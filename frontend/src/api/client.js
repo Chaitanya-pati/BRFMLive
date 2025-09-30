@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://28282886-3281-4c61-b476-c084ef2ed486-00-1v4f3ak1jsbf5.spock.replit.dev:8000/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -19,7 +19,7 @@ export const supplierApi = {
 
 export const vehicleApi = {
   getAll: () => api.get('/vehicles'),
-  getById: (id) => api.get('/vehicles/${id}`),
+  getById: (id) => api.get(`/vehicles/${id}`),
   create: (formData) => {
     return axios.post(`${API_URL}/vehicles`, formData, {
       headers: {

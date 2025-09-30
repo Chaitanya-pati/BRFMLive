@@ -6,8 +6,9 @@ from typing import List, Optional
 import base64
 from datetime import datetime
 
-from backend.database import engine, get_db, Base
-from backend import models, schemas
+from database import engine, get_db, Base
+import models
+import schemas
 
 Base.metadata.create_all(bind=engine)
 
