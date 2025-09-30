@@ -1,0 +1,110 @@
+Step 1 :
+Build a full-stack, cross-platform Gate Entry + Lab Testing app.
+
+Tech stack:
+
+────────────────────────
+
+Frontend:
+
+- React Native with Expo (react-native-web) — single codebase for Android, iOS and Web.
+
+- Use React Navigation, React Hook Form, @react-native-picker/picker, DateTimePicker, and Expo Camera/ImagePicker.
+
+- Use functional components + hooks. Provide mobile-first responsive layouts that also render on web.
+
+- Use Expo ImagePicker/Camera for “capture or upload” features.
+
+- Show dropdowns for state/city (dependent dropdown from free API).
+
+- UI: clean, responsive cards and sections for Supplier Master, Vehicle Entry, Lab Test.
+
+Backend:
+
+- FastAPI + SQLAlchemy + Alembic migrations + PostgreSQL.
+
+- Expose REST endpoints for suppliers, vehicles, categories, lab tests.
+
+- **Do not use local file storage**: store uploaded image data directly in PostgreSQL as BYTEA (or base64 string) columns.
+
+  - Accept multipart/form-data uploads or base64 strings.
+
+  - Save the binary data in the DB and return an identifier or small preview URL such as /api/vehicles/{id}/bill\_photo.
+
+- Provide Alembic migrations for all tables.
+
+Project layout:
+
+- /frontend — Expo React Native app
+
+- /backend — FastAPI app with SQLAlchemy + PostgreSQL
+
+Supplier Master Requirements:
+
+Fields:
+
+Supplier Name*
+
+Contact Person
+
+Phone
+
+Address
+
+State* (dropdown)
+
+City* (dependent dropdown based on State)
+
+State \& City should use an API (public/state-city API) so that when a user selects a State, the City dropdown populates automatically.
+
+CRUD operations for Supplier Master.
+
+Step 2:
+Vehicle Entry (Step 1) Requirements:
+
+Fields:
+
+Vehicle Number* (text, e.g., “UP16AB1234”)
+
+Supplier* (dropdown from Supplier Master, e.g., “ABC Wheat Suppliers – John Doe”)
+
+Bill No* (text)
+
+Driver Name (text)
+
+Driver Phone (text/mobile)
+
+Arrival Time (datetime)
+
+Supplier Bill Photo (upload or live capture from camera)
+
+Vehicle Photo (upload or live capture from camera)
+
+Notes (textarea)
+
+Save these values into a VehicleEntry table in the database.
+
+Supplier dropdown should use the Supplier Master.
+
+Provide option to capture or upload images for bill photo and vehicle photo.
+
+This form is part of Step 1 before the sample testing/approval steps.
+
+The page should be responsive and mobile-friendly.
+
+General:
+
+Generate models/tables, API endpoints and frontend components for both Supplier Master and Vehicle Entry.
+
+Use proper relationships between Supplier Master and Vehicle Entry.
+
+Use a public State-City API for dependent dropdowns.
+
+Include simple form validations for mandatory fields.
+
+Step:3
+<div class="row"> &nbsp; <!-- Quality Test Form --> &nbsp; <div class="col-lg-8 mb-4"> &nbsp; <div class="card"> &nbsp; <div class="card-header"> &nbsp; <h5 class="mb-0"> &nbsp; <i class="fas fa-flask me-2"></i>Raw Wheat Quality Report &nbsp; </h5> &nbsp; </div> &nbsp; <div class="card-body"> &nbsp; {% if vehicles %} &nbsp; <form method="POST" enctype="multipart/form-data" id="rawWheatQualityForm"> &nbsp; <!-- Document Header --> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-12"> &nbsp; <div class="border border-dark p-3"> &nbsp; <div class="row align-items-center"> &nbsp; <div class="col-md-2"> &nbsp; <div class="border border-dark text-center p-3"> &nbsp; <strong>B R<br>F M</strong> &nbsp; </div> &nbsp; </div> &nbsp; <div class="col-md-8 text-center"> &nbsp; <h4><strong>Raw Wheat Quality Report</strong></h4> &nbsp; </div> &nbsp; <div class="col-md-2"> &nbsp; <div class="border border-dark p-2 small"> &nbsp; <div>Document No - 001</div> &nbsp; <div>Issue No: 01</div> &nbsp; <div>Issue Date: 4/8/2022</div> &nbsp; <div>Dept - QA</div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Basic Information --> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="wheat\_variety" class="form-label">Wheat Variety \*</label> &nbsp; <input type="text" class="form-control" id="wheat\_variety" name="wheat\_variety" &nbsp; placeholder="e.g., HD" required> &nbsp; </div> &nbsp; </div> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="test\_date" class="form-label">Test Date \*</label> &nbsp; <input type="date" class="form-control" id="test\_date" name="test\_date" required> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="vehicle\_id" class="form-label">Select Vehicle \*</label> &nbsp; <select class="form-select" id="vehicle\_id" name="vehicle\_id" required onchange="loadVehicleInfo()"> &nbsp; <option value="">Choose vehicle for testing</option> &nbsp; {% for vehicle in vehicles %} &nbsp; <option value="{{ vehicle.id }}" &nbsp; data-number="{{ vehicle.vehicle\_number }}" &nbsp; data-supplier="{{ vehicle.supplier.company\_name if vehicle.supplier else 'Unknown' }}"> &nbsp; {{ vehicle.vehicle\_number }} - {{ vehicle.supplier.company\_name if vehicle.supplier else 'Unknown Supplier' }} &nbsp; </option> &nbsp; {% endfor %} &nbsp; </select> &nbsp; </div> &nbsp; </div> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="bill\_number" class="form-label">Bill Number</label> &nbsp; <input type="text" class="form-control" id="bill\_number" name="bill\_number" &nbsp; placeholder="e.g., 168"> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Vehicle Info Display --> &nbsp; <div class="row" id="vehicleInfoSection" style="display: none;"> &nbsp; <div class="col-12"> &nbsp; <div class="alert alert-info"> &nbsp; <h6><i class="fas fa-info-circle me-1"></i>Vehicle Information</h6> &nbsp; <div id="vehicleInfoContent"></div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="arrival\_datetime" class="form-label">Vehicle Arrival Date \& Time</label> &nbsp; <input type="datetime-local" class="form-control" id="arrival\_datetime" name="arrival\_datetime"> &nbsp; </div> &nbsp; </div> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="lab\_chemist" class="form-label">Lab Chemist \*</label> &nbsp; <input type="text" class="form-control" id="lab\_chemist" name="lab\_chemist" &nbsp; placeholder="Name of lab chemist" required> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Testing Parameters Table --> &nbsp; <div class="table-responsive mb-4"> &nbsp; <table class="table table-bordered"> &nbsp; <thead class="table-light"> &nbsp; <tr> &nbsp; <th>Sr.</th> &nbsp; <th>TEST</th> &nbsp; <th>UOM</th> &nbsp; <th>STANDARD</th> &nbsp; <th>ACTUAL REPORT</th> &nbsp; </tr> &nbsp; </thead> &nbsp; <tbody> &nbsp; <tr> &nbsp; <td>1</td> &nbsp; <td>Moisture</td> &nbsp; <td>%</td> &nbsp; <td>8-10.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="moisture" placeholder="10.71" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>2</td> &nbsp; <td>Hectoliter weight</td> &nbsp; <td>Kg/hl</td> &nbsp; <td>>75</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="hectoliter\_weight" placeholder="73.14" step="0.01"></td> &nbsp; </tr> &nbsp; <tr class="table-secondary"> &nbsp; <td>3</td> &nbsp; <td><strong>Gluten</strong></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>a</td> &nbsp; <td>\&nbsp;\&nbsp;Wet Gluten</td> &nbsp; <td>%</td> &nbsp; <td>32-33</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="wet\_gluten" placeholder="24.08" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>b</td> &nbsp; <td>\&nbsp;\&nbsp;Dry Gluten</td> &nbsp; <td></td> &nbsp; <td>10.5-11.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="dry\_gluten" placeholder="8.97" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>4</td> &nbsp; <td>Sedimentation Value</td> &nbsp; <td>ml</td> &nbsp; <td>24-25 ml</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="sedimentation\_value" placeholder="18" step="0.1"></td> &nbsp; </tr> &nbsp; <tr class="table-secondary"> &nbsp; <td>5</td> &nbsp; <td><strong>Refractions</strong></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>a</td> &nbsp; <td>\&nbsp;\&nbsp;Chaff/Husk</td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="chaff\_husk" placeholder="0.19" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>b</td> &nbsp; <td>\&nbsp;\&nbsp;Straws/Sticks</td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="straws\_sticks" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>c</td> &nbsp; <td>\&nbsp;\&nbsp;Other Foreign Matter (OFM)</td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="other\_foreign\_matter" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>d</td> &nbsp; <td>\&nbsp;\&nbsp;Mudballs</td> &nbsp; <td>%</td> &nbsp; <td><3</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="mudballs" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>e</td> &nbsp; <td>\&nbsp;\&nbsp;Stones</td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="stones" placeholder="0.65" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>f</td> &nbsp; <td>\&nbsp;\&nbsp;Dust/Sand</td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="dust\_sand" step="0.01"></td> &nbsp; </tr> &nbsp; <tr class="table-secondary"> &nbsp; <td></td> &nbsp; <td><strong>Total Impurities (%)</strong></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="total\_impurities" step="0.01" readonly></td> &nbsp; </tr> &nbsp; <tr class="table-secondary"> &nbsp; <td></td> &nbsp; <td><strong>Grain Dockage</strong></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>1</td> &nbsp; <td>\&nbsp;\&nbsp;Shriveled wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="shriveled\_wheat" placeholder="0.76" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>2</td> &nbsp; <td>\&nbsp;\&nbsp;Insect Bored damage</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="insect\_damage" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>3</td> &nbsp; <td>\&nbsp;\&nbsp;Blackened wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="blackened\_wheat" placeholder="0.19" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>4</td> &nbsp; <td>\&nbsp;\&nbsp;Other Grains</td> &nbsp; <td>%</td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="other\_grains" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>5</td> &nbsp; <td>\&nbsp;\&nbsp;Soft Wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="soft\_wheat" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>6</td> &nbsp; <td>\&nbsp;\&nbsp;Heat Damaged wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="heat\_damaged" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>7</td> &nbsp; <td>\&nbsp;\&nbsp;Immature wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="immature\_wheat" placeholder="0.05" step="0.01"></td> &nbsp; </tr> &nbsp; <tr> &nbsp; <td>8</td> &nbsp; <td>\&nbsp;\&nbsp;Broken wheat</td> &nbsp; <td></td> &nbsp; <td>0.5</td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="broken\_wheat" placeholder="9.52" step="0.01"></td> &nbsp; </tr> &nbsp; <tr class="table-secondary"> &nbsp; <td></td> &nbsp; <td><strong>Total Dockage (%)</strong></td> &nbsp; <td></td> &nbsp; <td></td> &nbsp; <td><input type="number" class="form-control form-control-sm" name="total\_dockage" step="0.01" readonly></td> &nbsp; </tr> &nbsp; </tbody> &nbsp; </table> &nbsp; </div> &nbsp; <!-- Comments Section --> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-12"> &nbsp; <div class="mb-3"> &nbsp; <label for="comments\_action" class="form-label">Comments \& Action</label> &nbsp; <textarea class="form-control" id="comments\_action" name="comments\_action" rows="4" &nbsp; placeholder="Enter comments and actions here..."></textarea> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Quality Category Assignment --> &nbsp; <div class="row mb-4"> &nbsp; <div class="col-md-6"> &nbsp; <div class="mb-3"> &nbsp; <label for="category\_assigned" class="form-label">Quality Category \*</label> &nbsp; <select class="form-select" id="category\_assigned" name="category\_assigned" required> &nbsp; <option value="">Assign quality category</option> &nbsp; <option value="Mill">Mill Grade (Premium)</option> &nbsp; <option value="Low Mill">Low Mill Grade</option> &nbsp; <option value="HD">Heavy Density (HD)</option> &nbsp; <option value="Rejected">Rejected</option> &nbsp; </select> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Approval Section --> &nbsp; <div class="row"> &nbsp; <div class="col-12"> &nbsp; <div class="card border-success"> &nbsp; <div class="card-header bg-success text-white"> &nbsp; <h6 class="mb-0"> &nbsp; <i class="fas fa-check-circle me-1"></i>Final Approval &nbsp; </h6> &nbsp; </div> &nbsp; <div class="card-body"> &nbsp; <div class="form-check form-switch"> &nbsp; <input class="form-check-input" type="checkbox" id="approved" name="approved"> &nbsp; <label class="form-check-label" for="approved"> &nbsp; <strong>Approve this vehicle for unloading</strong> &nbsp; <br><small class="text-muted">Check only if quality meets standards</small> &nbsp; </label> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <div class="d-flex justify-content-between mt-4"> &nbsp; <button type="reset" class="btn btn-outline-secondary"> &nbsp; <i class="fas fa-undo me-1"></i>Reset Form &nbsp; </button> &nbsp; <button type="submit" class="btn btn-primary"> &nbsp; <i class="fas fa-save me-1"></i>Save Quality Report &nbsp; </button> &nbsp; </div> &nbsp; </form> &nbsp; {% else %} &nbsp; <div class="text-center py-5"> &nbsp; <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i> &nbsp; <h5>No Vehicles Available for Testing</h5> &nbsp; <p class="text-muted">All vehicles have been processed or no vehicles are pending quality check.</p> &nbsp; <a href="{{ url\_for('vehicle\_entry') }}" class="btn btn-primary"> &nbsp; <i class="fas fa-plus me-1"></i>Add New Vehicle &nbsp; </a> &nbsp; </div> &nbsp; {% endif %} &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; <!-- Recent Quality Reports --> &nbsp; <div class="col-lg-4"> &nbsp; <div class="card"> &nbsp; <div class="card-header"> &nbsp; <h5 class="mb-0"> &nbsp; <i class="fas fa-history me-2"></i>Recent Reports &nbsp; </h5> &nbsp; </div> &nbsp; <div class="card-body"> &nbsp; {% if raw\_wheat\_reports %} &nbsp; <div class="list-group list-group-flush"> &nbsp; {% for report in raw\_wheat\_reports\[:10] %} &nbsp; <div class="list-group-item border-0 px-0"> &nbsp; <div class="d-flex justify-content-between align-items-start"> &nbsp; <div> &nbsp; <h6 class="mb-1">{{ report.vehicle.vehicle\_number }}</h6> &nbsp; <p class="mb-1 text-muted small"> &nbsp; {{ report.lab\_chemist }} &nbsp; </p> &nbsp; <small class="text-muted"> &nbsp; {{ report.test\_date.strftime('%d/%m/%Y') }} &nbsp; </small> &nbsp; </div> &nbsp; <span class="badge bg-{{ 'success' if report.approved else 'warning' if report.category\_assigned != 'Rejected' else 'danger' }}"> &nbsp; {{ report.category\_assigned }} &nbsp; </span> &nbsp; </div> &nbsp; <div class="mt-2"> &nbsp; <small class="text-muted"> &nbsp; {% if report.moisture %} &nbsp; <i class="fas fa-tint me-1"></i>{{ report.moisture }}% &nbsp; {% endif %} &nbsp; {% if report.wet\_gluten %} &nbsp; <i class="fas fa-seedling ms-2 me-1"></i>{{ report.wet\_gluten }}% gluten &nbsp; {% endif %} &nbsp; </small> &nbsp; </div> &nbsp; </div> &nbsp; {% endfor %} &nbsp; </div> &nbsp; {% else %} &nbsp; <div class="text-center py-4"> &nbsp; <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i> &nbsp; <p class="text-muted">No recent quality reports</p> &nbsp; </div> &nbsp; {% endif %} &nbsp; </div> &nbsp; </div> &nbsp; </div> &nbsp; </div>
+</div>
+
+<script> // Auto-calculate total impurities and dockage document.addEventListener('input', function(e) { &nbsp; if (e.target.matches('input\[name^="chaff\_husk"], input\[name^="straws\_sticks"], input\[name^="other\_foreign\_matter"], input\[name^="mudballs"], input\[name^="stones"], input\[name^="dust\_sand"]')) { &nbsp; calculateTotalImpurities(); &nbsp; } &nbsp; if (e.target.matches('input\[name^="shriveled\_wheat"], input\[name^="insect\_damage"], input\[name^="blackened\_wheat"], input\[name^="other\_grains"], input\[name^="soft\_wheat"], input\[name^="heat\_damaged"], input\[name^="immature\_wheat"], input\[name^="broken\_wheat"]')) { &nbsp; calculateTotalDockage(); &nbsp; } }); function calculateTotalImpurities() { &nbsp; const fields = \['chaff\_husk', 'straws\_sticks', 'other\_foreign\_matter', 'mudballs', 'stones', 'dust\_sand']; &nbsp; let total = 0; &nbsp; fields.forEach(field => { &nbsp; const value = parseFloat(document.getElementsByName(field)\[0].value) || 0; &nbsp; total += value; &nbsp; }); &nbsp; document.getElementsByName('total\_impurities')\[0].value = total.toFixed(2); } function calculateTotalDockage() { &nbsp; const fields = \['shriveled\_wheat', 'insect\_damage', 'blackened\_wheat', 'other\_grains', 'soft\_wheat', 'heat\_damaged', 'immature\_wheat', 'broken\_wheat']; &nbsp; let total = 0; &nbsp; fields.forEach(field => { &nbsp; const value = parseFloat(document.getElementsByName(field)\[0].value) || 0; &nbsp; total += value; &nbsp; }); &nbsp; document.getElementsByName('total\_dockage')\[0].value = total.toFixed(2); } function loadVehicleInfo() { &nbsp; const vehicleSelect = document.getElementById('vehicle\_id'); &nbsp; const selectedOption = vehicleSelect.options\[vehicleSelect.selectedIndex]; &nbsp; &nbsp; if (selectedOption.value) { &nbsp; const vehicleNumber = selectedOption.getAttribute('data-number'); &nbsp; const supplier = selectedOption.getAttribute('data-supplier'); &nbsp; &nbsp; document.getElementById('vehicleInfoContent').innerHTML = &nbsp; `<strong>Vehicle:</strong> ${vehicleNumber}<br> &nbsp; <strong>Supplier:</strong> ${supplier}`; &nbsp; document.getElementById('vehicleInfoSection').style.display = 'block'; &nbsp; } else { &nbsp; document.getElementById('vehicleInfoSection').style.display = 'none'; &nbsp; } } </script>
+Use this for the form for the lab test and here on selection of vehicle the bill no should automatically fetched in the field this is just for reference don't code in html write this code in the current techstack
