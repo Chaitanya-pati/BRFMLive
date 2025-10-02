@@ -32,10 +32,12 @@ Preferred communication style: Simple, everyday language.
 - **Navigation Pattern**: Native stack navigation provides platform-appropriate transitions and navigation behavior.
 
 **Screen Structure:**
+- LoginScreen: Professional login form with username/password authentication
 - HomeScreen: Professional dashboard with stats cards, quick actions, and recent activity
 - SupplierMasterScreen: Data table view with Add/Edit modal forms for supplier records
 - VehicleEntryScreen: Data table view with modal form for vehicle entries and photo capture
 - LabTestScreen: Data table view with comprehensive modal form for lab test data entry
+- UserManagementScreen: Admin-only screen for managing users (add, edit, delete users)
 
 **UI/UX Design:**
 - **Professional ERP Layout**: Collapsible sidebar navigation with menu items and icons
@@ -60,6 +62,7 @@ Preferred communication style: Simple, everyday language.
 - **CORS Enabled**: Wildcard CORS policy allows frontend to call API from any origin (suitable for development; should be restricted in production).
 
 **Data Models:**
+- **User**: User accounts with authentication (username, email, hashed password, role)
 - **Supplier**: Master data for suppliers with location information (state/city)
 - **VehicleEntry**: Records vehicle arrivals with foreign key to Supplier, includes binary fields for photos
 - **LabTest**: Quality test results linked to VehicleEntry, stores multiple wheat quality parameters (moisture, protein, gluten, impurities, etc.)
@@ -77,6 +80,7 @@ Preferred communication style: Simple, everyday language.
 - Relational structure with foreign key constraints maintaining referential integrity
 
 **Schema Design:**
+- users table: user accounts with authentication credentials and role-based access
 - suppliers table: supplier master data
 - vehicle_entries table: vehicle entry records with supplier foreign key
 - lab_tests table: test results with vehicle_entry foreign key
@@ -110,6 +114,29 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**October 2, 2025 - Complete Authentication & User Management System**
+- **Full JWT-Based Authentication**:
+  - Implemented secure JWT token-based authentication with access tokens
+  - Password hashing using bcrypt for secure credential storage
+  - Secure SECRET_KEY generation using Python's secrets module (secrets.token_urlsafe)
+  - Token-based session management with 24-hour token expiration
+- **User Management System**:
+  - Created User model with role-based access control (admin/user roles)
+  - Admin-only user management screen with full CRUD operations
+  - Pre-configured admin account (username: admin, password: admin123)
+  - User registration restricted to "user" role to prevent privilege escalation
+- **Security Hardening**:
+  - Protected all business endpoints (suppliers, vehicles, lab tests) with authentication
+  - Only authenticated users can access API endpoints
+  - Admin-only endpoints for user management operations
+  - Secure registration flow that prevents role-based privilege escalation
+- **Frontend Authentication**:
+  - Professional login screen with username/password form
+  - Token storage in AsyncStorage for persistent sessions
+  - Automatic token refresh and logout functionality
+  - User info display in Layout header with logout button
+  - Navigation updated with Users menu item (admin-only)
+
 **October 2, 2025 - Professional ERP UI Transformation**
 - **Complete UI/UX Overhaul**: Transformed application into professional ERP-style interface
   - Implemented sidebar navigation with collapsible menu and icons
@@ -140,15 +167,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Current Status
 
-The application is fully functional with professional ERP-style interface:
-- **Backend API**: FastAPI server on port 8000 with all CRUD endpoints
+The application is fully functional with professional ERP-style interface and complete authentication:
+- **Backend API**: FastAPI server on port 8000 with JWT-authenticated endpoints
 - **Frontend Web**: Professional Expo web app on port 5000 with ERP layout
 - **Database**: PostgreSQL with all tables and relationships configured
+- **Authentication**: Complete JWT-based authentication system with login and user management
+  - Default admin credentials: username "admin", password "admin123"
+  - Role-based access control (admin/user roles)
+  - All business endpoints protected with authentication
+  - Admin-only user management functionality
 - **UI/UX**: Complete professional transformation with sidebar navigation, data tables, and modal forms
 - **Features**: All CRUD operations (Create, Read, Update, Delete) working across all modules:
-  - Supplier Master: Add/Edit/Delete with flexible state/city input (✅ Fully tested and verified)
-  - Vehicle Entry: Add entries with photo capture (bill and vehicle photos)
-  - Lab Test: Add comprehensive test data with auto-calculations
+  - User Management: Add/Edit/Delete users (admin-only) ✅
+  - Supplier Master: Add/Edit/Delete with flexible state/city input ✅
+  - Vehicle Entry: Add entries with photo capture (bill and vehicle photos) ✅
+  - Lab Test: Add comprehensive test data with auto-calculations ✅
+- **Security**: All endpoints require authentication, secure password hashing, JWT token management
 - **Reliability**: Static fallback data ensures functionality even when external APIs are unavailable
 
 ## Replit Environment Configuration
