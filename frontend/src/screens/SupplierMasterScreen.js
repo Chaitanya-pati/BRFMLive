@@ -53,7 +53,8 @@ export default function SupplierMasterScreen({ navigation }) {
   };
 
   const handleStateChange = async (stateId) => {
-    console.log('handleStateChange called with stateId:', stateId);
+    console.log('handleStateChange called with stateId:', stateId, 'type:', typeof stateId);
+    console.log('Available states:', states);
     
     if (!stateId || stateId === '') {
       setSelectedStateId('');
@@ -67,7 +68,12 @@ export default function SupplierMasterScreen({ navigation }) {
     }
     
     const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
-    const state = states.find(s => s.state_id === numericStateId);
+    console.log('Looking for state with ID:', numericStateId);
+    const state = states.find(s => {
+      const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
+      console.log('Comparing:', sid, '===', numericStateId, '?', sid === numericStateId);
+      return sid === numericStateId;
+    });
     console.log('Found state:', state);
     
     if (state) {
