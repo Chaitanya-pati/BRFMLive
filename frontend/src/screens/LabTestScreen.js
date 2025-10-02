@@ -164,6 +164,61 @@ export default function LabTestScreen({ navigation }) {
     setModalVisible(true);
   };
 
+  const openEditModal = (labTest) => {
+    setFormData({
+      vehicle_entry_id: labTest.vehicle_entry_id || '',
+      test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
+      moisture: labTest.moisture?.toString() || '',
+      test_weight: labTest.test_weight?.toString() || '',
+      protein_percent: labTest.protein_percent?.toString() || '',
+      wet_gluten: labTest.wet_gluten?.toString() || '',
+      dry_gluten: labTest.dry_gluten?.toString() || '',
+      falling_number: labTest.falling_number?.toString() || '',
+      chaff_husk: labTest.chaff_husk?.toString() || '',
+      straws_sticks: labTest.straws_sticks?.toString() || '',
+      other_foreign_matter: labTest.other_foreign_matter?.toString() || '',
+      mudballs: labTest.mudballs?.toString() || '',
+      stones: labTest.stones?.toString() || '',
+      dust_sand: labTest.dust_sand?.toString() || '',
+      total_impurities: labTest.total_impurities?.toString() || '0.00',
+      shriveled_wheat: labTest.shriveled_wheat?.toString() || '',
+      insect_damage: labTest.insect_damage?.toString() || '',
+      blackened_wheat: labTest.blackened_wheat?.toString() || '',
+      sprouted_grains: labTest.sprouted_grains?.toString() || '',
+      other_grain_damage: labTest.other_grain_damage?.toString() || '',
+      total_dockage: labTest.total_dockage?.toString() || '0.00',
+      remarks: labTest.remarks || '',
+      tested_by: labTest.tested_by || '',
+    });
+    const vehicle = vehicles.find((v) => v.id === labTest.vehicle_entry_id);
+    setSelectedVehicle(vehicle);
+    setModalVisible(true);
+  };
+
+  const handleDelete = async (labTest) => {
+    Alert.alert(
+      'Confirm Delete',
+      `Are you sure you want to delete lab test #${labTest.id}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await labTestApi.delete(labTest.id);
+              Alert.alert('Success', 'Lab test deleted successfully');
+              loadLabTests();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete lab test');
+              console.error(error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -271,6 +326,8 @@ export default function LabTestScreen({ navigation }) {
         columns={columns}
         data={labTests}
         onAdd={openAddModal}
+        onEdit={openEditModal}
+        onDelete={handleDelete}
       />
 
       <Modal
