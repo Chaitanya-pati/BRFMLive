@@ -53,19 +53,40 @@ export default function SupplierMasterScreen({ navigation }) {
   };
 
   const handleStateChange = async (stateId) => {
+    console.log('handleStateChange called with stateId:', stateId);
+    
+    if (!stateId || stateId === '') {
+      setSelectedStateId('');
+      setFormData({ 
+        ...formData, 
+        state: '', 
+        city: '' 
+      });
+      setCities([]);
+      return;
+    }
+    
     const state = states.find(s => s.state_id === stateId);
+    console.log('Found state:', state);
     
     setSelectedStateId(stateId);
-    setFormData({ 
-      ...formData, 
-      state: state ? state.state_name : '', 
-      city: '' 
-    });
     
-    if (stateId && stateId !== '' && state) {
+    if (state) {
+      setFormData({ 
+        ...formData, 
+        state: state.state_name, 
+        city: '' 
+      });
+      
       const citiesData = await stateCityApi.getCities(stateId);
       setCities(citiesData || []);
+      console.log('Updated formData with state:', state.state_name);
     } else {
+      setFormData({ 
+        ...formData, 
+        state: '', 
+        city: '' 
+      });
       setCities([]);
     }
   };
