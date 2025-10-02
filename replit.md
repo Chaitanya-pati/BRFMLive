@@ -159,7 +159,7 @@ The application has been successfully configured to run in the Replit environmen
 
 ### Backend Configuration
 - Python dependencies managed with `uv` (pyproject.toml)
-- FastAPI backend running on `127.0.0.1:8000`
+- FastAPI backend running on `0.0.0.0:8000`
 - PostgreSQL database connected via Replit's DATABASE_URL environment variable
 - Alembic migrations applied successfully
 - All CRUD endpoints tested and verified working
@@ -169,16 +169,17 @@ The application has been successfully configured to run in the Replit environmen
 - Running on port 5000 for Replit webview compatibility
 - Environment variable `EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0` set for proper proxy handling
 - Custom `webpack.config.js` with `allowedHosts: 'all'` for Replit iframe support
-- API client configured to use Replit domain for backend communication
+- API client configured to use Replit domain with port 8000 for backend communication
+- API URL format: `https://[replit-domain]:8000/api` for external requests
 
 ### Workflows
-- **Backend API**: `cd backend && uv run uvicorn main:app --host 127.0.0.1 --port 8000`
+- **Backend API**: `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000`
 - **Frontend**: `cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000`
 
 ### Deployment Configuration
 - Deployment target: VM (for stateful full-stack application)
-- Build: Installs frontend npm packages and backend Python dependencies
-- Run: Starts both backend (port 8000) and frontend (port 5000) services
+- Build: Installs frontend npm packages (`npm install`) and backend Python dependencies (`uv sync`)
+- Run: Starts both backend (port 8000) and frontend (port 5000) services concurrently
 
 ### CRUD Verification
 All supplier management CRUD operations have been tested and verified:
