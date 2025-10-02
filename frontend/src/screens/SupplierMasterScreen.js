@@ -103,12 +103,19 @@ export default function SupplierMasterScreen({ navigation }) {
       setSelectedStateId(state.state_id);
       const citiesData = await stateCityApi.getCities(state.state_id);
       setCities(citiesData || []);
+    } else {
+      setSelectedStateId('');
+      setCities([]);
     }
     
     setModalVisible(true);
   };
 
   const handleSubmit = async () => {
+    console.log('Save button clicked');
+    console.log('Form data:', formData);
+    console.log('Selected State ID:', selectedStateId);
+    
     if (!formData.supplier_name || !formData.state || !formData.city) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -117,9 +124,11 @@ export default function SupplierMasterScreen({ navigation }) {
     setLoading(true);
     try {
       if (editMode && currentSupplier) {
+        console.log('Updating supplier:', currentSupplier.id);
         await supplierApi.update(currentSupplier.id, formData);
         Alert.alert('Success', 'Supplier updated successfully');
       } else {
+        console.log('Creating new supplier');
         await supplierApi.create(formData);
         Alert.alert('Success', 'Supplier created successfully');
       }
@@ -127,8 +136,8 @@ export default function SupplierMasterScreen({ navigation }) {
       setModalVisible(false);
       loadSuppliers();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save supplier');
-      console.error(error);
+      Alert.alert('Error', 'Failed to save supplier: ' + (error.response?.data?.detail || error.message));
+      console.error('Save error:', error);
     } finally {
       setLoading(false);
     }
@@ -227,8 +236,9 @@ export default function SupplierMasterScreen({ navigation }) {
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={selectedStateId}
+              selectedValue={selectedStateId || ''}
               onValueChange={(itemValue) => {
+                console.log('State picker value changed:', itemValue);
                 handleStateChange(itemValue);
               }}
               style={styles.picker}
@@ -248,8 +258,11 @@ export default function SupplierMasterScreen({ navigation }) {
           {cities.length > 0 ? (
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={formData.city}
-                onValueChange={(value) => setFormData({ ...formData, city: value })}
+                selectedValue={formData.city || ''}
+                onValueChange={(value) => {
+                  console.log('City picker value changed:', value);
+                  setFormData({ ...formData, city: value });
+                }}
                 style={styles.picker}
               >
                 <Picker.Item label="Select City" value="" />
@@ -265,7 +278,7 @@ export default function SupplierMasterScreen({ navigation }) {
           ) : (
             <TextInput
               style={styles.input}
-              value={formData.city}
+              value={formData.city || ''}
               onChangeText={(text) => setFormData({ ...formData, city: text })}
               placeholder="Enter city name"
             />
