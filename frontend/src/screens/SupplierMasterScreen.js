@@ -70,19 +70,19 @@ export default function SupplierMasterScreen({ navigation }) {
     const state = states.find(s => s.state_id === numericStateId);
     console.log('Found state:', state);
     
-    setSelectedStateId(stateId);
-    
     if (state) {
+      setSelectedStateId(numericStateId);
       setFormData({ 
         ...formData, 
         state: state.state_name, 
         city: '' 
       });
       
-      const citiesData = await stateCityApi.getCities(stateId);
+      const citiesData = await stateCityApi.getCities(numericStateId);
       setCities(citiesData || []);
       console.log('Updated formData with state:', state.state_name);
     } else {
+      setSelectedStateId('');
       setFormData({ 
         ...formData, 
         state: '', 
@@ -138,20 +138,34 @@ export default function SupplierMasterScreen({ navigation }) {
     console.log('Form data:', formData);
     console.log('Selected State ID:', selectedStateId);
     
-    if (!formData.supplier_name || !formData.state || !formData.city) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Trim and validate required fields
+    const trimmedName = formData.supplier_name?.trim();
+    const trimmedState = formData.state?.trim();
+    const trimmedCity = formData.city?.trim();
+    
+    if (!trimmedName || !trimmedState || !trimmedCity) {
+      Alert.alert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
       return;
     }
 
     setLoading(true);
     try {
+      const payload = {
+        supplier_name: trimmedName,
+        contact_person: formData.contact_person?.trim() || '',
+        phone: formData.phone?.trim() || '',
+        address: formData.address?.trim() || '',
+        state: trimmedState,
+        city: trimmedCity,
+      };
+      
       if (editMode && currentSupplier) {
         console.log('Updating supplier:', currentSupplier.id);
-        await supplierApi.update(currentSupplier.id, formData);
+        await supplierApi.update(currentSupplier.id, payload);
         Alert.alert('Success', 'Supplier updated successfully');
       } else {
-        console.log('Creating new supplier');
-        await supplierApi.create(formData);
+        console.log('Creating new supplier with payload:', payload);
+        await supplierApi.create(payload);
         Alert.alert('Success', 'Supplier created successfully');
       }
       
