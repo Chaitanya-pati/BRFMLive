@@ -46,6 +46,15 @@ task = "shell.exec"
 args = "cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Backend API Server"
+author = 48243134
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
