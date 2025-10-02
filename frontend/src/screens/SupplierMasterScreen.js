@@ -33,6 +33,27 @@ export default function SupplierMasterScreen({ navigation }) {
     city: '',
   });
 
+  const showAlert = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const showConfirm = (title, message, onConfirm) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: onConfirm }
+      ]);
+    }
+  };
+
   useEffect(() => {
     loadSuppliers();
     loadStates();
@@ -173,13 +194,13 @@ export default function SupplierMasterScreen({ navigation }) {
         const response = await supplierApi.update(currentSupplier.id, payload);
         console.log('Update response status:', response.status);
         console.log('Update response data:', response.data);
-        Alert.alert('Success', 'Supplier updated successfully');
+        showAlert('Success', 'Supplier updated successfully');
       } else {
         console.log('Creating new supplier with payload:', payload);
         const response = await supplierApi.create(payload);
         console.log('Create response status:', response.status);
         console.log('Create response data:', response.data);
-        Alert.alert('Success', 'Supplier created successfully');
+        showAlert('Success', 'Supplier created successfully');
       }
       
       setModalVisible(false);
@@ -192,32 +213,25 @@ export default function SupplierMasterScreen({ navigation }) {
         || error.response?.data?.message 
         || error.message 
         || 'Unknown error occurred';
-      Alert.alert('Error', 'Failed to save supplier: ' + errorMessage);
+      showAlert('Error', 'Failed to save supplier: ' + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (supplier) => {
-    Alert.alert(
+    showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete ${supplier.supplier_name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supplierApi.delete(supplier.id);
-              Alert.alert('Success', 'Supplier deleted successfully');
-              loadSuppliers();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete supplier');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await supplierApi.delete(supplier.id);
+          showAlert('Success', 'Supplier deleted successfully');
+          loadSuppliers();
+        } catch (error) {
+          showAlert('Error', 'Failed to delete supplier');
+        }
+      }
     );
   };
 
