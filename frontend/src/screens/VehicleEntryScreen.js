@@ -144,6 +144,45 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
+  const openEditModal = (vehicle) => {
+    setFormData({
+      vehicle_number: vehicle.vehicle_number,
+      supplier_id: vehicle.supplier?.id || '',
+      bill_no: vehicle.bill_no,
+      driver_name: vehicle.driver_name || '',
+      driver_phone: vehicle.driver_phone || '',
+      arrival_time: new Date(vehicle.arrival_time),
+      notes: vehicle.notes || '',
+    });
+    setBillPhoto(null);
+    setVehiclePhoto(null);
+    setModalVisible(true);
+  };
+
+  const handleDelete = async (vehicle) => {
+    Alert.alert(
+      'Confirm Delete',
+      `Are you sure you want to delete vehicle entry ${vehicle.vehicle_number}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await vehicleApi.delete(vehicle.id);
+              Alert.alert('Success', 'Vehicle entry deleted successfully');
+              loadVehicles();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete vehicle entry');
+              console.error(error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -208,6 +247,8 @@ export default function VehicleEntryScreen({ navigation }) {
         columns={columns}
         data={vehicles}
         onAdd={openAddModal}
+        onEdit={openEditModal}
+        onDelete={handleDelete}
       />
 
       <Modal
