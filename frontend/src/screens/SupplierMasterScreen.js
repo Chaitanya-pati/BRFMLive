@@ -159,21 +159,31 @@ export default function SupplierMasterScreen({ navigation }) {
         city: trimmedCity,
       };
       
+      console.log('Sending payload to API:', payload);
+      
       if (editMode && currentSupplier) {
         console.log('Updating supplier:', currentSupplier.id);
-        await supplierApi.update(currentSupplier.id, payload);
+        const response = await supplierApi.update(currentSupplier.id, payload);
+        console.log('Update response:', response);
         Alert.alert('Success', 'Supplier updated successfully');
       } else {
         console.log('Creating new supplier with payload:', payload);
-        await supplierApi.create(payload);
+        const response = await supplierApi.create(payload);
+        console.log('Create response:', response);
         Alert.alert('Success', 'Supplier created successfully');
       }
       
       setModalVisible(false);
-      loadSuppliers();
+      await loadSuppliers();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save supplier: ' + (error.response?.data?.detail || error.message));
-      console.error('Save error:', error);
+      console.error('Full error object:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      const errorMessage = error.response?.data?.detail 
+        || error.response?.data?.message 
+        || error.message 
+        || 'Unknown error occurred';
+      Alert.alert('Error', 'Failed to save supplier: ' + errorMessage);
     } finally {
       setLoading(false);
     }

@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-const API_URL = 'https://af7b7034-d868-4ed3-bbc1-a639f53dee0b-00-191cz612f89aa.worf.replit.dev:8000/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 export const supplierApi = {
