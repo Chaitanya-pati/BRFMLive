@@ -166,16 +166,19 @@ export default function SupplierMasterScreen({ navigation }) {
       };
       
       console.log('Sending payload to API:', payload);
+      console.log('API Base URL:', await import('../api/client').then(m => m.api.defaults.baseURL));
       
       if (editMode && currentSupplier) {
         console.log('Updating supplier:', currentSupplier.id);
         const response = await supplierApi.update(currentSupplier.id, payload);
-        console.log('Update response:', response);
+        console.log('Update response status:', response.status);
+        console.log('Update response data:', response.data);
         Alert.alert('Success', 'Supplier updated successfully');
       } else {
         console.log('Creating new supplier with payload:', payload);
         const response = await supplierApi.create(payload);
-        console.log('Create response:', response);
+        console.log('Create response status:', response.status);
+        console.log('Create response data:', response.data);
         Alert.alert('Success', 'Supplier created successfully');
       }
       
