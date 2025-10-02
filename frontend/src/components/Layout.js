@@ -1,21 +1,46 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
+import { AuthContext } from '../../App';
 
 export default function Layout({ children, title, navigation, currentRoute }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { user, logout } = useContext(AuthContext);
 
   const menuItems = [
     { name: 'Dashboard', route: 'Home', icon: '📊' },
     { name: 'Suppliers', route: 'SupplierMaster', icon: '🏢' },
     { name: 'Vehicle Entries', route: 'VehicleEntry', icon: '🚛' },
     { name: 'Lab Tests', route: 'LabTest', icon: '🔬' },
+    ...(user?.role === 'admin' ? [{ name: 'Users', route: 'UserManagement', icon: '👥' }] : []),
   ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: logout, style: 'destructive' },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>Gate Entry & Lab Testing System</Text>
-        <Text style={styles.topBarSubtitle}>ERP Management</Text>
+        <View>
+          <Text style={styles.topBarTitle}>Gate Entry & Lab Testing System</Text>
+          <Text style={styles.topBarSubtitle}>ERP Management</Text>
+        </View>
+        <View style={styles.topBarRight}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{user?.full_name}</Text>
+            <Text style={styles.userRole}>{user?.role}</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.mainContainer}>
@@ -85,6 +110,35 @@ const styles = StyleSheet.create({
   topBarSubtitle: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  userInfo: {
+    alignItems: 'flex-end',
+  },
+  userName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userRole: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   mainContainer: {
     flex: 1,

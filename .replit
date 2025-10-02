@@ -1,4 +1,4 @@
-modules = ["python-3.11", "nodejs-20"]
+modules = ["python-3.11", "nodejs-20", "python3", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = ["python_database:1.0.0"]
@@ -65,7 +65,7 @@ localPort = 8081
 externalPort = 8081
 
 [[ports]]
-localPort = 34277
+localPort = 43215
 externalPort = 3000
 
 [deployment]

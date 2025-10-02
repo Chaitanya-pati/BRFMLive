@@ -4,11 +4,12 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from database import engine, get_db, Base
 import models
 import schemas
+import auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,8 +27,141 @@ app.add_middleware(
 def read_root():
     return {"message": "Gate Entry & Lab Testing API", "status": "running"}
 
+@app.post("/api/auth/register", response_model=schemas.User)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    db_user_email = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        role="user"
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/api/auth/login", response_model=schemas.Token)
+def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = auth.authenticate_user(db, login_data.username, login_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/auth/me", response_model=schemas.User)
+async def read_users_me(current_user: models.User = Depends(auth.get_current_active_user)):
+    return current_user
+
+@app.post("/api/users", response_model=schemas.User)
+async def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user)
+):
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    db_user_email = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        role=user.role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.get("/api/users", response_model=List[schemas.User])
+async def get_users(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user)
+):
+    users = db.query(models.User).offset(skip).limit(limit).all()
+    return users
+
+@app.get("/api/users/{user_id}", response_model=schemas.User)
+async def get_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.put("/api/users/{user_id}", response_model=schemas.User)
+async def update_user(
+    user_id: int, 
+    user_update: schemas.UserUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user)
+):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = user_update.dict(exclude_unset=True)
+    if "password" in update_data:
+        update_data["hashed_password"] = auth.get_password_hash(update_data.pop("password"))
+    
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user)
+):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if db_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    db.delete(db_user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
 @app.post("/api/suppliers", response_model=schemas.Supplier)
-def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_db)):
+def create_supplier(
+    supplier: schemas.SupplierCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     db_supplier = models.Supplier(**supplier.dict())
     db.add(db_supplier)
     db.commit()
@@ -35,19 +169,33 @@ def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_
     return db_supplier
 
 @app.get("/api/suppliers", response_model=List[schemas.Supplier])
-def get_suppliers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_suppliers(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     suppliers = db.query(models.Supplier).offset(skip).limit(limit).all()
     return suppliers
 
 @app.get("/api/suppliers/{supplier_id}", response_model=schemas.Supplier)
-def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
+def get_supplier(
+    supplier_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     supplier = db.query(models.Supplier).filter(models.Supplier.id == supplier_id).first()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     return supplier
 
 @app.put("/api/suppliers/{supplier_id}", response_model=schemas.Supplier)
-def update_supplier(supplier_id: int, supplier: schemas.SupplierUpdate, db: Session = Depends(get_db)):
+def update_supplier(
+    supplier_id: int, 
+    supplier: schemas.SupplierUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     db_supplier = db.query(models.Supplier).filter(models.Supplier.id == supplier_id).first()
     if not db_supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -60,7 +208,11 @@ def update_supplier(supplier_id: int, supplier: schemas.SupplierUpdate, db: Sess
     return db_supplier
 
 @app.delete("/api/suppliers/{supplier_id}")
-def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
+def delete_supplier(
+    supplier_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     db_supplier = db.query(models.Supplier).filter(models.Supplier.id == supplier_id).first()
     if not db_supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -80,7 +232,8 @@ def create_vehicle_entry(
     notes: Optional[str] = Form(None),
     supplier_bill_photo: Optional[str] = Form(None),
     vehicle_photo: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
 ):
     arrival_dt = None
     if arrival_time:
@@ -117,33 +270,54 @@ def create_vehicle_entry(
     return db_vehicle
 
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_vehicle_entries(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
     return vehicles
 
 @app.get("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntryWithSupplier)
-def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
+def get_vehicle_entry(
+    vehicle_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
     return vehicle
 
 @app.get("/api/vehicles/{vehicle_id}/bill_photo")
-def get_bill_photo(vehicle_id: int, db: Session = Depends(get_db)):
+def get_bill_photo(
+    vehicle_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle or not vehicle.supplier_bill_photo:
         raise HTTPException(status_code=404, detail="Bill photo not found")
     return Response(content=vehicle.supplier_bill_photo, media_type="image/jpeg")
 
 @app.get("/api/vehicles/{vehicle_id}/vehicle_photo")
-def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
+def get_vehicle_photo(
+    vehicle_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle or not vehicle.vehicle_photo:
         raise HTTPException(status_code=404, detail="Vehicle photo not found")
     return Response(content=vehicle.vehicle_photo, media_type="image/jpeg")
 
 @app.post("/api/lab-tests", response_model=schemas.LabTest)
-def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_db)):
+def create_lab_test(
+    lab_test: schemas.LabTestCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == lab_test.vehicle_entry_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
@@ -155,12 +329,21 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     return db_lab_test
 
 @app.get("/api/lab-tests", response_model=List[schemas.LabTestWithVehicle])
-def get_lab_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_lab_tests(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     lab_tests = db.query(models.LabTest).offset(skip).limit(limit).all()
     return lab_tests
 
 @app.get("/api/lab-tests/{lab_test_id}", response_model=schemas.LabTestWithVehicle)
-def get_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
+def get_lab_test(
+    lab_test_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
     lab_test = db.query(models.LabTest).filter(models.LabTest.id == lab_test_id).first()
     if not lab_test:
         raise HTTPException(status_code=404, detail="Lab test not found")

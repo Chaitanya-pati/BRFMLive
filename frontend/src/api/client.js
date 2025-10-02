@@ -45,6 +45,56 @@ export const labTestApi = {
   create: (data) => api.post('/lab-tests', data),
 };
 
+export const authApi = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  getCurrentUser: (token) => {
+    return axios.get(`${API_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
+export const userApi = {
+  getAll: (token) => {
+    return axios.get(`${API_URL}/users`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+  getById: (id, token) => {
+    return axios.get(`${API_URL}/users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+  create: (data, token) => {
+    return axios.post(`${API_URL}/users`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+  update: (id, data, token) => {
+    return axios.put(`${API_URL}/users/${id}`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+  delete: (id, token) => {
+    return axios.delete(`${API_URL}/users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: 'Andhra Pradesh' },
   { state_id: 2, state_name: 'Arunachal Pradesh' },
