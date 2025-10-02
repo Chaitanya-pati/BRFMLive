@@ -241,23 +241,31 @@ export default function SupplierMasterScreen({ navigation }) {
           </View>
 
           <Text style={styles.label}>City *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.city}
-              onValueChange={(value) => setFormData({ ...formData, city: value })}
-              enabled={cities.length > 0}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select City" value="" />
-              {cities.map((city) => (
-                <Picker.Item
-                  key={city.district_id}
-                  label={city.district_name}
-                  value={city.district_name}
-                />
-              ))}
-            </Picker>
-          </View>
+          {cities.length > 0 ? (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.city}
+                onValueChange={(value) => setFormData({ ...formData, city: value })}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select City" value="" />
+                {cities.map((city) => (
+                  <Picker.Item
+                    key={city.district_id}
+                    label={city.district_name}
+                    value={city.district_name}
+                  />
+                ))}
+              </Picker>
+            </View>
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={formData.city}
+              onChangeText={(text) => setFormData({ ...formData, city: text })}
+              placeholder="Enter city name"
+            />
+          )}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
