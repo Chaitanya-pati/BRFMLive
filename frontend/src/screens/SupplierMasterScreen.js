@@ -21,7 +21,7 @@ export default function SupplierMasterScreen({ navigation }) {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-  const [selectedStateId, setSelectedStateId] = useState(0);
+  const [selectedStateId, setSelectedStateId] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -52,11 +52,17 @@ export default function SupplierMasterScreen({ navigation }) {
     }
   };
 
-  const handleStateChange = async (stateId, stateName) => {
-    setSelectedStateId(stateId);
-    setFormData({ ...formData, state: stateName, city: '' });
+  const handleStateChange = async (stateId) => {
+    const state = states.find(s => s.state_id === stateId);
     
-    if (stateId && stateId !== 0) {
+    setSelectedStateId(stateId);
+    setFormData({ 
+      ...formData, 
+      state: state ? state.state_name : '', 
+      city: '' 
+    });
+    
+    if (stateId && state) {
       const citiesData = await stateCityApi.getCities(stateId);
       setCities(citiesData || []);
     } else {
@@ -75,7 +81,7 @@ export default function SupplierMasterScreen({ navigation }) {
       state: '',
       city: '',
     });
-    setSelectedStateId(0);
+    setSelectedStateId(null);
     setCities([]);
     setModalVisible(true);
   };
@@ -223,20 +229,11 @@ export default function SupplierMasterScreen({ navigation }) {
             <Picker
               selectedValue={selectedStateId}
               onValueChange={(itemValue) => {
-                if (itemValue === 0 || itemValue === '0') {
-                  setSelectedStateId(0);
-                  setFormData({ ...formData, state: '', city: '' });
-                  setCities([]);
-                } else {
-                  const state = states.find(s => s.state_id === itemValue);
-                  if (state) {
-                    handleStateChange(itemValue, state.state_name);
-                  }
-                }
+                handleStateChange(itemValue);
               }}
               style={styles.picker}
             >
-              <Picker.Item label="Select State" value={0} />
+              <Picker.Item label="Select State" value={null} />
               {states.map((state) => (
                 <Picker.Item
                   key={state.state_id}
