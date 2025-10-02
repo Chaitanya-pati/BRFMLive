@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://28282886-3281-4c61-b476-c084ef2ed486-00-1v4f3ak1jsbf5.spock.replit.dev:8000/api';
+const API_URL = 'https://af7b7034-d868-4ed3-bbc1-a639f53dee0b-00-191cz612f89aa.worf.replit.dev:8000/api';
 
 export const api = axios.create({
   baseURL: API_URL,
