@@ -4,15 +4,26 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import Layout from '../components/Layout';
+import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
 import { supplierApi, stateCityApi } from '../api/client';
 
 export default function SupplierMasterScreen({ navigation }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [currentSupplier, setCurrentSupplier] = useState(null);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [selectedStateId, setSelectedStateId] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     supplier_name: '',
     contact_person: '',
@@ -21,15 +32,10 @@ export default function SupplierMasterScreen({ navigation }) {
     state: '',
     city: '',
   });
-  const [states, setStates] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [selectedStateId, setSelectedStateId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState([]);
 
   useEffect(() => {
-    loadStates();
     loadSuppliers();
+    loadStates();
   }, []);
 
   const loadStates = async () => {
@@ -57,189 +63,242 @@ export default function SupplierMasterScreen({ navigation }) {
     }
   };
 
-  const handleCityChange = (cityName) => {
-    setFormData({ ...formData, city: cityName });
+  const openAddModal = () => {
+    setEditMode(false);
+    setCurrentSupplier(null);
+    setFormData({
+      supplier_name: '',
+      contact_person: '',
+      phone: '',
+      address: '',
+      state: '',
+      city: '',
+    });
+    setSelectedStateId('');
+    setCities([]);
+    setModalVisible(true);
+  };
+
+  const openEditModal = async (supplier) => {
+    setEditMode(true);
+    setCurrentSupplier(supplier);
+    setFormData({
+      supplier_name: supplier.supplier_name,
+      contact_person: supplier.contact_person || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+      state: supplier.state,
+      city: supplier.city,
+    });
+
+    const state = states.find(s => s.state_name === supplier.state);
+    if (state) {
+      setSelectedStateId(state.state_id);
+      const citiesData = await stateCityApi.getCities(state.state_id);
+      setCities(citiesData || []);
+    }
+    
+    setModalVisible(true);
   };
 
   const handleSubmit = async () => {
     if (!formData.supplier_name || !formData.state || !formData.city) {
-      Alert.alert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
     setLoading(true);
     try {
-      await supplierApi.create(formData);
-      Alert.alert('Success', 'Supplier created successfully');
-      setFormData({
-        supplier_name: '',
-        contact_person: '',
-        phone: '',
-        address: '',
-        state: '',
-        city: '',
-      });
-      setSelectedStateId('');
-      setCities([]);
+      if (editMode && currentSupplier) {
+        await supplierApi.update(currentSupplier.id, formData);
+        Alert.alert('Success', 'Supplier updated successfully');
+      } else {
+        await supplierApi.create(formData);
+        Alert.alert('Success', 'Supplier created successfully');
+      }
+      
+      setModalVisible(false);
       loadSuppliers();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create supplier');
+      Alert.alert('Error', 'Failed to save supplier');
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async (supplier) => {
+    Alert.alert(
+      'Confirm Delete',
+      `Are you sure you want to delete ${supplier.supplier_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await supplierApi.delete(supplier.id);
+              Alert.alert('Success', 'Supplier deleted successfully');
+              loadSuppliers();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete supplier');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const columns = [
+    { label: 'ID', field: 'id', width: 80 },
+    { label: 'Supplier Name', field: 'supplier_name', width: 200 },
+    { label: 'Contact Person', field: 'contact_person', width: 180 },
+    { label: 'Phone', field: 'phone', width: 150 },
+    { label: 'State', field: 'state', width: 150 },
+    { label: 'City', field: 'city', width: 150 },
+    { 
+      label: 'Created', 
+      field: 'created_at', 
+      width: 180,
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+  ];
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Add Supplier</Text>
-        
-        <Text style={styles.label}>Supplier Name *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.supplier_name}
-          onChangeText={(text) => setFormData({ ...formData, supplier_name: text })}
-          placeholder="Enter supplier name"
-        />
+    <Layout title="Supplier Master" navigation={navigation} currentRoute="SupplierMaster">
+      <DataTable
+        columns={columns}
+        data={suppliers}
+        onAdd={openAddModal}
+        onEdit={openEditModal}
+        onDelete={handleDelete}
+      />
 
-        <Text style={styles.label}>Contact Person</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.contact_person}
-          onChangeText={(text) => setFormData({ ...formData, contact_person: text })}
-          placeholder="Enter contact person"
-        />
+      <Modal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title={editMode ? 'Edit Supplier' : 'Add New Supplier'}
+        width="70%"
+      >
+        <View style={styles.form}>
+          <Text style={styles.label}>Supplier Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.supplier_name}
+            onChangeText={(text) => setFormData({ ...formData, supplier_name: text })}
+            placeholder="Enter supplier name"
+          />
 
-        <Text style={styles.label}>Phone</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.phone}
-          onChangeText={(text) => setFormData({ ...formData, phone: text })}
-          placeholder="Enter phone number"
-          keyboardType="phone-pad"
-        />
+          <Text style={styles.label}>Contact Person</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.contact_person}
+            onChangeText={(text) => setFormData({ ...formData, contact_person: text })}
+            placeholder="Enter contact person"
+          />
 
-        <Text style={styles.label}>Address</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.address}
-          onChangeText={(text) => setFormData({ ...formData, address: text })}
-          placeholder="Enter address"
-          multiline
-          numberOfLines={3}
-        />
+          <Text style={styles.label}>Phone</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.phone}
+            onChangeText={(text) => setFormData({ ...formData, phone: text })}
+            placeholder="Enter phone number"
+            keyboardType="phone-pad"
+          />
 
-        <Text style={styles.label}>State *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedStateId}
-            onValueChange={(itemValue, itemIndex) => {
-              const state = states.find(s => s.state_id === itemValue);
-              if (state) {
-                handleStateChange(itemValue, state.state_name);
-              }
-            }}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select State" value="" />
-            {states.map((state) => (
-              <Picker.Item
-                key={state.state_id}
-                label={state.state_name}
-                value={state.state_id}
-              />
-            ))}
-          </Picker>
-        </View>
+          <Text style={styles.label}>Address</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.address}
+            onChangeText={(text) => setFormData({ ...formData, address: text })}
+            placeholder="Enter address"
+            multiline
+            numberOfLines={3}
+          />
 
-        <Text style={styles.label}>City *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={formData.city}
-            onValueChange={handleCityChange}
-            enabled={cities.length > 0}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select City" value="" />
-            {cities.map((city) => (
-              <Picker.Item
-                key={city.district_id}
-                label={city.district_name}
-                value={city.district_name}
-              />
-            ))}
-          </Picker>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Submitting...' : 'Add Supplier'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.title}>Suppliers List</Text>
-        {suppliers.map((supplier) => (
-          <View key={supplier.id} style={styles.supplierItem}>
-            <Text style={styles.supplierName}>{supplier.supplier_name}</Text>
-            <Text style={styles.supplierDetail}>
-              Contact: {supplier.contact_person || 'N/A'}
-            </Text>
-            <Text style={styles.supplierDetail}>
-              Location: {supplier.city}, {supplier.state}
-            </Text>
-            {supplier.phone && (
-              <Text style={styles.supplierDetail}>Phone: {supplier.phone}</Text>
-            )}
+          <Text style={styles.label}>State *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedStateId}
+              onValueChange={(itemValue) => {
+                const state = states.find(s => s.state_id === itemValue);
+                if (state) {
+                  handleStateChange(itemValue, state.state_name);
+                }
+              }}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select State" value="" />
+              {states.map((state) => (
+                <Picker.Item
+                  key={state.state_id}
+                  label={state.state_name}
+                  value={state.state_id}
+                />
+              ))}
+            </Picker>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+
+          <Text style={styles.label}>City *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.city}
+              onValueChange={(value) => setFormData({ ...formData, city: value })}
+              enabled={cities.length > 0}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select City" value="" />
+              {cities.map((city) => (
+                <Picker.Item
+                  key={city.district_id}
+                  label={city.district_name}
+                  value={city.district_name}
+                />
+              ))}
+            </Picker>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? 'Saving...' : editMode ? 'Update' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </Layout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  card: {
-    backgroundColor: 'white',
-    margin: 16,
-    padding: 20,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
+  form: {
+    gap: 12,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
-    color: '#555',
+    color: '#374151',
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#d1d5db',
     borderRadius: 6,
     padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    fontSize: 14,
+    backgroundColor: 'white',
   },
   textArea: {
     height: 80,
@@ -247,44 +306,43 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#d1d5db',
     borderRadius: 6,
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
   },
   picker: {
-    height: Platform.OS === 'ios' ? 180 : 50,
+    height: Platform.OS === 'ios' ? 150 : 50,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
   },
   button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 6,
+    minWidth: 100,
     alignItems: 'center',
-    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#6b7280',
+  },
+  saveButton: {
+    backgroundColor: '#3b82f6',
   },
   buttonDisabled: {
-    backgroundColor: '#999',
+    opacity: 0.5,
   },
-  buttonText: {
+  cancelButtonText: {
     color: 'white',
-    fontSize: 16,
     fontWeight: '600',
-  },
-  supplierItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    marginBottom: 8,
-  },
-  supplierName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#333',
-  },
-  supplierDetail: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

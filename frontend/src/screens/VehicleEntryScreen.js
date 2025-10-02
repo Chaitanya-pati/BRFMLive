@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
   Image,
@@ -13,9 +12,20 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Layout from '../components/Layout';
+import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
 import { supplierApi, vehicleApi } from '../api/client';
 
 export default function VehicleEntryScreen({ navigation }) {
+  const [vehicles, setVehicles] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [billPhoto, setBillPhoto] = useState(null);
+  const [vehiclePhoto, setVehiclePhoto] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     vehicle_number: '',
     supplier_id: '',
@@ -25,24 +35,16 @@ export default function VehicleEntryScreen({ navigation }) {
     arrival_time: new Date(),
     notes: '',
   });
-  const [suppliers, setSuppliers] = useState([]);
-  const [billPhoto, setBillPhoto] = useState(null);
-  const [vehiclePhoto, setVehiclePhoto] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    loadVehicles();
     loadSuppliers();
     requestPermissions();
   }, []);
 
   const requestPermissions = async () => {
-    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-    const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
-      Alert.alert('Permission Required', 'Camera and photo library permissions are required for this feature');
-    }
+    await ImagePicker.requestCameraPermissionsAsync();
+    await ImagePicker.requestMediaLibraryPermissionsAsync();
   };
 
   const loadSuppliers = async () => {
@@ -51,6 +53,15 @@ export default function VehicleEntryScreen({ navigation }) {
       setSuppliers(response.data);
     } catch (error) {
       console.error('Error loading suppliers:', error);
+    }
+  };
+
+  const loadVehicles = async () => {
+    try {
+      const response = await vehicleApi.getAll();
+      setVehicles(response.data);
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
     }
   };
 
@@ -111,6 +122,21 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
+  const openAddModal = () => {
+    setFormData({
+      vehicle_number: '',
+      supplier_id: '',
+      bill_no: '',
+      driver_name: '',
+      driver_phone: '',
+      arrival_time: new Date(),
+      notes: '',
+    });
+    setBillPhoto(null);
+    setVehiclePhoto(null);
+    setModalVisible(true);
+  };
+
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -120,7 +146,7 @@ export default function VehicleEntryScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
-      Alert.alert('Error', 'Please fill in all required fields (Vehicle Number, Supplier, Bill No)');
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
@@ -146,17 +172,8 @@ export default function VehicleEntryScreen({ navigation }) {
       await vehicleApi.create(submitData);
       Alert.alert('Success', 'Vehicle entry created successfully');
       
-      setFormData({
-        vehicle_number: '',
-        supplier_id: '',
-        bill_no: '',
-        driver_name: '',
-        driver_phone: '',
-        arrival_time: new Date(),
-        notes: '',
-      });
-      setBillPhoto(null);
-      setVehiclePhoto(null);
+      setModalVisible(false);
+      loadVehicles();
     } catch (error) {
       Alert.alert('Error', 'Failed to create vehicle entry');
       console.error(error);
@@ -165,166 +182,192 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
+  const columns = [
+    { label: 'ID', field: 'id', width: 80 },
+    { label: 'Vehicle Number', field: 'vehicle_number', width: 150 },
+    { 
+      label: 'Supplier', 
+      field: 'supplier', 
+      width: 200,
+      render: (supplier) => supplier?.supplier_name || '-'
+    },
+    { label: 'Bill No', field: 'bill_no', width: 150 },
+    { label: 'Driver Name', field: 'driver_name', width: 150 },
+    { label: 'Driver Phone', field: 'driver_phone', width: 150 },
+    { 
+      label: 'Arrival Time', 
+      field: 'arrival_time', 
+      width: 180,
+      render: (value) => new Date(value).toLocaleString()
+    },
+  ];
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Vehicle Entry</Text>
+    <Layout title="Vehicle Entries" navigation={navigation} currentRoute="VehicleEntry">
+      <DataTable
+        columns={columns}
+        data={vehicles}
+        onAdd={openAddModal}
+      />
 
-        <Text style={styles.label}>Vehicle Number *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.vehicle_number}
-          onChangeText={(text) => setFormData({ ...formData, vehicle_number: text.toUpperCase() })}
-          placeholder="e.g., UP16AB1234"
-          autoCapitalize="characters"
-        />
-
-        <Text style={styles.label}>Supplier *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={formData.supplier_id}
-            onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select Supplier" value="" />
-            {suppliers.map((supplier) => (
-              <Picker.Item
-                key={supplier.id}
-                label={`${supplier.supplier_name} - ${supplier.contact_person || 'N/A'}`}
-                value={supplier.id}
-              />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Bill No *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.bill_no}
-          onChangeText={(text) => setFormData({ ...formData, bill_no: text })}
-          placeholder="Enter bill number"
-        />
-
-        <Text style={styles.label}>Driver Name</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.driver_name}
-          onChangeText={(text) => setFormData({ ...formData, driver_name: text })}
-          placeholder="Enter driver name"
-        />
-
-        <Text style={styles.label}>Driver Phone</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.driver_phone}
-          onChangeText={(text) => setFormData({ ...formData, driver_phone: text })}
-          placeholder="Enter driver phone"
-          keyboardType="phone-pad"
-        />
-
-        <Text style={styles.label}>Arrival Time</Text>
-        <TouchableOpacity
-          style={styles.input}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text>{formData.arrival_time.toLocaleString()}</Text>
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={formData.arrival_time}
-            mode="datetime"
-            display="default"
-            onChange={handleDateChange}
+      <Modal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title="New Vehicle Entry"
+        width="70%"
+      >
+        <View style={styles.form}>
+          <Text style={styles.label}>Vehicle Number *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.vehicle_number}
+            onChangeText={(text) => setFormData({ ...formData, vehicle_number: text.toUpperCase() })}
+            placeholder="e.g., UP16AB1234"
+            autoCapitalize="characters"
           />
-        )}
 
-        <Text style={styles.label}>Supplier Bill Photo</Text>
-        <TouchableOpacity
-          style={styles.photoButton}
-          onPress={() => pickImage('bill')}
-        >
-          <Text style={styles.photoButtonText}>
-            {billPhoto ? 'Change Bill Photo' : 'Add Bill Photo'}
-          </Text>
-        </TouchableOpacity>
-        {billPhoto && (
-          <Image source={{ uri: billPhoto.uri }} style={styles.preview} />
-        )}
+          <Text style={styles.label}>Supplier *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.supplier_id}
+              onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Supplier" value="" />
+              {suppliers.map((supplier) => (
+                <Picker.Item
+                  key={supplier.id}
+                  label={`${supplier.supplier_name} - ${supplier.contact_person || 'N/A'}`}
+                  value={supplier.id}
+                />
+              ))}
+            </Picker>
+          </View>
 
-        <Text style={styles.label}>Vehicle Photo</Text>
-        <TouchableOpacity
-          style={styles.photoButton}
-          onPress={() => pickImage('vehicle')}
-        >
-          <Text style={styles.photoButtonText}>
-            {vehiclePhoto ? 'Change Vehicle Photo' : 'Add Vehicle Photo'}
-          </Text>
-        </TouchableOpacity>
-        {vehiclePhoto && (
-          <Image source={{ uri: vehiclePhoto.uri }} style={styles.preview} />
-        )}
+          <Text style={styles.label}>Bill No *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.bill_no}
+            onChangeText={(text) => setFormData({ ...formData, bill_no: text })}
+            placeholder="Enter bill number"
+          />
 
-        <Text style={styles.label}>Notes</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.notes}
-          onChangeText={(text) => setFormData({ ...formData, notes: text })}
-          placeholder="Enter any additional notes"
-          multiline
-          numberOfLines={3}
-        />
+          <Text style={styles.label}>Driver Name</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.driver_name}
+            onChangeText={(text) => setFormData({ ...formData, driver_name: text })}
+            placeholder="Enter driver name"
+          />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Submitting...' : 'Submit Entry'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <Text style={styles.label}>Driver Phone</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.driver_phone}
+            onChangeText={(text) => setFormData({ ...formData, driver_phone: text })}
+            placeholder="Enter driver phone"
+            keyboardType="phone-pad"
+          />
+
+          <Text style={styles.label}>Arrival Time</Text>
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text>{formData.arrival_time.toLocaleString()}</Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={formData.arrival_time}
+              mode="datetime"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+
+          <View style={styles.photoSection}>
+            <View style={styles.photoColumn}>
+              <Text style={styles.label}>Supplier Bill Photo</Text>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={() => pickImage('bill')}
+              >
+                <Text style={styles.photoButtonText}>
+                  {billPhoto ? '✓ Photo Added' : '📷 Add Photo'}
+                </Text>
+              </TouchableOpacity>
+              {billPhoto && (
+                <Image source={{ uri: billPhoto.uri }} style={styles.photoPreview} />
+              )}
+            </View>
+
+            <View style={styles.photoColumn}>
+              <Text style={styles.label}>Vehicle Photo</Text>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={() => pickImage('vehicle')}
+              >
+                <Text style={styles.photoButtonText}>
+                  {vehiclePhoto ? '✓ Photo Added' : '📷 Add Photo'}
+                </Text>
+              </TouchableOpacity>
+              {vehiclePhoto && (
+                <Image source={{ uri: vehiclePhoto.uri }} style={styles.photoPreview} />
+              )}
+            </View>
+          </View>
+
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.notes}
+            onChangeText={(text) => setFormData({ ...formData, notes: text })}
+            placeholder="Enter any additional notes"
+            multiline
+            numberOfLines={3}
+          />
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? 'Saving...' : 'Save Entry'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </Layout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  card: {
-    backgroundColor: 'white',
-    margin: 16,
-    padding: 20,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
+  form: {
+    gap: 12,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
-    color: '#555',
+    color: '#374151',
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#d1d5db',
     borderRadius: 6,
     padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    fontSize: 14,
+    backgroundColor: 'white',
   },
   textArea: {
     height: 80,
@@ -332,46 +375,66 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#d1d5db',
     borderRadius: 6,
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
   },
   picker: {
-    height: Platform.OS === 'ios' ? 180 : 50,
+    height: Platform.OS === 'ios' ? 150 : 50,
+  },
+  photoSection: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  photoColumn: {
+    flex: 1,
   },
   photoButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#10b981',
     padding: 12,
     borderRadius: 6,
     alignItems: 'center',
-    marginBottom: 12,
   },
   photoButtonText: {
     color: 'white',
-    fontSize: 14,
     fontWeight: '600',
   },
-  preview: {
+  photoPreview: {
     width: '100%',
-    height: 200,
+    height: 120,
     borderRadius: 6,
-    marginBottom: 16,
-    resizeMode: 'cover',
+    marginTop: 8,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
   },
   button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 6,
+    minWidth: 100,
     alignItems: 'center',
-    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#6b7280',
+  },
+  saveButton: {
+    backgroundColor: '#3b82f6',
   },
   buttonDisabled: {
-    backgroundColor: '#999',
+    opacity: 0.5,
   },
-  buttonText: {
+  cancelButtonText: {
     color: 'white',
-    fontSize: 16,
     fontWeight: '600',
+    fontSize: 14,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

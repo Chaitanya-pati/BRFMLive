@@ -14,35 +14,13 @@ export default function App() {
       <Stack.Navigator
         initialRouteName="Home"
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#007AFF',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
+          headerShown: false,
         }}
       >
-        <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ title: 'Gate Entry & Lab Testing' }}
-        />
-        <Stack.Screen
-          name="SupplierMaster"
-          component={SupplierMasterScreen}
-          options={{ title: 'Supplier Master' }}
-        />
-        <Stack.Screen
-          name="VehicleEntry"
-          component={VehicleEntryScreen}
-          options={{ title: 'Vehicle Entry' }}
-        />
-        <Stack.Screen
-          name="LabTest"
-          component={LabTestScreen}
-          options={{ title: 'Lab Test' }}
-        />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
+        <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
+        <Stack.Screen name="LabTest" component={LabTestScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
