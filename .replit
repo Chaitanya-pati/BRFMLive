@@ -33,7 +33,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd backend && uv run uvicorn main:app --host 127.0.0.1 --port 8000"
-waitForPort = 8000
 
 [[workflows.workflow]]
 name = "Frontend"
@@ -52,7 +51,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 43309
+localPort = 40521
 externalPort = 3000
 
 [deployment]

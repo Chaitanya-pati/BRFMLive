@@ -66,7 +66,8 @@ export default function SupplierMasterScreen({ navigation }) {
       return;
     }
     
-    const state = states.find(s => s.state_id === stateId);
+    const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
+    const state = states.find(s => s.state_id === numericStateId);
     console.log('Found state:', state);
     
     setSelectedStateId(stateId);
