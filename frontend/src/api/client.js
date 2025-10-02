@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:8000/api'
-  : `https://${window.location.hostname.replace('-00-', '-00-').replace('.replit.dev', '-8000.replit.dev')}/api`;
+const getApiUrl = () => {
+  if (window.location.hostname === 'localhost') {
+    return 'http://localhost:8000/api';
+  }
+  
+  const hostname = window.location.hostname;
+  return `https://${hostname}:8000/api`;
+};
+
+const API_URL = getApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
