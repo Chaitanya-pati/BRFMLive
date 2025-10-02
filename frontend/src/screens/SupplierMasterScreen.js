@@ -21,7 +21,7 @@ export default function SupplierMasterScreen({ navigation }) {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-  const [selectedStateId, setSelectedStateId] = useState('');
+  const [selectedStateId, setSelectedStateId] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -32,12 +32,6 @@ export default function SupplierMasterScreen({ navigation }) {
     state: '',
     city: '',
   });
-  
-  useEffect(() => {
-    if (selectedStateId === '') {
-      setSelectedStateId(0);
-    }
-  }, [selectedStateId]);
 
   useEffect(() => {
     loadSuppliers();
@@ -61,11 +55,12 @@ export default function SupplierMasterScreen({ navigation }) {
   const handleStateChange = async (stateId, stateName) => {
     setSelectedStateId(stateId);
     setFormData({ ...formData, state: stateName, city: '' });
-    setCities([]);
     
-    if (stateId) {
+    if (stateId && stateId !== 0) {
       const citiesData = await stateCityApi.getCities(stateId);
       setCities(citiesData || []);
+    } else {
+      setCities([]);
     }
   };
 
@@ -226,10 +221,10 @@ export default function SupplierMasterScreen({ navigation }) {
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={selectedStateId || 0}
+              selectedValue={selectedStateId}
               onValueChange={(itemValue) => {
-                if (itemValue === 0) {
-                  setSelectedStateId('');
+                if (itemValue === 0 || itemValue === '0') {
+                  setSelectedStateId(0);
                   setFormData({ ...formData, state: '', city: '' });
                   setCities([]);
                 } else {
