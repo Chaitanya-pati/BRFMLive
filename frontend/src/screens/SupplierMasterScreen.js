@@ -21,7 +21,7 @@ export default function SupplierMasterScreen({ navigation }) {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-  const [selectedStateId, setSelectedStateId] = useState(null);
+  const [selectedStateId, setSelectedStateId] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -62,7 +62,7 @@ export default function SupplierMasterScreen({ navigation }) {
       city: '' 
     });
     
-    if (stateId && state) {
+    if (stateId && stateId !== '' && state) {
       const citiesData = await stateCityApi.getCities(stateId);
       setCities(citiesData || []);
     } else {
@@ -81,7 +81,7 @@ export default function SupplierMasterScreen({ navigation }) {
       state: '',
       city: '',
     });
-    setSelectedStateId(null);
+    setSelectedStateId('');
     setCities([]);
     setModalVisible(true);
   };
@@ -233,7 +233,7 @@ export default function SupplierMasterScreen({ navigation }) {
               }}
               style={styles.picker}
             >
-              <Picker.Item label="Select State" value={null} />
+              <Picker.Item label="Select State" value="" />
               {states.map((state) => (
                 <Picker.Item
                   key={state.state_id}
