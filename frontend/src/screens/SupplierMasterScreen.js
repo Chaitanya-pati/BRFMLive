@@ -32,6 +32,12 @@ export default function SupplierMasterScreen({ navigation }) {
     state: '',
     city: '',
   });
+  
+  useEffect(() => {
+    if (selectedStateId === '') {
+      setSelectedStateId(0);
+    }
+  }, [selectedStateId]);
 
   useEffect(() => {
     loadSuppliers();
@@ -74,7 +80,7 @@ export default function SupplierMasterScreen({ navigation }) {
       state: '',
       city: '',
     });
-    setSelectedStateId('');
+    setSelectedStateId(0);
     setCities([]);
     setModalVisible(true);
   };
@@ -220,16 +226,22 @@ export default function SupplierMasterScreen({ navigation }) {
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={selectedStateId}
+              selectedValue={selectedStateId || 0}
               onValueChange={(itemValue) => {
-                const state = states.find(s => s.state_id === itemValue);
-                if (state) {
-                  handleStateChange(itemValue, state.state_name);
+                if (itemValue === 0) {
+                  setSelectedStateId('');
+                  setFormData({ ...formData, state: '', city: '' });
+                  setCities([]);
+                } else {
+                  const state = states.find(s => s.state_id === itemValue);
+                  if (state) {
+                    handleStateChange(itemValue, state.state_name);
+                  }
                 }
               }}
               style={styles.picker}
             >
-              <Picker.Item label="Select State" value="" />
+              <Picker.Item label="Select State" value={0} />
               {states.map((state) => (
                 <Picker.Item
                   key={state.state_id}
