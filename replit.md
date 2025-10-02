@@ -153,37 +153,45 @@ The application is fully functional with professional ERP-style interface:
 
 ## Replit Environment Configuration
 
-**October 2, 2025 - Replit Setup Complete**
+**October 2, 2025 - Fresh GitHub Import Successfully Configured**
 
-The application has been successfully configured to run in the Replit environment:
+The application has been successfully imported from GitHub and configured to run in the Replit environment:
 
 ### Backend Configuration
 - Python dependencies managed with `uv` (pyproject.toml)
 - FastAPI backend running on `0.0.0.0:8000`
-- PostgreSQL database connected via Replit's DATABASE_URL environment variable
-- Alembic migrations applied successfully
-- All CRUD endpoints tested and verified working
+- PostgreSQL database provisioned using Replit's managed database service
+- Database connected via DATABASE_URL environment variable
+- Alembic migrations applied successfully on first run
+- All REST API endpoints tested and operational
 
 ### Frontend Configuration
-- Expo web server configured with webpack to listen on all interfaces (0.0.0.0)
+- React Native web dependencies installed via npm
+- Expo web server configured to listen on all interfaces (0.0.0.0)
 - Running on port 5000 for Replit webview compatibility
 - Environment variable `EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0` set for proper proxy handling
 - Custom `webpack.config.js` with `allowedHosts: 'all'` for Replit iframe support
 - API client configured to use Replit domain with port 8000 for backend communication
-- API URL format: `https://[replit-domain]:8000/api` for external requests
+- Package.json updated with web script: `EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 expo start --web --port 5000`
 
 ### Workflows
 - **Backend API**: `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000`
-- **Frontend**: `cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000`
+  - Listens on port 8000
+  - Console output type (API server)
+- **Frontend**: `cd frontend && npm run web`
+  - Listens on port 5000
+  - Webview output type (main user interface)
 
 ### Deployment Configuration
-- Deployment target: VM (for stateful full-stack application)
-- Build: Installs frontend npm packages (`npm install`) and backend Python dependencies (`uv sync`)
-- Run: Starts both backend (port 8000) and frontend (port 5000) services concurrently
+- Deployment target: VM (stateful full-stack application with database)
+- Build command: `bash -c "cd frontend && npm install && cd ../backend && uv sync"`
+- Run command: `bash -c "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npm run web"`
+- Both backend and frontend services run concurrently in production
 
-### CRUD Verification
-All supplier management CRUD operations have been tested and verified:
-- ✅ **Create**: Successfully creates new suppliers with all fields
-- ✅ **Read**: Retrieves all suppliers from database
-- ✅ **Update**: Updates existing supplier information
-- ✅ **Delete**: Removes suppliers from database
+### Import Verification
+Application successfully tested and verified:
+- ✅ **Backend API**: Health check endpoint responding correctly
+- ✅ **Database**: PostgreSQL provisioned, migrations applied, tables created
+- ✅ **Frontend**: Professional ERP dashboard rendering correctly
+- ✅ **Integration**: Frontend-backend communication working
+- ✅ **Deployment**: Production configuration complete
