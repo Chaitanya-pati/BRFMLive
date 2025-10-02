@@ -6,7 +6,7 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 expo start --web --port 5000"
   },
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.5",
