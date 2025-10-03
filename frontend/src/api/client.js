@@ -23,9 +23,13 @@ export const api = axios.create({
 // Add a request interceptor to include the auth token in all requests
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error getting auth token:', error);
     }
     return config;
   },
@@ -45,10 +49,12 @@ export const supplierApi = {
 export const vehicleApi = {
   getAll: () => api.get('/vehicles'),
   getById: (id) => api.get(`/vehicles/${id}`),
-  create: (formData) => {
+  create: async (formData) => {
+    const token = await AsyncStorage.getItem('auth_token');
     return axios.post(`${API_URL}/vehicles`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        'Authorization': token ? `Bearer ${token}` : '',
       },
     });
   },
@@ -63,51 +69,15 @@ export const labTestApi = {
 export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
-  getCurrentUser: (token) => {
-    return axios.get(`${API_URL}/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
+  getCurrentUser: () => api.get('/auth/me'),
 };
 
 export const userApi = {
-  getAll: (token) => {
-    return axios.get(`${API_URL}/users`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
-  getById: (id, token) => {
-    return axios.get(`${API_URL}/users/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
-  create: (data, token) => {
-    return axios.post(`${API_URL}/users`, data, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
-  update: (id, data, token) => {
-    return axios.put(`${API_URL}/users/${id}`, data, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
-  delete: (id, token) => {
-    return axios.delete(`${API_URL}/users/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
+  getAll: () => api.get('/users'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
 };
 
 const STATIC_STATES = [

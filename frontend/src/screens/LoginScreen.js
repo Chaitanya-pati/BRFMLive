@@ -20,7 +20,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       const { access_token } = response.data;
       
       await AsyncStorage.setItem('auth_token', access_token);
-      const userResponse = await authApi.getCurrentUser(access_token);
+      const userResponse = await authApi.getCurrentUser();
       await AsyncStorage.setItem('user_data', JSON.stringify(userResponse.data));
       
       onLoginSuccess(userResponse.data, access_token);
