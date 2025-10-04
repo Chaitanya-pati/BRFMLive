@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "web:port5000": "webpack serve --config webpack.config.js --port 5000 --host 0.0.0.0 --mode development"
   },
   "dependencies": {
     "@expo/webpack-config": "^19.0.1",
@@ -30,6 +31,8 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "^54.0.3"
+    "babel-preset-expo": "^54.0.3",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }
