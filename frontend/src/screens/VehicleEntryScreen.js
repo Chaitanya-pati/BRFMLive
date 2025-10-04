@@ -16,6 +16,7 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { supplierApi, vehicleApi } from '../api/client';
+import colors from '../theme/colors';
 
 export default function VehicleEntryScreen({ navigation }) {
   const [vehicles, setVehicles] = useState([]);
@@ -399,16 +400,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.onSurface,
     marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
+    borderColor: colors.border,
+    borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    backgroundColor: 'white',
+    backgroundColor: colors.inputBackground,
   },
   textArea: {
     height: 80,
@@ -416,9 +417,9 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    backgroundColor: 'white',
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.inputBackground,
   },
   picker: {
     height: Platform.OS === 'ios' ? 150 : 50,
@@ -431,19 +432,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   photoButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: colors.primary,
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
   },
   photoButtonText: {
-    color: 'white',
+    color: colors.onPrimary,
     fontWeight: '600',
   },
   photoPreview: {
     width: '100%',
     height: 120,
-    borderRadius: 6,
+    borderRadius: 8,
     marginTop: 8,
   },
   buttonContainer: {
@@ -455,26 +456,26 @@ const styles = StyleSheet.create({
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     minWidth: 100,
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#6b7280',
+    backgroundColor: colors.secondary,
   },
   saveButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   cancelButtonText: {
-    color: 'white',
+    color: colors.onSecondary,
     fontWeight: '600',
     fontSize: 14,
   },
   saveButtonText: {
-    color: 'white',
+    color: colors.onPrimary,
     fontWeight: '600',
     fontSize: 14,
   },

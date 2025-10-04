@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import colors from '../theme/colors';
 
 export default function DataTable({ columns, data, onEdit, onDelete, onAdd, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,13 +91,13 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 3,
   },
   toolbar: {
@@ -104,44 +105,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.divider,
   },
   searchInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    padding: 8,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
     marginRight: 12,
     fontSize: 14,
+    backgroundColor: colors.inputBackground,
   },
   addButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     justifyContent: 'center',
   },
   addButtonText: {
-    color: 'white',
+    color: colors.onPrimary,
     fontWeight: '600',
     fontSize: 14,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.surface,
     borderBottomWidth: 2,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.divider,
   },
   headerCell: {
     padding: 12,
     borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
+    borderRightColor: colors.divider,
   },
   headerText: {
     fontWeight: '700',
     fontSize: 14,
-    color: '#374151',
+    color: colors.onSecondary,
   },
   tableBody: {
     maxHeight: 500,
@@ -149,36 +151,36 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.divider,
   },
   cell: {
     padding: 12,
     borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
+    borderRightColor: colors.divider,
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: '#4b5563',
+    color: colors.onSecondary,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   editButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   deleteButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   actionButtonText: {
-    color: 'white',
+    color: colors.onPrimary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#9ca3af',
+    color: colors.placeholder,
     fontSize: 16,
   },
 });

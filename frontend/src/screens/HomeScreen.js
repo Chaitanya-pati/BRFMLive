@@ -1,19 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Layout from '../components/Layout';
+import colors from '../theme/colors';
 
 export default function HomeScreen({ navigation }) {
   const stats = [
-    { title: 'Total Suppliers', value: '-', color: '#3b82f6', icon: '🏢' },
-    { title: 'Vehicle Entries', value: '-', color: '#10b981', icon: '🚛' },
-    { title: 'Lab Tests', value: '-', color: '#f59e0b', icon: '🔬' },
-    { title: 'Pending Tests', value: '-', color: '#ef4444', icon: '⏱️' },
+    { title: 'Total Suppliers', value: '-', color: colors.primary, icon: '🏢' },
+    { title: 'Vehicle Entries', value: '-', color: colors.primary, icon: '🚛' },
+    { title: 'Lab Tests', value: '-', color: colors.primary, icon: '🔬' },
+    { title: 'Pending Tests', value: '-', color: colors.error, icon: '⏱️' },
   ];
 
   const quickActions = [
-    { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: '#3b82f6' },
-    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: '#10b981' },
-    { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: '#f59e0b' },
+    { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.primary },
+    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: colors.primary },
+    { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: colors.primary },
   ];
 
   return (
@@ -67,16 +68,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 200,
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     borderLeftWidth: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 3,
   },
   statIcon: {
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.onSecondary,
     marginBottom: 4,
   },
   statValue: {
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: colors.onSurface,
     marginBottom: 16,
     marginTop: 8,
   },
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   actionCard: {
     flex: 1,
     padding: 24,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     minWidth: 150,
   },
@@ -119,22 +120,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionTitle: {
-    color: 'white',
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   activityCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     padding: 20,
-    borderRadius: 8,
-    shadowColor: '#000',
+    borderRadius: 12,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 3,
   },
   activityText: {
-    color: '#9ca3af',
+    color: colors.placeholder,
     textAlign: 'center',
   },
 });
