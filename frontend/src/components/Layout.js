@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import colors from '../theme/colors';
 
 export default function Layout({ children, title, navigation, currentRoute }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -67,10 +68,10 @@ export default function Layout({ children, title, navigation, currentRoute }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: colors.surface,
   },
   topBar: {
-    backgroundColor: '#1e3a8a',
+    backgroundColor: colors.primary,
     padding: 16,
     paddingTop: Platform.OS === 'web' ? 16 : 40,
     flexDirection: 'row',
@@ -78,13 +79,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   topBarTitle: {
-    color: 'white',
+    color: colors.onPrimary,
     fontSize: 20,
     fontWeight: 'bold',
   },
   topBarSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.onPrimary,
     fontSize: 14,
+    opacity: 0.8,
   },
   mainContainer: {
     flex: 1,
@@ -92,7 +94,7 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.onSurface,
     padding: 8,
   },
   sidebarCollapsed: {
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   toggleIcon: {
-    color: 'white',
+    color: colors.onPrimary,
     fontSize: 20,
   },
   menuItem: {
@@ -115,34 +117,36 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   menuItemActive: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.primary,
   },
   menuIcon: {
     fontSize: 24,
     marginRight: 12,
   },
   menuText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.onPrimary,
     fontSize: 16,
+    opacity: 0.8,
   },
   menuTextActive: {
-    color: 'white',
+    color: colors.onPrimary,
     fontWeight: '600',
+    opacity: 1,
   },
   content: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: colors.surface,
   },
   contentHeader: {
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.divider,
   },
   contentTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: colors.onSurface,
   },
   contentScroll: {
     flex: 1,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal as RNModal, ScrollView } from 'react-native';
+import colors from '../theme/colors';
 
 export default function Modal({ visible, onClose, title, children, width = '80%' }) {
   return (
@@ -34,12 +35,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     borderRadius: 12,
     maxHeight: '90%',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -49,19 +50,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.divider,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: colors.onSurface,
   },
   closeButton: {
     padding: 4,
   },
   closeText: {
     fontSize: 24,
-    color: '#6b7280',
+    color: colors.placeholder,
   },
   content: {
     padding: 20,
