@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "build": "expo build:web",
     "serve": "npx serve web-build"
-  }
+  },
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.5",
     "@react-native-picker/picker": "^2.11.2",
