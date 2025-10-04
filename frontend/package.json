@@ -7,11 +7,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "npx expo export:web",
-    "serve": "npx serve web-build"
+    "build": "npx expo export --platform web",
+    "serve": "npx serve dist"
   },
   "dependencies": {
-    "@expo/webpack-config": "^19.0.1",
     "@react-native-community/datetimepicker": "^8.4.5",
     "@react-native-picker/picker": "^2.11.2",
     "@react-navigation/native": "^7.1.17",
@@ -31,8 +30,6 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "^54.0.3",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.2"
+    "babel-preset-expo": "^54.0.3"
   }
 }
