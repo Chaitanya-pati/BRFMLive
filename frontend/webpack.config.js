@@ -10,6 +10,7 @@ module.exports = async function (env, argv) {
   
   if (config.devServer) {
     config.devServer.host = '0.0.0.0';
+    config.devServer.port = 5000;
     config.devServer.allowedHosts = 'all';
   }
   

@@ -44,7 +44,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000"
+args = "cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 PORT=5000 npx expo start --web"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -61,10 +61,18 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 19006
+externalPort = 3001
+
+[[ports]]
+localPort = 46463
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
 run = ["bash", "-c", "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000 & wait"]
-build = ["bash", "-c", "cd frontend && npm install && cd ../backend && uv sync"]
+build = ["bash", "-c", "cd frontend && npm install --legacy-peer-deps && cd ../backend && uv sync"]
