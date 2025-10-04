@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "expo export --public-url ./"
+    "build": "expo export --public-url ./",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
