@@ -66,7 +66,15 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
                           style={styles.editButton}
                           onPress={() => onEdit(row)}
                         >
-                          <Text style={styles.actionButtonText}>Edit</Text>
+                          <Text style={styles.actionButtonText}>👁️</Text>
+                        </TouchableOpacity>
+                      )}
+                      {onEdit && (
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => onEdit(row)}
+                        >
+                          <Text style={styles.actionButtonText}>✏️</Text>
                         </TouchableOpacity>
                       )}
                       {onDelete && (
@@ -74,7 +82,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
                           style={styles.deleteButton}
                           onPress={() => onDelete(row)}
                         >
-                          <Text style={styles.actionButtonText}>Delete</Text>
+                          <Text style={styles.actionButtonText}>🗑️</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -91,37 +99,36 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
     overflow: 'hidden',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
   },
   toolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomColor: colors.outlineVariant,
+    backgroundColor: colors.surface,
   },
   searchInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.outline,
+    borderRadius: 6,
+    padding: 10,
     marginRight: 12,
     fontSize: 14,
-    backgroundColor: colors.inputBackground,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
   addButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 6,
     justifyContent: 'center',
   },
   addButtonText: {
@@ -131,65 +138,66 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.divider,
+    backgroundColor: colors.surfaceVariant,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outlineVariant,
   },
   headerCell: {
-    padding: 12,
+    padding: 14,
     borderRightWidth: 1,
-    borderRightColor: colors.divider,
+    borderRightColor: colors.outlineVariant,
   },
   headerText: {
-    fontWeight: '700',
-    fontSize: 14,
-    color: colors.onSecondary,
+    fontWeight: '600',
+    fontSize: 13,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tableBody: {
     maxHeight: 500,
+    backgroundColor: colors.surface,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomColor: colors.outlineVariant,
   },
   cell: {
-    padding: 12,
+    padding: 14,
     borderRightWidth: 1,
-    borderRightColor: colors.divider,
+    borderRightColor: colors.outlineVariant,
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: colors.onSecondary,
+    color: colors.textPrimary,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   editButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 6,
   },
   deleteButton: {
-    backgroundColor: colors.error,
-    paddingHorizontal: 12,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 6,
   },
   actionButtonText: {
-    color: colors.onPrimary,
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.textSecondary,
+    fontSize: 18,
   },
   emptyState: {
     padding: 40,
     alignItems: 'center',
+    backgroundColor: colors.surface,
   },
   emptyText: {
-    color: colors.placeholder,
-    fontSize: 16,
+    color: colors.textTertiary,
+    fontSize: 14,
   },
 });

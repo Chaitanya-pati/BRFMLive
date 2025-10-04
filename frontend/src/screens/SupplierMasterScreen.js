@@ -362,16 +362,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.onSurface,
-    marginBottom: 4,
+    color: colors.textPrimary,
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
+    borderColor: colors.outline,
+    borderRadius: 6,
     padding: 12,
     fontSize: 14,
-    backgroundColor: colors.inputBackground,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
   textArea: {
     height: 80,
@@ -379,9 +380,9 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.inputBackground,
+    borderColor: colors.outline,
+    borderRadius: 6,
+    backgroundColor: colors.surface,
   },
   picker: {
     height: Platform.OS === 'ios' ? 150 : 50,
@@ -395,12 +396,14 @@ const styles = StyleSheet.create({
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 6,
     minWidth: 100,
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
   },
   saveButton: {
     backgroundColor: colors.primary,
@@ -409,7 +412,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   cancelButtonText: {
-    color: colors.onSecondary,
+    color: colors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
   },

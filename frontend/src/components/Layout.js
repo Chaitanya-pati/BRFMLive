@@ -68,25 +68,26 @@ export default function Layout({ children, title, navigation, currentRoute }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   topBar: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface,
     padding: 16,
     paddingTop: Platform.OS === 'web' ? 16 : 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outlineVariant,
   },
   topBarTitle: {
-    color: colors.onPrimary,
+    color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   topBarSubtitle: {
-    color: colors.onPrimary,
+    color: colors.textSecondary,
     fontSize: 14,
-    opacity: 0.8,
   },
   mainContainer: {
     flex: 1,
@@ -94,8 +95,8 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: colors.onSurface,
-    padding: 8,
+    backgroundColor: colors.secondaryContainer,
+    padding: 12,
   },
   sidebarCollapsed: {
     width: 70,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   toggleIcon: {
-    color: colors.onPrimary,
+    color: colors.onSecondaryContainer,
     fontSize: 20,
   },
   menuItem: {
@@ -117,36 +118,36 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   menuItemActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.secondaryHover,
   },
   menuIcon: {
-    fontSize: 24,
+    fontSize: 20,
     marginRight: 12,
   },
   menuText: {
-    color: colors.onPrimary,
-    fontSize: 16,
-    opacity: 0.8,
+    color: colors.onSecondaryContainer,
+    fontSize: 15,
+    opacity: 0.9,
   },
   menuTextActive: {
-    color: colors.onPrimary,
+    color: colors.onSecondaryContainer,
     fontWeight: '600',
     opacity: 1,
   },
   content: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   contentHeader: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomColor: colors.outlineVariant,
   },
   contentTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.onSurface,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   contentScroll: {
     flex: 1,
