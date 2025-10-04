@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "expo export",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "web:port5000": "webpack serve --config webpack.config.js --port 5000 --host 0.0.0.0 --mode development"
-  },
+    "build": "expo build:web",
+    "serve": "npx serve web-build"
+  }
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.5",
     "@react-native-picker/picker": "^2.11.2",
