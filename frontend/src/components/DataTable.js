@@ -100,11 +100,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
-    borderRadius: 8,
+    borderRadius: 0,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    boxShadow: '0 1px 3px rgba(44, 62, 80, 0.08)',
+    borderColor: '#e5e7eb',
+    boxShadow: 'none',
   },
   toolbar: {
     flexDirection: 'row',
@@ -139,21 +139,21 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.outlineVariant,
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   headerCell: {
-    padding: 16,
+    padding: 12,
     borderRightWidth: 1,
-    borderRightColor: colors.outlineVariant,
+    borderRightColor: '#e5e7eb',
   },
   headerText: {
     fontWeight: '600',
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: 11,
+    color: '#6b7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   tableBody: {
     maxHeight: 500,
@@ -162,18 +162,18 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: colors.outlineVariant,
+    borderBottomColor: '#f3f4f6',
     backgroundColor: colors.surface,
   },
   cell: {
-    padding: 16,
+    padding: 14,
     borderRightWidth: 1,
-    borderRightColor: colors.outlineVariant,
+    borderRightColor: '#f3f4f6',
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: colors.textPrimary,
+    color: '#374151',
   },
   actionButtons: {
     flexDirection: 'row',

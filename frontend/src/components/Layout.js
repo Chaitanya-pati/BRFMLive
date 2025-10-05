@@ -8,9 +8,13 @@ export default function Layout({ children, title, navigation, currentRoute }) {
 
   const menuItems = [
     { name: 'Dashboard', route: 'Home', icon: '📊', section: null },
-    { name: 'Suppliers', route: 'SupplierMaster', icon: '🏢', section: 'Operations' },
-    { name: 'Vehicle Entries', route: 'VehicleEntry', icon: '🚛', section: 'Operations' },
-    { name: 'Lab Tests', route: 'LabTest', icon: '🔬', section: 'Operations' },
+    { name: 'Gate Entry', route: 'VehicleEntry', icon: '🚪', section: 'Operations' },
+    { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
+    { name: 'Pre-Cleaning', route: 'PreCleaning', icon: '🔥', section: 'Operations' },
+    { name: 'Production Orders', route: 'ProductionOrders', icon: '📄', section: 'Operations' },
+    { name: 'Production Workflow', route: 'ProductionWorkflow', icon: '🔧', section: 'Operations' },
+    { name: 'Production Process', route: 'ProductionProcess', icon: '⚙️', section: 'Operations' },
+    { name: 'Weight Management', route: 'WeightManagement', icon: '🔒', section: 'Operations' },
   ];
 
   const renderMenuItem = (item, index) => (
@@ -207,20 +211,18 @@ const styles = StyleSheet.create({
   sidebarHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(236, 240, 241, 0.1)',
-    alignItems: 'center',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'flex-start',
   },
   sidebarTitle: {
     color: colors.sidebarText,
     fontSize: 18,
     fontWeight: '700',
-    textAlign: 'center',
   },
   sidebarSubtitle: {
-    color: colors.textTertiary,
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
     marginTop: 4,
-    textAlign: 'center',
   },
   sidebarTitleCollapsed: {
     color: colors.sidebarText,
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   sectionLabel: {
-    color: colors.textTertiary,
+    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -243,28 +245,28 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
-    marginHorizontal: 8,
-    borderRadius: 6,
-    marginBottom: 2,
+    marginHorizontal: 0,
+    borderRadius: 0,
+    marginBottom: 0,
   },
   menuItemActive: {
-    backgroundColor: colors.sidebarActive,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   menuIcon: {
-    fontSize: 18,
-    marginRight: 12,
+    fontSize: 20,
+    marginRight: 16,
+    width: 24,
   },
   menuText: {
     color: colors.sidebarText,
-    fontSize: 14,
-    opacity: 0.9,
+    fontSize: 15,
+    fontWeight: '400',
   },
   menuTextActive: {
     color: colors.sidebarText,
-    fontWeight: '600',
-    opacity: 1,
+    fontWeight: '500',
   },
   content: {
     flex: 1,

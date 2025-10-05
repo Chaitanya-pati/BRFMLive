@@ -97,10 +97,10 @@ export const colors = {
   shadowStrong: 'rgba(44, 62, 80, 0.2)',
 
   // Sidebar specific
-  sidebarBackground: '#2c3e50',
-  sidebarText: '#ecf0f1',
-  sidebarHover: '#34495e',
-  sidebarActive: '#3d566e',
+  sidebarBackground: '#3d5a6c',
+  sidebarText: '#ffffff',
+  sidebarHover: '#4a6a7f',
+  sidebarActive: '#506c81',
 
   // Legacy support (for backward compatibility)
   border: '#e0e0e0',
