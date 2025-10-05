@@ -1,105 +1,112 @@
-export const colors = {
-  // Primary
-  primary: '#2563eb',
-  onPrimary: '#ffffff',
-  primaryContainer: '#dbeafe',
-  onPrimaryContainer: '#1e40af',
-  primaryHover: '#1d4ed8',
 
-  // Secondary
-  secondary: '#334155',
-  onSecondary: '#ffffff',
-  secondaryContainer: '#1e293b',
-  onSecondaryContainer: '#f8fafc',
-  secondaryHover: '#475569',
+export const colors = {
+  // Primary - Dark Blue/Gray for sidebar
+  primary: '#3b5998',
+  onPrimary: '#ffffff',
+  primaryContainer: '#e8eaf6',
+  onPrimaryContainer: '#1a237e',
+  primaryHover: '#2d4373',
+
+  // Secondary - Sidebar dark theme
+  secondary: '#2c3e50',
+  onSecondary: '#ecf0f1',
+  secondaryContainer: '#34495e',
+  onSecondaryContainer: '#ecf0f1',
+  secondaryHover: '#3d566e',
 
   // Surface
   surface: '#ffffff',
-  onSurface: '#1f2937',
-  surfaceVariant: '#f9fafb',
-  onSurfaceVariant: '#4b5563',
+  onSurface: '#2c3e50',
+  surfaceVariant: '#f5f6fa',
+  onSurfaceVariant: '#546e7a',
 
   // Background
-  background: '#f9fafb',
-  onBackground: '#111827',
+  background: '#f5f6fa',
+  onBackground: '#2c3e50',
 
   // Outline
-  outline: '#d1d5db',
-  outlineVariant: '#e5e7eb',
+  outline: '#e0e0e0',
+  outlineVariant: '#eceff1',
 
-  // Status - Success
-  success: '#16a34a',
+  // Status - Success (Green)
+  success: '#27ae60',
   onSuccess: '#ffffff',
-  successContainer: '#dcfce7',
-  onSuccessContainer: '#15803d',
+  successContainer: '#d4edda',
+  onSuccessContainer: '#1e7e34',
 
-  // Status - Warning
-  warning: '#eab308',
+  // Status - Warning (Yellow/Orange)
+  warning: '#f39c12',
   onWarning: '#ffffff',
-  warningContainer: '#fef3c7',
-  onWarningContainer: '#a16207',
+  warningContainer: '#fff3cd',
+  onWarningContainer: '#856404',
 
-  // Status - Error
-  error: '#ef4444',
+  // Status - Error (Red)
+  error: '#e74c3c',
   onError: '#ffffff',
-  errorContainer: '#fee2e2',
-  onErrorContainer: '#b91c1c',
+  errorContainer: '#f8d7da',
+  onErrorContainer: '#c0392b',
 
-  // Status - Info
-  info: '#3b82f6',
+  // Status - Info (Blue)
+  info: '#3498db',
   onInfo: '#ffffff',
-  infoContainer: '#dbeafe',
-  onInfoContainer: '#1e40af',
+  infoContainer: '#d1ecf1',
+  onInfoContainer: '#0c5460',
 
-  // Accent - Purple
-  purple: '#9333ea',
+  // Accent - Purple (for Quality Check status)
+  purple: '#9b59b6',
   onPurple: '#ffffff',
-  purpleContainer: '#f3e8ff',
-  onPurpleContainer: '#7e22ce',
+  purpleContainer: '#e8daef',
+  onPurpleContainer: '#6c3483',
 
-  // Accent - Orange
-  orange: '#ea580c',
+  // Accent - Orange (for Medium priority)
+  orange: '#e67e22',
   onOrange: '#ffffff',
-  orangeContainer: '#ffedd5',
-  onOrangeContainer: '#c2410c',
+  orangeContainer: '#fdebd0',
+  onOrangeContainer: '#ba4a00',
 
   // Accent - Teal
-  teal: '#14b8a6',
+  teal: '#16a085',
   onTeal: '#ffffff',
-  tealContainer: '#ccfbf1',
-  onTealContainer: '#0f766e',
+  tealContainer: '#d0ece7',
+  onTealContainer: '#117a65',
 
   // Text
-  textPrimary: '#1f2937',
-  textSecondary: '#4b5563',
-  textTertiary: '#6b7280',
-  textDisabled: '#9ca3af',
+  textPrimary: '#2c3e50',
+  textSecondary: '#7f8c8d',
+  textTertiary: '#95a5a6',
+  textDisabled: '#bdc3c7',
   textInverse: '#ffffff',
 
   // Interactive
-  hover: 'rgba(0, 0, 0, 0.04)',
-  focus: '#3b82f6',
-  disabled: '#e5e7eb',
-  onDisabled: '#9ca3af',
+  hover: 'rgba(52, 73, 94, 0.08)',
+  focus: '#3498db',
+  disabled: '#ecf0f1',
+  onDisabled: '#bdc3c7',
 
   // Priority
-  priorityHighBg: '#fee2e2',
-  priorityHighText: '#b91c1c',
-  priorityMediumBg: '#ffedd5',
-  priorityMediumText: '#ea580c',
-  priorityLowBg: '#f3f4f6',
-  priorityLowText: '#374151',
+  priorityHighBg: '#fadbd8',
+  priorityHighText: '#e74c3c',
+  priorityMediumBg: '#fdebd0',
+  priorityMediumText: '#e67e22',
+  priorityLowBg: '#d4edda',
+  priorityLowText: '#27ae60',
 
   // Shadow
-  shadowLight: 'rgba(0, 0, 0, 0.05)',
-  shadowMedium: 'rgba(0, 0, 0, 0.1)',
-  shadowStrong: 'rgba(0, 0, 0, 0.25)',
+  shadowLight: 'rgba(44, 62, 80, 0.05)',
+  shadowMedium: 'rgba(44, 62, 80, 0.1)',
+  shadowStrong: 'rgba(44, 62, 80, 0.2)',
+
+  // Sidebar specific
+  sidebarBackground: '#2c3e50',
+  sidebarText: '#ecf0f1',
+  sidebarHover: '#34495e',
+  sidebarActive: '#3d566e',
 
   // Legacy support (for backward compatibility)
-  border: '#d1d5db',
-  divider: '#e5e7eb',
+  border: '#e0e0e0',
+  divider: '#eceff1',
   inputBackground: '#ffffff',
-  placeholder: '#9ca3af',
+  placeholder: '#95a5a6',
 };
 
 export default colors;

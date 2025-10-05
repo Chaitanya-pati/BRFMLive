@@ -5,16 +5,16 @@ import colors from '../theme/colors';
 
 export default function HomeScreen({ navigation }) {
   const stats = [
-    { title: 'Total Suppliers', value: '-', color: colors.primary, icon: '🏢' },
-    { title: 'Vehicle Entries', value: '-', color: colors.primary, icon: '🚛' },
-    { title: 'Lab Tests', value: '-', color: colors.primary, icon: '🔬' },
-    { title: 'Pending Tests', value: '-', color: colors.error, icon: '⏱️' },
+    { title: 'Total Suppliers', value: '-', color: colors.info, icon: '🏢' },
+    { title: 'Vehicle Entries', value: '-', color: colors.purple, icon: '🚛' },
+    { title: 'Lab Tests', value: '-', color: colors.success, icon: '🔬' },
+    { title: 'Pending Tests', value: '-', color: colors.warning, icon: '⏱️' },
   ];
 
   const quickActions = [
-    { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.primary },
-    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: colors.primary },
-    { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: colors.primary },
+    { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.info },
+    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: colors.purple },
+    { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: colors.success },
   ];
 
   return (
@@ -71,11 +71,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 20,
     borderRadius: 8,
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.outlineVariant,
+    boxShadow: '0 1px 3px rgba(44, 62, 80, 0.08)',
   },
   statIcon: {
     fontSize: 36,
@@ -85,13 +86,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statTitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   statValue: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   sectionTitle: {
@@ -112,6 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     minWidth: 150,
+    boxShadow: '0 2px 4px rgba(44, 62, 80, 0.1)',
   },
   actionIcon: {
     fontSize: 32,
@@ -119,7 +124,7 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     color: colors.onPrimary,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   activityCard: {
@@ -128,6 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
+    boxShadow: '0 1px 3px rgba(44, 62, 80, 0.08)',
   },
   activityText: {
     color: colors.textTertiary,
