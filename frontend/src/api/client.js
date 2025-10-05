@@ -1,24 +1,5 @@
 import axios from 'axios';
-
-// Detect the correct API URL based on environment
-const getApiUrl = () => {
-  // In Replit, use proxy path to backend (port 8000)
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    
-    // If on Replit (.replit.dev domain), construct backend URL
-    if (hostname.includes('replit.dev')) {
-      // Use the backend port directly through Replit's proxy
-      return `${protocol}//${hostname.replace(/\.replit\.dev.*/, '.replit.dev:8000')}/api`;
-    }
-  }
-  
-  // Use environment variable or localhost fallback
-  return process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-};
-
-const API_URL = getApiUrl();
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 export const api = axios.create({
   baseURL: API_URL,
