@@ -8,13 +8,9 @@ export default function Layout({ children, title, navigation, currentRoute }) {
 
   const menuItems = [
     { name: 'Dashboard', route: 'Home', icon: '📊', section: null },
+    { name: 'Supplier Master', route: 'SupplierMaster', icon: '🏢', section: 'Operations' },
     { name: 'Gate Entry', route: 'VehicleEntry', icon: '🚪', section: 'Operations' },
     { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
-    { name: 'Pre-Cleaning', route: 'PreCleaning', icon: '🔥', section: 'Operations' },
-    { name: 'Production Orders', route: 'ProductionOrders', icon: '📄', section: 'Operations' },
-    { name: 'Production Workflow', route: 'ProductionWorkflow', icon: '🔧', section: 'Operations' },
-    { name: 'Production Process', route: 'ProductionProcess', icon: '⚙️', section: 'Operations' },
-    { name: 'Weight Management', route: 'WeightManagement', icon: '🔒', section: 'Operations' },
   ];
 
   const renderMenuItem = (item, index) => (
@@ -51,7 +47,7 @@ export default function Layout({ children, title, navigation, currentRoute }) {
           >
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
-          <Text style={styles.topBarTitle}>Welcome to Gate Entry & Lab Testing System</Text>
+          <Text style={styles.topBarTitle}>Welcome to Mill Management System</Text>
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.notificationButton}>
