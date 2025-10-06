@@ -392,12 +392,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
     marginTop: 20,
+    flexWrap: 'wrap',
   },
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 6,
-    minWidth: 100,
+    minWidth: Platform.select({ web: 100, default: 120 }),
     alignItems: 'center',
   },
   cancelButton: {

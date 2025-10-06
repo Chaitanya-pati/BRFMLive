@@ -1,10 +1,23 @@
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Dimensions, useWindowDimensions } from 'react-native';
 import colors from '../theme/colors';
 
 export default function Layout({ children, title, navigation, currentRoute }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(isMobile);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      setMobileMenuOpen(false);
+    } else {
+      setSidebarCollapsed(false);
+    }
+  }, [isMobile]);
 
   const menuItems = [
     { name: 'Dashboard', route: 'Home', icon: '📊', section: null },
@@ -13,6 +26,21 @@ export default function Layout({ children, title, navigation, currentRoute }) {
     { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
   ];
 
+  const toggleMobileMenu = () => {
+    if (isMobile) {
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
+  };
+
+  const handleNavigate = (route) => {
+    navigation.navigate(route);
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
   const renderMenuItem = (item, index) => (
     <TouchableOpacity
       key={index}
@@ -20,10 +48,10 @@ export default function Layout({ children, title, navigation, currentRoute }) {
         styles.menuItem,
         currentRoute === item.route && styles.menuItemActive,
       ]}
-      onPress={() => navigation.navigate(item.route)}
+      onPress={() => handleNavigate(item.route)}
     >
       <Text style={styles.menuIcon}>{item.icon}</Text>
-      {!sidebarCollapsed && (
+      {(!sidebarCollapsed || mobileMenuOpen) && (
         <Text
           style={[
             styles.menuText,
@@ -43,11 +71,13 @@ export default function Layout({ children, title, navigation, currentRoute }) {
         <View style={styles.topBarLeft}>
           <TouchableOpacity
             style={styles.menuToggle}
-            onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onPress={toggleMobileMenu}
           >
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
-          <Text style={styles.topBarTitle}>Welcome to Mill Management System</Text>
+          <Text style={[styles.topBarTitle, isMobile && styles.topBarTitleMobile]} numberOfLines={1}>
+            {isMobile ? 'Mill Management' : 'Welcome to Mill Management System'}
+          </Text>
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.notificationButton}>
@@ -56,26 +86,42 @@ export default function Layout({ children, title, navigation, currentRoute }) {
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
-          <View style={styles.adminProfile}>
-            <View style={styles.adminAvatar}>
-              <Text style={styles.adminAvatarText}>AD</Text>
+          {!isMobile && (
+            <View style={styles.adminProfile}>
+              <View style={styles.adminAvatar}>
+                <Text style={styles.adminAvatarText}>AD</Text>
+              </View>
+              <Text style={styles.adminName}>Admin</Text>
             </View>
-            <Text style={styles.adminName}>Admin</Text>
-          </View>
+          )}
         </View>
       </View>
 
       <View style={styles.mainContainer}>
+        {/* Mobile Overlay */}
+        {isMobile && mobileMenuOpen && (
+          <TouchableOpacity 
+            style={styles.mobileOverlay} 
+            onPress={() => setMobileMenuOpen(false)}
+            activeOpacity={1}
+          />
+        )}
+
         {/* Sidebar */}
-        <View style={[styles.sidebar, sidebarCollapsed && styles.sidebarCollapsed]}>
+        <View style={[
+          styles.sidebar,
+          sidebarCollapsed && !mobileMenuOpen && styles.sidebarCollapsed,
+          isMobile && mobileMenuOpen && styles.sidebarMobileOpen,
+          isMobile && !mobileMenuOpen && styles.sidebarMobileHidden,
+        ]}>
           <View style={styles.sidebarHeader}>
-            {!sidebarCollapsed && (
+            {(!sidebarCollapsed || mobileMenuOpen) && (
               <>
                 <Text style={styles.sidebarTitle}>Mill Management</Text>
                 <Text style={styles.sidebarSubtitle}>System v2.0</Text>
               </>
             )}
-            {sidebarCollapsed && (
+            {sidebarCollapsed && !mobileMenuOpen && (
               <Text style={styles.sidebarTitleCollapsed}>MM</Text>
             )}
           </View>
@@ -83,7 +129,7 @@ export default function Layout({ children, title, navigation, currentRoute }) {
           <ScrollView style={styles.menuContainer}>
             {renderMenuItem(menuItems[0], 0)}
             
-            {!sidebarCollapsed && (
+            {(!sidebarCollapsed || mobileMenuOpen) && (
               <Text style={styles.sectionLabel}>Operations</Text>
             )}
             
@@ -92,9 +138,9 @@ export default function Layout({ children, title, navigation, currentRoute }) {
         </View>
 
         {/* Content Area */}
-        <View style={styles.content}>
+        <View style={[styles.content, isMobile && styles.contentMobile]}>
           <View style={styles.contentHeader}>
-            <Text style={styles.contentTitle}>{title}</Text>
+            <Text style={[styles.contentTitle, isMobile && styles.contentTitleMobile]}>{title}</Text>
           </View>
           <ScrollView style={styles.contentScroll}>
             {children}
@@ -112,7 +158,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.select({ web: 16, default: 12 }),
     paddingVertical: 12,
     paddingTop: Platform.OS === 'web' ? 12 : 40,
     flexDirection: 'row',
@@ -126,10 +172,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
   },
   menuToggle: {
     padding: 8,
-    marginRight: 16,
+    marginRight: Platform.select({ web: 16, default: 8 }),
   },
   menuToggleIcon: {
     fontSize: 20,
@@ -139,6 +186,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '500',
+    flexShrink: 1,
+  },
+  topBarTitleMobile: {
+    fontSize: 16,
   },
   topBarRight: {
     flexDirection: 'row',
@@ -195,14 +246,39 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     flexDirection: 'row',
+    position: 'relative',
+  },
+  mobileOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 999,
   },
   sidebar: {
     width: 200,
     backgroundColor: colors.sidebarBackground,
     boxShadow: '2px 0 8px rgba(44, 62, 80, 0.1)',
+    zIndex: 1000,
   },
   sidebarCollapsed: {
     width: 70,
+  },
+  sidebarMobileOpen: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 250,
+    boxShadow: '2px 0 16px rgba(0, 0, 0, 0.3)',
+  },
+  sidebarMobileHidden: {
+    position: 'absolute',
+    left: -250,
+    width: 0,
+    overflow: 'hidden',
   },
   sidebarHeader: {
     padding: 20,
@@ -268,9 +344,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  contentMobile: {
+    width: '100%',
+  },
   contentHeader: {
     backgroundColor: colors.surface,
-    padding: 20,
+    padding: Platform.select({ web: 20, default: 16 }),
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineVariant,
   },
@@ -279,8 +358,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  contentTitleMobile: {
+    fontSize: 20,
+  },
   contentScroll: {
     flex: 1,
-    padding: 20,
+    padding: Platform.select({ web: 20, default: 12 }),
   },
 });

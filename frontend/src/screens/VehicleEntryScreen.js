@@ -426,11 +426,12 @@ const styles = StyleSheet.create({
     height: Platform.OS === 'ios' ? 150 : 50,
   },
   photoSection: {
-    flexDirection: 'row',
+    flexDirection: Platform.select({ web: 'row', default: 'column' }),
     gap: 16,
   },
   photoColumn: {
-    flex: 1,
+    flex: Platform.select({ web: 1, default: 0 }),
+    width: Platform.select({ web: 'auto', default: '100%' }),
   },
   photoButton: {
     backgroundColor: colors.primary,

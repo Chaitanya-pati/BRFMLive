@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
 
 export default function DataTable({ columns, data, onEdit, onDelete, onAdd, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   const filteredData = searchable
     ? data.filter((row) =>
@@ -13,86 +15,133 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
       )
     : data;
 
+  const renderMobileCard = (row, rowIndex) => (
+    <View key={rowIndex} style={styles.mobileCard}>
+      {columns.slice(0, 4).map((col, colIndex) => (
+        <View key={colIndex} style={styles.mobileCardRow}>
+          <Text style={styles.mobileCardLabel}>{col.label}:</Text>
+          <Text style={styles.mobileCardValue} numberOfLines={2}>
+            {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+          </Text>
+        </View>
+      ))}
+      <View style={styles.mobileCardActions}>
+        {onEdit && (
+          <TouchableOpacity
+            style={styles.mobileActionButton}
+            onPress={() => onEdit(row)}
+          >
+            <Text style={styles.mobileActionButtonText}>View/Edit</Text>
+          </TouchableOpacity>
+        )}
+        {onDelete && (
+          <TouchableOpacity
+            style={[styles.mobileActionButton, styles.mobileDeleteButton]}
+            onPress={() => onDelete(row)}
+          >
+            <Text style={styles.mobileActionButtonText}>Delete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderDesktopTable = () => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+      <View>
+        <View style={styles.tableHeader}>
+          {columns.map((col, index) => (
+            <View key={index} style={[styles.headerCell, { width: col.width || 150 }]}>
+              <Text style={styles.headerText}>{col.label}</Text>
+            </View>
+          ))}
+          <View style={[styles.headerCell, { width: 150 }]}>
+            <Text style={styles.headerText}>Actions</Text>
+          </View>
+        </View>
+
+        <ScrollView style={styles.tableBody}>
+          {filteredData.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No data available</Text>
+            </View>
+          ) : (
+            filteredData.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.tableRow}>
+                {columns.map((col, colIndex) => (
+                  <View key={colIndex} style={[styles.cell, { width: col.width || 150 }]}>
+                    <Text style={styles.cellText} numberOfLines={2}>
+                      {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+                    </Text>
+                  </View>
+                ))}
+                <View style={[styles.cell, { width: 150 }]}>
+                  <View style={styles.actionButtons}>
+                    {onEdit && (
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => onEdit(row)}
+                      >
+                        <Text style={styles.actionButtonText}>👁️</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onEdit && (
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => onEdit(row)}
+                      >
+                        <Text style={styles.actionButtonText}>✏️</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onDelete && (
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => onDelete(row)}
+                      >
+                        <Text style={styles.actionButtonText}>🗑️</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, isMobile && styles.toolbarMobile]}>
         {searchable && (
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isMobile && styles.searchInputMobile]}
             placeholder="Search..."
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
         )}
         {onAdd && (
-          <TouchableOpacity style={styles.addButton} onPress={onAdd}>
-            <Text style={styles.addButtonText}>+ Add New</Text>
+          <TouchableOpacity style={[styles.addButton, isMobile && styles.addButtonMobile]} onPress={onAdd}>
+            <Text style={styles.addButtonText}>{isMobile ? '+ Add' : '+ Add New'}</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-        <View>
-          <View style={styles.tableHeader}>
-            {columns.map((col, index) => (
-              <View key={index} style={[styles.headerCell, { width: col.width || 150 }]}>
-                <Text style={styles.headerText}>{col.label}</Text>
-              </View>
-            ))}
-            <View style={[styles.headerCell, { width: 150 }]}>
-              <Text style={styles.headerText}>Actions</Text>
+      {isMobile ? (
+        <ScrollView style={styles.mobileCardsContainer}>
+          {filteredData.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No data available</Text>
             </View>
-          </View>
-
-          <ScrollView style={styles.tableBody}>
-            {filteredData.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No data available</Text>
-              </View>
-            ) : (
-              filteredData.map((row, rowIndex) => (
-                <View key={rowIndex} style={styles.tableRow}>
-                  {columns.map((col, colIndex) => (
-                    <View key={colIndex} style={[styles.cell, { width: col.width || 150 }]}>
-                      <Text style={styles.cellText} numberOfLines={2}>
-                        {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
-                      </Text>
-                    </View>
-                  ))}
-                  <View style={[styles.cell, { width: 150 }]}>
-                    <View style={styles.actionButtons}>
-                      {onEdit && (
-                        <TouchableOpacity
-                          style={styles.editButton}
-                          onPress={() => onEdit(row)}
-                        >
-                          <Text style={styles.actionButtonText}>👁️</Text>
-                        </TouchableOpacity>
-                      )}
-                      {onEdit && (
-                        <TouchableOpacity
-                          style={styles.editButton}
-                          onPress={() => onEdit(row)}
-                        >
-                          <Text style={styles.actionButtonText}>✏️</Text>
-                        </TouchableOpacity>
-                      )}
-                      {onDelete && (
-                        <TouchableOpacity
-                          style={styles.deleteButton}
-                          onPress={() => onDelete(row)}
-                        >
-                          <Text style={styles.actionButtonText}>🗑️</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))
-            )}
-          </ScrollView>
-        </View>
-      </ScrollView>
+          ) : (
+            filteredData.map((row, rowIndex) => renderMobileCard(row, rowIndex))
+          )}
+        </ScrollView>
+      ) : (
+        renderDesktopTable()
+      )}
     </View>
   );
 }
@@ -105,14 +154,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     boxShadow: 'none',
+    flex: 1,
   },
   toolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineVariant,
     backgroundColor: colors.surface,
+    gap: 8,
+  },
+  toolbarMobile: {
+    padding: 12,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
@@ -120,10 +176,13 @@ const styles = StyleSheet.create({
     borderColor: colors.outline,
     borderRadius: 6,
     padding: 10,
-    marginRight: 12,
     fontSize: 14,
     backgroundColor: colors.surface,
     color: colors.textPrimary,
+  },
+  searchInputMobile: {
+    fontSize: 14,
+    padding: 8,
   },
   addButton: {
     backgroundColor: colors.info,
@@ -132,10 +191,72 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     justifyContent: 'center',
   },
+  addButtonMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   addButtonText: {
     color: colors.onInfo,
     fontWeight: '600',
     fontSize: 14,
+  },
+  mobileCardsContainer: {
+    flex: 1,
+    padding: 12,
+  },
+  mobileCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  },
+  mobileCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  mobileCardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+    minWidth: 100,
+  },
+  mobileCardValue: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 2,
+    textAlign: 'right',
+  },
+  mobileCardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.outlineVariant,
+  },
+  mobileActionButton: {
+    flex: 1,
+    backgroundColor: colors.info,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  mobileDeleteButton: {
+    backgroundColor: colors.error,
+  },
+  mobileActionButtonText: {
+    color: colors.onInfo,
+    fontWeight: '600',
+    fontSize: 13,
   },
   tableHeader: {
     flexDirection: 'row',

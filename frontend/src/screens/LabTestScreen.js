@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   numberInputContainer: {
     flex: 1,
-    minWidth: 150,
+    minWidth: Platform.select({ web: 150, default: '100%' }),
   },
   inputWithUnit: {
     flexDirection: 'row',
