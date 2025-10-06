@@ -24,6 +24,7 @@ export default function Layout({ children, title, navigation, currentRoute }) {
     { name: 'Supplier Master', route: 'SupplierMaster', icon: '🏢', section: 'Operations' },
     { name: 'Gate Entry', route: 'VehicleEntry', icon: '🚪', section: 'Operations' },
     { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
+    { name: 'Claim Tracking', route: 'ClaimTracking', icon: '📝', section: 'Operations' },
   ];
 
   const toggleMobileMenu = () => {
