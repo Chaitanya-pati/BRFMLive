@@ -266,13 +266,85 @@ export default function LabTestScreen({ navigation }) {
         test_date: formData.test_date.toISOString(),
       };
 
-      await labTestApi.create(submitData);
+      const response = await labTestApi.create(submitData);
       Alert.alert('Success', 'Lab test created successfully');
       
       setModalVisible(false);
       loadLabTests();
+      loadVehicles();
     } catch (error) {
       Alert.alert('Error', 'Failed to create lab test');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAndRaiseClaim = async () => {
+    if (!formData.vehicle_entry_id) {
+      Alert.alert('Error', 'Please select a vehicle');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const submitData = {
+        ...formData,
+        moisture: parseFloat(formData.moisture) || null,
+        test_weight: parseFloat(formData.test_weight) || null,
+        protein_percent: parseFloat(formData.protein_percent) || null,
+        wet_gluten: parseFloat(formData.wet_gluten) || null,
+        dry_gluten: parseFloat(formData.dry_gluten) || null,
+        falling_number: parseInt(formData.falling_number) || null,
+        chaff_husk: parseFloat(formData.chaff_husk) || null,
+        straws_sticks: parseFloat(formData.straws_sticks) || null,
+        other_foreign_matter: parseFloat(formData.other_foreign_matter) || null,
+        mudballs: parseFloat(formData.mudballs) || null,
+        stones: parseFloat(formData.stones) || null,
+        dust_sand: parseFloat(formData.dust_sand) || null,
+        total_impurities: parseFloat(formData.total_impurities) || null,
+        shriveled_wheat: parseFloat(formData.shriveled_wheat) || null,
+        insect_damage: parseFloat(formData.insect_damage) || null,
+        blackened_wheat: parseFloat(formData.blackened_wheat) || null,
+        sprouted_grains: parseFloat(formData.sprouted_grains) || null,
+        other_grain_damage: parseFloat(formData.other_grain_damage) || null,
+        total_dockage: parseFloat(formData.total_dockage) || null,
+        test_date: formData.test_date.toISOString(),
+      };
+
+      // Save the lab test first
+      const response = await labTestApi.create(submitData);
+      const createdLabTest = response.data;
+      
+      // Close the lab test modal
+      setModalVisible(false);
+      
+      // Prepare the claim with the newly created lab test
+      const categoryDetected = submitData.moisture && submitData.protein_percent 
+        ? `Moisture: ${submitData.moisture}%, Protein: ${submitData.protein_percent}%`
+        : 'Not Available';
+      
+      setSelectedLabTest({
+        id: createdLabTest.id,
+        vehicle_entry: selectedVehicle,
+        ...createdLabTest
+      });
+      
+      setClaimFormData({
+        issue_found: '',
+        category_detected: categoryDetected,
+        remarks: '',
+      });
+      
+      // Open the claim modal
+      setClaimModalVisible(true);
+      
+      // Reload data
+      loadLabTests();
+      loadVehicles();
+      
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save lab test');
       console.error(error);
     } finally {
       setLoading(false);
@@ -382,9 +454,6 @@ export default function LabTestScreen({ navigation }) {
         onAdd={openAddModal}
         onEdit={openEditModal}
         onDelete={handleDelete}
-        onCustomAction={openRaiseClaimModal}
-        customActionLabel="Raise Claim"
-        showCustomAction={(row) => !row.has_claim}
       />
 
       <Modal
@@ -512,6 +581,15 @@ export default function LabTestScreen({ navigation }) {
             >
               <Text style={styles.saveButtonText}>
                 {loading ? 'Saving...' : 'Save Test'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.raiseClaimButton, loading && styles.buttonDisabled]}
+              onPress={handleSaveAndRaiseClaim}
+              disabled={loading}
+            >
+              <Text style={styles.raiseClaimButtonText}>
+                {loading ? 'Processing...' : 'Save & Raise Claim'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -693,6 +771,9 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: colors.primary,
   },
+  raiseClaimButton: {
+    backgroundColor: '#DC2626',
+  },
   buttonDisabled: {
     opacity: 0.5,
   },
@@ -703,6 +784,11 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: colors.onPrimary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  raiseClaimButtonText: {
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
