@@ -1,6 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from enum import Enum
+
+class ClaimStatusEnum(str, Enum):
+    OPEN = "Open"
+    IN_PROGRESS = "In Progress"
+    CLOSED = "Closed"
 
 class SupplierBase(BaseModel):
     supplier_name: str
@@ -97,8 +103,13 @@ class ClaimBase(BaseModel):
 class ClaimCreate(ClaimBase):
     pass
 
+class ClaimUpdate(BaseModel):
+    claim_status: Optional[ClaimStatusEnum] = None
+    remarks: Optional[str] = None
+
 class Claim(ClaimBase):
     id: int
+    claim_status: ClaimStatusEnum
     created_at: datetime
     updated_at: datetime
     

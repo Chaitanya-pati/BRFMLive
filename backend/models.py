@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, LargeBinary, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, LargeBinary, Float, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+import enum
+
+class ClaimStatus(str, enum.Enum):
+    OPEN = "Open"
+    IN_PROGRESS = "In Progress"
+    CLOSED = "Closed"
 
 class Supplier(Base):
     __tablename__ = "suppliers"
@@ -82,6 +88,7 @@ class Claim(Base):
     lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), nullable=False)
     issue_found = Column(Text, nullable=False)
     category_detected = Column(String(100))
+    claim_status = Column(Enum(ClaimStatus), default=ClaimStatus.OPEN, nullable=False)
     claim_date = Column(DateTime, default=datetime.utcnow)
     remarks = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
