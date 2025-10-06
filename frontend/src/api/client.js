@@ -57,6 +57,7 @@ export const labTestApi = {
 export const claimApi = {
   getAll: () => api.get("/claims"),
   create: (data) => api.post("/claims/create", data),
+  update: (id, data) => api.patch(`/claims/${id}`, data),
 };
 
 const STATIC_STATES = [
