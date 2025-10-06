@@ -205,6 +205,30 @@ def get_claims(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     claims = db.query(models.Claim).offset(skip).limit(limit).all()
     return claims
 
+@app.patch("/api/claims/{claim_id}", response_model=schemas.Claim)
+def update_claim(claim_id: int, claim_update: schemas.ClaimUpdate, db: Session = Depends(get_db)):
+    db_claim = db.query(models.Claim).filter(models.Claim.id == claim_id).first()
+    if not db_claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    
+    update_data = claim_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_claim, key, value)
+    
+    db.commit()
+    db.refresh(db_claim)
+    return db_claim
+
+@app.delete("/api/lab-tests/{lab_test_id}")
+def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
+    db_lab_test = db.query(models.LabTest).filter(models.LabTest.id == lab_test_id).first()
+    if not db_lab_test:
+        raise HTTPException(status_code=404, detail="Lab test not found")
+    
+    db.delete(db_lab_test)
+    db.commit()
+    return {"message": "Lab test deleted successfully"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
