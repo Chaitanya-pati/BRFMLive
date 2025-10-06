@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **Supplier**: Master data for suppliers with location information (state/city)
 - **VehicleEntry**: Records vehicle arrivals with foreign key to Supplier, includes binary fields for photos
 - **LabTest**: Quality test results linked to VehicleEntry, stores multiple wheat quality parameters (moisture, protein, gluten, impurities, etc.)
+- **Claim**: Quality claim records linked to LabTest via foreign key, tracks issues found during quality testing with category detection and remarks
 
 **Architectural Patterns:**
 - Dependency Injection: FastAPI's Depends() for database session management
@@ -80,6 +81,7 @@ Preferred communication style: Simple, everyday language.
 - suppliers table: supplier master data
 - vehicle_entries table: vehicle entry records with supplier foreign key
 - lab_tests table: test results with vehicle_entry foreign key
+- claims table: quality claims linked to lab_tests with foreign key
 - Timestamps (created_at, updated_at) on all tables for audit trail
 
 ### External Dependencies
@@ -109,6 +111,19 @@ Preferred communication style: Simple, everyday language.
 - Connection pooling configured with pre-ping and recycle for reliability
 
 ## Recent Changes
+
+**October 6, 2025 - Raise Claim Feature**
+- **Quality Claims Management**: Added comprehensive claim raising functionality for lab test results
+  - New Claim model with foreign key relationship to lab_tests table
+  - POST /api/claims/create endpoint for claim submission
+  - "Raise Claim" action button in Lab Tests data table
+  - Modal form with auto-filled fields (Vehicle ID, Supplier Name, Category Detected, Claim Date)
+  - Required validation for issue description
+  - Optional remarks field for additional notes
+  - Success feedback and modal closure after claim submission
+- **Database Migration**: Created claims table with proper foreign key constraints
+- **Frontend Integration**: Extended DataTable component to support custom action buttons
+- **API Client**: Added claimApi.create() function for claim submission
 
 **October 2, 2025 - Professional ERP UI Transformation**
 - **Complete UI/UX Overhaul**: Transformed application into professional ERP-style interface
@@ -149,6 +164,7 @@ The application is fully functional with professional ERP-style interface:
   - Supplier Master: Add/Edit/Delete with flexible state/city input (✅ Fully tested and verified)
   - Vehicle Entry: Add entries with photo capture (bill and vehicle photos)
   - Lab Test: Add comprehensive test data with auto-calculations
+  - Raise Claim: Quality claims linked to lab test results with auto-filled context and validation (✅ October 6, 2025)
 - **Reliability**: Static fallback data ensures functionality even when external APIs are unavailable
 
 ## Replit Environment Configuration
