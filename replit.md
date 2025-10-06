@@ -112,6 +112,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**October 6, 2025 - Claim Tracking Feature**
+- **Claim Status Management**: Added comprehensive claim tracking and status update functionality
+  - Added claim_status field to Claim model with enum values (Open, In Progress, Closed)
+  - Created database migration to add claim_status column with default "Open" status
+  - PATCH /api/claims/{id} endpoint for updating claim status and remarks
+  - ClaimTrackingScreen.js with professional table interface
+  - Status filter dropdown to filter by All/Open/In Progress/Closed
+  - Color-coded status indicators: 🟢 Closed (green), 🟠 In Progress (orange), 🔴 Open (red)
+  - Update modal to change claim status and add/edit remarks
+  - Navigation integration with new menu item in sidebar
+- **Technical Implementation**:
+  - Backend: SQLAlchemy Enum type for claim_status, Pydantic schemas for validation
+  - Frontend: React Native screen following existing patterns with responsive design
+  - API Client: Extended claimApi with update method
+
 **October 6, 2025 - Raise Claim Feature**
 - **Quality Claims Management**: Added comprehensive claim raising functionality for lab test results
   - New Claim model with foreign key relationship to lab_tests table
