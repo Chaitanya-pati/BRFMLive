@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
 
-export default function DataTable({ columns, data, onEdit, onDelete, onAdd, searchable = true }) {
+export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCustomAction, customActionLabel, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -34,6 +34,14 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
             <Text style={styles.mobileActionButtonText}>View/Edit</Text>
           </TouchableOpacity>
         )}
+        {onCustomAction && (
+          <TouchableOpacity
+            style={[styles.mobileActionButton, styles.mobileCustomButton]}
+            onPress={() => onCustomAction(row)}
+          >
+            <Text style={styles.mobileActionButtonText}>{customActionLabel || 'Action'}</Text>
+          </TouchableOpacity>
+        )}
         {onDelete && (
           <TouchableOpacity
             style={[styles.mobileActionButton, styles.mobileDeleteButton]}
@@ -55,7 +63,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
               <Text style={styles.headerText}>{col.label}</Text>
             </View>
           ))}
-          <View style={[styles.headerCell, { width: 150 }]}>
+          <View style={[styles.headerCell, { width: onCustomAction ? 200 : 150 }]}>
             <Text style={styles.headerText}>Actions</Text>
           </View>
         </View>
@@ -75,7 +83,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
                     </Text>
                   </View>
                 ))}
-                <View style={[styles.cell, { width: 150 }]}>
+                <View style={[styles.cell, { width: onCustomAction ? 200 : 150 }]}>
                   <View style={styles.actionButtons}>
                     {onEdit && (
                       <TouchableOpacity
@@ -91,6 +99,14 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, sear
                         onPress={() => onEdit(row)}
                       >
                         <Text style={styles.actionButtonText}>✏️</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onCustomAction && (
+                      <TouchableOpacity
+                        style={styles.customActionButton}
+                        onPress={() => onCustomAction(row)}
+                      >
+                        <Text style={styles.customActionButtonText}>{customActionLabel || 'Action'}</Text>
                       </TouchableOpacity>
                     )}
                     {onDelete && (
@@ -251,10 +267,24 @@ const styles = StyleSheet.create({
   mobileDeleteButton: {
     backgroundColor: colors.error,
   },
+  mobileCustomButton: {
+    backgroundColor: colors.warning,
+  },
   mobileActionButtonText: {
     color: colors.onInfo,
     fontWeight: '600',
     fontSize: 13,
+  },
+  customActionButton: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  customActionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   tableHeader: {
     flexDirection: 'row',
