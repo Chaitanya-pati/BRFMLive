@@ -85,3 +85,24 @@ class LabTest(LabTestBase):
 
 class LabTestWithVehicle(LabTest):
     vehicle_entry: VehicleEntryWithSupplier
+
+class ClaimBase(BaseModel):
+    lab_test_id: int
+    issue_found: str
+    category_detected: Optional[str] = None
+    claim_date: Optional[datetime] = None
+    remarks: Optional[str] = None
+
+class ClaimCreate(ClaimBase):
+    pass
+
+class Claim(ClaimBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ClaimWithLabTest(Claim):
+    lab_test: LabTestWithVehicle
