@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     maxHeight: '90%',
-    boxShadow: '0 20px 60px rgba(44, 62, 80, 0.2)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
   },
   modalContainerMobile: {
     borderRadius: 0,

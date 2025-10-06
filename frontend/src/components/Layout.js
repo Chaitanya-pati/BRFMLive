@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 200,
-    backgroundColor: colors.sidebarBackground,
-    boxShadow: '2px 0 8px rgba(44, 62, 80, 0.1)',
+    backgroundColor: '#3d4e5c',
+    boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
     zIndex: 1000,
   },
   sidebarCollapsed: {
@@ -283,30 +283,30 @@ const styles = StyleSheet.create({
   sidebarHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'flex-start',
   },
   sidebarTitle: {
-    color: colors.sidebarText,
+    color: '#ffffff',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   sidebarSubtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 12,
     marginTop: 4,
   },
   sidebarTitleCollapsed: {
-    color: colors.sidebarText,
+    color: '#ffffff',
     fontSize: 20,
     fontWeight: '700',
   },
   menuContainer: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   sectionLabel: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -317,52 +317,54 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     marginHorizontal: 0,
     borderRadius: 0,
     marginBottom: 0,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#4a90e2',
   },
   menuIcon: {
-    fontSize: 20,
-    marginRight: 16,
-    width: 24,
+    fontSize: 18,
+    marginRight: 14,
+    width: 20,
   },
   menuText: {
-    color: colors.sidebarText,
-    fontSize: 15,
+    color: '#e5e7eb',
+    fontSize: 14,
     fontWeight: '400',
   },
   menuTextActive: {
-    color: colors.sidebarText,
+    color: '#ffffff',
     fontWeight: '500',
   },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#f5f6fa',
   },
   contentMobile: {
     width: '100%',
   },
   contentHeader: {
     backgroundColor: colors.surface,
-    padding: Platform.select({ web: 20, default: 16 }),
-    borderBottomWidth: 1,
-    borderBottomColor: colors.outlineVariant,
+    padding: Platform.select({ web: 24, default: 16 }),
+    borderBottomWidth: 0,
+    marginBottom: 20,
   },
   contentTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontWeight: '600',
+    color: '#1f2937',
   },
   contentTitleMobile: {
     fontSize: 20,
   },
   contentScroll: {
     flex: 1,
-    padding: Platform.select({ web: 20, default: 12 }),
+    padding: Platform.select({ web: 24, default: 12 }),
   },
 });

@@ -96,13 +96,12 @@ const styles = StyleSheet.create({
     minWidth: 200,
     backgroundColor: colors.surface,
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     borderLeftWidth: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    boxShadow: '0 1px 3px rgba(44, 62, 80, 0.08)',
+    borderWidth: 0,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
   },
   statCardMobile: {
     minWidth: '100%',
@@ -163,10 +162,10 @@ const styles = StyleSheet.create({
   actionCard: {
     flex: 1,
     padding: 24,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     minWidth: 150,
-    boxShadow: '0 2px 4px rgba(44, 62, 80, 0.1)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
   },
   actionCardMobile: {
     minWidth: Platform.select({ web: 'calc(50% - 6px)', default: '45%' }),
@@ -192,10 +191,9 @@ const styles = StyleSheet.create({
   activityCard: {
     backgroundColor: colors.surface,
     padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    boxShadow: '0 1px 3px rgba(44, 62, 80, 0.08)',
+    borderRadius: 12,
+    borderWidth: 0,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
   },
   activityText: {
     color: colors.textTertiary,
