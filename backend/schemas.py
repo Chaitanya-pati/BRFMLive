@@ -85,6 +85,7 @@ class LabTest(LabTestBase):
 
 class LabTestWithVehicle(LabTest):
     vehicle_entry: VehicleEntryWithSupplier
+    has_claim: bool = False
 
 class ClaimBase(BaseModel):
     lab_test_id: int

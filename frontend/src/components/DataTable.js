@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
 
-export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCustomAction, customActionLabel, searchable = true }) {
+export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -34,7 +34,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
             <Text style={styles.mobileActionButtonText}>View/Edit</Text>
           </TouchableOpacity>
         )}
-        {onCustomAction && (
+        {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
           <TouchableOpacity
             style={[styles.mobileActionButton, styles.mobileCustomButton]}
             onPress={() => onCustomAction(row)}
@@ -101,7 +101,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
                         <Text style={styles.actionButtonText}>✏️</Text>
                       </TouchableOpacity>
                     )}
-                    {onCustomAction && (
+                    {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
                       <TouchableOpacity
                         style={styles.customActionButton}
                         onPress={() => onCustomAction(row)}

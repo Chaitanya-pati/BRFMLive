@@ -157,7 +157,16 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
 @app.get("/api/lab-tests", response_model=List[schemas.LabTestWithVehicle])
 def get_lab_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     lab_tests = db.query(models.LabTest).offset(skip).limit(limit).all()
-    return lab_tests
+    
+    # Add has_claim flag to each lab test
+    result = []
+    for lab_test in lab_tests:
+        lab_test_dict = schemas.LabTestWithVehicle.model_validate(lab_test).model_dump()
+        claim_exists = db.query(models.Claim).filter(models.Claim.lab_test_id == lab_test.id).first()
+        lab_test_dict['has_claim'] = claim_exists is not None
+        result.append(lab_test_dict)
+    
+    return result
 
 @app.get("/api/lab-tests/{lab_test_id}", response_model=schemas.LabTestWithVehicle)
 def get_lab_test(lab_test_id: int, db: Session = Depends(get_db)):

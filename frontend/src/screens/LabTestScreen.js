@@ -384,6 +384,7 @@ export default function LabTestScreen({ navigation }) {
         onDelete={handleDelete}
         onCustomAction={openRaiseClaimModal}
         customActionLabel="Raise Claim"
+        showCustomAction={(row) => !row.has_claim}
       />
 
       <Modal
