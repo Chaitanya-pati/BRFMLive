@@ -73,3 +73,18 @@ class LabTest(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     vehicle_entry = relationship("VehicleEntry", back_populates="lab_tests")
+    claims = relationship("Claim", back_populates="lab_test")
+
+class Claim(Base):
+    __tablename__ = "claims"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), nullable=False)
+    issue_found = Column(Text, nullable=False)
+    category_detected = Column(String(100))
+    claim_date = Column(DateTime, default=datetime.utcnow)
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    lab_test = relationship("LabTest", back_populates="claims")
