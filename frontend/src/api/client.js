@@ -37,6 +37,7 @@ export const supplierApi = {
 export const vehicleApi = {
   getAll: () => api.get("/vehicles"),
   getById: (id) => api.get(`/vehicles/${id}`),
+  getAvailableForTesting: () => api.get("/vehicles/available-for-testing"),
   create: (formData) => {
     return axios.post(`${API_URL}/vehicles`, formData, {
       headers: {

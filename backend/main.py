@@ -142,6 +142,19 @@ def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vehicle photo not found")
     return Response(content=vehicle.vehicle_photo, media_type="image/jpeg")
 
+@app.get("/api/vehicles/available-for-testing", response_model=List[schemas.VehicleEntryWithSupplier])
+def get_vehicles_available_for_testing(db: Session = Depends(get_db)):
+    # Get all vehicle IDs that already have lab tests
+    tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
+    tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids]
+    
+    # Get vehicles that don't have lab tests yet
+    available_vehicles = db.query(models.VehicleEntry).filter(
+        ~models.VehicleEntry.id.in_(tested_vehicle_ids)
+    ).all()
+    
+    return available_vehicles
+
 @app.post("/api/lab-tests", response_model=schemas.LabTest)
 def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == lab_test.vehicle_entry_id).first()

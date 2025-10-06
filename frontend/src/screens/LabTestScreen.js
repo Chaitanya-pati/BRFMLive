@@ -85,7 +85,7 @@ export default function LabTestScreen({ navigation }) {
 
   const loadVehicles = async () => {
     try {
-      const response = await vehicleApi.getAll();
+      const response = await vehicleApi.getAvailableForTesting();
       setVehicles(response.data);
     } catch (error) {
       console.error('Error loading vehicles:', error);
