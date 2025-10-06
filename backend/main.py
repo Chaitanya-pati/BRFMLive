@@ -166,6 +166,23 @@ def get_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Lab test not found")
     return lab_test
 
+@app.post("/api/claims/create", response_model=schemas.Claim)
+def create_claim(claim: schemas.ClaimCreate, db: Session = Depends(get_db)):
+    lab_test = db.query(models.LabTest).filter(models.LabTest.id == claim.lab_test_id).first()
+    if not lab_test:
+        raise HTTPException(status_code=404, detail="Lab test not found")
+    
+    db_claim = models.Claim(**claim.dict())
+    db.add(db_claim)
+    db.commit()
+    db.refresh(db_claim)
+    return db_claim
+
+@app.get("/api/claims", response_model=List[schemas.ClaimWithLabTest])
+def get_claims(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    claims = db.query(models.Claim).offset(skip).limit(limit).all()
+    return claims
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
