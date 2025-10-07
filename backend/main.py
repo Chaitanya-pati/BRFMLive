@@ -1,10 +1,15 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import base64
 from datetime import datetime
+import json
+import os
+import uuid
+from pathlib import Path
 
 from database import engine, get_db, Base
 import models
@@ -21,6 +26,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def read_root():
@@ -232,6 +242,158 @@ def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
     db.delete(db_lab_test)
     db.commit()
     return {"message": "Lab test deleted successfully"}
+
+async def save_upload_file(file: UploadFile) -> str:
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    return f"/uploads/{unique_filename}"
+
+@app.get("/api/godown-types")
+def get_godown_types():
+    with open("godown_types.json", "r") as f:
+        data = json.load(f)
+    return data["godown_types"]
+
+@app.post("/api/godowns", response_model=schemas.GodownMaster)
+def create_godown(godown: schemas.GodownMasterCreate, db: Session = Depends(get_db)):
+    db_godown = models.GodownMaster(**godown.dict())
+    db.add(db_godown)
+    db.commit()
+    db.refresh(db_godown)
+    return db_godown
+
+@app.get("/api/godowns", response_model=List[schemas.GodownMaster])
+def get_godowns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    godowns = db.query(models.GodownMaster).offset(skip).limit(limit).all()
+    return godowns
+
+@app.get("/api/godowns/{godown_id}", response_model=schemas.GodownMaster)
+def get_godown(godown_id: int, db: Session = Depends(get_db)):
+    godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
+    if not godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+    return godown
+
+@app.put("/api/godowns/{godown_id}", response_model=schemas.GodownMaster)
+def update_godown(godown_id: int, godown: schemas.GodownMasterUpdate, db: Session = Depends(get_db)):
+    db_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
+    if not db_godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+    
+    for key, value in godown.dict().items():
+        setattr(db_godown, key, value)
+    
+    db.commit()
+    db.refresh(db_godown)
+    return db_godown
+
+@app.delete("/api/godowns/{godown_id}")
+def delete_godown(godown_id: int, db: Session = Depends(get_db)):
+    db_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
+    if not db_godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+    
+    db.delete(db_godown)
+    db.commit()
+    return {"message": "Godown deleted successfully"}
+
+@app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithSupplier])
+def get_lab_tested_vehicles(db: Session = Depends(get_db)):
+    tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
+    tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids] if tested_vehicle_ids else []
+    
+    if tested_vehicle_ids:
+        lab_tested_vehicles = db.query(models.VehicleEntry).filter(
+            models.VehicleEntry.id.in_(tested_vehicle_ids)
+        ).all()
+    else:
+        lab_tested_vehicles = []
+    
+    return lab_tested_vehicles
+
+@app.post("/api/unloading-entries", response_model=schemas.UnloadingEntry)
+async def create_unloading_entry(
+    vehicle_entry_id: int = Form(...),
+    godown_id: int = Form(...),
+    gross_weight: float = Form(...),
+    empty_vehicle_weight: float = Form(...),
+    net_weight: float = Form(...),
+    unloading_start_time: Optional[str] = Form(None),
+    unloading_end_time: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    before_unloading_image: Optional[UploadFile] = File(None),
+    after_unloading_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    start_time = None
+    if unloading_start_time:
+        try:
+            start_time = datetime.fromisoformat(unloading_start_time.replace('Z', '+00:00'))
+        except:
+            start_time = datetime.utcnow()
+    
+    end_time = None
+    if unloading_end_time:
+        try:
+            end_time = datetime.fromisoformat(unloading_end_time.replace('Z', '+00:00'))
+        except:
+            end_time = datetime.utcnow()
+    
+    db_entry = models.UnloadingEntry(
+        vehicle_entry_id=vehicle_entry_id,
+        godown_id=godown_id,
+        gross_weight=gross_weight,
+        empty_vehicle_weight=empty_vehicle_weight,
+        net_weight=net_weight,
+        unloading_start_time=start_time or datetime.utcnow(),
+        unloading_end_time=end_time or datetime.utcnow(),
+        notes=notes
+    )
+    
+    if before_unloading_image:
+        db_entry.before_unloading_image = await save_upload_file(before_unloading_image)
+    
+    if after_unloading_image:
+        db_entry.after_unloading_image = await save_upload_file(after_unloading_image)
+    
+    godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
+    if godown:
+        net_weight_tons = net_weight / 1000
+        godown.current_storage = (godown.current_storage or 0) + net_weight_tons
+        db.add(godown)
+    
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    return db_entry
+
+@app.get("/api/unloading-entries", response_model=List[schemas.UnloadingEntryWithDetails])
+def get_unloading_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    entries = db.query(models.UnloadingEntry).offset(skip).limit(limit).all()
+    return entries
+
+@app.get("/api/unloading-entries/{entry_id}", response_model=schemas.UnloadingEntryWithDetails)
+def get_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.query(models.UnloadingEntry).filter(models.UnloadingEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Unloading entry not found")
+    return entry
+
+@app.delete("/api/unloading-entries/{entry_id}")
+def delete_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
+    db_entry = db.query(models.UnloadingEntry).filter(models.UnloadingEntry.id == entry_id).first()
+    if not db_entry:
+        raise HTTPException(status_code=404, detail="Unloading entry not found")
+    
+    db.delete(db_entry)
+    db.commit()
+    return {"message": "Unloading entry deleted successfully"}
 
 if __name__ == "__main__":
     import uvicorn
