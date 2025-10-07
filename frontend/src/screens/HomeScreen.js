@@ -1,19 +1,48 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator } from 'react-native';
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
+import { supplierApi, vehicleApi, labTestApi } from '../api/client';
 
 export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
 
-  const stats = [
+  const [stats, setStats] = useState([
     { title: 'Total Suppliers', value: '-', color: colors.info, icon: '🏢' },
     { title: 'Vehicle Entries', value: '-', color: colors.purple, icon: '🚛' },
     { title: 'Lab Tests', value: '-', color: colors.success, icon: '🔬' },
     { title: 'Pending Tests', value: '-', color: colors.warning, icon: '⏱️' },
-  ];
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
+  const fetchStatistics = async () => {
+    try {
+      setLoading(true);
+      const [suppliersRes, vehiclesRes, labTestsRes, availableVehiclesRes] = await Promise.all([
+        supplierApi.getAll(),
+        vehicleApi.getAll(),
+        labTestApi.getAll(),
+        vehicleApi.getAvailableForTesting(),
+      ]);
+
+      setStats([
+        { title: 'Total Suppliers', value: suppliersRes.data.length.toString(), color: colors.info, icon: '🏢' },
+        { title: 'Vehicle Entries', value: vehiclesRes.data.length.toString(), color: colors.purple, icon: '🚛' },
+        { title: 'Lab Tests', value: labTestsRes.data.length.toString(), color: colors.success, icon: '🔬' },
+        { title: 'Pending Tests', value: availableVehiclesRes.data.length.toString(), color: colors.warning, icon: '⏱️' },
+      ]);
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const quickActions = [
     { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.info },
@@ -38,7 +67,11 @@ export default function HomeScreen({ navigation }) {
               <Text style={[styles.statIcon, isMobile && styles.statIconMobile]}>{stat.icon}</Text>
               <View style={styles.statInfo}>
                 <Text style={[styles.statTitle, isMobile && styles.statTitleMobile]}>{stat.title}</Text>
-                <Text style={[styles.statValue, { color: stat.color }, isMobile && styles.statValueMobile]}>{stat.value}</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color={stat.color} />
+                ) : (
+                  <Text style={[styles.statValue, { color: stat.color }, isMobile && styles.statValueMobile]}>{stat.value}</Text>
+                )}
               </View>
             </View>
           ))}
