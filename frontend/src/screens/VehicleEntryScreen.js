@@ -27,6 +27,7 @@ export default function VehicleEntryScreen({ navigation }) {
   const [billPhoto, setBillPhoto] = useState(null);
   const [vehiclePhoto, setVehiclePhoto] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     vehicle_number: '',
     supplier_id: '',
@@ -176,6 +177,7 @@ export default function VehicleEntryScreen({ navigation }) {
       return;
     }
 
+    setLoading(true);
     try {
       const submitFormData = new FormData();
       submitFormData.append('vehicle_number', formData.vehicle_number);
@@ -225,6 +227,8 @@ export default function VehicleEntryScreen({ navigation }) {
     } catch (error) {
       console.error('Error saving entry:', error);
       showAlert('Error', 'Failed to save entry');
+    } finally {
+      setLoading(false);
     }
   };
 
