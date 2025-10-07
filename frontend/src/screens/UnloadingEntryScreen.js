@@ -268,19 +268,23 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'id', label: 'ID' },
+    { key: 'id', label: 'ID', field: 'id', width: 80 },
     { 
       key: 'vehicle_entry', 
       label: 'Vehicle', 
-      render: (entry) => entry.vehicle_entry?.vehicle_number || 'N/A'
+      field: 'vehicle_entry',
+      width: 180,
+      render: (value) => value?.vehicle_number || 'N/A'
     },
     { 
       key: 'godown', 
       label: 'Godown', 
-      render: (entry) => entry.godown?.name || 'N/A'
+      field: 'godown',
+      width: 200,
+      render: (value) => value?.name || 'N/A'
     },
-    { key: 'gross_weight', label: 'Gross Weight (kg)' },
-    { key: 'net_weight', label: 'Net Weight (kg)' },
+    { key: 'gross_weight', label: 'Gross Weight (kg)', field: 'gross_weight', width: 150 },
+    { key: 'net_weight', label: 'Net Weight (kg)', field: 'net_weight', width: 150 },
   ];
 
   return (
