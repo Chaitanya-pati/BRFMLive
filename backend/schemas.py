@@ -118,3 +118,50 @@ class Claim(ClaimBase):
 
 class ClaimWithLabTest(Claim):
     lab_test: LabTestWithVehicle
+
+class GodownMasterBase(BaseModel):
+    name: str
+    capacity: int
+    type: str
+
+class GodownMasterCreate(GodownMasterBase):
+    pass
+
+class GodownMasterUpdate(GodownMasterBase):
+    pass
+
+class GodownMaster(GodownMasterBase):
+    id: int
+    current_storage: float
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class UnloadingEntryBase(BaseModel):
+    vehicle_entry_id: int
+    godown_id: int
+    gross_weight: float
+    empty_vehicle_weight: float
+    net_weight: float
+    unloading_start_time: Optional[datetime] = None
+    unloading_end_time: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class UnloadingEntryCreate(UnloadingEntryBase):
+    pass
+
+class UnloadingEntry(UnloadingEntryBase):
+    id: int
+    before_unloading_image: Optional[str] = None
+    after_unloading_image: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class UnloadingEntryWithDetails(UnloadingEntry):
+    vehicle_entry: VehicleEntryWithSupplier
+    godown: GodownMaster
