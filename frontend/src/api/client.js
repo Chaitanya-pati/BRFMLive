@@ -5,14 +5,14 @@ const getApiUrl = () => {
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
-  
+
   // For Replit, construct the backend URL from the current host
   if (typeof window !== 'undefined') {
     const currentHost = window.location.hostname;
     // Replace the port with 8000 for the backend
     return `https://${currentHost}:8000/api`;
   }
-  
+
   return "http://localhost:8000/api";
 };
 
@@ -71,7 +71,6 @@ export const godownApi = {
 
 export const unloadingApi = {
   getAll: () => api.get("/unloading-entries"),
-  getById: (id) => api.get(`/unloading-entries/${id}`),
   getLabTestedVehicles: () => api.get("/vehicles/lab-tested"),
   create: (formData) => {
     return axios.post(`${API_URL}/unloading-entries`, formData, {
