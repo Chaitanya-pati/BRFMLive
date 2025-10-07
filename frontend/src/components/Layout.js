@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Dimensions, useWindowDimensions, Image } from 'react-native';
 import colors from '../theme/colors';
 
 export default function Layout({ children, title, navigation, currentRoute }) {
@@ -76,9 +76,11 @@ export default function Layout({ children, title, navigation, currentRoute }) {
           >
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
-          <Text style={[styles.topBarTitle, isMobile && styles.topBarTitleMobile]} numberOfLines={1}>
-            BRFM
-          </Text>
+          <Image 
+            source={require('../../assets/brfm-logo.png')} 
+            style={[styles.logo, isMobile && styles.logoMobile]}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.notificationButton}>
@@ -183,14 +185,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: colors.textSecondary,
   },
-  topBarTitle: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '500',
+  logo: {
+    height: 40,
+    width: 120,
     flexShrink: 1,
   },
-  topBarTitleMobile: {
-    fontSize: 16,
+  logoMobile: {
+    height: 32,
+    width: 100,
   },
   topBarRight: {
     flexDirection: 'row',
