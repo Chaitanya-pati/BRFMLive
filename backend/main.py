@@ -146,12 +146,16 @@ def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
 def get_vehicles_available_for_testing(db: Session = Depends(get_db)):
     # Get all vehicle IDs that already have lab tests
     tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
-    tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids]
+    tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids] if tested_vehicle_ids else []
     
     # Get vehicles that don't have lab tests yet
-    available_vehicles = db.query(models.VehicleEntry).filter(
-        ~models.VehicleEntry.id.in_(tested_vehicle_ids)
-    ).all()
+    if tested_vehicle_ids:
+        available_vehicles = db.query(models.VehicleEntry).filter(
+            ~models.VehicleEntry.id.in_(tested_vehicle_ids)
+        ).all()
+    else:
+        # If no lab tests exist, all vehicles are available
+        available_vehicles = db.query(models.VehicleEntry).all()
     
     return available_vehicles
 
