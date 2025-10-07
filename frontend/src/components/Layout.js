@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Dimensions, useWindowDimensions } from 'react-native';
 import colors from '../theme/colors';
@@ -78,7 +77,7 @@ export default function Layout({ children, title, navigation, currentRoute }) {
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
           <Text style={[styles.topBarTitle, isMobile && styles.topBarTitleMobile]} numberOfLines={1}>
-            {isMobile ? 'Mill Management' : 'Welcome to Mill Management System'}
+            BRFM
           </Text>
         </View>
         <View style={styles.topBarRight}>
@@ -102,8 +101,8 @@ export default function Layout({ children, title, navigation, currentRoute }) {
       <View style={styles.mainContainer}>
         {/* Mobile Overlay */}
         {isMobile && mobileMenuOpen && (
-          <TouchableOpacity 
-            style={styles.mobileOverlay} 
+          <TouchableOpacity
+            style={styles.mobileOverlay}
             onPress={() => setMobileMenuOpen(false)}
             activeOpacity={1}
           />
@@ -119,8 +118,8 @@ export default function Layout({ children, title, navigation, currentRoute }) {
           <View style={styles.sidebarHeader}>
             {(!sidebarCollapsed || mobileMenuOpen) && (
               <>
-                <Text style={styles.sidebarTitle}>Mill Management</Text>
-                <Text style={styles.sidebarSubtitle}>System v2.0</Text>
+                {/* Removed: <Text style={styles.sidebarTitle}>Mill Management</Text> */}
+                {/* Removed: <Text style={styles.sidebarSubtitle}>System v2.0</Text> */}
               </>
             )}
             {sidebarCollapsed && !mobileMenuOpen && (
@@ -130,11 +129,11 @@ export default function Layout({ children, title, navigation, currentRoute }) {
 
           <ScrollView style={styles.menuContainer}>
             {renderMenuItem(menuItems[0], 0)}
-            
+
             {(!sidebarCollapsed || mobileMenuOpen) && (
               <Text style={styles.sectionLabel}>Operations</Text>
             )}
-            
+
             {menuItems.slice(1).map((item, index) => renderMenuItem(item, index + 1))}
           </ScrollView>
         </View>
