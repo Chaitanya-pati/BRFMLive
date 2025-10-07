@@ -391,6 +391,11 @@ def delete_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     if not db_entry:
         raise HTTPException(status_code=404, detail="Unloading entry not found")
     
+    godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_entry.godown_id).first()
+    if godown:
+        net_weight_tons = db_entry.net_weight / 1000
+        godown.current_storage = max(0, (godown.current_storage or 0) - net_weight_tons)
+    
     db.delete(db_entry)
     db.commit()
     return {"message": "Unloading entry deleted successfully"}
