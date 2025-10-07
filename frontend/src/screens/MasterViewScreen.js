@@ -242,20 +242,20 @@ export default function MasterViewScreen({ navigation }) {
   };
 
   const godownColumns = [
-    { key: 'id', label: 'ID' },
-    { key: 'name', label: 'Name' },
-    { key: 'capacity', label: 'Capacity (tons)' },
-    { key: 'type', label: 'Type' },
-    { key: 'current_storage', label: 'Current Storage (tons)' },
+    { field: 'id', label: 'ID', width: 80 },
+    { field: 'name', label: 'Name', width: 200 },
+    { field: 'capacity', label: 'Capacity (tons)', width: 150 },
+    { field: 'type', label: 'Type', width: 150 },
+    { field: 'current_storage', label: 'Current Storage (tons)', width: 180 },
   ];
 
   const supplierColumns = [
-    { key: 'id', label: 'ID' },
-    { key: 'supplier_name', label: 'Supplier Name' },
-    { key: 'contact_person', label: 'Contact Person' },
-    { key: 'phone', label: 'Phone' },
-    { key: 'state', label: 'State' },
-    { key: 'city', label: 'City' },
+    { field: 'id', label: 'ID', width: 80 },
+    { field: 'supplier_name', label: 'Supplier Name', width: 200 },
+    { field: 'contact_person', label: 'Contact Person', width: 180 },
+    { field: 'phone', label: 'Phone', width: 150 },
+    { field: 'state', label: 'State', width: 150 },
+    { field: 'city', label: 'City', width: 150 },
   ];
 
   return (

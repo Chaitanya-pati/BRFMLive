@@ -22,7 +22,6 @@ export default function Layout({ children, title, navigation, currentRoute }) {
   const menuItems = [
     { name: 'Dashboard', route: 'Home', icon: '📊', section: null },
     { name: 'Master Data', route: 'MasterView', icon: '📚', section: 'Operations' },
-    { name: 'Supplier Master', route: 'SupplierMaster', icon: '🏢', section: 'Operations' },
     { name: 'Gate Entry', route: 'VehicleEntry', icon: '🚪', section: 'Operations' },
     { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
     { name: 'Unloading Entry', route: 'UnloadingEntry', icon: '📦', section: 'Operations' },
