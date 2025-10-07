@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,12 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   Alert,
   useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
+import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { claimApi } from '../api/client';
 import colors from '../theme/colors';
@@ -52,11 +52,11 @@ export default function ClaimTrackingScreen({ navigation }) {
 
   const filterClaims = () => {
     let filtered = claims;
-    
+
     if (statusFilter !== 'All') {
       filtered = filtered.filter(claim => claim.claim_status === statusFilter);
     }
-    
+
     if (searchTerm) {
       filtered = filtered.filter(claim =>
         claim.id.toString().includes(searchTerm) ||
@@ -66,7 +66,7 @@ export default function ClaimTrackingScreen({ navigation }) {
         claim.remarks?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     setFilteredClaims(filtered);
   };
 
@@ -125,127 +125,55 @@ export default function ClaimTrackingScreen({ navigation }) {
     }
   };
 
-  const renderMobileCard = (claim) => (
-    <View key={claim.id} style={styles.mobileCard}>
-      <View style={styles.mobileCardHeader}>
-        <Text style={styles.mobileCardId}>Claim #{claim.id}</Text>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusEmoji}>{getStatusEmoji(claim.claim_status)}</Text>
-          <Text style={[styles.statusText, { color: getStatusColor(claim.claim_status) }]}>
-            {claim.claim_status}
+  const columns = [
+    { label: 'Claim ID', field: 'id', width: 100 },
+    {
+      label: 'Vehicle No',
+      field: 'lab_test',
+      width: 140,
+      render: (labTest) => labTest?.vehicle_entry?.vehicle_number || '-'
+    },
+    {
+      label: 'Supplier Name',
+      field: 'lab_test',
+      width: 200,
+      render: (labTest) => labTest?.vehicle_entry?.supplier?.supplier_name || '-'
+    },
+    { label: 'Issue Found', field: 'issue_found', width: 250 },
+    {
+      label: 'Claim Status',
+      field: 'claim_status',
+      width: 150,
+      render: (status) => (
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusEmoji}>{getStatusEmoji(status)}</Text>
+          <Text style={[styles.statusText, { color: getStatusColor(status) }]}>
+            {status}
           </Text>
         </View>
-      </View>
-
-      <View style={styles.mobileCardContent}>
-        <View style={styles.mobileCardRow}>
-          <Text style={styles.mobileCardLabel}>Vehicle:</Text>
-          <Text style={styles.mobileCardValue}>
-            {claim.lab_test?.vehicle_entry?.vehicle_number || '-'}
-          </Text>
-        </View>
-
-        <View style={styles.mobileCardRow}>
-          <Text style={styles.mobileCardLabel}>Supplier:</Text>
-          <Text style={styles.mobileCardValue} numberOfLines={2}>
-            {claim.lab_test?.vehicle_entry?.supplier?.supplier_name || '-'}
-          </Text>
-        </View>
-
-        <View style={styles.mobileCardRow}>
-          <Text style={styles.mobileCardLabel}>Issue:</Text>
-          <Text style={styles.mobileCardValue} numberOfLines={3}>
-            {claim.issue_found}
-          </Text>
-        </View>
-
-        <View style={styles.mobileCardRow}>
-          <Text style={styles.mobileCardLabel}>Date:</Text>
-          <Text style={styles.mobileCardValue}>
-            {new Date(claim.claim_date).toLocaleDateString()}
-          </Text>
-        </View>
-
-        {claim.remarks && (
-          <View style={styles.mobileCardRow}>
-            <Text style={styles.mobileCardLabel}>Remarks:</Text>
-            <Text style={styles.mobileCardValue} numberOfLines={2}>
-              {claim.remarks}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <TouchableOpacity
-        style={styles.mobileUpdateButton}
-        onPress={() => openUpdateModal(claim)}
-      >
-        <Text style={styles.mobileUpdateButtonText}>Update Status</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderDesktopTable = () => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-      <View style={styles.tableWrapper}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, styles.cellId]}>Claim ID</Text>
-          <Text style={[styles.headerCell, styles.cellVehicle]}>Vehicle No</Text>
-          <Text style={[styles.headerCell, styles.cellSupplier]}>Supplier Name</Text>
-          <Text style={[styles.headerCell, styles.cellIssue]}>Issue Found</Text>
-          <Text style={[styles.headerCell, styles.cellStatus]}>Claim Status</Text>
-          <Text style={[styles.headerCell, styles.cellDate]}>Claim Date</Text>
-          <Text style={[styles.headerCell, styles.cellRemarks]}>Remarks</Text>
-          <Text style={[styles.headerCell, styles.cellAction]}>Action</Text>
-        </View>
-
-        <ScrollView style={styles.tableBody}>
-          {filteredClaims.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No claims found</Text>
-            </View>
-          ) : (
-            filteredClaims.map((claim) => (
-              <View key={claim.id} style={styles.tableRow}>
-                <Text style={[styles.cell, styles.cellId]}>{claim.id}</Text>
-                <Text style={[styles.cell, styles.cellVehicle]}>
-                  {claim.lab_test?.vehicle_entry?.vehicle_number || '-'}
-                </Text>
-                <Text style={[styles.cell, styles.cellSupplier]} numberOfLines={2}>
-                  {claim.lab_test?.vehicle_entry?.supplier?.supplier_name || '-'}
-                </Text>
-                <Text style={[styles.cell, styles.cellIssue]} numberOfLines={2}>
-                  {claim.issue_found}
-                </Text>
-                <View style={[styles.cell, styles.cellStatus]}>
-                  <View style={styles.statusContainer}>
-                    <Text style={styles.statusEmoji}>{getStatusEmoji(claim.claim_status)}</Text>
-                    <Text style={[styles.statusText, { color: getStatusColor(claim.claim_status) }]}>
-                      {claim.claim_status}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.cell, styles.cellDate]}>
-                  {new Date(claim.claim_date).toLocaleDateString()}
-                </Text>
-                <Text style={[styles.cell, styles.cellRemarks]} numberOfLines={2}>
-                  {claim.remarks || '-'}
-                </Text>
-                <View style={[styles.cell, styles.cellAction]}>
-                  <TouchableOpacity
-                    style={styles.updateButton}
-                    onPress={() => openUpdateModal(claim)}
-                  >
-                    <Text style={styles.updateButtonText}>Update</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
-          )}
-        </ScrollView>
-      </View>
-    </ScrollView>
-  );
+      )
+    },
+    {
+      label: 'Claim Date',
+      field: 'claim_date',
+      width: 120,
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    { label: 'Remarks', field: 'remarks', width: 200 },
+    {
+      label: 'Action',
+      field: 'action',
+      width: 100,
+      render: (rowData) => (
+        <TouchableOpacity
+          style={styles.updateButton}
+          onPress={() => openUpdateModal(rowData)}
+        >
+          <Text style={styles.updateButtonText}>Update</Text>
+        </TouchableOpacity>
+      )
+    },
+  ];
 
   return (
     <Layout title="Claim Tracking" navigation={navigation} currentRoute="ClaimTracking">
@@ -277,21 +205,12 @@ export default function ClaimTrackingScreen({ navigation }) {
           </View>
         </View>
 
-        {isMobile ? (
-          <ScrollView style={styles.mobileCardsContainer}>
-            {filteredClaims.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No claims found</Text>
-              </View>
-            ) : (
-              filteredClaims.map((claim) => renderMobileCard(claim))
-            )}
-          </ScrollView>
-        ) : (
-          <View style={styles.tableContainer}>
-            {renderDesktopTable()}
-          </View>
-        )}
+        <DataTable
+          columns={columns}
+          data={filteredClaims}
+          onEdit={openUpdateModal}
+          searchable={false} // Search is handled by the TextInput above
+        />
       </View>
 
       <Modal
