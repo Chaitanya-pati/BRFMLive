@@ -331,15 +331,19 @@ def delete_godown(godown_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithSupplier])
 def get_lab_tested_vehicles(db: Session = Depends(get_db)):
-    tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
-    tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids] if tested_vehicle_ids else []
+    # Get all lab test records with their vehicle entries
+    lab_tests = db.query(models.LabTest).all()
     
-    if tested_vehicle_ids:
-        lab_tested_vehicles = db.query(models.VehicleEntry).filter(
-            models.VehicleEntry.id.in_(tested_vehicle_ids)
-        ).all()
-    else:
-        lab_tested_vehicles = []
+    if not lab_tests:
+        return []
+    
+    # Get unique vehicle IDs from lab tests
+    tested_vehicle_ids = list(set([test.vehicle_entry_id for test in lab_tests]))
+    
+    # Fetch vehicles with those IDs
+    lab_tested_vehicles = db.query(models.VehicleEntry).filter(
+        models.VehicleEntry.id.in_(tested_vehicle_ids)
+    ).all()
     
     return lab_tested_vehicles
 
