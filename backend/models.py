@@ -95,3 +95,40 @@ class Claim(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     lab_test = relationship("LabTest", back_populates="claims")
+
+class GodownMaster(Base):
+    __tablename__ = "godown_master"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    capacity = Column(Integer, nullable=False)
+    type = Column(String(50), nullable=False)
+    current_storage = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    unloading_entries = relationship("UnloadingEntry", back_populates="godown")
+
+class UnloadingEntry(Base):
+    __tablename__ = "unloading_entries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    vehicle_entry_id = Column(Integer, ForeignKey("vehicle_entries.id"), nullable=False)
+    godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
+    
+    gross_weight = Column(Float, nullable=False)
+    empty_vehicle_weight = Column(Float, nullable=False)
+    net_weight = Column(Float, nullable=False)
+    
+    before_unloading_image = Column(String(500))
+    after_unloading_image = Column(String(500))
+    
+    unloading_start_time = Column(DateTime, default=datetime.utcnow)
+    unloading_end_time = Column(DateTime, default=datetime.utcnow)
+    notes = Column(Text)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    vehicle_entry = relationship("VehicleEntry")
+    godown = relationship("GodownMaster", back_populates="unloading_entries")
