@@ -170,3 +170,6 @@ class UnloadingEntry(UnloadingEntryBase):
 class UnloadingEntryWithDetails(UnloadingEntry):
     vehicle_entry: VehicleEntryWithSupplier
     godown: GodownMaster
+
+# Resolve forward references
+VehicleEntryWithLabTests.model_rebuild()

@@ -139,6 +139,24 @@ def get_vehicles_available_for_testing(db: Session = Depends(get_db)):
     
     return available_vehicles
 
+@app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithLabTests])
+def get_lab_tested_vehicles(db: Session = Depends(get_db)):
+    # Get all lab test records with their vehicle entries
+    lab_tests = db.query(models.LabTest).all()
+    
+    if not lab_tests:
+        return []
+    
+    # Get unique vehicle IDs from lab tests
+    tested_vehicle_ids = list(set([test.vehicle_entry_id for test in lab_tests]))
+    
+    # Fetch vehicles with those IDs
+    lab_tested_vehicles = db.query(models.VehicleEntry).filter(
+        models.VehicleEntry.id.in_(tested_vehicle_ids)
+    ).all()
+    
+    return lab_tested_vehicles
+
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
 def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
@@ -328,24 +346,6 @@ def delete_godown(godown_id: int, db: Session = Depends(get_db)):
     db.delete(db_godown)
     db.commit()
     return {"message": "Godown deleted successfully"}
-
-@app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_lab_tested_vehicles(db: Session = Depends(get_db)):
-    # Get all lab test records with their vehicle entries
-    lab_tests = db.query(models.LabTest).all()
-    
-    if not lab_tests:
-        return []
-    
-    # Get unique vehicle IDs from lab tests
-    tested_vehicle_ids = list(set([test.vehicle_entry_id for test in lab_tests]))
-    
-    # Fetch vehicles with those IDs
-    lab_tested_vehicles = db.query(models.VehicleEntry).filter(
-        models.VehicleEntry.id.in_(tested_vehicle_ids)
-    ).all()
-    
-    return lab_tested_vehicles
 
 @app.post("/api/unloading-entries", response_model=schemas.UnloadingEntry)
 async def create_unloading_entry(
