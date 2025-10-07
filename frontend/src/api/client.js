@@ -60,6 +60,29 @@ export const claimApi = {
   update: (id, data) => api.patch(`/claims/${id}`, data),
 };
 
+export const godownApi = {
+  getAll: () => api.get("/godowns"),
+  getById: (id) => api.get(`/godowns/${id}`),
+  create: (data) => api.post("/godowns", data),
+  update: (id, data) => api.put(`/godowns/${id}`, data),
+  delete: (id) => api.delete(`/godowns/${id}`),
+  getTypes: () => api.get("/godown-types"),
+};
+
+export const unloadingApi = {
+  getAll: () => api.get("/unloading-entries"),
+  getById: (id) => api.get(`/unloading-entries/${id}`),
+  getLabTestedVehicles: () => api.get("/vehicles/lab-tested"),
+  create: (formData) => {
+    return axios.post(`${API_URL}/unloading-entries`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+  delete: (id) => api.delete(`/unloading-entries/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },
