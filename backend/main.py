@@ -329,7 +329,7 @@ def delete_godown(godown_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Godown deleted successfully"}
 
-@app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithSupplier])
+@app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithLabTests])
 def get_lab_tested_vehicles(db: Session = Depends(get_db)):
     # Get all lab test records with their vehicle entries
     lab_tests = db.query(models.LabTest).all()

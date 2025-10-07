@@ -53,6 +53,7 @@ export default function LabTestScreen({ navigation }) {
     sprouted_grains: '',
     other_grain_damage: '',
     total_dockage: '0.00',
+    category: '',
     remarks: '',
     tested_by: '',
   });
@@ -165,6 +166,7 @@ export default function LabTestScreen({ navigation }) {
       sprouted_grains: '',
       other_grain_damage: '',
       total_dockage: '0.00',
+      category: '',
       remarks: '',
       tested_by: '',
     });
@@ -195,6 +197,7 @@ export default function LabTestScreen({ navigation }) {
       sprouted_grains: labTest.sprouted_grains?.toString() || '',
       other_grain_damage: labTest.other_grain_damage?.toString() || '',
       total_dockage: labTest.total_dockage?.toString() || '0.00',
+      category: labTest.category || '',
       remarks: labTest.remarks || '',
       tested_by: labTest.tested_by || '',
     });
@@ -547,6 +550,20 @@ export default function LabTestScreen({ navigation }) {
           <View style={styles.totalBox}>
             <Text style={styles.totalLabel}>Total Dockage:</Text>
             <Text style={styles.totalValue}>{formData.total_dockage}%</Text>
+          </View>
+
+          <Text style={styles.label}>Wheat Category *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.category}
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Category" value="" />
+              <Picker.Item label="Mill" value="Mill" />
+              <Picker.Item label="Low Mill" value="Low Mill" />
+              <Picker.Item label="HD Type" value="HD Type" />
+            </Picker>
           </View>
 
           <Text style={styles.label}>Tested By</Text>

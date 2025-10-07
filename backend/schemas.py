@@ -53,6 +53,10 @@ class VehicleEntry(VehicleEntryBase):
 class VehicleEntryWithSupplier(VehicleEntry):
     supplier: Supplier
 
+class VehicleEntryWithLabTests(VehicleEntry):
+    supplier: Supplier
+    lab_tests: list['LabTest'] = []
+
 class LabTestBase(BaseModel):
     vehicle_entry_id: int
     test_date: Optional[datetime] = None
@@ -75,6 +79,7 @@ class LabTestBase(BaseModel):
     sprouted_grains: Optional[float] = None
     other_grain_damage: Optional[float] = None
     total_dockage: Optional[float] = None
+    category: Optional[str] = None
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
 

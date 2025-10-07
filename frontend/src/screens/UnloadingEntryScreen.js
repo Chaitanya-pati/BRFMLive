@@ -23,6 +23,8 @@ export default function UnloadingEntryScreen({ navigation }) {
   const [entries, setEntries] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [godowns, setGodowns] = useState([]);
+  const [filteredGodowns, setFilteredGodowns] = useState([]);
+  const [selectedVehicleCategory, setSelectedVehicleCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [beforeImage, setBeforeImage] = useState(null);
   const [afterImage, setAfterImage] = useState(null);
@@ -105,6 +107,28 @@ export default function UnloadingEntryScreen({ navigation }) {
     return (grossNum - emptyNum).toFixed(2);
   };
 
+  const handleVehicleChange = (vehicleId) => {
+    setFormData({ ...formData, vehicle_entry_id: vehicleId });
+    
+    // Find the selected vehicle and get its lab test category
+    const selectedVehicle = vehicles.find(v => v.id === vehicleId);
+    if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
+      const category = selectedVehicle.lab_tests[0].category;
+      setSelectedVehicleCategory(category);
+      
+      // Filter godowns by category
+      if (category) {
+        const filtered = godowns.filter(g => g.type === category);
+        setFilteredGodowns(filtered);
+      } else {
+        setFilteredGodowns(godowns);
+      }
+    } else {
+      setSelectedVehicleCategory(null);
+      setFilteredGodowns(godowns);
+    }
+  };
+
   const handleWeightChange = (field, value) => {
     const newFormData = { ...formData, [field]: value };
     if (field === 'gross_weight' || field === 'empty_vehicle_weight') {
@@ -167,6 +191,8 @@ export default function UnloadingEntryScreen({ navigation }) {
     });
     setBeforeImage(null);
     setAfterImage(null);
+    setSelectedVehicleCategory(null);
+    setFilteredGodowns(godowns);
     setModalVisible(true);
   };
 
@@ -276,7 +302,7 @@ export default function UnloadingEntryScreen({ navigation }) {
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.vehicle_entry_id}
-              onValueChange={(value) => setFormData({ ...formData, vehicle_entry_id: value })}
+              onValueChange={handleVehicleChange}
               style={styles.picker}
             >
               <Picker.Item label="Select Vehicle" value="" />
@@ -290,7 +316,7 @@ export default function UnloadingEntryScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Godown *</Text>
+          <Text style={styles.label}>Godown * {selectedVehicleCategory && `(Category: ${selectedVehicleCategory})`}</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.godown_id}
@@ -298,7 +324,7 @@ export default function UnloadingEntryScreen({ navigation }) {
               style={styles.picker}
             >
               <Picker.Item label="Select Godown" value="" />
-              {godowns.map((godown) => (
+              {filteredGodowns.map((godown) => (
                 <Picker.Item
                   key={godown.id}
                   label={`${godown.name} (${godown.type}) - ${godown.current_storage}/${godown.capacity} tons`}

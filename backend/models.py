@@ -72,6 +72,7 @@ class LabTest(Base):
     other_grain_damage = Column(Float)
     total_dockage = Column(Float)
     
+    category = Column(String(50))
     remarks = Column(Text)
     tested_by = Column(String(255))
     
