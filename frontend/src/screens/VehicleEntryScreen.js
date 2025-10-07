@@ -5,28 +5,28 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Image,
+  Alert,
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
+import * as Camera from 'expo-camera';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { supplierApi, vehicleApi } from '../api/client';
+import { vehicleApi, supplierApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function VehicleEntryScreen({ navigation }) {
   const [vehicles, setVehicles] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [billPhoto, setBillPhoto] = useState(null);
   const [vehiclePhoto, setVehiclePhoto] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
-
+  const [cameraPermission, setCameraPermission] = useState(null);
   const [formData, setFormData] = useState({
     vehicle_number: '',
     supplier_id: '',
@@ -40,12 +40,12 @@ export default function VehicleEntryScreen({ navigation }) {
   useEffect(() => {
     loadVehicles();
     loadSuppliers();
-    requestPermissions();
+    requestCameraPermission();
   }, []);
 
-  const requestPermissions = async () => {
-    await ImagePicker.requestCameraPermissionsAsync();
-    await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const requestCameraPermission = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setCameraPermission(status === 'granted');
   };
 
   const loadSuppliers = async () => {
@@ -67,33 +67,11 @@ export default function VehicleEntryScreen({ navigation }) {
   };
 
   const pickImage = async (type) => {
-    Alert.alert(
-      'Select Option',
-      'Choose how to add the photo',
-      [
-        {
-          text: 'Take Photo',
-          onPress: () => takePhoto(type),
-        },
-        {
-          text: 'Choose from Gallery',
-          onPress: () => chooseFromGallery(type),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
-  };
-
-  const takePhoto = async (type) => {
-    const result = await ImagePicker.launchCameraAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
-      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -105,13 +83,17 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
-  const chooseFromGallery = async (type) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
+  const takePhoto = async (type) => {
+    if (cameraPermission === null || cameraPermission === false) {
+      Alert.alert('Permission Denied', 'Camera access is required to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
-      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -155,7 +137,7 @@ export default function VehicleEntryScreen({ navigation }) {
       arrival_time: new Date(vehicle.arrival_time),
       notes: vehicle.notes || '',
     });
-    setBillPhoto(null);
+    setBillPhoto(null); // Reset photos on edit
     setVehiclePhoto(null);
     setModalVisible(true);
   };
@@ -184,41 +166,65 @@ export default function VehicleEntryScreen({ navigation }) {
     );
   };
 
+  const showAlert = (title, message) => {
+    Alert.alert(title, message);
+  };
+
   const handleSubmit = async () => {
     if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showAlert('Error', 'Please fill all required fields');
       return;
     }
 
-    setLoading(true);
     try {
-      const submitData = new FormData();
-      submitData.append('vehicle_number', formData.vehicle_number);
-      submitData.append('supplier_id', formData.supplier_id);
-      submitData.append('bill_no', formData.bill_no);
-      submitData.append('driver_name', formData.driver_name || '');
-      submitData.append('driver_phone', formData.driver_phone || '');
-      submitData.append('arrival_time', formData.arrival_time.toISOString());
-      submitData.append('notes', formData.notes || '');
-
-      if (billPhoto && billPhoto.base64) {
-        submitData.append('supplier_bill_photo', `data:image/jpeg;base64,${billPhoto.base64}`);
+      const submitFormData = new FormData();
+      submitFormData.append('vehicle_number', formData.vehicle_number);
+      submitFormData.append('supplier_id', formData.supplier_id);
+      submitFormData.append('bill_no', formData.bill_no);
+      if (formData.driver_name) {
+        submitFormData.append('driver_name', formData.driver_name);
+      }
+      if (formData.driver_phone) {
+        submitFormData.append('driver_phone', formData.driver_phone);
+      }
+      submitFormData.append('arrival_time', formData.arrival_time.toISOString());
+      if (formData.notes) {
+        submitFormData.append('notes', formData.notes);
       }
 
-      if (vehiclePhoto && vehiclePhoto.base64) {
-        submitData.append('vehicle_photo', `data:image/jpeg;base64,${vehiclePhoto.base64}`);
+      if (billPhoto) {
+        if (Platform.OS === 'web') {
+          const billBlob = await fetch(billPhoto.uri).then(r => r.blob());
+          submitFormData.append('supplier_bill_photo', billBlob, 'bill.jpg');
+        } else {
+          submitFormData.append('supplier_bill_photo', {
+            uri: billPhoto.uri,
+            type: 'image/jpeg',
+            name: 'bill.jpg',
+          });
+        }
       }
 
-      await vehicleApi.create(submitData);
-      Alert.alert('Success', 'Vehicle entry created successfully');
-      
+      if (vehiclePhoto) {
+        if (Platform.OS === 'web') {
+          const vehicleBlob = await fetch(vehiclePhoto.uri).then(r => r.blob());
+          submitFormData.append('vehicle_photo', vehicleBlob, 'vehicle.jpg');
+        } else {
+          submitFormData.append('vehicle_photo', {
+            uri: vehiclePhoto.uri,
+            type: 'image/jpeg',
+            name: 'vehicle.jpg',
+          });
+        }
+      }
+
+      await vehicleApi.create(submitFormData);
+      showAlert('Success', 'Vehicle entry added successfully');
       setModalVisible(false);
       loadVehicles();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create vehicle entry');
-      console.error(error);
-    } finally {
-      setLoading(false);
+      console.error('Error saving entry:', error);
+      showAlert('Error', 'Failed to save entry');
     }
   };
 
@@ -328,35 +334,53 @@ export default function VehicleEntryScreen({ navigation }) {
             />
           )}
 
-          <View style={styles.photoSection}>
-            <View style={styles.photoColumn}>
-              <Text style={styles.label}>Supplier Bill Photo</Text>
+          <Text style={styles.label}>Supplier Bill Photo</Text>
+          <View style={styles.imageSection}>
+            {billPhoto ? (
+              <Image source={{ uri: billPhoto.uri }} style={styles.imagePreview} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.placeholderText}>No image</Text>
+              </View>
+            )}
+            <View style={styles.imageButtons}>
               <TouchableOpacity
-                style={styles.photoButton}
+                style={styles.imageButton}
+                onPress={() => takePhoto('bill')}
+              >
+                <Text style={styles.imageButtonText}>📷 Camera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.imageButton}
                 onPress={() => pickImage('bill')}
               >
-                <Text style={styles.photoButtonText}>
-                  {billPhoto ? '✓ Photo Added' : '📷 Add Photo'}
-                </Text>
+                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
               </TouchableOpacity>
-              {billPhoto && (
-                <Image source={{ uri: billPhoto.uri }} style={styles.photoPreview} />
-              )}
             </View>
+          </View>
 
-            <View style={styles.photoColumn}>
-              <Text style={styles.label}>Vehicle Photo</Text>
+          <Text style={styles.label}>Vehicle Photo</Text>
+          <View style={styles.imageSection}>
+            {vehiclePhoto ? (
+              <Image source={{ uri: vehiclePhoto.uri }} style={styles.imagePreview} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.placeholderText}>No image</Text>
+              </View>
+            )}
+            <View style={styles.imageButtons}>
               <TouchableOpacity
-                style={styles.photoButton}
+                style={styles.imageButton}
+                onPress={() => takePhoto('vehicle')}
+              >
+                <Text style={styles.imageButtonText}>📷 Camera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.imageButton}
                 onPress={() => pickImage('vehicle')}
               >
-                <Text style={styles.photoButtonText}>
-                  {vehiclePhoto ? '✓ Photo Added' : '📷 Add Photo'}
-                </Text>
+                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
               </TouchableOpacity>
-              {vehiclePhoto && (
-                <Image source={{ uri: vehiclePhoto.uri }} style={styles.photoPreview} />
-              )}
             </View>
           </View>
 
@@ -413,47 +437,55 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   textArea: {
-    height: 80,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: colors.outline,
+  imageSection: {
+    marginBottom: 16,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
     borderRadius: 6,
-    backgroundColor: colors.surface,
+    marginBottom: 8,
   },
-  picker: {
-    height: Platform.OS === 'ios' ? 150 : 50,
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
   },
-  photoSection: {
-    flexDirection: Platform.select({ web: 'row', default: 'column' }),
-    gap: 16,
+  placeholderText: {
+    color: '#9ca3af',
+    fontSize: 14,
   },
-  photoColumn: {
-    flex: Platform.select({ web: 1, default: 0 }),
-    width: Platform.select({ web: 'auto', default: '100%' }),
+  imageButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  photoButton: {
+  imageButton: {
+    flex: 1,
     backgroundColor: colors.primary,
-    padding: 12,
+    paddingVertical: 10,
     borderRadius: 6,
     alignItems: 'center',
   },
-  photoButtonText: {
-    color: colors.onPrimary,
+  imageButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
-  },
-  photoPreview: {
-    width: '100%',
-    height: 120,
-    borderRadius: 6,
-    marginTop: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    marginTop: 24,
     gap: 12,
-    marginTop: 20,
   },
   button: {
     paddingHorizontal: 24,

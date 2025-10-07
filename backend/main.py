@@ -80,7 +80,7 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
     return {"message": "Supplier deleted successfully"}
 
 @app.post("/api/vehicles", response_model=schemas.VehicleEntry)
-def create_vehicle_entry(
+async def create_vehicle_entry(
     vehicle_number: str = Form(...),
     supplier_id: int = Form(...),
     bill_no: str = Form(...),
@@ -88,8 +88,8 @@ def create_vehicle_entry(
     driver_phone: Optional[str] = Form(None),
     arrival_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
-    supplier_bill_photo: Optional[str] = Form(None),
-    vehicle_photo: Optional[str] = Form(None),
+    supplier_bill_photo: Optional[UploadFile] = File(None),
+    vehicle_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     arrival_dt = None
@@ -110,16 +110,12 @@ def create_vehicle_entry(
     )
     
     if supplier_bill_photo:
-        try:
-            db_vehicle.supplier_bill_photo = base64.b64decode(supplier_bill_photo.split(',')[1] if ',' in supplier_bill_photo else supplier_bill_photo)
-        except:
-            pass
+        bill_path = await save_upload_file(supplier_bill_photo)
+        db_vehicle.supplier_bill_photo = bill_path.encode('utf-8')
     
     if vehicle_photo:
-        try:
-            db_vehicle.vehicle_photo = base64.b64decode(vehicle_photo.split(',')[1] if ',' in vehicle_photo else vehicle_photo)
-        except:
-            pass
+        vehicle_path = await save_upload_file(vehicle_photo)
+        db_vehicle.vehicle_photo = vehicle_path.encode('utf-8')
     
     db.add(db_vehicle)
     db.commit()
@@ -160,14 +156,44 @@ def get_bill_photo(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle or not vehicle.supplier_bill_photo:
         raise HTTPException(status_code=404, detail="Bill photo not found")
-    return Response(content=vehicle.supplier_bill_photo, media_type="image/jpeg")
+    
+    # Check if it's a file path or binary data
+    photo_data = vehicle.supplier_bill_photo
+    if isinstance(photo_data, bytes):
+        photo_str = photo_data.decode('utf-8')
+        if photo_str.startswith('/uploads/'):
+            # It's a file path
+            file_path = UPLOAD_DIR / photo_str.split('/')[-1]
+            if file_path.exists():
+                with open(file_path, 'rb') as f:
+                    return Response(content=f.read(), media_type="image/jpeg")
+        else:
+            # It's binary image data
+            return Response(content=photo_data, media_type="image/jpeg")
+    
+    raise HTTPException(status_code=404, detail="Bill photo not found")
 
 @app.get("/api/vehicles/{vehicle_id}/vehicle_photo")
 def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle or not vehicle.vehicle_photo:
         raise HTTPException(status_code=404, detail="Vehicle photo not found")
-    return Response(content=vehicle.vehicle_photo, media_type="image/jpeg")
+    
+    # Check if it's a file path or binary data
+    photo_data = vehicle.vehicle_photo
+    if isinstance(photo_data, bytes):
+        photo_str = photo_data.decode('utf-8')
+        if photo_str.startswith('/uploads/'):
+            # It's a file path
+            file_path = UPLOAD_DIR / photo_str.split('/')[-1]
+            if file_path.exists():
+                with open(file_path, 'rb') as f:
+                    return Response(content=f.read(), media_type="image/jpeg")
+        else:
+            # It's binary image data
+            return Response(content=photo_data, media_type="image/jpeg")
+    
+    raise HTTPException(status_code=404, detail="Vehicle photo not found")
 
 @app.post("/api/lab-tests", response_model=schemas.LabTest)
 def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_db)):
