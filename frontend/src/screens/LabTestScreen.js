@@ -198,7 +198,10 @@ export default function LabTestScreen({ navigation }) {
     }
   };
 
-  const openAddModal = () => {
+  const openAddModal = async () => {
+    // Load only AVAILABLE vehicles for add mode
+    await loadVehicles();
+    
     setFormData({
       vehicle_entry_id: "",
       test_date: new Date(),
@@ -776,10 +779,18 @@ export default function LabTestScreen({ navigation }) {
       Alert.alert("Error", "Please allow pop-ups to generate PDF");
     }
   };
-  const handleEdit = (labTest) => {
-    // Find the vehicle for this lab test
-    const vehicle = vehicles.find(v => v.id === labTest.vehicle_entry_id);
-    setSelectedVehicle(vehicle);
+  const handleEdit = async (labTest) => {
+    // Load ALL vehicles for edit mode (not just available ones)
+    try {
+      const response = await vehicleApi.getAll();
+      setVehicles(response.data);
+      
+      // Find the vehicle for this lab test
+      const vehicle = response.data.find(v => v.id === labTest.vehicle_entry_id);
+      setSelectedVehicle(vehicle);
+    } catch (error) {
+      console.error("Error loading vehicles:", error);
+    }
     
     setFormData({
       vehicle_entry_id: labTest.vehicle_entry_id?.toString() || "",
