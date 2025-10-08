@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,14 @@ import {
   Alert,
   Platform,
   ScrollView,
-} from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import Layout from '../components/Layout';
-import DataTable from '../components/DataTable';
-import Modal from '../components/Modal';
-import { vehicleApi, labTestApi } from '../api/client';
-import colors from '../theme/colors';
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import Layout from "../components/Layout";
+import DataTable from "../components/DataTable";
+import Modal from "../components/Modal";
+import { vehicleApi, labTestApi } from "../api/client";
+import colors from "../theme/colors";
 
 export default function LabTestScreen({ navigation }) {
   const [labTests, setLabTests] = useState([]);
@@ -26,51 +26,51 @@ export default function LabTestScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    vehicle_entry_id: '',
+    vehicle_entry_id: "",
     test_date: new Date(),
-    wheat_variety: '',
-    bill_number: '',
-    document_no: '',
-    issue_no: '01',
+    wheat_variety: "",
+    bill_number: "",
+    document_no: "",
+    issue_no: "01",
     issue_date: new Date(),
-    department: 'QA',
+    department: "QA",
     // Basic Parameters
-    moisture: '',
-    hectoliter_weight: '',
-    protein_percent: '',
-    wet_gluten: '',
-    dry_gluten: '',
-    sedimentation_value: '',
+    moisture: "",
+    hectoliter_weight: "",
+    protein_percent: "",
+    wet_gluten: "",
+    dry_gluten: "",
+    sedimentation_value: "",
     // Impurities/Refractions
-    chaff_husk: '',
-    straws_sticks: '',
-    other_foreign_matter: '',
-    mudballs: '',
-    stones: '',
-    dust_sand: '',
-    total_impurities: '0.00',
+    chaff_husk: "",
+    straws_sticks: "",
+    other_foreign_matter: "",
+    mudballs: "",
+    stones: "",
+    dust_sand: "",
+    total_impurities: "0.00",
     // Grain Dockage
-    shriveled_wheat: '',
-    insect_damage: '',
-    blackened_wheat: '',
-    other_grains: '',
-    soft_wheat: '',
-    heat_damaged: '',
-    immature_wheat: '',
-    broken_wheat: '',
-    total_dockage: '0.00',
+    shriveled_wheat: "",
+    insect_damage: "",
+    blackened_wheat: "",
+    other_grains: "",
+    soft_wheat: "",
+    heat_damaged: "",
+    immature_wheat: "",
+    broken_wheat: "",
+    total_dockage: "0.00",
     // Final
-    category: '',
-    comments_action: '',
+    category: "",
+    comments_action: "",
     approved: false,
-    tested_by: '',
+    tested_by: "",
   });
 
   const qualityCategories = [
-    { label: 'Mill Grade (Premium)', value: 'Mill' },
-    { label: 'Low Mill Grade', value: 'Low Mill' },
-    { label: 'Heavy Density (HD)', value: 'HD' },
-    { label: 'Rejected', value: 'Rejected' },
+    { label: "Mill Grade (Premium)", value: "Mill" },
+    { label: "Low Mill Grade", value: "Low Mill" },
+    { label: "Heavy Density (HD)", value: "HD" },
+    { label: "Rejected", value: "Rejected" },
   ];
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function LabTestScreen({ navigation }) {
       const response = await vehicleApi.getAvailableForTesting();
       setVehicles(response.data);
     } catch (error) {
-      console.error('Error loading vehicles:', error);
+      console.error("Error loading vehicles:", error);
     }
   };
 
@@ -116,7 +116,7 @@ export default function LabTestScreen({ navigation }) {
       const response = await labTestApi.getAll();
       setLabTests(response.data);
     } catch (error) {
-      console.error('Error loading lab tests:', error);
+      console.error("Error loading lab tests:", error);
     }
   };
 
@@ -164,81 +164,83 @@ export default function LabTestScreen({ navigation }) {
 
     // Generate document number based on today's date and count
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split("T")[0];
 
     try {
       // Get today's lab tests to determine the next document number
       const response = await labTestApi.getAll();
-      const todayTests = response.data.filter(test => {
-        const createdDate = new Date(test.created_at).toISOString().split('T')[0];
+      const todayTests = response.data.filter((test) => {
+        const createdDate = new Date(test.created_at)
+          .toISOString()
+          .split("T")[0];
         return createdDate === todayStr;
       });
 
       // Generate 3-digit document number
-      const docNumber = String(todayTests.length + 1).padStart(3, '0');
+      const docNumber = String(todayTests.length + 1).padStart(3, "0");
 
-      setFormData((prev) => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         vehicle_entry_id: vehicleId,
-        bill_number: vehicle?.bill_no || '',
+        bill_number: vehicle?.bill_no || "",
         document_no: docNumber,
-        issue_no: '01'
+        issue_no: "01",
       }));
     } catch (error) {
-      console.error('Error generating document number:', error);
-      setFormData((prev) => ({ 
-        ...prev, 
+      console.error("Error generating document number:", error);
+      setFormData((prev) => ({
+        ...prev,
         vehicle_entry_id: vehicleId,
-        bill_number: vehicle?.bill_no || '',
-        document_no: '001',
-        issue_no: '01'
+        bill_number: vehicle?.bill_no || "",
+        document_no: "001",
+        issue_no: "01",
       }));
     }
   };
 
   const openAddModal = () => {
     setFormData({
-      vehicle_entry_id: '',
+      vehicle_entry_id: "",
       test_date: new Date(),
-      wheat_variety: '',
-      bill_number: '',
-      document_no: '',
-      issue_no: '01',
+      wheat_variety: "",
+      bill_number: "",
+      document_no: "",
+      issue_no: "01",
       issue_date: new Date(),
-      department: 'QA',
-      moisture: '',
-      hectoliter_weight: '',
-      protein_percent: '',
-      wet_gluten: '',
-      dry_gluten: '',
-      sedimentation_value: '',
-      chaff_husk: '',
-      straws_sticks: '',
-      other_foreign_matter: '',
-      mudballs: '',
-      stones: '',
-      dust_sand: '',
-      total_impurities: '0.00',
-      shriveled_wheat: '',
-      insect_damage: '',
-      blackened_wheat: '',
-      other_grains: '',
-      soft_wheat: '',
-      heat_damaged: '',
-      immature_wheat: '',
-      broken_wheat: '',
-      total_dockage: '0.00',
-      category: '',
-      comments_action: '',
+      department: "QA",
+      moisture: "",
+      hectoliter_weight: "",
+      protein_percent: "",
+      wet_gluten: "",
+      dry_gluten: "",
+      sedimentation_value: "",
+      chaff_husk: "",
+      straws_sticks: "",
+      other_foreign_matter: "",
+      mudballs: "",
+      stones: "",
+      dust_sand: "",
+      total_impurities: "0.00",
+      shriveled_wheat: "",
+      insect_damage: "",
+      blackened_wheat: "",
+      other_grains: "",
+      soft_wheat: "",
+      heat_damaged: "",
+      immature_wheat: "",
+      broken_wheat: "",
+      total_dockage: "0.00",
+      category: "",
+      comments_action: "",
       approved: false,
-      tested_by: '',
+      tested_by: "",
     });
     setSelectedVehicle(null);
     setModalVisible(true);
   };
 
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setFormData({ ...formData, test_date: selectedDate });
     }
@@ -246,7 +248,7 @@ export default function LabTestScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!formData.vehicle_entry_id) {
-      Alert.alert('Error', 'Please select a vehicle');
+      Alert.alert("Error", "Please select a vehicle");
       return;
     }
 
@@ -279,13 +281,13 @@ export default function LabTestScreen({ navigation }) {
       };
 
       await labTestApi.create(submitData);
-      Alert.alert('Success', 'Lab test created successfully');
+      Alert.alert("Success", "Lab test created successfully");
 
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create lab test');
+      Alert.alert("Error", "Failed to create lab test");
       console.error(error);
     } finally {
       setLoading(false);
@@ -294,207 +296,525 @@ export default function LabTestScreen({ navigation }) {
 
   const generatePDF = () => {
     if (!selectedVehicle || !formData.vehicle_entry_id) {
-      Alert.alert('Error', 'Please select a vehicle first');
+      Alert.alert("Error", "Please select a vehicle first");
       return;
     }
 
     const pdfContent = `
-<!DOCTYPE html>
-<html>
-<head>
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="UTF-8">
   <title>Raw Wheat Quality Report</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .header { border: 2px solid black; padding: 10px; margin-bottom: 20px; }
-    .header-row { display: flex; align-items: center; justify-content: space-between; }
-    .logo-box { border: 2px solid black; padding: 15px; text-align: center; font-weight: bold; min-width: 80px; }
-    .title { flex: 1; text-align: center; padding: 0 10px; }
-    .doc-info { border: 2px solid black; padding: 8px; font-size: 11px; min-width: 140px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .info-item { padding: 8px; background: #f5f5f5; border: 1px solid #ddd; }
-    .info-label { font-weight: bold; margin-right: 5px; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { border: 1px solid black; padding: 8px; text-align: left; }
-    th { background-color: #e0e0e0; font-weight: bold; }
-    .section-header { background-color: #d0d0d0; font-weight: bold; }
-    .total-row { background-color: #d0d0d0; font-weight: bold; }
-    .sub-item { padding-left: 20px; }
-    .comments-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
-    .approval-section { margin: 20px 0; padding: 15px; border: 2px solid #28a745; background: #d4edda; }
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+
+    body { 
+      font-family: Arial, sans-serif; 
+      font-size: 11px;
+      line-height: 1.3;
+      width: 100%;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+
+    .header { 
+      border: 2px solid black; 
+      padding: 8px;
+      margin-bottom: 6px;
+      width: 100%;
+    }
+
+    .header-row { 
+      width: 100%;
+      position: relative;
+      min-height: 70px;
+    }
+
+    .logo-box { 
+      border: 2px solid black; 
+      padding: 5px;
+      width: 80px;
+      height: 70px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      text-align: center;
+    }
+
+    .logo-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .title { 
+      text-align: center;
+      padding: 10px 90px;
+    }
+
+    .title h2 {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .doc-info { 
+      border: 2px solid black; 
+      padding: 8px;
+      font-size: 10px;
+      width: 180px;
+      position: absolute;
+      right: 0;
+      top: 0;
+      line-height: 1.6;
+    }
+
+    .basic-info {
+      margin: 6px 0;
+      line-height: 1.6;
+    }
+
+    .basic-info > div {
+      margin-bottom: 3px;
+    }
+
+    .vehicle-info {
+      margin: 6px 0;
+      line-height: 1.6;
+    }
+
+    .vehicle-info > div {
+      margin-bottom: 3px;
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 8px 0;
+      font-size: 10px;
+    }
+
+    th, td { 
+      border: 1px solid black; 
+      padding: 4px 6px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th { 
+      background-color: #fff;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .section-header td { 
+      font-weight: bold;
+      background-color: #f5f5f5;
+    }
+
+    .total-row td { 
+      font-weight: bold;
+    }
+
+    .sub-item { 
+      padding-left: 20px;
+    }
+
+    .sr-col { 
+      width: 50px; 
+      text-align: center; 
+    }
+
+    .test-col { 
+      width: 40%; 
+    }
+
+    .uom-col { 
+      width: 80px; 
+      text-align: center; 
+    }
+
+    .standard-col { 
+      width: 100px; 
+      text-align: center; 
+    }
+
+    .actual-col { 
+      width: auto;
+      text-align: left; 
+    }
+
+    .comments-section { 
+      border: 1px solid black;
+      padding: 8px;
+      margin: 8px 0;
+      min-height: 60px;
+    }
+
+    .comments-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .signature-section {
+      width: 100%;
+      margin-top: 15px;
+      page-break-inside: avoid;
+    }
+
+    .signature-container {
+      width: 100%;
+    }
+
+    .signature-box {
+      border: 1px solid black;
+      padding: 15px 20px;
+      width: 45%;
+      height: 80px;
+      text-align: center;
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 8%;
+      position: relative;
+    }
+
+    .signature-box:last-child {
+      margin-right: 0;
+    }
+
+    .signature-box::before {
+      content: '';
+      display: block;
+      height: 50px;
+    }
+
+    @media print {
+      body { 
+        padding: 0;
+        margin: 0;
+      }
+
+      .header { 
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      table { 
+        page-break-inside: auto;
+      }
+
+      tr { 
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      tfoot {
+        display: table-footer-group;
+      }
+
+      .signature-section {
+        page-break-inside: avoid;
+      }
+    }
   </style>
-</head>
-<body>
+  <body>
   <div class="header">
     <div class="header-row">
-      <div class="logo-box">B R<br>F M</div>
-      <div class="title"><h2>Raw Wheat Quality Report</h2></div>
+      <div class="logo-box">
+        <img src="YOUR_LOGO_URL_HERE" alt="Logo" onerror="this.style.display='none'" />
+      </div>
+      <div class="title">
+        <h2>Raw Wheat Quality Report</h2>
+      </div>
       <div class="doc-info">
-        Document No - ${formData.document_no || '---'}<br>
-        Issue No: ${formData.issue_no}<br>
-        Issue Date: ${formData.issue_date.toLocaleDateString('en-GB')}<br>
-        Dept - ${formData.department}
+        <div>Document No - ${formData.document_no || "001"}</div>
+        <div>Issue No: ${formData.issue_no}</div>
+        <div>Issue Date - ${formData.issue_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
+        <div>Dept. - ${formData.department}</div>
       </div>
     </div>
   </div>
 
-  <div class="info-grid">
-    <div class="info-item"><span class="info-label">Wheat Variety:</span>${formData.wheat_variety || 'N/A'}</div>
-    <div class="info-item"><span class="info-label">Test Date:</span>${formData.test_date.toLocaleDateString('en-GB')}</div>
-    <div class="info-item"><span class="info-label">Vehicle Number:</span>${selectedVehicle?.vehicle_number || 'N/A'}</div>
-    <div class="info-item"><span class="info-label">Supplier:</span>${selectedVehicle?.supplier?.supplier_name || 'N/A'}</div>
-    <div class="info-item"><span class="info-label">Bill Number:</span>${formData.bill_number || 'N/A'}</div>
-    <div class="info-item"><span class="info-label">Tested By:</span>${formData.tested_by || 'N/A'}</div>
+  <div class="basic-info">
+    <div>WHEAT VARIETY: <strong>${formData.wheat_variety || "N/A"}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DATE: <strong>${formData.test_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</strong></div>
+    <div>TRADER/SUPPLIER NAME: <strong>${selectedVehicle?.supplier?.supplier_name || "N/A"}</strong></div>
+  </div>
+
+  <div class="vehicle-info">
+    <div>VEHICLE NO: <strong>${selectedVehicle?.vehicle_number || "N/A"}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; BILL NO: <strong>${formData.bill_number || "N/A"}</strong></div>
+    <div>VEHICLE ARRIVAL DATE & TIME: <strong>${selectedVehicle?.arrival_date ? new Date(selectedVehicle.arrival_date).toLocaleString("en-GB") : "N/A"}</strong></div>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th style="width: 50px;">SR.</th>
-        <th style="width: 250px;">TEST</th>
-        <th style="width: 80px;">UOM</th>
-        <th style="width: 120px;">STANDARD</th>
-        <th>ACTUAL REPORT</th>
+        <th class="sr-col">Sr.</th>
+        <th class="test-col">TEST</th>
+        <th class="uom-col">UOM</th>
+        <th class="standard-col">STANDARD</th>
+        <th class="actual-col">ACTUAL REPORT</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>1</td><td>Moisture</td><td>%</td><td>8-10.5</td><td>${formData.moisture || '-'}</td>
+        <td class="sr-col">1</td>
+        <td class="test-col">Moisture</td>
+        <td class="uom-col">%</td>
+        <td class="standard-col">8-10.5</td>
+        <td class="actual-col">${formData.moisture || ""}</td>
       </tr>
       <tr>
-        <td>2</td><td>Hectoliter weight</td><td>Kg/hl</td><td>&gt;75</td><td>${formData.hectoliter_weight || '-'}</td>
+        <td class="sr-col">2</td>
+        <td class="test-col">Hectoliter weight</td>
+        <td class="uom-col">Kg/hl</td>
+        <td class="standard-col">&gt;75</td>
+        <td class="actual-col">${formData.hectoliter_weight || ""}</td>
       </tr>
       <tr class="section-header">
-        <td>3</td><td>Gluten</td><td></td><td></td><td></td>
+        <td class="sr-col">3</td>
+        <td class="test-col">Gluten</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col"></td>
       </tr>
       <tr>
-        <td>a</td><td class="sub-item">Wet Gluten</td><td>%</td><td>32-33</td><td>${formData.wet_gluten || '-'}</td>
+        <td class="sr-col">a</td>
+        <td class="test-col sub-item">Wet Gluten</td>
+        <td class="uom-col">%</td>
+        <td class="standard-col">32-33</td>
+        <td class="actual-col">${formData.wet_gluten || ""}</td>
       </tr>
       <tr>
-        <td>b</td><td class="sub-item">Dry Gluten</td><td></td><td>10.5-11.5</td><td>${formData.dry_gluten || '-'}</td>
+        <td class="sr-col">b</td>
+        <td class="test-col sub-item">Dry Gluten</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">10.5-11.5</td>
+        <td class="actual-col">${formData.dry_gluten || ""}</td>
       </tr>
       <tr>
-        <td>4</td><td>Sedimentation Value</td><td>ml</td><td>24-25 ml</td><td>${formData.sedimentation_value || '-'}</td>
+        <td class="sr-col">4</td>
+        <td class="test-col">Sedimentation Value</td>
+        <td class="uom-col">ml</td>
+        <td class="standard-col">24-25 ml</td>
+        <td class="actual-col">${formData.sedimentation_value || ""}</td>
       </tr>
       <tr class="section-header">
-        <td>5</td><td>Refractions</td><td></td><td></td><td></td>
+        <td class="sr-col">5</td>
+        <td class="test-col">Refractions</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col"></td>
       </tr>
       <tr>
-        <td>a</td><td class="sub-item">Chaff/Husk</td><td></td><td></td><td>${formData.chaff_husk || '-'}</td>
+        <td class="sr-col">a</td>
+        <td class="test-col sub-item">chaff/Husk</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col">${formData.chaff_husk || ""}</td>
       </tr>
       <tr>
-        <td>b</td><td class="sub-item">Straws/Sticks</td><td></td><td></td><td>${formData.straws_sticks || '-'}</td>
+        <td class="sr-col">b</td>
+        <td class="test-col sub-item">straws/sticks</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col">${formData.straws_sticks || ""}</td>
       </tr>
       <tr>
-        <td>c</td><td class="sub-item">Other Foreign Matter (OFM)</td><td></td><td></td><td>${formData.other_foreign_matter || '-'}</td>
+        <td class="sr-col">c</td>
+        <td class="test-col sub-item">Other Foreign Matter (OFM)</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col">${formData.other_foreign_matter || ""}</td>
       </tr>
       <tr>
-        <td>d</td><td class="sub-item">Mudballs</td><td>%</td><td>&lt;3</td><td>${formData.mudballs || '-'}</td>
+        <td class="sr-col">d</td>
+        <td class="test-col sub-item">Mudballs</td>
+        <td class="uom-col">%</td>
+        <td class="standard-col">&lt;3</td>
+        <td class="actual-col">${formData.mudballs || ""}</td>
       </tr>
       <tr>
-        <td>e</td><td class="sub-item">Stones</td><td></td><td></td><td>${formData.stones || '-'}</td>
+        <td class="sr-col">e</td>
+        <td class="test-col sub-item">Stones</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col">${formData.stones || ""}</td>
       </tr>
       <tr>
-        <td>f</td><td class="sub-item">Dust/Sand</td><td></td><td></td><td>${formData.dust_sand || '-'}</td>
+        <td class="sr-col">f</td>
+        <td class="test-col sub-item">Dust/Sand</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col">${formData.dust_sand || ""}</td>
       </tr>
       <tr class="total-row">
-        <td></td><td>Total Impurities (%)</td><td></td><td></td><td>${formData.total_impurities}</td>
+        <td class="sr-col"></td>
+        <td class="test-col"><strong>Total Impurities (%)</strong></td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col"></td>
       </tr>
       <tr class="section-header">
-        <td></td><td>Grain Dockage</td><td></td><td></td><td></td>
+        <td class="sr-col"></td>
+        <td class="test-col">Grain dockage</td>
+        <td class="uom-col"></td>
+        <td class="standard-col"></td>
+        <td class="actual-col"></td>
       </tr>
       <tr>
-        <td>1</td><td class="sub-item">Shriveled wheat</td><td></td><td>0.5</td><td>${formData.shriveled_wheat || '-'}</td>
+        <td class="sr-col">1</td>
+        <td class="test-col sub-item">Shriveled wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.shriveled_wheat || ""}</td>
       </tr>
       <tr>
-        <td>2</td><td class="sub-item">Insect Bored damage</td><td></td><td>0.5</td><td>${formData.insect_damage || '-'}</td>
+        <td class="sr-col">2</td>
+        <td class="test-col sub-item">Insect Bored damage</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.insect_damage || ""}</td>
       </tr>
       <tr>
-        <td>3</td><td class="sub-item">Blackened wheat</td><td></td><td>0.5</td><td>${formData.blackened_wheat || '-'}</td>
+        <td class="sr-col">3</td>
+        <td class="test-col sub-item">Blackened wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.blackened_wheat || ""}</td>
       </tr>
       <tr>
-        <td>4</td><td class="sub-item">Other Grains</td><td>%</td><td>0.5</td><td>${formData.other_grains || '-'}</td>
+        <td class="sr-col">4</td>
+        <td class="test-col sub-item">Other Grains</td>
+        <td class="uom-col">%</td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.other_grains || ""}</td>
       </tr>
       <tr>
-        <td>5</td><td class="sub-item">Soft Wheat</td><td></td><td>0.5</td><td>${formData.soft_wheat || '-'}</td>
+        <td class="sr-col">5</td>
+        <td class="test-col sub-item">Soft Wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.soft_wheat || ""}</td>
       </tr>
       <tr>
-        <td>6</td><td class="sub-item">Heat Damaged wheat</td><td></td><td>0.5</td><td>${formData.heat_damaged || '-'}</td>
+        <td class="sr-col">6</td>
+        <td class="test-col sub-item">Heat Damaged wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.heat_damaged || ""}</td>
       </tr>
       <tr>
-        <td>7</td><td class="sub-item">Immature wheat</td><td></td><td>0.5</td><td>${formData.immature_wheat || '-'}</td>
+        <td class="sr-col">7</td>
+        <td class="test-col sub-item">Immature wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.immature_wheat || ""}</td>
       </tr>
       <tr>
-        <td>8</td><td class="sub-item">Broken wheat</td><td></td><td>0.5</td><td>${formData.broken_wheat || '-'}</td>
+        <td class="sr-col">8</td>
+        <td class="test-col sub-item">Broken wheat</td>
+        <td class="uom-col"></td>
+        <td class="standard-col">0.5</td>
+        <td class="actual-col">${formData.broken_wheat || ""}</td>
       </tr>
       <tr class="total-row">
-        <td></td><td>Total Dockage (%)</td><td></td><td></td><td>${formData.total_dockage}</td>
+        <td class="sr-col"></td>
+        <td class="test-col"><strong>Total Dockage</strong></td>
+        <td class="uom-col">%</td>
+        <td class="standard-col"></td>
+        <td class="actual-col"></td>
       </tr>
     </tbody>
   </table>
 
   <div class="comments-section">
-    <strong>Comments & Action:</strong><br>
-    ${formData.comments_action || 'N/A'}
+    <div class="comments-title">Comments & Action:</div>
+    <div>${formData.comments_action || ""}</div>
   </div>
 
-  <div class="approval-section">
-    <div><strong>Quality Category:</strong> ${formData.category || 'N/A'}</div>
-    <div><strong>Approved for Unloading:</strong> ${formData.approved ? 'Yes' : 'No'}</div>
+  <div class="signature-section">
+    <div class="signature-container">
+      <div class="signature-box">
+        Lab Chemist Signature
+      </div>
+      <div class="signature-box">
+        QA Head Signature
+      </div>
+    </div>
   </div>
-</body>
-</html>
+  </body>
+  </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(pdfContent);
-    printWindow.document.close();
-    printWindow.print();
-  };
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
 
+      // Wait for content to load before printing
+      printWindow.onload = function () {
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+        }, 250);
+      };
+    } else {
+      Alert.alert("Error", "Please allow pop-ups to generate PDF");
+    }
+  };
   const columns = [
-    { label: 'ID', field: 'id', width: 80 },
-    { 
-      label: 'Document No', 
-      field: 'document_no', 
+    { label: "ID", field: "id", width: 80 },
+    {
+      label: "Document No",
+      field: "document_no",
       width: 120,
-      render: (value) => value || '-'
+      render: (value) => value || "-",
     },
-    { 
-      label: 'Vehicle', 
-      field: 'vehicle_entry', 
+    {
+      label: "Vehicle",
+      field: "vehicle_entry",
       width: 150,
-      render: (vehicle) => vehicle?.vehicle_number || '-'
+      render: (vehicle) => vehicle?.vehicle_number || "-",
     },
-    { 
-      label: 'Supplier', 
-      field: 'vehicle_entry', 
+    {
+      label: "Supplier",
+      field: "vehicle_entry",
       width: 180,
-      render: (vehicle) => vehicle?.supplier?.supplier_name || '-'
+      render: (vehicle) => vehicle?.supplier?.supplier_name || "-",
     },
-    { 
-      label: 'Wheat Variety', 
-      field: 'wheat_variety', 
+    {
+      label: "Wheat Variety",
+      field: "wheat_variety",
       width: 150,
-      render: (value) => value || '-'
+      render: (value) => value || "-",
     },
-    { label: 'Moisture %', field: 'moisture', width: 120 },
-    { label: 'Total Impurities %', field: 'total_impurities', width: 150 },
-    { 
-      label: 'Test Date', 
-      field: 'test_date', 
+    { label: "Moisture %", field: "moisture", width: 120 },
+    { label: "Total Impurities %", field: "total_impurities", width: 150 },
+    {
+      label: "Test Date",
+      field: "test_date",
       width: 180,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
   ];
 
   return (
     <Layout title="Lab Tests" navigation={navigation} currentRoute="LabTest">
-      <DataTable
-        columns={columns}
-        data={labTests}
-        onAdd={openAddModal}
-      />
+      <DataTable columns={columns} data={labTests} onAdd={openAddModal} />
 
       <Modal
         visible={modalVisible}
@@ -509,7 +829,9 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.docHeaderRow}>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Document No:</Text>
-                  <Text style={styles.docHeaderValue}>{formData.document_no || '---'}</Text>
+                  <Text style={styles.docHeaderValue}>
+                    {formData.document_no || "---"}
+                  </Text>
                 </View>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Issue No:</Text>
@@ -519,11 +841,15 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.docHeaderRow}>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Issue Date:</Text>
-                  <Text style={styles.docHeaderValue}>{formData.issue_date.toLocaleDateString()}</Text>
+                  <Text style={styles.docHeaderValue}>
+                    {formData.issue_date.toLocaleDateString()}
+                  </Text>
                 </View>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Department:</Text>
-                  <Text style={styles.docHeaderValue}>{formData.department}</Text>
+                  <Text style={styles.docHeaderValue}>
+                    {formData.department}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -545,7 +871,7 @@ export default function LabTestScreen({ navigation }) {
                       {vehicles.map((vehicle) => (
                         <Picker.Item
                           key={vehicle.id}
-                          label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || 'N/A'}`}
+                          label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || "N/A"}`}
                           value={vehicle.id}
                         />
                       ))}
@@ -565,16 +891,24 @@ export default function LabTestScreen({ navigation }) {
 
               <View style={styles.row}>
                 <View style={styles.field}>
-                  <Text style={styles.label}>Quality Category (Wheat Variety) *</Text>
+                  <Text style={styles.label}>
+                    Quality Category (Wheat Variety) *
+                  </Text>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.wheat_variety}
-                      onValueChange={(value) => setFormData({ ...formData, wheat_variety: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, wheat_variety: value })
+                      }
                       style={styles.picker}
                     >
                       <Picker.Item label="Select Quality Category" value="" />
                       {qualityCategories.map((cat, index) => (
-                        <Picker.Item key={index} label={cat.label} value={cat.value} />
+                        <Picker.Item
+                          key={index}
+                          label={cat.label}
+                          value={cat.value}
+                        />
                       ))}
                     </Picker>
                   </View>
@@ -582,7 +916,10 @@ export default function LabTestScreen({ navigation }) {
 
                 <View style={styles.field}>
                   <Text style={styles.label}>Test Date *</Text>
-                  <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setShowDatePicker(true)}
+                  >
                     <Text>{formData.test_date.toLocaleDateString()}</Text>
                   </TouchableOpacity>
                 </View>
@@ -602,7 +939,9 @@ export default function LabTestScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   value={formData.tested_by}
-                  onChangeText={(text) => setFormData({ ...formData, tested_by: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, tested_by: text })
+                  }
                   placeholder="Name of lab chemist"
                 />
               </View>
@@ -618,7 +957,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.moisture}
-                    onChangeText={(text) => setFormData({ ...formData, moisture: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, moisture: text })
+                    }
                     keyboardType="decimal-pad"
                     placeholder="8-10.5"
                   />
@@ -628,7 +969,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.hectoliter_weight}
-                    onChangeText={(text) => setFormData({ ...formData, hectoliter_weight: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, hectoliter_weight: text })
+                    }
                     keyboardType="decimal-pad"
                     placeholder=">75"
                   />
@@ -641,7 +984,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.wet_gluten}
-                    onChangeText={(text) => setFormData({ ...formData, wet_gluten: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, wet_gluten: text })
+                    }
                     keyboardType="decimal-pad"
                     placeholder="32-33"
                   />
@@ -651,7 +996,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.dry_gluten}
-                    onChangeText={(text) => setFormData({ ...formData, dry_gluten: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, dry_gluten: text })
+                    }
                     keyboardType="decimal-pad"
                     placeholder="10.5-11.5"
                   />
@@ -663,7 +1010,9 @@ export default function LabTestScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   value={formData.sedimentation_value}
-                  onChangeText={(text) => setFormData({ ...formData, sedimentation_value: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, sedimentation_value: text })
+                  }
                   keyboardType="decimal-pad"
                   placeholder="24-25"
                 />
@@ -680,7 +1029,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.chaff_husk}
-                    onChangeText={(text) => setFormData({ ...formData, chaff_husk: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, chaff_husk: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -689,7 +1040,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.straws_sticks}
-                    onChangeText={(text) => setFormData({ ...formData, straws_sticks: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, straws_sticks: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -701,7 +1054,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.other_foreign_matter}
-                    onChangeText={(text) => setFormData({ ...formData, other_foreign_matter: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, other_foreign_matter: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -710,7 +1065,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.mudballs}
-                    onChangeText={(text) => setFormData({ ...formData, mudballs: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, mudballs: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -722,7 +1079,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.stones}
-                    onChangeText={(text) => setFormData({ ...formData, stones: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, stones: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -731,7 +1090,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.dust_sand}
-                    onChangeText={(text) => setFormData({ ...formData, dust_sand: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, dust_sand: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -739,7 +1100,9 @@ export default function LabTestScreen({ navigation }) {
 
               <View style={styles.totalField}>
                 <Text style={styles.totalLabel}>Total Impurities (%)</Text>
-                <Text style={styles.totalValue}>{formData.total_impurities}</Text>
+                <Text style={styles.totalValue}>
+                  {formData.total_impurities}
+                </Text>
               </View>
             </View>
 
@@ -753,7 +1116,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.shriveled_wheat}
-                    onChangeText={(text) => setFormData({ ...formData, shriveled_wheat: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, shriveled_wheat: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -762,7 +1127,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.insect_damage}
-                    onChangeText={(text) => setFormData({ ...formData, insect_damage: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, insect_damage: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -774,7 +1141,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.blackened_wheat}
-                    onChangeText={(text) => setFormData({ ...formData, blackened_wheat: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, blackened_wheat: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -783,7 +1152,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.other_grains}
-                    onChangeText={(text) => setFormData({ ...formData, other_grains: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, other_grains: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -795,7 +1166,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.soft_wheat}
-                    onChangeText={(text) => setFormData({ ...formData, soft_wheat: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, soft_wheat: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -804,7 +1177,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.heat_damaged}
-                    onChangeText={(text) => setFormData({ ...formData, heat_damaged: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, heat_damaged: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -816,7 +1191,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.immature_wheat}
-                    onChangeText={(text) => setFormData({ ...formData, immature_wheat: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, immature_wheat: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -825,7 +1202,9 @@ export default function LabTestScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={formData.broken_wheat}
-                    onChangeText={(text) => setFormData({ ...formData, broken_wheat: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, broken_wheat: text })
+                    }
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -843,7 +1222,9 @@ export default function LabTestScreen({ navigation }) {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={formData.comments_action}
-                onChangeText={(text) => setFormData({ ...formData, comments_action: text })}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, comments_action: text })
+                }
                 placeholder="Enter comments and actions here..."
                 multiline
                 numberOfLines={4}
@@ -851,16 +1232,29 @@ export default function LabTestScreen({ navigation }) {
 
               <View style={styles.approvalBox}>
                 <Text style={styles.approvalTitle}>Final Approval</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.checkboxContainer}
-                  onPress={() => setFormData({ ...formData, approved: !formData.approved })}
+                  onPress={() =>
+                    setFormData({ ...formData, approved: !formData.approved })
+                  }
                 >
-                  <View style={[styles.checkbox, formData.approved && styles.checkboxChecked]}>
-                    {formData.approved && <Text style={styles.checkmark}>✓</Text>}
+                  <View
+                    style={[
+                      styles.checkbox,
+                      formData.approved && styles.checkboxChecked,
+                    ]}
+                  >
+                    {formData.approved && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
                   </View>
                   <View style={styles.checkboxLabel}>
-                    <Text style={styles.checkboxText}>Approve this vehicle for unloading</Text>
-                    <Text style={styles.checkboxSubtext}>Check only if quality meets standards</Text>
+                    <Text style={styles.checkboxText}>
+                      Approve this vehicle for unloading
+                    </Text>
+                    <Text style={styles.checkboxSubtext}>
+                      Check only if quality meets standards
+                    </Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -881,12 +1275,16 @@ export default function LabTestScreen({ navigation }) {
                 <Text style={styles.pdfButtonText}>Generate PDF</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+                style={[
+                  styles.button,
+                  styles.saveButton,
+                  loading && styles.buttonDisabled,
+                ]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? 'Saving...' : 'Save Test'}
+                  {loading ? "Saving..." : "Save Test"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -905,14 +1303,14 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   docHeaderInfo: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     padding: 15,
     borderRadius: 8,
     marginBottom: 20,
   },
   docHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   docHeaderItem: {
@@ -921,12 +1319,12 @@ const styles = StyleSheet.create({
   docHeaderLabel: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   docHeaderValue: {
     fontSize: 14,
     color: colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 2,
   },
   section: {
@@ -934,7 +1332,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textPrimary,
     marginBottom: 12,
     paddingBottom: 8,
@@ -942,7 +1340,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 12,
   },
@@ -951,7 +1349,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: 6,
   },
@@ -965,12 +1363,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   inputDisabled: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     color: colors.textSecondary,
   },
   textArea: {
     height: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   pickerContainer: {
     borderWidth: 1,
@@ -979,30 +1377,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   picker: {
-    height: Platform.OS === 'ios' ? 150 : 50,
+    height: Platform.OS === "ios" ? 150 : 50,
   },
   totalField: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#e0e0e0',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#e0e0e0",
     padding: 12,
     borderRadius: 6,
     marginTop: 8,
   },
   totalLabel: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textPrimary,
   },
   totalValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primary,
   },
   approvalBox: {
-    backgroundColor: '#d4edda',
-    borderColor: '#28a745',
+    backgroundColor: "#d4edda",
+    borderColor: "#28a745",
     borderWidth: 1,
     borderRadius: 6,
     padding: 12,
@@ -1010,49 +1408,49 @@ const styles = StyleSheet.create({
   },
   approvalTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#155724',
+    fontWeight: "700",
+    color: "#155724",
     marginBottom: 12,
   },
   checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#28a745',
+    borderColor: "#28a745",
     borderRadius: 4,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   checkboxChecked: {
-    backgroundColor: '#28a745',
+    backgroundColor: "#28a745",
   },
   checkmark: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   checkboxLabel: {
     flex: 1,
   },
   checkboxText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#155724',
+    fontWeight: "600",
+    color: "#155724",
   },
   checkboxSubtext: {
     fontSize: 12,
-    color: '#6c757d',
+    color: "#6c757d",
     marginTop: 2,
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
     marginTop: 20,
   },
@@ -1061,7 +1459,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 6,
     minWidth: 100,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButton: {
     backgroundColor: colors.surface,
@@ -1072,24 +1470,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   pdfButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: "#6c757d",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   cancelButtonText: {
     color: colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
   },
   saveButtonText: {
     color: colors.onPrimary,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
   },
   pdfButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
     fontSize: 14,
   },
 });
