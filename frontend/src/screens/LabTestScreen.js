@@ -159,14 +159,39 @@ export default function LabTestScreen({ navigation }) {
     setFormData((prev) => ({ ...prev, total_dockage: total.toFixed(2) }));
   };
 
-  const handleVehicleChange = (vehicleId) => {
+  const handleVehicleChange = async (vehicleId) => {
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     setSelectedVehicle(vehicle);
-    setFormData({ 
-      ...formData, 
-      vehicle_entry_id: vehicleId,
-      bill_number: vehicle?.bill_no || ''
-    });
+    
+    // Generate document number based on today's date and count
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    try {
+      // Get today's lab tests to determine the next document number
+      const response = await labTestApi.getAll();
+      const todayTests = response.data.filter(test => {
+        const testDate = new Date(test.test_date).toISOString().split('T')[0];
+        return testDate === todayStr;
+      });
+      
+      const docNumber = String(todayTests.length + 1).padStart(3, '0');
+      
+      setFormData({ 
+        ...formData, 
+        vehicle_entry_id: vehicleId,
+        bill_number: vehicle?.bill_no || '',
+        document_no: docNumber
+      });
+    } catch (error) {
+      console.error('Error generating document number:', error);
+      setFormData({ 
+        ...formData, 
+        vehicle_entry_id: vehicleId,
+        bill_number: vehicle?.bill_no || '',
+        document_no: '001'
+      });
+    }
   };
 
   const openAddModal = () => {
@@ -303,7 +328,7 @@ export default function LabTestScreen({ navigation }) {
       <div class="logo-box">B R<br>F M</div>
       <div class="title"><h2>Raw Wheat Quality Report</h2></div>
       <div class="doc-info">
-        Document No - ${formData.document_no || 'Auto-generated'}<br>
+        Document No - ${formData.document_no || '---'}<br>
         Issue No: ${formData.issue_no}<br>
         Issue Date: ${formData.issue_date.toLocaleDateString('en-GB')}<br>
         Dept - ${formData.department}
@@ -482,7 +507,7 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.docHeaderRow}>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Document No:</Text>
-                  <Text style={styles.docHeaderValue}>Auto-generated</Text>
+                  <Text style={styles.docHeaderValue}>{formData.document_no || '---'}</Text>
                 </View>
                 <View style={styles.docHeaderItem}>
                   <Text style={styles.docHeaderLabel}>Issue No:</Text>
