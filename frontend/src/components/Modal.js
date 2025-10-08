@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal as RNModal, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
 
@@ -6,6 +6,13 @@ export default function Modal({ visible, onClose, title, children, width = '80%'
   const { width: screenWidth } = useWindowDimensions();
   const isMobile = screenWidth < 768;
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    if (visible && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
+  }, [visible]);
 
   const getModalWidth = () => {
     if (isMobile) return '95%';
@@ -32,7 +39,10 @@ export default function Modal({ visible, onClose, title, children, width = '80%'
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={[styles.content, isMobile && styles.contentMobile]}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={[styles.content, isMobile && styles.contentMobile]}
+          >
             {children}
           </ScrollView>
         </View>

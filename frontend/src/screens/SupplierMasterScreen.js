@@ -172,7 +172,7 @@ export default function SupplierMasterScreen({ navigation }) {
     const trimmedCity = formData.city?.trim();
     
     if (!trimmedName || !trimmedState || !trimmedCity) {
-      Alert.alert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
+      showAlert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
       return;
     }
 
