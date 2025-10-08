@@ -776,6 +776,88 @@ export default function LabTestScreen({ navigation }) {
       Alert.alert("Error", "Please allow pop-ups to generate PDF");
     }
   };
+  const handleEdit = (labTest) => {
+    // Find the vehicle for this lab test
+    const vehicle = vehicles.find(v => v.id === labTest.vehicle_entry_id);
+    setSelectedVehicle(vehicle);
+    
+    setFormData({
+      vehicle_entry_id: labTest.vehicle_entry_id || "",
+      test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
+      wheat_variety: labTest.wheat_variety || "",
+      bill_number: labTest.bill_number || "",
+      document_no: labTest.document_no || "",
+      issue_no: labTest.issue_no || "01",
+      issue_date: labTest.issue_date ? new Date(labTest.issue_date) : new Date(),
+      department: labTest.department || "QA",
+      moisture: labTest.moisture?.toString() || "",
+      hectoliter_weight: labTest.test_weight?.toString() || "",
+      protein_percent: labTest.protein_percent?.toString() || "",
+      wet_gluten: labTest.wet_gluten?.toString() || "",
+      dry_gluten: labTest.dry_gluten?.toString() || "",
+      sedimentation_value: labTest.falling_number?.toString() || "",
+      chaff_husk: labTest.chaff_husk?.toString() || "",
+      straws_sticks: labTest.straws_sticks?.toString() || "",
+      other_foreign_matter: labTest.other_foreign_matter?.toString() || "",
+      mudballs: labTest.mudballs?.toString() || "",
+      stones: labTest.stones?.toString() || "",
+      dust_sand: labTest.dust_sand?.toString() || "",
+      total_impurities: labTest.total_impurities?.toString() || "0.00",
+      shriveled_wheat: labTest.shriveled_wheat?.toString() || "",
+      insect_damage: labTest.insect_damage?.toString() || "",
+      blackened_wheat: labTest.blackened_wheat?.toString() || "",
+      other_grains: labTest.sprouted_grains?.toString() || "",
+      soft_wheat: labTest.other_grain_damage?.toString() || "",
+      heat_damaged: "",
+      immature_wheat: "",
+      broken_wheat: "",
+      total_dockage: labTest.total_dockage?.toString() || "0.00",
+      category: labTest.category || "",
+      comments_action: labTest.remarks || "",
+      approved: false,
+      tested_by: labTest.tested_by || "",
+    });
+    
+    setModalVisible(true);
+  };
+
+  const handleDelete = async (labTest) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to delete this lab test?')) {
+        try {
+          await labTestApi.delete(labTest.id);
+          Alert.alert('Success', 'Lab test deleted successfully');
+          loadLabTests();
+        } catch (error) {
+          Alert.alert('Error', 'Failed to delete lab test');
+          console.error(error);
+        }
+      }
+    } else {
+      Alert.alert(
+        'Confirm Delete',
+        'Are you sure you want to delete this lab test?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await labTestApi.delete(labTest.id);
+                Alert.alert('Success', 'Lab test deleted successfully');
+                loadLabTests();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to delete lab test');
+                console.error(error);
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
   const columns = [
     { label: "ID", field: "id", width: 80 },
     {
@@ -814,7 +896,13 @@ export default function LabTestScreen({ navigation }) {
 
   return (
     <Layout title="Lab Tests" navigation={navigation} currentRoute="LabTest">
-      <DataTable columns={columns} data={labTests} onAdd={openAddModal} />
+      <DataTable 
+        columns={columns} 
+        data={labTests} 
+        onAdd={openAddModal}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       <Modal
         visible={modalVisible}
