@@ -84,76 +84,74 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
   );
 
   const renderDesktopTable = () => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-      <View>
-        <View style={styles.tableHeader}>
-          {columns.map((col, index) => (
-            <View key={index} style={[styles.headerCell, { width: col.width || 150 }]}>
-              <Text style={styles.headerText}>{col.label}</Text>
-            </View>
-          ))}
-          <View style={[styles.headerCell, { width: onCustomAction ? 200 : 150 }]}>
-            <Text style={styles.headerText}>Actions</Text>
+    <View style={styles.tableWrapper}>
+      <View style={styles.tableHeader}>
+        {columns.map((col, index) => (
+          <View key={index} style={[styles.headerCell, { flex: col.flex || 1 }]}>
+            <Text style={styles.headerText}>{col.label}</Text>
           </View>
+        ))}
+        <View style={[styles.headerCell, { flex: onCustomAction ? 1.5 : 1 }]}>
+          <Text style={styles.headerText}>Actions</Text>
         </View>
+      </View>
 
-        <ScrollView style={styles.tableBody}>
-          {filteredData.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No data available</Text>
-            </View>
-          ) : (
-            filteredData.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.tableRow}>
-                {columns.map((col, colIndex) => (
-                  <View key={colIndex} style={[styles.cell, { width: col.width || 150 }]}>
-                    <Text style={styles.cellText} numberOfLines={2}>
-                      {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
-                    </Text>
-                  </View>
-                ))}
-                <View style={[styles.cell, { width: onCustomAction ? 200 : 150 }]}>
-                  <View style={styles.actionButtons}>
-                    {onEdit && (
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => onEdit(row)}
-                      >
-                        <Text style={styles.actionButtonText}>👁️</Text>
-                      </TouchableOpacity>
-                    )}
-                    {onEdit && (
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => onEdit(row)}
-                      >
-                        <Text style={styles.actionButtonText}>✏️</Text>
-                      </TouchableOpacity>
-                    )}
-                    {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
-                      <TouchableOpacity
-                        style={styles.customActionButton}
-                        onPress={() => onCustomAction(row)}
-                      >
-                        <Text style={styles.customActionButtonText}>{customActionLabel || 'Action'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {onDelete && (
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => onDelete(row)}
-                      >
-                        <Text style={styles.actionButtonText}>🗑️</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+      <ScrollView style={styles.tableBody}>
+        {filteredData.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No data available</Text>
+          </View>
+        ) : (
+          filteredData.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.tableRow}>
+              {columns.map((col, colIndex) => (
+                <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
+                  <Text style={styles.cellText} numberOfLines={2}>
+                    {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+                  </Text>
+                </View>
+              ))}
+              <View style={[styles.cell, { flex: onCustomAction ? 1.5 : 1 }]}>
+                <View style={styles.actionButtons}>
+                  {onEdit && (
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => onEdit(row)}
+                    >
+                      <Text style={styles.actionButtonText}>👁️</Text>
+                    </TouchableOpacity>
+                  )}
+                  {onEdit && (
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => onEdit(row)}
+                    >
+                      <Text style={styles.actionButtonText}>✏️</Text>
+                    </TouchableOpacity>
+                  )}
+                  {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
+                    <TouchableOpacity
+                      style={styles.customActionButton}
+                      onPress={() => onCustomAction(row)}
+                    >
+                      <Text style={styles.customActionButtonText}>{customActionLabel || 'Action'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {onDelete && (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => onDelete(row)}
+                    >
+                      <Text style={styles.actionButtonText}>🗑️</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            ))
-          )}
-        </ScrollView>
-      </View>
-    </ScrollView>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 
   return (
@@ -365,6 +363,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  tableWrapper: {
+    flex: 1,
   },
   tableHeader: {
     flexDirection: 'row',

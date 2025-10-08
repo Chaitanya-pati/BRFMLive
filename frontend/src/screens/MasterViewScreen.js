@@ -242,20 +242,20 @@ export default function MasterViewScreen({ navigation }) {
   };
 
   const godownColumns = [
-    { field: 'id', label: 'ID', width: 80 },
-    { field: 'name', label: 'Name', width: 200 },
-    { field: 'capacity', label: 'Capacity (tons)', width: 150 },
-    { field: 'type', label: 'Type', width: 150 },
-    { field: 'current_storage', label: 'Current Storage (tons)', width: 180 },
+    { field: 'id', label: 'ID', flex: 0.5 },
+    { field: 'name', label: 'Name', flex: 1.5 },
+    { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
+    { field: 'type', label: 'Type', flex: 1 },
+    { field: 'current_storage', label: 'Current Storage (tons)', flex: 1.2 },
   ];
 
   const supplierColumns = [
-    { field: 'id', label: 'ID', width: 80 },
-    { field: 'supplier_name', label: 'Supplier Name', width: 200 },
-    { field: 'contact_person', label: 'Contact Person', width: 180 },
-    { field: 'phone', label: 'Phone', width: 150 },
-    { field: 'state', label: 'State', width: 150 },
-    { field: 'city', label: 'City', width: 150 },
+    { field: 'id', label: 'ID', flex: 0.5 },
+    { field: 'supplier_name', label: 'Supplier Name', flex: 1.5 },
+    { field: 'contact_person', label: 'Contact Person', flex: 1.2 },
+    { field: 'phone', label: 'Phone', flex: 1 },
+    { field: 'state', label: 'State', flex: 1 },
+    { field: 'city', label: 'City', flex: 1 },
   ];
 
   return (
