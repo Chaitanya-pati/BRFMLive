@@ -201,6 +201,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
     flex: 1,
     width: '100%',
+    alignSelf: 'stretch',
   },
   toolbar: {
     flexDirection: 'row',

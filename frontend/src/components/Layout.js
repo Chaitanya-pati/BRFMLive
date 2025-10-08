@@ -394,6 +394,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: "#f5f6fa",
+    width: '100%',
+    alignSelf: 'stretch',
   },
   contentMobile: {
     width: "100%",
@@ -403,6 +405,7 @@ const styles = StyleSheet.create({
     padding: Platform.select({ web: 24, default: 16 }),
     borderBottomWidth: 0,
     marginBottom: 20,
+    width: '100%',
   },
   contentTitle: {
     fontSize: 24,
@@ -414,6 +417,7 @@ const styles = StyleSheet.create({
   },
   contentScroll: {
     flex: 1,
+    width: '100%',
     padding: Platform.select({ web: 24, default: 12 }),
   },
 });
