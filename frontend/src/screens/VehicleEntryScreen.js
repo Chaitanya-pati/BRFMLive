@@ -45,6 +45,11 @@ export default function VehicleEntryScreen({ navigation }) {
   }, []);
 
   const requestCameraPermission = async () => {
+    if (Platform.OS === 'web') {
+      // Camera permissions are handled by the browser on web
+      setCameraPermission(true);
+      return;
+    }
     const { status } = await Camera.requestCameraPermissionsAsync();
     setCameraPermission(status === 'granted');
   };
