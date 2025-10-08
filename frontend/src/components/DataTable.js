@@ -17,40 +17,69 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
 
   const renderMobileCard = (row, rowIndex) => (
     <View key={rowIndex} style={styles.mobileCard}>
-      {columns.slice(0, 4).map((col, colIndex) => (
-        <View key={colIndex} style={styles.mobileCardRow}>
-          <Text style={styles.mobileCardLabel}>{col.label}:</Text>
-          <Text style={styles.mobileCardValue} numberOfLines={2}>
-            {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
-          </Text>
+      <View style={styles.mobileCardHeader}>
+        <View style={styles.mobileCardIdBadge}>
+          <Text style={styles.mobileCardIdText}>#{row.id || rowIndex + 1}</Text>
         </View>
-      ))}
-      <View style={styles.mobileCardActions}>
-        {onEdit && (
-          <TouchableOpacity
-            style={styles.mobileActionButton}
-            onPress={() => onEdit(row)}
-          >
-            <Text style={styles.mobileActionButtonText}>View/Edit</Text>
-          </TouchableOpacity>
-        )}
-        {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
-          <TouchableOpacity
-            style={[styles.mobileActionButton, styles.mobileCustomButton]}
-            onPress={() => onCustomAction(row)}
-          >
-            <Text style={styles.mobileActionButtonText}>{customActionLabel || 'Action'}</Text>
-          </TouchableOpacity>
-        )}
-        {onDelete && (
-          <TouchableOpacity
-            style={[styles.mobileActionButton, styles.mobileDeleteButton]}
-            onPress={() => onDelete(row)}
-          >
-            <Text style={styles.mobileActionButtonText}>Delete</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.mobileCardHeaderActions}>
+          {onEdit && (
+            <TouchableOpacity
+              style={styles.mobileHeaderIconButton}
+              onPress={() => onEdit(row)}
+            >
+              <Text style={styles.iconText}>👁️</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              style={[styles.mobileHeaderIconButton, styles.deleteIconButton]}
+              onPress={() => onDelete(row)}
+            >
+              <Text style={styles.iconText}>🗑️</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+      
+      <View style={styles.mobileCardContent}>
+        {columns.slice(1, 5).map((col, colIndex) => (
+          <View key={colIndex} style={styles.mobileCardRow}>
+            <Text style={styles.mobileCardLabel}>{col.label}</Text>
+            <Text style={styles.mobileCardValue} numberOfLines={2}>
+              {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+            </Text>
+          </View>
+        ))}
+      </View>
+      
+      {(onEdit || onCustomAction || onDelete) && (
+        <View style={styles.mobileCardFooter}>
+          {onEdit && (
+            <TouchableOpacity
+              style={[styles.mobileActionButton, styles.mobileEditButton]}
+              onPress={() => onEdit(row)}
+            >
+              <Text style={styles.mobileActionButtonText}>✏️ Edit</Text>
+            </TouchableOpacity>
+          )}
+          {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
+            <TouchableOpacity
+              style={[styles.mobileActionButton, styles.mobileCustomButton]}
+              onPress={() => onCustomAction(row)}
+            >
+              <Text style={styles.mobileActionButtonText}>{customActionLabel || 'Action'}</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              style={[styles.mobileActionButton, styles.mobileDeleteButton]}
+              onPress={() => onDelete(row)}
+            >
+              <Text style={styles.mobileActionButtonText}>🗑️ Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 
@@ -167,8 +196,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     overflow: 'hidden',
-    borderWidth: 0,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
     flex: 1,
   },
   toolbar: {
@@ -176,93 +206,142 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    borderBottomWidth: 0,
-    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#fafbfc',
     gap: 12,
   },
   toolbarMobile: {
     padding: 16,
-    gap: 8,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
+    padding: 12,
     fontSize: 14,
     backgroundColor: colors.surface,
     color: colors.textPrimary,
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
   },
   searchInputMobile: {
     fontSize: 14,
-    padding: 8,
+    padding: 10,
   },
   addButton: {
-    backgroundColor: colors.info,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
     justifyContent: 'center',
+    boxShadow: '0 2px 4px rgba(59, 89, 152, 0.2)',
   },
   addButtonMobile: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   addButtonText: {
-    color: colors.onInfo,
-    fontWeight: '600',
+    color: colors.onPrimary,
+    fontWeight: '700',
     fontSize: 14,
+    letterSpacing: 0.3,
   },
   mobileCardsContainer: {
     flex: 1,
-    padding: 12,
+    padding: 16,
   },
   mobileCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    borderColor: '#e5e7eb',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
+    overflow: 'hidden',
   },
-  mobileCardRow: {
+  mobileCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  mobileCardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    flex: 1,
-    minWidth: 100,
+  mobileCardIdBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  mobileCardValue: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    flex: 2,
-    textAlign: 'right',
+  mobileCardIdText: {
+    color: colors.onPrimary,
+    fontSize: 13,
+    fontWeight: '700',
   },
-  mobileCardActions: {
+  mobileCardHeaderActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
-    paddingTop: 12,
+  },
+  mobileHeaderIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteIconButton: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  iconText: {
+    fontSize: 16,
+  },
+  mobileCardContent: {
+    padding: 16,
+  },
+  mobileCardRow: {
+    marginBottom: 12,
+  },
+  mobileCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  mobileCardValue: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '500',
+    lineHeight: 22,
+  },
+  mobileCardFooter: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#f9fafb',
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    borderTopColor: '#e5e7eb',
   },
   mobileActionButton: {
     flex: 1,
-    backgroundColor: colors.info,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  mobileEditButton: {
+    backgroundColor: colors.info,
   },
   mobileDeleteButton: {
     backgroundColor: colors.error,
@@ -271,9 +350,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning,
   },
   mobileActionButtonText: {
-    color: colors.onInfo,
-    fontWeight: '600',
+    color: '#ffffff',
+    fontWeight: '700',
     fontSize: 13,
+    letterSpacing: 0.3,
   },
   customActionButton: {
     backgroundColor: colors.warning,
@@ -288,20 +368,21 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#fafbfc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    backgroundColor: colors.primary,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primaryHover,
   },
   headerCell: {
-    padding: 16,
-    borderRightWidth: 0,
+    padding: 14,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerText: {
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.onPrimary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   tableBody: {
     maxHeight: 500,
@@ -310,36 +391,44 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#e5e7eb',
     backgroundColor: colors.surface,
+    transition: 'background-color 0.2s ease',
   },
   cell: {
-    padding: 16,
-    borderRightWidth: 0,
+    padding: 14,
+    borderRightWidth: 1,
+    borderRightColor: '#f3f4f6',
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: '#374151',
+    color: colors.textPrimary,
+    lineHeight: 20,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 6,
     justifyContent: 'flex-end',
   },
   editButton: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    backgroundColor: '#f0f9ff',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
   },
   deleteButton: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
   actionButtonText: {
-    color: '#6b7280',
-    fontSize: 18,
+    fontSize: 16,
   },
   emptyState: {
     padding: 40,
