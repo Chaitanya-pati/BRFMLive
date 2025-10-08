@@ -211,18 +211,32 @@ export default function UnloadingEntryScreen({ navigation }) {
 
     // Load existing images if available
     if (entry.before_unloading_image) {
-      const imageUrl = entry.before_unloading_image.startsWith('http') 
-        ? entry.before_unloading_image 
-        : `${process.env.REACT_APP_API_URL || 'http://0.0.0.0:8000'}${entry.before_unloading_image}`;
+      let imageUrl;
+      if (entry.before_unloading_image.startsWith('http')) {
+        imageUrl = entry.before_unloading_image;
+      } else {
+        // Construct the correct URL using the current hostname
+        const baseUrl = typeof window !== 'undefined' 
+          ? `${window.location.protocol}//${window.location.hostname}:8000`
+          : 'http://0.0.0.0:8000';
+        imageUrl = `${baseUrl}${entry.before_unloading_image}`;
+      }
       setBeforeImage({ uri: imageUrl });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      const imageUrl = entry.after_unloading_image.startsWith('http') 
-        ? entry.after_unloading_image 
-        : `${process.env.REACT_APP_API_URL || 'http://0.0.0.0:8000'}${entry.after_unloading_image}`;
+      let imageUrl;
+      if (entry.after_unloading_image.startsWith('http')) {
+        imageUrl = entry.after_unloading_image;
+      } else {
+        // Construct the correct URL using the current hostname
+        const baseUrl = typeof window !== 'undefined' 
+          ? `${window.location.protocol}//${window.location.hostname}:8000`
+          : 'http://0.0.0.0:8000';
+        imageUrl = `${baseUrl}${entry.after_unloading_image}`;
+      }
       setAfterImage({ uri: imageUrl });
     } else {
       setAfterImage(null);
