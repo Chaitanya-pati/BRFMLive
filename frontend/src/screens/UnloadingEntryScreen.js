@@ -196,6 +196,57 @@ export default function UnloadingEntryScreen({ navigation }) {
     setModalVisible(true);
   };
 
+  const openEditModal = (entry) => {
+    setFormData({
+      id: entry.id,
+      vehicle_entry_id: entry.vehicle_entry_id,
+      godown_id: entry.godown_id,
+      gross_weight: entry.gross_weight.toString(),
+      empty_vehicle_weight: entry.empty_vehicle_weight.toString(),
+      net_weight: entry.net_weight.toString(),
+      unloading_start_time: entry.unloading_start_time,
+      unloading_end_time: entry.unloading_end_time,
+      notes: entry.notes || '',
+    });
+
+    // Load existing images if available
+    if (entry.before_unloading_image) {
+      const imageUrl = entry.before_unloading_image.startsWith('http') 
+        ? entry.before_unloading_image 
+        : `${process.env.REACT_APP_API_URL || 'http://0.0.0.0:8000'}${entry.before_unloading_image}`;
+      setBeforeImage({ uri: imageUrl });
+    } else {
+      setBeforeImage(null);
+    }
+
+    if (entry.after_unloading_image) {
+      const imageUrl = entry.after_unloading_image.startsWith('http') 
+        ? entry.after_unloading_image 
+        : `${process.env.REACT_APP_API_URL || 'http://0.0.0.0:8000'}${entry.after_unloading_image}`;
+      setAfterImage({ uri: imageUrl });
+    } else {
+      setAfterImage(null);
+    }
+
+    // Set vehicle category and filter godowns
+    const selectedVehicle = vehicles.find(v => v.id === entry.vehicle_entry_id);
+    if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
+      const category = selectedVehicle.lab_tests[0].category;
+      setSelectedVehicleCategory(category);
+      if (category) {
+        const filtered = godowns.filter(g => g.type === category);
+        setFilteredGodowns(filtered);
+      } else {
+        setFilteredGodowns(godowns);
+      }
+    } else {
+      setSelectedVehicleCategory(null);
+      setFilteredGodowns(godowns);
+    }
+
+    setModalVisible(true);
+  };
+
   const handleSubmit = async () => {
     try {
       if (!formData.vehicle_entry_id || !formData.godown_id || 
@@ -216,26 +267,41 @@ export default function UnloadingEntryScreen({ navigation }) {
         submitFormData.append('notes', formData.notes);
       }
 
-      if (Platform.OS === 'web') {
-        const beforeBlob = await fetch(beforeImage.uri).then(r => r.blob());
-        const afterBlob = await fetch(afterImage.uri).then(r => r.blob());
-        submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
-        submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
-      } else {
-        submitFormData.append('before_unloading_image', {
-          uri: beforeImage.uri,
-          type: 'image/jpeg',
-          name: 'before.jpg',
-        });
-        submitFormData.append('after_unloading_image', {
-          uri: afterImage.uri,
-          type: 'image/jpeg',
-          name: 'after.jpg',
-        });
+      // Only append new images (not existing URLs)
+      if (beforeImage && !beforeImage.uri.startsWith('http')) {
+        if (Platform.OS === 'web') {
+          const beforeBlob = await fetch(beforeImage.uri).then(r => r.blob());
+          submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
+        } else {
+          submitFormData.append('before_unloading_image', {
+            uri: beforeImage.uri,
+            type: 'image/jpeg',
+            name: 'before.jpg',
+          });
+        }
       }
 
-      await unloadingApi.create(submitFormData);
-      showAlert('Success', 'Unloading entry added successfully');
+      if (afterImage && !afterImage.uri.startsWith('http')) {
+        if (Platform.OS === 'web') {
+          const afterBlob = await fetch(afterImage.uri).then(r => r.blob());
+          submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
+        } else {
+          submitFormData.append('after_unloading_image', {
+            uri: afterImage.uri,
+            type: 'image/jpeg',
+            name: 'after.jpg',
+          });
+        }
+      }
+
+      if (formData.id) {
+        await unloadingApi.update(formData.id, submitFormData);
+        showAlert('Success', 'Unloading entry updated successfully');
+      } else {
+        await unloadingApi.create(submitFormData);
+        showAlert('Success', 'Unloading entry added successfully');
+      }
+      
       setModalVisible(false);
       loadEntries();
       loadGodowns();
@@ -308,13 +374,14 @@ export default function UnloadingEntryScreen({ navigation }) {
         columns={columns}
         data={entries}
         onAdd={openAddModal}
+        onEdit={openEditModal}
         onDelete={handleDelete}
       />
 
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title="Add Unloading Entry"
+        title={formData.id ? "Edit Unloading Entry" : "Add Unloading Entry"}
       >
         <ScrollView style={styles.modalContent}>
           <Text style={styles.label}>Vehicle (Lab Tested) *</Text>

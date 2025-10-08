@@ -386,10 +386,10 @@ async def create_unloading_entry(
         notes=notes
     )
     
-    if before_unloading_image:
+    if before_unloading_image and before_unloading_image.filename:
         db_entry.before_unloading_image = await save_upload_file(before_unloading_image)
     
-    if after_unloading_image:
+    if after_unloading_image and after_unloading_image.filename:
         db_entry.after_unloading_image = await save_upload_file(after_unloading_image)
     
     godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
@@ -414,6 +414,69 @@ def get_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404, detail="Unloading entry not found")
     return entry
+
+@app.put("/api/unloading-entries/{entry_id}", response_model=schemas.UnloadingEntry)
+async def update_unloading_entry(
+    entry_id: int,
+    vehicle_entry_id: int = Form(...),
+    godown_id: int = Form(...),
+    gross_weight: float = Form(...),
+    empty_vehicle_weight: float = Form(...),
+    net_weight: float = Form(...),
+    unloading_start_time: Optional[str] = Form(None),
+    unloading_end_time: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    before_unloading_image: Optional[UploadFile] = File(None),
+    after_unloading_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    db_entry = db.query(models.UnloadingEntry).filter(models.UnloadingEntry.id == entry_id).first()
+    if not db_entry:
+        raise HTTPException(status_code=404, detail="Unloading entry not found")
+    
+    # Update godown storage (subtract old, add new)
+    old_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_entry.godown_id).first()
+    if old_godown:
+        old_net_weight_tons = db_entry.net_weight / 1000
+        old_godown.current_storage = max(0, (old_godown.current_storage or 0) - old_net_weight_tons)
+    
+    # Update entry fields
+    db_entry.vehicle_entry_id = vehicle_entry_id
+    db_entry.godown_id = godown_id
+    db_entry.gross_weight = gross_weight
+    db_entry.empty_vehicle_weight = empty_vehicle_weight
+    db_entry.net_weight = net_weight
+    
+    if unloading_start_time:
+        try:
+            db_entry.unloading_start_time = datetime.fromisoformat(unloading_start_time.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    if unloading_end_time:
+        try:
+            db_entry.unloading_end_time = datetime.fromisoformat(unloading_end_time.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    db_entry.notes = notes
+    
+    # Update images if provided
+    if before_unloading_image and before_unloading_image.filename:
+        db_entry.before_unloading_image = await save_upload_file(before_unloading_image)
+    
+    if after_unloading_image and after_unloading_image.filename:
+        db_entry.after_unloading_image = await save_upload_file(after_unloading_image)
+    
+    # Add new weight to godown
+    new_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
+    if new_godown:
+        new_net_weight_tons = net_weight / 1000
+        new_godown.current_storage = (new_godown.current_storage or 0) + new_net_weight_tons
+    
+    db.commit()
+    db.refresh(db_entry)
+    return db_entry
 
 @app.delete("/api/unloading-entries/{entry_id}")
 def delete_unloading_entry(entry_id: int, db: Session = Depends(get_db)):

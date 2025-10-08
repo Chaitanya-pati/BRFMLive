@@ -79,6 +79,13 @@ export const unloadingApi = {
       },
     });
   },
+  update: (id, formData) => {
+    return axios.put(`${API_URL}/unloading-entries/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
   delete: (id) => api.delete(`/unloading-entries/${id}`),
 };
 
