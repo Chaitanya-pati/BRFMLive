@@ -12,11 +12,13 @@ const getApiUrl = () => {
     const hostname = window.location.hostname;
     
     if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      return `${protocol}//${hostname}:8000/api`;
+      // Use the backend port with proper URL construction
+      const backendHostname = hostname.replace(/:\d+/, ''); // Remove any port from hostname
+      return `${protocol}//${backendHostname}-8000.${hostname.split('.').slice(-2).join('.')}/api`;
     }
   }
 
-  return "http://localhost:8000/api";
+  return "http://0.0.0.0:8000/api";
 };
 
 const API_URL = getApiUrl();
