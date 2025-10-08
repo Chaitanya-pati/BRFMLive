@@ -6,9 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
 } from 'react-native';
+import notify from '../utils/notifications';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -47,26 +47,7 @@ export default function MasterViewScreen({ navigation }) {
     city: '',
   });
 
-  const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onConfirm }
-      ]);
-    }
-  };
+  
 
   useEffect(() => {
     loadGodowns();
@@ -188,28 +169,28 @@ export default function MasterViewScreen({ navigation }) {
         await handleGodownSubmit();
       } else {
         if (!supplierFormData.supplier_name || !supplierFormData.state || !supplierFormData.city) {
-          showAlert('Error', 'Please fill all required fields');
+          notify.showWarning('Please fill all required fields');
           return;
         }
 
         if (editMode) {
           await supplierApi.update(currentItem.id, supplierFormData);
-          showAlert('Success', 'Supplier updated successfully');
+          notify.showSuccess('Supplier updated successfully');
         } else {
           await supplierApi.create(supplierFormData);
-          showAlert('Success', 'Supplier added successfully');
+          notify.showSuccess('Supplier added successfully');
         }
         loadSuppliers();
       }
       setModalVisible(false);
     } catch (error) {
       console.error('Error saving data:', error);
-      showAlert('Error', 'Failed to save data');
+      notify.showError('Failed to save data. Please try again.');
     }
   };
 
   const handleDelete = (item) => {
-    showConfirm(
+    notify.showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete this ${activeTab === 'godown' ? 'godown' : 'supplier'}?`,
       async () => {
@@ -221,42 +202,42 @@ export default function MasterViewScreen({ navigation }) {
             await supplierApi.delete(item.id);
             loadSuppliers();
           }
-          showAlert('Success', 'Deleted successfully');
+          notify.showSuccess('Deleted successfully');
         } catch (error) {
           console.error('Error deleting:', error);
-          showAlert('Error', 'Failed to delete');
+          notify.showError('Failed to delete. Please try again.');
         }
       }
     );
   };
 
   const handleSupplierDelete = (supplier) => {
-    showConfirm(
+    notify.showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete ${supplier.supplier_name}?`,
       async () => {
         try {
           await supplierApi.delete(supplier.id);
-          showAlert('Success', 'Supplier deleted successfully');
+          notify.showSuccess('Supplier deleted successfully');
           loadSuppliers();
         } catch (error) {
-          showAlert('Error', 'Failed to delete supplier');
+          notify.showError('Failed to delete supplier');
         }
       }
     );
   };
 
   const handleGodownDelete = (godown) => {
-    showConfirm(
+    notify.showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete ${godown.name}?`,
       async () => {
         try {
           await godownApi.delete(godown.id);
-          showAlert('Success', 'Godown deleted successfully');
+          notify.showSuccess('Godown deleted successfully');
           loadGodowns();
         } catch (error) {
-          showAlert('Error', 'Failed to delete godown');
+          notify.showError('Failed to delete godown');
         }
       }
     );
@@ -307,7 +288,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const handleGodownSubmit = async () => {
     if (!godownFormData.name || !godownFormData.capacity || !godownFormData.type) {
-      showAlert('Error', 'Please fill all required fields');
+      notify.showWarning('Please fill all required fields');
       return;
     }
 
@@ -323,16 +304,16 @@ export default function MasterViewScreen({ navigation }) {
 
       if (editMode && currentGodown) {
         await godownApi.update(currentGodown.id, payload);
-        showAlert('Success', 'Godown updated successfully');
+        notify.showSuccess('Godown updated successfully');
       } else {
         await godownApi.create(payload);
-        showAlert('Success', 'Godown created successfully');
+        notify.showSuccess('Godown created successfully');
       }
 
       setModalVisible(false);
       loadGodowns();
     } catch (error) {
-      showAlert('Error', editMode ? 'Failed to update godown' : 'Failed to create godown');
+      notify.showError(editMode ? 'Failed to update godown' : 'Failed to create godown');
     } finally {
       setLoading(false);
     }

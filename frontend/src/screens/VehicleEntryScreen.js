@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Alert,
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -18,6 +17,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { vehicleApi, supplierApi } from '../api/client';
 import colors from '../theme/colors';
+import notify from '../utils/notifications';
 
 export default function VehicleEntryScreen({ navigation }) {
   const [vehicles, setVehicles] = useState([]);
@@ -91,7 +91,7 @@ export default function VehicleEntryScreen({ navigation }) {
 
   const takePhoto = async (type) => {
     if (cameraPermission === null || cameraPermission === false) {
-      Alert.alert('Permission Denied', 'Camera access is required to take photos.');
+      notify.showWarning('Camera access is required to take photos.', 'Permission Denied');
       return;
     }
 
@@ -178,36 +178,25 @@ export default function VehicleEntryScreen({ navigation }) {
   };
 
   const handleDelete = async (vehicle) => {
-    Alert.alert(
+    notify.showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete vehicle entry ${vehicle.vehicle_number}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await vehicleApi.delete(vehicle.id);
-              Alert.alert('Success', 'Vehicle entry deleted successfully');
-              loadVehicles();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete vehicle entry');
-              console.error(error);
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await vehicleApi.delete(vehicle.id);
+          notify.showSuccess('Vehicle entry deleted successfully');
+          loadVehicles();
+        } catch (error) {
+          notify.showError('Failed to delete vehicle entry');
+          console.error(error);
+        }
+      }
     );
-  };
-
-  const showAlert = (title, message) => {
-    Alert.alert(title, message);
   };
 
   const handleSubmit = async () => {
     if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
-      showAlert('Error', 'Please fill all required fields');
+      notify.showWarning('Please fill all required fields');
       return;
     }
 
@@ -255,20 +244,18 @@ export default function VehicleEntryScreen({ navigation }) {
       }
 
       if (formData.id) {
-        // Update existing vehicle entry
         await vehicleApi.update(formData.id, submitFormData);
-        showAlert('Success', 'Vehicle entry updated successfully');
+        notify.showSuccess('Vehicle entry updated successfully');
       } else {
-        // Create new vehicle entry
         await vehicleApi.create(submitFormData);
-        showAlert('Success', 'Vehicle entry added successfully');
+        notify.showSuccess('Vehicle entry added successfully');
       }
       
       setModalVisible(false);
       loadVehicles();
     } catch (error) {
       console.error('Error saving entry:', error);
-      showAlert('Error', 'Failed to save entry');
+      notify.showError('Failed to save vehicle entry. Please try again.');
     } finally {
       setLoading(false);
     }

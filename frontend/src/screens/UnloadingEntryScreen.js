@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
   Platform,
 } from 'react-native';
+import notify from '../utils/notifications';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Camera from 'expo-camera';
@@ -41,26 +41,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     notes: '',
   });
 
-  const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onConfirm }
-      ]);
-    }
-  };
+  
 
   useEffect(() => {
     loadEntries();
@@ -71,12 +52,14 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const requestCameraPermission = async () => {
     if (Platform.OS === 'web') {
-      // Camera permissions are handled by the browser on web
       setCameraPermission(true);
       return;
     }
     const { status } = await Camera.requestCameraPermissionsAsync();
     setCameraPermission(status === 'granted');
+    if (status !== 'granted') {
+      notify.showWarning('Camera permission is required to take photos');
+    }
   };
 
   const loadEntries = async () => {
@@ -164,7 +147,7 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const takePhoto = async (type) => {
     if (!cameraPermission) {
-      showAlert('Permission Required', 'Camera permission is required to take photos');
+      notify.showWarning('Camera permission is required to take photos', 'Permission Required');
       return;
     }
 
@@ -264,7 +247,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     try {
       if (!formData.vehicle_entry_id || !formData.godown_id || 
           !formData.gross_weight || !formData.empty_vehicle_weight) {
-        showAlert('Error', 'Please fill all required fields');
+        notify.showWarning('Please fill all required fields');
         return;
       }
 
@@ -309,10 +292,10 @@ export default function UnloadingEntryScreen({ navigation }) {
 
       if (formData.id) {
         await unloadingApi.update(formData.id, submitFormData);
-        showAlert('Success', 'Unloading entry updated successfully');
+        notify.showSuccess('Unloading entry updated successfully');
       } else {
         await unloadingApi.create(submitFormData);
-        showAlert('Success', 'Unloading entry added successfully');
+        notify.showSuccess('Unloading entry added successfully');
       }
 
       setModalVisible(false);
@@ -320,22 +303,22 @@ export default function UnloadingEntryScreen({ navigation }) {
       loadGodowns();
     } catch (error) {
       console.error('Error saving entry:', error);
-      showAlert('Error', 'Failed to save entry');
+      notify.showError('Failed to save unloading entry. Please try again.');
     }
   };
 
   const handleDelete = (entry) => {
-    showConfirm(
+    notify.showConfirm(
       'Confirm Delete',
       'Are you sure you want to delete this unloading entry?',
       async () => {
         try {
           await unloadingApi.delete(entry.id);
           loadEntries();
-          showAlert('Success', 'Deleted successfully');
+          notify.showSuccess('Unloading entry deleted successfully');
         } catch (error) {
           console.error('Error deleting:', error);
-          showAlert('Error', 'Failed to delete');
+          notify.showError('Failed to delete unloading entry');
         }
       }
     );

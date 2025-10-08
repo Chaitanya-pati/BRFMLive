@@ -5,10 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
+import notify from '../utils/notifications';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -46,7 +46,7 @@ export default function ClaimTrackingScreen({ navigation }) {
       setClaims(response.data);
     } catch (error) {
       console.error('Error loading claims:', error);
-      Alert.alert('Error', 'Failed to load claims');
+      notify.showError('Failed to load claims');
     }
   };
 
@@ -114,11 +114,11 @@ export default function ClaimTrackingScreen({ navigation }) {
         claim_status: updateData.claim_status,
         remarks: updateData.remarks || null,
       });
-      Alert.alert('Success', 'Claim updated successfully');
+      notify.showSuccess('Claim updated successfully');
       setUpdateModalVisible(false);
       loadClaims();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update claim');
+      notify.showError('Failed to update claim');
       console.error(error);
     } finally {
       setLoading(false);

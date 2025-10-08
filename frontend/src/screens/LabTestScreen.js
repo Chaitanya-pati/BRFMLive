@@ -5,10 +5,10 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
   ScrollView,
 } from "react-native";
+import notify from '../utils/notifications';
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Layout from "../components/Layout";
@@ -255,7 +255,7 @@ export default function LabTestScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!formData.vehicle_entry_id) {
-      Alert.alert("Error", "Please select a vehicle");
+      notify.showWarning("Please select a vehicle");
       return;
     }
 
@@ -289,17 +289,17 @@ export default function LabTestScreen({ navigation }) {
 
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
-        Alert.alert("Success", "Lab test updated successfully");
+        notify.showSuccess("Lab test updated successfully");
       } else {
         await labTestApi.create(submitData);
-        Alert.alert("Success", "Lab test created successfully");
+        notify.showSuccess("Lab test created successfully");
       }
 
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
     } catch (error) {
-      Alert.alert("Error", editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
       console.error(error);
     } finally {
       setLoading(false);
@@ -308,7 +308,7 @@ export default function LabTestScreen({ navigation }) {
 
   const generatePDF = () => {
     if (!selectedVehicle || !formData.vehicle_entry_id) {
-      Alert.alert("Error", "Please select a vehicle first");
+      notify.showWarning("Please select a vehicle first");
       return;
     }
 
@@ -785,7 +785,7 @@ export default function LabTestScreen({ navigation }) {
         }, 250);
       };
     } else {
-      Alert.alert("Error", "Please allow pop-ups to generate PDF");
+      notify.showWarning("Please allow pop-ups to generate PDF");
     }
   };
   const handleEdit = async (labTest) => {
@@ -844,40 +844,20 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleDelete = async (labTest) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete this lab test?')) {
+    notify.showConfirm(
+      'Confirm Delete',
+      'Are you sure you want to delete this lab test?',
+      async () => {
         try {
           await labTestApi.delete(labTest.id);
-          Alert.alert('Success', 'Lab test deleted successfully');
+          notify.showSuccess('Lab test deleted successfully');
           loadLabTests();
         } catch (error) {
-          Alert.alert('Error', 'Failed to delete lab test');
+          notify.showError('Failed to delete lab test');
           console.error(error);
         }
       }
-    } else {
-      Alert.alert(
-        'Confirm Delete',
-        'Are you sure you want to delete this lab test?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await labTestApi.delete(labTest.id);
-                Alert.alert('Success', 'Lab test deleted successfully');
-                loadLabTests();
-              } catch (error) {
-                Alert.alert('Error', 'Failed to delete lab test');
-                console.error(error);
-              }
-            }
-          }
-        ]
-      );
-    }
+    );
   };
 
   const columns = [
