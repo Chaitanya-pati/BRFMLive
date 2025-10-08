@@ -204,11 +204,6 @@ export default function UnloadingEntryScreen({ navigation }) {
         return;
       }
 
-      if (!beforeImage || !afterImage) {
-        showAlert('Error', 'Please capture both before and after images');
-        return;
-      }
-
       const submitFormData = new FormData();
       submitFormData.append('vehicle_entry_id', formData.vehicle_entry_id);
       submitFormData.append('godown_id', formData.godown_id);
@@ -285,6 +280,26 @@ export default function UnloadingEntryScreen({ navigation }) {
     },
     { key: 'gross_weight', label: 'Gross Weight (kg)', field: 'gross_weight', width: 150 },
     { key: 'net_weight', label: 'Net Weight (kg)', field: 'net_weight', width: 150 },
+    { 
+      key: 'images', 
+      label: 'Images', 
+      field: 'before_unloading_image',
+      width: 150,
+      render: (value, row) => {
+        const hasBeforeImage = row.before_unloading_image;
+        const hasAfterImage = row.after_unloading_image;
+        
+        if (hasBeforeImage && hasAfterImage) {
+          return '✅ Complete';
+        } else if (!hasBeforeImage && !hasAfterImage) {
+          return '⚠️ Missing Both';
+        } else if (!hasBeforeImage) {
+          return '⚠️ Missing Before';
+        } else {
+          return '⚠️ Missing After';
+        }
+      }
+    },
   ];
 
   return (
@@ -363,7 +378,7 @@ export default function UnloadingEntryScreen({ navigation }) {
             editable={false}
           />
 
-          <Text style={styles.label}>Before Unloading Image *</Text>
+          <Text style={styles.label}>Before Unloading Image (Optional)</Text>
           <View style={styles.imageSection}>
             {beforeImage ? (
               <Image source={{ uri: beforeImage.uri }} style={styles.imagePreview} />
@@ -388,7 +403,7 @@ export default function UnloadingEntryScreen({ navigation }) {
             </View>
           </View>
 
-          <Text style={styles.label}>After Unloading Image *</Text>
+          <Text style={styles.label}>After Unloading Image (Optional)</Text>
           <View style={styles.imageSection}>
             {afterImage ? (
               <Image source={{ uri: afterImage.uri }} style={styles.imagePreview} />
