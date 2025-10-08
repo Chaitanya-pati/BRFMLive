@@ -147,18 +147,28 @@ export default function VehicleEntryScreen({ navigation }) {
     
     // Load existing images if available
     if (vehicle.supplier_bill_photo) {
-      const billPhotoUrl = vehicle.supplier_bill_photo.startsWith('http') 
-        ? vehicle.supplier_bill_photo 
-        : `https://brfmlive.onrender.com${vehicle.supplier_bill_photo}`;
+      let billPhotoUrl = vehicle.supplier_bill_photo;
+      if (!billPhotoUrl.startsWith('http')) {
+        // If it's a relative path, construct the full URL
+        billPhotoUrl = billPhotoUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${billPhotoUrl}`
+          : `https://brfmlive.onrender.com/${billPhotoUrl}`;
+      }
+      console.log('Loading bill photo from:', billPhotoUrl);
       setBillPhoto({ uri: billPhotoUrl });
     } else {
       setBillPhoto(null);
     }
     
     if (vehicle.vehicle_photo) {
-      const vehiclePhotoUrl = vehicle.vehicle_photo.startsWith('http') 
-        ? vehicle.vehicle_photo 
-        : `https://brfmlive.onrender.com${vehicle.vehicle_photo}`;
+      let vehiclePhotoUrl = vehicle.vehicle_photo;
+      if (!vehiclePhotoUrl.startsWith('http')) {
+        // If it's a relative path, construct the full URL
+        vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${vehiclePhotoUrl}`
+          : `https://brfmlive.onrender.com/${vehiclePhotoUrl}`;
+      }
+      console.log('Loading vehicle photo from:', vehiclePhotoUrl);
       setVehiclePhoto({ uri: vehiclePhotoUrl });
     } else {
       setVehiclePhoto(null);
@@ -373,7 +383,11 @@ export default function VehicleEntryScreen({ navigation }) {
           <Text style={styles.label}>Supplier Bill Photo</Text>
           <View style={styles.imageSection}>
             {billPhoto ? (
-              <Image source={{ uri: billPhoto.uri }} style={styles.imagePreview} />
+              <Image 
+                source={{ uri: billPhoto.uri || billPhoto }} 
+                style={styles.imagePreview}
+                onError={(e) => console.log('Error loading bill photo:', e.nativeEvent.error)}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.placeholderText}>No image</Text>
@@ -398,7 +412,11 @@ export default function VehicleEntryScreen({ navigation }) {
           <Text style={styles.label}>Vehicle Photo</Text>
           <View style={styles.imageSection}>
             {vehiclePhoto ? (
-              <Image source={{ uri: vehiclePhoto.uri }} style={styles.imagePreview} />
+              <Image 
+                source={{ uri: vehiclePhoto.uri || vehiclePhoto }} 
+                style={styles.imagePreview}
+                onError={(e) => console.log('Error loading vehicle photo:', e.nativeEvent.error)}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.placeholderText}>No image</Text>

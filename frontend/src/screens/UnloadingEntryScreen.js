@@ -216,18 +216,26 @@ export default function UnloadingEntryScreen({ navigation }) {
 
     // Load existing images if available
     if (entry.before_unloading_image) {
-      const beforeImageUrl = entry.before_unloading_image.startsWith('http') 
-        ? entry.before_unloading_image 
-        : `https://brfmlive.onrender.com${entry.before_unloading_image}`;
+      let beforeImageUrl = entry.before_unloading_image;
+      if (!beforeImageUrl.startsWith('http')) {
+        beforeImageUrl = beforeImageUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${beforeImageUrl}`
+          : `https://brfmlive.onrender.com/${beforeImageUrl}`;
+      }
+      console.log('Loading before image from:', beforeImageUrl);
       setBeforeImage({ uri: beforeImageUrl });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      const afterImageUrl = entry.after_unloading_image.startsWith('http') 
-        ? entry.after_unloading_image 
-        : `https://brfmlive.onrender.com${entry.after_unloading_image}`;
+      let afterImageUrl = entry.after_unloading_image;
+      if (!afterImageUrl.startsWith('http')) {
+        afterImageUrl = afterImageUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${afterImageUrl}`
+          : `https://brfmlive.onrender.com/${afterImageUrl}`;
+      }
+      console.log('Loading after image from:', afterImageUrl);
       setAfterImage({ uri: afterImageUrl });
     } else {
       setAfterImage(null);
@@ -453,7 +461,11 @@ export default function UnloadingEntryScreen({ navigation }) {
           <Text style={styles.label}>Before Unloading Image (Optional)</Text>
           <View style={styles.imageSection}>
             {beforeImage ? (
-              <Image source={{ uri: beforeImage.uri }} style={styles.imagePreview} />
+              <Image 
+                source={{ uri: beforeImage.uri || beforeImage }} 
+                style={styles.imagePreview}
+                onError={(e) => console.log('Error loading before image:', e.nativeEvent.error)}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.placeholderText}>No image</Text>
@@ -478,7 +490,11 @@ export default function UnloadingEntryScreen({ navigation }) {
           <Text style={styles.label}>After Unloading Image (Optional)</Text>
           <View style={styles.imageSection}>
             {afterImage ? (
-              <Image source={{ uri: afterImage.uri }} style={styles.imagePreview} />
+              <Image 
+                source={{ uri: afterImage.uri || afterImage }} 
+                style={styles.imagePreview}
+                onError={(e) => console.log('Error loading after image:', e.nativeEvent.error)}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.placeholderText}>No image</Text>
