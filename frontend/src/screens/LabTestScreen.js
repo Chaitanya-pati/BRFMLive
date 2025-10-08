@@ -782,7 +782,7 @@ export default function LabTestScreen({ navigation }) {
     setSelectedVehicle(vehicle);
     
     setFormData({
-      vehicle_entry_id: labTest.vehicle_entry_id || "",
+      vehicle_entry_id: labTest.vehicle_entry_id?.toString() || "",
       test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
       wheat_variety: labTest.wheat_variety || "",
       bill_number: labTest.bill_number || "",
@@ -951,7 +951,7 @@ export default function LabTestScreen({ navigation }) {
                   <Text style={styles.label}>Select Vehicle *</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={formData.vehicle_entry_id}
+                      selectedValue={formData.vehicle_entry_id?.toString() || ""}
                       onValueChange={handleVehicleChange}
                       style={styles.picker}
                     >
@@ -960,7 +960,7 @@ export default function LabTestScreen({ navigation }) {
                         <Picker.Item
                           key={vehicle.id}
                           label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || "N/A"}`}
-                          value={vehicle.id}
+                          value={vehicle.id.toString()}
                         />
                       ))}
                     </Picker>
