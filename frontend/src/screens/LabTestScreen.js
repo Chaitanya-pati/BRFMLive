@@ -171,17 +171,19 @@ export default function LabTestScreen({ navigation }) {
       // Get today's lab tests to determine the next document number
       const response = await labTestApi.getAll();
       const todayTests = response.data.filter(test => {
-        const testDate = new Date(test.test_date).toISOString().split('T')[0];
-        return testDate === todayStr;
+        const createdDate = new Date(test.created_at).toISOString().split('T')[0];
+        return createdDate === todayStr;
       });
       
+      // Generate 3-digit document number
       const docNumber = String(todayTests.length + 1).padStart(3, '0');
       
       setFormData({ 
         ...formData, 
         vehicle_entry_id: vehicleId,
         bill_number: vehicle?.bill_no || '',
-        document_no: docNumber
+        document_no: docNumber,
+        issue_no: '01'  // 2-digit issue number
       });
     } catch (error) {
       console.error('Error generating document number:', error);
@@ -189,7 +191,8 @@ export default function LabTestScreen({ navigation }) {
         ...formData, 
         vehicle_entry_id: vehicleId,
         bill_number: vehicle?.bill_no || '',
-        document_no: '001'
+        document_no: '001',
+        issue_no: '01'
       });
     }
   };
