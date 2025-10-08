@@ -34,12 +34,18 @@ export default function LabTestScreen({ navigation }) {
   const [formData, setFormData] = useState({
     vehicle_entry_id: '',
     test_date: new Date(),
+    wheat_variety: '',
+    bill_number: '',
+    arrival_datetime: '',
+    lab_chemist: '',
+    // Basic Parameters
     moisture: '',
-    test_weight: '',
+    hectoliter_weight: '',
     protein_percent: '',
     wet_gluten: '',
     dry_gluten: '',
-    falling_number: '',
+    sedimentation_value: '',
+    // Impurities/Refractions
     chaff_husk: '',
     straws_sticks: '',
     other_foreign_matter: '',
@@ -47,14 +53,20 @@ export default function LabTestScreen({ navigation }) {
     stones: '',
     dust_sand: '',
     total_impurities: '0.00',
+    // Grain Dockage
     shriveled_wheat: '',
     insect_damage: '',
     blackened_wheat: '',
-    sprouted_grains: '',
-    other_grain_damage: '',
+    other_grains: '',
+    soft_wheat: '',
+    heat_damaged: '',
+    immature_wheat: '',
+    broken_wheat: '',
     total_dockage: '0.00',
+    // Final
     category: '',
-    remarks: '',
+    comments_action: '',
+    approved: false,
     tested_by: '',
   });
 
@@ -80,8 +92,11 @@ export default function LabTestScreen({ navigation }) {
     formData.shriveled_wheat,
     formData.insect_damage,
     formData.blackened_wheat,
-    formData.sprouted_grains,
-    formData.other_grain_damage,
+    formData.other_grains,
+    formData.soft_wheat,
+    formData.heat_damaged,
+    formData.immature_wheat,
+    formData.broken_wheat,
   ]);
 
   const loadVehicles = async () => {
@@ -125,8 +140,11 @@ export default function LabTestScreen({ navigation }) {
       formData.shriveled_wheat,
       formData.insect_damage,
       formData.blackened_wheat,
-      formData.sprouted_grains,
-      formData.other_grain_damage,
+      formData.other_grains,
+      formData.soft_wheat,
+      formData.heat_damaged,
+      formData.immature_wheat,
+      formData.broken_wheat,
     ];
 
     const total = dockage.reduce((sum, val) => {
@@ -147,12 +165,16 @@ export default function LabTestScreen({ navigation }) {
     setFormData({
       vehicle_entry_id: '',
       test_date: new Date(),
+      wheat_variety: '',
+      bill_number: '',
+      arrival_datetime: '',
+      lab_chemist: '',
       moisture: '',
-      test_weight: '',
+      hectoliter_weight: '',
       protein_percent: '',
       wet_gluten: '',
       dry_gluten: '',
-      falling_number: '',
+      sedimentation_value: '',
       chaff_husk: '',
       straws_sticks: '',
       other_foreign_matter: '',
@@ -163,11 +185,15 @@ export default function LabTestScreen({ navigation }) {
       shriveled_wheat: '',
       insect_damage: '',
       blackened_wheat: '',
-      sprouted_grains: '',
-      other_grain_damage: '',
+      other_grains: '',
+      soft_wheat: '',
+      heat_damaged: '',
+      immature_wheat: '',
+      broken_wheat: '',
       total_dockage: '0.00',
       category: '',
-      remarks: '',
+      comments_action: '',
+      approved: false,
       tested_by: '',
     });
     setSelectedVehicle(null);
@@ -400,6 +426,163 @@ export default function LabTestScreen({ navigation }) {
     }
   };
 
+  const generatePDF = () => {
+    if (!selectedVehicle || !formData.vehicle_entry_id) {
+      Alert.alert('Error', 'Please select a vehicle first');
+      return;
+    }
+
+    // Create PDF content
+    const pdfContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Raw Wheat Quality Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .header { border: 2px solid black; padding: 15px; margin-bottom: 20px; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; }
+    .logo-box { border: 2px solid black; padding: 20px; text-align: center; font-weight: bold; }
+    .title { text-align: center; flex: 1; }
+    .doc-info { border: 2px solid black; padding: 10px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .section-header { background-color: #e0e0e0; font-weight: bold; }
+    .total-row { background-color: #e0e0e0; font-weight: bold; }
+    .info-section { margin: 15px 0; }
+    .info-row { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-row">
+      <div class="logo-box">B R<br>F M</div>
+      <div class="title"><h2>Raw Wheat Quality Report</h2></div>
+      <div class="doc-info">
+        Document No - 001<br>
+        Issue No: 01<br>
+        Issue Date: 4/8/2022<br>
+        Dept - QA
+      </div>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <div class="info-row"><strong>Wheat Variety:</strong> ${formData.wheat_variety || 'N/A'}</div>
+    <div class="info-row"><strong>Test Date:</strong> ${formData.test_date.toLocaleDateString()}</div>
+    <div class="info-row"><strong>Vehicle Number:</strong> ${selectedVehicle?.vehicle_number || 'N/A'}</div>
+    <div class="info-row"><strong>Supplier:</strong> ${selectedVehicle?.supplier?.supplier_name || 'N/A'}</div>
+    <div class="info-row"><strong>Bill Number:</strong> ${formData.bill_number || 'N/A'}</div>
+    <div class="info-row"><strong>Lab Chemist:</strong> ${formData.lab_chemist || 'N/A'}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sr.</th>
+        <th>TEST</th>
+        <th>UOM</th>
+        <th>STANDARD</th>
+        <th>ACTUAL REPORT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td><td>Moisture</td><td>%</td><td>8-10.5</td><td>${formData.moisture || '-'}</td>
+      </tr>
+      <tr>
+        <td>2</td><td>Hectoliter weight</td><td>Kg/hl</td><td>>75</td><td>${formData.hectoliter_weight || '-'}</td>
+      </tr>
+      <tr class="section-header">
+        <td>3</td><td>Gluten</td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>a</td><td>&nbsp;&nbsp;Wet Gluten</td><td>%</td><td>32-33</td><td>${formData.wet_gluten || '-'}</td>
+      </tr>
+      <tr>
+        <td>b</td><td>&nbsp;&nbsp;Dry Gluten</td><td></td><td>10.5-11.5</td><td>${formData.dry_gluten || '-'}</td>
+      </tr>
+      <tr>
+        <td>4</td><td>Sedimentation Value</td><td>ml</td><td>24-25 ml</td><td>${formData.sedimentation_value || '-'}</td>
+      </tr>
+      <tr class="section-header">
+        <td>5</td><td>Refractions</td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>a</td><td>&nbsp;&nbsp;Chaff/Husk</td><td></td><td></td><td>${formData.chaff_husk || '-'}</td>
+      </tr>
+      <tr>
+        <td>b</td><td>&nbsp;&nbsp;Straws/Sticks</td><td></td><td></td><td>${formData.straws_sticks || '-'}</td>
+      </tr>
+      <tr>
+        <td>c</td><td>&nbsp;&nbsp;Other Foreign Matter</td><td></td><td></td><td>${formData.other_foreign_matter || '-'}</td>
+      </tr>
+      <tr>
+        <td>d</td><td>&nbsp;&nbsp;Mudballs</td><td>%</td><td><3</td><td>${formData.mudballs || '-'}</td>
+      </tr>
+      <tr>
+        <td>e</td><td>&nbsp;&nbsp;Stones</td><td></td><td></td><td>${formData.stones || '-'}</td>
+      </tr>
+      <tr>
+        <td>f</td><td>&nbsp;&nbsp;Dust/Sand</td><td></td><td></td><td>${formData.dust_sand || '-'}</td>
+      </tr>
+      <tr class="total-row">
+        <td></td><td>Total Impurities (%)</td><td></td><td></td><td>${formData.total_impurities}</td>
+      </tr>
+      <tr class="section-header">
+        <td></td><td>Grain Dockage</td><td></td><td></td><td></td>
+      </tr>
+      <tr>
+        <td>1</td><td>&nbsp;&nbsp;Shriveled wheat</td><td></td><td>0.5</td><td>${formData.shriveled_wheat || '-'}</td>
+      </tr>
+      <tr>
+        <td>2</td><td>&nbsp;&nbsp;Insect Bored damage</td><td></td><td>0.5</td><td>${formData.insect_damage || '-'}</td>
+      </tr>
+      <tr>
+        <td>3</td><td>&nbsp;&nbsp;Blackened wheat</td><td></td><td>0.5</td><td>${formData.blackened_wheat || '-'}</td>
+      </tr>
+      <tr>
+        <td>4</td><td>&nbsp;&nbsp;Other Grains</td><td>%</td><td>0.5</td><td>${formData.other_grains || '-'}</td>
+      </tr>
+      <tr>
+        <td>5</td><td>&nbsp;&nbsp;Soft Wheat</td><td></td><td>0.5</td><td>${formData.soft_wheat || '-'}</td>
+      </tr>
+      <tr>
+        <td>6</td><td>&nbsp;&nbsp;Heat Damaged wheat</td><td></td><td>0.5</td><td>${formData.heat_damaged || '-'}</td>
+      </tr>
+      <tr>
+        <td>7</td><td>&nbsp;&nbsp;Immature wheat</td><td></td><td>0.5</td><td>${formData.immature_wheat || '-'}</td>
+      </tr>
+      <tr>
+        <td>8</td><td>&nbsp;&nbsp;Broken wheat</td><td></td><td>0.5</td><td>${formData.broken_wheat || '-'}</td>
+      </tr>
+      <tr class="total-row">
+        <td></td><td>Total Dockage (%)</td><td></td><td></td><td>${formData.total_dockage}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-section">
+    <div class="info-row"><strong>Comments & Action:</strong></div>
+    <div>${formData.comments_action || 'N/A'}</div>
+  </div>
+
+  <div class="info-section">
+    <div class="info-row"><strong>Quality Category:</strong> ${formData.category || 'N/A'}</div>
+    <div class="info-row"><strong>Approved for Unloading:</strong> ${formData.approved ? 'Yes' : 'No'}</div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(pdfContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const NumberInput = ({ label, value, field, unit = '%' }) => (
     <View style={styles.numberInputContainer}>
       <Text style={styles.label}>{label}</Text>
@@ -566,23 +749,89 @@ export default function LabTestScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Tested By</Text>
+          <Text style={styles.label}>Wheat Variety *</Text>
           <TextInput
             style={styles.input}
-            value={formData.tested_by}
-            onChangeText={(text) => setFormData({ ...formData, tested_by: text })}
-            placeholder="Enter tester name"
+            value={formData.wheat_variety}
+            onChangeText={(text) => setFormData({ ...formData, wheat_variety: text })}
+            placeholder="e.g., HD"
           />
 
-          <Text style={styles.label}>Remarks</Text>
+          <Text style={styles.label}>Bill Number</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.bill_number}
+            onChangeText={(text) => setFormData({ ...formData, bill_number: text })}
+            placeholder="e.g., 168"
+          />
+
+          <Text style={styles.label}>Lab Chemist *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.lab_chemist}
+            onChangeText={(text) => setFormData({ ...formData, lab_chemist: text })}
+            placeholder="Name of lab chemist"
+          />
+
+          <Text style={styles.sectionTitle}>Gluten Parameters</Text>
+          <View style={styles.grid}>
+            <NumberInput label="Sedimentation Value" value={formData.sedimentation_value} field="sedimentation_value" unit="ml" />
+          </View>
+
+          <Text style={styles.sectionTitle}>Additional Dockage</Text>
+          <View style={styles.grid}>
+            <NumberInput label="Other Grains" value={formData.other_grains} field="other_grains" />
+            <NumberInput label="Soft Wheat" value={formData.soft_wheat} field="soft_wheat" />
+            <NumberInput label="Heat Damaged" value={formData.heat_damaged} field="heat_damaged" />
+            <NumberInput label="Immature Wheat" value={formData.immature_wheat} field="immature_wheat" />
+            <NumberInput label="Broken Wheat" value={formData.broken_wheat} field="broken_wheat" />
+          </View>
+
+          <View style={styles.totalBox}>
+            <Text style={styles.totalLabel}>Total Dockage:</Text>
+            <Text style={styles.totalValue}>{formData.total_dockage}%</Text>
+          </View>
+
+          <Text style={styles.label}>Comments & Action</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            value={formData.remarks}
-            onChangeText={(text) => setFormData({ ...formData, remarks: text })}
-            placeholder="Enter any remarks"
+            value={formData.comments_action}
+            onChangeText={(text) => setFormData({ ...formData, comments_action: text })}
+            placeholder="Enter comments and actions here..."
             multiline
-            numberOfLines={3}
+            numberOfLines={4}
           />
+
+          <Text style={styles.label}>Quality Category *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.category}
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Assign quality category" value="" />
+              <Picker.Item label="Mill Grade (Premium)" value="Mill" />
+              <Picker.Item label="Low Mill Grade" value="Low Mill" />
+              <Picker.Item label="Heavy Density (HD)" value="HD" />
+              <Picker.Item label="Rejected" value="Rejected" />
+            </Picker>
+          </View>
+
+          <View style={styles.approvalBox}>
+            <Text style={styles.approvalTitle}>Final Approval</Text>
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => setFormData({ ...formData, approved: !formData.approved })}
+            >
+              <View style={[styles.checkbox, formData.approved && styles.checkboxChecked]}>
+                {formData.approved && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <View style={styles.checkboxLabel}>
+                <Text style={styles.checkboxText}>Approve this vehicle for unloading</Text>
+                <Text style={styles.checkboxSubtext}>Check only if quality meets standards</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -590,6 +839,12 @@ export default function LabTestScreen({ navigation }) {
               onPress={() => setModalVisible(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.pdfButton]}
+              onPress={generatePDF}
+            >
+              <Text style={styles.pdfButtonText}>Generate PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
@@ -805,6 +1060,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   raiseClaimButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  approvalBox: {
+    backgroundColor: '#d4edda',
+    borderColor: '#28a745',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 16,
+  },
+  approvalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#155724',
+    marginBottom: 12,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#28a745',
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#28a745',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    flex: 1,
+  },
+  checkboxText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#155724',
+  },
+  checkboxSubtext: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 2,
+  },
+  pdfButton: {
+    backgroundColor: '#6c757d',
+  },
+  pdfButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
