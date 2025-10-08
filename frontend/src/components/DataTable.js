@@ -200,6 +200,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
     flex: 1,
+    width: '100%',
   },
   toolbar: {
     flexDirection: 'row',
