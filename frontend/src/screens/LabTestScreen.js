@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -162,11 +161,11 @@ export default function LabTestScreen({ navigation }) {
   const handleVehicleChange = async (vehicleId) => {
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     setSelectedVehicle(vehicle);
-    
+
     // Generate document number based on today's date and count
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-    
+
     try {
       // Get today's lab tests to determine the next document number
       const response = await labTestApi.getAll();
@@ -174,10 +173,10 @@ export default function LabTestScreen({ navigation }) {
         const createdDate = new Date(test.created_at).toISOString().split('T')[0];
         return createdDate === todayStr;
       });
-      
+
       // Generate 3-digit document number
       const docNumber = String(todayTests.length + 1).padStart(3, '0');
-      
+
       setFormData({ 
         ...formData, 
         vehicle_entry_id: vehicleId,
@@ -281,7 +280,7 @@ export default function LabTestScreen({ navigation }) {
 
       await labTestApi.create(submitData);
       Alert.alert('Success', 'Lab test created successfully');
-      
+
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
@@ -532,7 +531,7 @@ export default function LabTestScreen({ navigation }) {
             {/* Basic Information */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
-              
+
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Select Vehicle *</Text>
@@ -612,7 +611,7 @@ export default function LabTestScreen({ navigation }) {
             {/* Test Parameters */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Test Parameters</Text>
-              
+
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Moisture (%)</Text>
@@ -674,7 +673,7 @@ export default function LabTestScreen({ navigation }) {
             {/* Impurities */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Refractions / Impurities</Text>
-              
+
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Chaff/Husk</Text>
@@ -747,7 +746,7 @@ export default function LabTestScreen({ navigation }) {
             {/* Grain Dockage */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Grain Dockage</Text>
-              
+
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Shriveled Wheat</Text>
