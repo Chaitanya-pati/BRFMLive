@@ -2,26 +2,27 @@ import axios from "axios";
 
 // In Replit, we need to use the public URL, not localhost
 const getApiUrl = () => {
-  const envApiUrl = process.env.REACT_APP_API_URL || process.env.EXPO_PUBLIC_API_URL;
+  const envApiUrl =
+    process.env.REACT_APP_API_URL || process.env.EXPO_PUBLIC_API_URL;
   if (envApiUrl) {
     return envApiUrl;
   }
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    
-    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+
+    if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
       // Use the backend port with proper URL construction
-      const backendHostname = hostname.replace(/:\d+/, ''); // Remove any port from hostname
-      return `${protocol}//${backendHostname}-8000.${hostname.split('.').slice(-2).join('.')}/api`;
+      const backendHostname = hostname.replace(/:\d+/, ""); // Remove any port from hostname
+      return `${protocol}//${backendHostname}-8000.${hostname.split(".").slice(-2).join(".")}/api`;
     }
   }
 
   return "http://0.0.0.0:8000/api";
 };
 
-const API_URL = getApiUrl();
+const API_URL = "https://brfmlive.onrender.com/api";
 
 export const api = axios.create({
   baseURL: API_URL,
