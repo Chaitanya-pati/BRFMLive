@@ -7,7 +7,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(
+    0, os.path.realpath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from backend.database import Base
 from backend import models
@@ -16,7 +17,12 @@ from backend import models
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL', 'postgresql://localhost/gateentry'))
+config.set_main_option(
+    'sqlalchemy.url',
+    os.getenv(
+        'DATABASE_URL',
+        'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-still-math-afmw2sjv-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+    ))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -73,9 +79,8 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection,
+                          target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
