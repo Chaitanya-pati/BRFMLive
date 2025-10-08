@@ -15,6 +15,28 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
       )
     : data;
 
+  const EyeIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="12" r="3" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  const EditIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  const DeleteIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="10" y1="11" x2="10" y2="17" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="14" y1="11" x2="14" y2="17" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
   const renderMobileCard = (row, rowIndex) => (
     <View key={rowIndex} style={styles.mobileCard}>
       <View style={styles.mobileCardHeader}>
@@ -27,7 +49,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               style={styles.mobileHeaderIconButton}
               onPress={() => onEdit(row)}
             >
-              <Text style={styles.iconText}>👁️</Text>
+              <EyeIcon />
             </TouchableOpacity>
           )}
           {onDelete && (
@@ -35,7 +57,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               style={[styles.mobileHeaderIconButton, styles.deleteIconButton]}
               onPress={() => onDelete(row)}
             >
-              <Text style={styles.iconText}>🗑️</Text>
+              <DeleteIcon />
             </TouchableOpacity>
           )}
         </View>
@@ -59,7 +81,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               style={[styles.mobileActionButton, styles.mobileEditButton]}
               onPress={() => onEdit(row)}
             >
-              <Text style={styles.mobileActionButtonText}>✏️ Edit</Text>
+              <View style={styles.actionButtonContent}>
+                <EditIcon />
+                <Text style={styles.mobileActionButtonText}>Edit</Text>
+              </View>
             </TouchableOpacity>
           )}
           {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
@@ -75,7 +100,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               style={[styles.mobileActionButton, styles.mobileDeleteButton]}
               onPress={() => onDelete(row)}
             >
-              <Text style={styles.mobileActionButtonText}>🗑️ Delete</Text>
+              <View style={styles.actionButtonContent}>
+                <DeleteIcon />
+                <Text style={styles.mobileActionButtonText}>Delete</Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>
@@ -115,10 +143,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
                 <View style={styles.actionButtons}>
                   {onEdit && (
                     <TouchableOpacity
-                      style={styles.editButton}
+                      style={styles.viewButton}
                       onPress={() => onEdit(row)}
                     >
-                      <Text style={styles.actionButtonText}>👁️</Text>
+                      <EyeIcon />
                     </TouchableOpacity>
                   )}
                   {onEdit && (
@@ -126,7 +154,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
                       style={styles.editButton}
                       onPress={() => onEdit(row)}
                     >
-                      <Text style={styles.actionButtonText}>✏️</Text>
+                      <EditIcon />
                     </TouchableOpacity>
                   )}
                   {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
@@ -142,7 +170,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
                       style={styles.deleteButton}
                       onPress={() => onDelete(row)}
                     >
-                      <Text style={styles.actionButtonText}>🗑️</Text>
+                      <DeleteIcon />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -298,9 +326,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef2f2',
     borderColor: '#fecaca',
   },
-  iconText: {
-    fontSize: 16,
-  },
   mobileCardContent: {
     padding: 16,
   },
@@ -412,24 +437,46 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: 'flex-end',
   },
-  editButton: {
-    backgroundColor: '#f0f9ff',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
+  viewButton: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#bfdbfe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
+  },
+  editButton: {
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
   },
   deleteButton: {
     backgroundColor: '#fef2f2',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#fecaca',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
   },
   actionButtonText: {
     fontSize: 16,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   emptyState: {
     padding: 40,
