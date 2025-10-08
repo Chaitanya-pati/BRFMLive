@@ -43,14 +43,15 @@ export const supplierApi = {
 export const vehicleApi = {
   getAll: () => api.get("/vehicles"),
   getById: (id) => api.get(`/vehicles/${id}`),
+  create: (data) => api.post("/vehicles", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  update: (id, data) => api.put(`/vehicles/${id}`, data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  delete: (id) => api.delete(`/vehicles/${id}`),
   getAvailableForTesting: () => api.get("/vehicles/available-for-testing"),
-  create: (formData) => {
-    return axios.post(`${API_URL}/vehicles`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  },
+  getLabTested: () => api.get("/vehicles/lab-tested"),
 };
 
 export const labTestApi = {

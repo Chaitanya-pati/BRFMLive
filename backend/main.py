@@ -169,6 +169,63 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
     return vehicle
 
+@app.put("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntry)
+async def update_vehicle_entry(
+    vehicle_id: int,
+    vehicle_number: str = Form(...),
+    supplier_id: int = Form(...),
+    bill_no: str = Form(...),
+    driver_name: Optional[str] = Form(None),
+    driver_phone: Optional[str] = Form(None),
+    arrival_time: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    supplier_bill_photo: Optional[UploadFile] = File(None),
+    vehicle_photo: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    db_vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
+    if not db_vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle entry not found")
+
+    # Update basic fields
+    db_vehicle.vehicle_number = vehicle_number
+    db_vehicle.supplier_id = supplier_id
+    db_vehicle.bill_no = bill_no
+    db_vehicle.driver_name = driver_name
+    db_vehicle.driver_phone = driver_phone
+    db_vehicle.notes = notes
+
+    # Update arrival time if provided
+    if arrival_time:
+        try:
+            arrival_dt = datetime.fromisoformat(arrival_time.replace('Z', '+00:00'))
+            db_vehicle.arrival_time = arrival_dt
+        except:
+            pass
+
+    # Update photos if new ones are provided
+    if supplier_bill_photo and supplier_bill_photo.filename:
+        bill_path = await save_upload_file(supplier_bill_photo)
+        db_vehicle.supplier_bill_photo = bill_path.encode('utf-8')
+
+    if vehicle_photo and vehicle_photo.filename:
+        vehicle_path = await save_upload_file(vehicle_photo)
+        db_vehicle.vehicle_photo = vehicle_path.encode('utf-8')
+
+    db.commit()
+    db.refresh(db_vehicle)
+    return db_vehicle
+
+@app.delete("/api/vehicles/{vehicle_id}")
+def delete_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
+    db_vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
+    if not db_vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle entry not found")
+
+    db.delete(db_vehicle)
+    db.commit()
+    return {"message": "Vehicle entry deleted successfully"}
+
 @app.get("/api/vehicles/{vehicle_id}/bill_photo")
 def get_bill_photo(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()

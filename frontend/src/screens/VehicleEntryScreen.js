@@ -135,6 +135,7 @@ export default function VehicleEntryScreen({ navigation }) {
 
   const openEditModal = (vehicle) => {
     setFormData({
+      id: vehicle.id,
       vehicle_number: vehicle.vehicle_number,
       supplier_id: vehicle.supplier?.id || '',
       bill_no: vehicle.bill_no,
@@ -225,8 +226,16 @@ export default function VehicleEntryScreen({ navigation }) {
         }
       }
 
-      await vehicleApi.create(submitFormData);
-      showAlert('Success', 'Vehicle entry added successfully');
+      if (formData.id) {
+        // Update existing vehicle entry
+        await vehicleApi.update(formData.id, submitFormData);
+        showAlert('Success', 'Vehicle entry updated successfully');
+      } else {
+        // Create new vehicle entry
+        await vehicleApi.create(submitFormData);
+        showAlert('Success', 'Vehicle entry added successfully');
+      }
+      
       setModalVisible(false);
       loadVehicles();
     } catch (error) {
@@ -270,7 +279,7 @@ export default function VehicleEntryScreen({ navigation }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title="New Vehicle Entry"
+        title={formData.id ? "Edit Vehicle Entry" : "New Vehicle Entry"}
         width="70%"
       >
         <View style={styles.form}>
