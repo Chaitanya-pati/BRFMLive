@@ -328,6 +328,20 @@ def get_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Lab test not found")
     return lab_test
 
+@app.put("/api/lab-tests/{lab_test_id}", response_model=schemas.LabTest)
+def update_lab_test(lab_test_id: int, lab_test: schemas.LabTestCreate, db: Session = Depends(get_db)):
+    db_lab_test = db.query(models.LabTest).filter(models.LabTest.id == lab_test_id).first()
+    if not db_lab_test:
+        raise HTTPException(status_code=404, detail="Lab test not found")
+
+    # Update all fields
+    for key, value in lab_test.dict().items():
+        setattr(db_lab_test, key, value)
+
+    db.commit()
+    db.refresh(db_lab_test)
+    return db_lab_test
+
 @app.post("/api/claims/create", response_model=schemas.Claim)
 def create_claim(claim: schemas.ClaimCreate, db: Session = Depends(get_db)):
     lab_test = db.query(models.LabTest).filter(models.LabTest.id == claim.lab_test_id).first()

@@ -24,6 +24,8 @@ export default function LabTestScreen({ navigation }) {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [currentLabTest, setCurrentLabTest] = useState(null);
 
   const [formData, setFormData] = useState({
     vehicle_entry_id: "",
@@ -202,6 +204,8 @@ export default function LabTestScreen({ navigation }) {
     // Load only AVAILABLE vehicles for add mode
     await loadVehicles();
     
+    setEditMode(false);
+    setCurrentLabTest(null);
     setFormData({
       vehicle_entry_id: "",
       test_date: new Date(),
@@ -283,14 +287,19 @@ export default function LabTestScreen({ navigation }) {
         test_date: formData.test_date.toISOString(),
       };
 
-      await labTestApi.create(submitData);
-      Alert.alert("Success", "Lab test created successfully");
+      if (editMode && currentLabTest) {
+        await labTestApi.update(currentLabTest.id, submitData);
+        Alert.alert("Success", "Lab test updated successfully");
+      } else {
+        await labTestApi.create(submitData);
+        Alert.alert("Success", "Lab test created successfully");
+      }
 
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
     } catch (error) {
-      Alert.alert("Error", "Failed to create lab test");
+      Alert.alert("Error", editMode ? "Failed to update lab test" : "Failed to create lab test");
       console.error(error);
     } finally {
       setLoading(false);
@@ -792,6 +801,8 @@ export default function LabTestScreen({ navigation }) {
       console.error("Error loading vehicles:", error);
     }
     
+    setEditMode(true);
+    setCurrentLabTest(labTest);
     setFormData({
       vehicle_entry_id: labTest.vehicle_entry_id?.toString() || "",
       test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
@@ -918,7 +929,7 @@ export default function LabTestScreen({ navigation }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title="Raw Wheat Quality Report"
+        title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
         width="90%"
       >
         <ScrollView style={styles.scrollContainer}>
@@ -1383,7 +1394,7 @@ export default function LabTestScreen({ navigation }) {
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? "Saving..." : "Save Test"}
+                  {loading ? "Saving..." : editMode ? "Update Test" : "Save Test"}
                 </Text>
               </TouchableOpacity>
             </View>

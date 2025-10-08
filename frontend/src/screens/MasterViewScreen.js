@@ -27,11 +27,15 @@ export default function MasterViewScreen({ navigation }) {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [selectedStateId, setSelectedStateId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [currentGodown, setCurrentGodown] = useState(null);
+
 
   const [godownFormData, setGodownFormData] = useState({
     name: '',
     capacity: '',
     type: '',
+    location: ''
   });
 
   const [supplierFormData, setSupplierFormData] = useState({
@@ -110,13 +114,13 @@ export default function MasterViewScreen({ navigation }) {
       setCities([]);
       return;
     }
-    
+
     const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
     const state = states.find(s => {
       const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
       return sid === numericStateId;
     });
-    
+
     if (state) {
       setSelectedStateId(numericStateId);
       setSupplierFormData({ ...supplierFormData, state: state.state_name, city: '' });
@@ -129,7 +133,8 @@ export default function MasterViewScreen({ navigation }) {
     setEditMode(false);
     setCurrentItem(null);
     if (activeTab === 'godown') {
-      setGodownFormData({ name: '', capacity: '', type: '' });
+      setGodownFormData({ name: '', capacity: '', type: '', location: '' });
+      setCurrentGodown(null);
     } else {
       setSupplierFormData({
         supplier_name: '',
@@ -153,7 +158,9 @@ export default function MasterViewScreen({ navigation }) {
         name: item.name,
         capacity: item.capacity.toString(),
         type: item.type,
+        location: item.location || ''
       });
+      setCurrentGodown(item);
     } else {
       setSupplierFormData({
         supplier_name: item.supplier_name,
@@ -178,25 +185,7 @@ export default function MasterViewScreen({ navigation }) {
   const handleSubmit = async () => {
     try {
       if (activeTab === 'godown') {
-        if (!godownFormData.name || !godownFormData.capacity || !godownFormData.type) {
-          showAlert('Error', 'Please fill all required fields');
-          return;
-        }
-
-        const data = {
-          name: godownFormData.name,
-          capacity: parseInt(godownFormData.capacity, 10),
-          type: godownFormData.type,
-        };
-
-        if (editMode) {
-          await godownApi.update(currentItem.id, data);
-          showAlert('Success', 'Godown updated successfully');
-        } else {
-          await godownApi.create(data);
-          showAlert('Success', 'Godown added successfully');
-        }
-        loadGodowns();
+        await handleGodownSubmit();
       } else {
         if (!supplierFormData.supplier_name || !supplierFormData.state || !supplierFormData.city) {
           showAlert('Error', 'Please fill all required fields');
@@ -241,12 +230,45 @@ export default function MasterViewScreen({ navigation }) {
     );
   };
 
+  const handleSupplierDelete = (supplier) => {
+    showConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete ${supplier.supplier_name}?`,
+      async () => {
+        try {
+          await supplierApi.delete(supplier.id);
+          showAlert('Success', 'Supplier deleted successfully');
+          loadSuppliers();
+        } catch (error) {
+          showAlert('Error', 'Failed to delete supplier');
+        }
+      }
+    );
+  };
+
+  const handleGodownDelete = (godown) => {
+    showConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete ${godown.name}?`,
+      async () => {
+        try {
+          await godownApi.delete(godown.id);
+          showAlert('Success', 'Godown deleted successfully');
+          loadGodowns();
+        } catch (error) {
+          showAlert('Error', 'Failed to delete godown');
+        }
+      }
+    );
+  };
+
   const godownColumns = [
     { field: 'id', label: 'ID', flex: 0.5 },
     { field: 'name', label: 'Name', flex: 1.5 },
     { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
     { field: 'type', label: 'Type', flex: 1 },
     { field: 'current_storage', label: 'Current Storage (tons)', flex: 1.2 },
+    { field: 'location', label: 'Location', flex: 1 },
   ];
 
   const supplierColumns = [
@@ -257,6 +279,65 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'state', label: 'State', flex: 1 },
     { field: 'city', label: 'City', flex: 1 },
   ];
+
+  const openGodownModal = () => {
+    setEditMode(false);
+    setCurrentGodown(null);
+    setGodownFormData({
+      name: '',
+      capacity: '',
+      type: '',
+      location: '',
+    });
+    setModalVisible(true);
+  };
+
+  const openEditGodownModal = (godown) => {
+    setEditMode(true);
+    setCurrentGodown(godown);
+    setGodownFormData({
+      name: godown.name,
+      capacity: godown.capacity.toString(),
+      type: godown.type,
+      location: godown.location || '',
+    });
+    setActiveTab('godown');
+    setModalVisible(true);
+  };
+
+  const handleGodownSubmit = async () => {
+    if (!godownFormData.name || !godownFormData.capacity || !godownFormData.type) {
+      showAlert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        name: godownFormData.name,
+        capacity: parseFloat(godownFormData.capacity),
+        type: godownFormData.type,
+        location: godownFormData.location,
+        current_storage: editMode ? currentGodown?.current_storage || 0 : 0,
+      };
+
+      if (editMode && currentGodown) {
+        await godownApi.update(currentGodown.id, payload);
+        showAlert('Success', 'Godown updated successfully');
+      } else {
+        await godownApi.create(payload);
+        showAlert('Success', 'Godown created successfully');
+      }
+
+      setModalVisible(false);
+      loadGodowns();
+    } catch (error) {
+      showAlert('Error', editMode ? 'Failed to update godown' : 'Failed to create godown');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <Layout navigation={navigation} title="Master Data">
@@ -284,9 +365,9 @@ export default function MasterViewScreen({ navigation }) {
           <DataTable
             columns={godownColumns}
             data={godowns}
-            onAdd={openAddModal}
-            onEdit={openEditModal}
-            onDelete={handleDelete}
+            onAdd={openGodownModal}
+            onEdit={openEditGodownModal}
+            onDelete={handleGodownDelete}
           />
         ) : (
           <DataTable
@@ -294,7 +375,7 @@ export default function MasterViewScreen({ navigation }) {
             data={suppliers}
             onAdd={openAddModal}
             onEdit={openEditModal}
-            onDelete={handleDelete}
+            onDelete={handleSupplierDelete}
           />
         )}
 
@@ -336,6 +417,14 @@ export default function MasterViewScreen({ navigation }) {
                     ))}
                   </Picker>
                 </View>
+
+                <Text style={styles.label}>Location</Text>
+                <TextInput
+                  style={styles.input}
+                  value={godownFormData.location}
+                  onChangeText={(text) => setGodownFormData({ ...godownFormData, location: text })}
+                  placeholder="Enter location"
+                />
               </>
             ) : (
               <>

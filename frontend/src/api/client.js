@@ -58,6 +58,7 @@ export const labTestApi = {
   getAll: () => api.get("/lab-tests"),
   getById: (id) => api.get(`/lab-tests/${id}`),
   create: (data) => api.post("/lab-tests", data),
+  update: (id, data) => api.put(`/lab-tests/${id}`, data),
   delete: (id) => api.delete(`/lab-tests/${id}`),
 };
 
