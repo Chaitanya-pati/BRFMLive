@@ -46,6 +46,8 @@ class VehicleEntry(VehicleEntryBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    supplier_bill_photo: Optional[str] = None
+    vehicle_photo: Optional[str] = None
     
     class Config:
         from_attributes = True

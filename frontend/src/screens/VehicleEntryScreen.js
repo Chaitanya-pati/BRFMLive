@@ -144,8 +144,26 @@ export default function VehicleEntryScreen({ navigation }) {
       arrival_time: new Date(vehicle.arrival_time),
       notes: vehicle.notes || '',
     });
-    setBillPhoto(null); // Reset photos on edit
-    setVehiclePhoto(null);
+    
+    // Load existing images if available
+    if (vehicle.supplier_bill_photo) {
+      const billPhotoUrl = vehicle.supplier_bill_photo.startsWith('http') 
+        ? vehicle.supplier_bill_photo 
+        : `https://brfmlive.onrender.com${vehicle.supplier_bill_photo}`;
+      setBillPhoto({ uri: billPhotoUrl });
+    } else {
+      setBillPhoto(null);
+    }
+    
+    if (vehicle.vehicle_photo) {
+      const vehiclePhotoUrl = vehicle.vehicle_photo.startsWith('http') 
+        ? vehicle.vehicle_photo 
+        : `https://brfmlive.onrender.com${vehicle.vehicle_photo}`;
+      setVehiclePhoto({ uri: vehiclePhotoUrl });
+    } else {
+      setVehiclePhoto(null);
+    }
+    
     setModalVisible(true);
   };
 

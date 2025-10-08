@@ -160,6 +160,14 @@ def get_lab_tested_vehicles(db: Session = Depends(get_db)):
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
 def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
+    
+    # Convert binary image paths to strings
+    for vehicle in vehicles:
+        if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
+            vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
+        if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
+            vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
+    
     return vehicles
 
 @app.get("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntryWithSupplier)
@@ -167,6 +175,13 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
+    
+    # Convert binary image paths to strings
+    if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
+        vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
+    if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
+        vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
+    
     return vehicle
 
 @app.put("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntry)
@@ -502,6 +517,8 @@ async def create_unloading_entry(
 @app.get("/api/unloading-entries", response_model=List[schemas.UnloadingEntryWithDetails])
 def get_unloading_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     entries = db.query(models.UnloadingEntry).offset(skip).limit(limit).all()
+    
+    # Images are already stored as strings in UnloadingEntry, no conversion needed
     return entries
 
 @app.get("/api/unloading-entries/{entry_id}", response_model=schemas.UnloadingEntryWithDetails)

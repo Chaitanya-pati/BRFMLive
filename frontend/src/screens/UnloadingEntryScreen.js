@@ -114,13 +114,13 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const handleVehicleChange = (vehicleId) => {
     setFormData({ ...formData, vehicle_entry_id: vehicleId });
-    
+
     // Find the selected vehicle and get its lab test category
     const selectedVehicle = vehicles.find(v => v.id === vehicleId);
     if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
       const category = selectedVehicle.lab_tests[0].category;
       setSelectedVehicleCategory(category);
-      
+
       // Filter godowns by category
       if (category) {
         const filtered = godowns.filter(g => g.type === category);
@@ -209,40 +209,26 @@ export default function UnloadingEntryScreen({ navigation }) {
       gross_weight: entry.gross_weight.toString(),
       empty_vehicle_weight: entry.empty_vehicle_weight.toString(),
       net_weight: entry.net_weight.toString(),
-      unloading_start_time: entry.unloading_start_time,
-      unloading_end_time: entry.unloading_end_time,
+      unloading_start_time: new Date(entry.unloading_start_time),
+      unloading_end_time: new Date(entry.unloading_end_time),
       notes: entry.notes || '',
     });
 
     // Load existing images if available
     if (entry.before_unloading_image) {
-      let imageUrl;
-      if (entry.before_unloading_image.startsWith('http')) {
-        imageUrl = entry.before_unloading_image;
-      } else {
-        // Construct the correct URL using the current hostname
-        const baseUrl = typeof window !== 'undefined' 
-          ? `${window.location.protocol}//${window.location.hostname}:8000`
-          : 'http://0.0.0.0:8000';
-        imageUrl = `${baseUrl}${entry.before_unloading_image}`;
-      }
-      setBeforeImage({ uri: imageUrl });
+      const beforeImageUrl = entry.before_unloading_image.startsWith('http') 
+        ? entry.before_unloading_image 
+        : `https://brfmlive.onrender.com${entry.before_unloading_image}`;
+      setBeforeImage({ uri: beforeImageUrl });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      let imageUrl;
-      if (entry.after_unloading_image.startsWith('http')) {
-        imageUrl = entry.after_unloading_image;
-      } else {
-        // Construct the correct URL using the current hostname
-        const baseUrl = typeof window !== 'undefined' 
-          ? `${window.location.protocol}//${window.location.hostname}:8000`
-          : 'http://0.0.0.0:8000';
-        imageUrl = `${baseUrl}${entry.after_unloading_image}`;
-      }
-      setAfterImage({ uri: imageUrl });
+      const afterImageUrl = entry.after_unloading_image.startsWith('http') 
+        ? entry.after_unloading_image 
+        : `https://brfmlive.onrender.com${entry.after_unloading_image}`;
+      setAfterImage({ uri: afterImageUrl });
     } else {
       setAfterImage(null);
     }
@@ -320,7 +306,7 @@ export default function UnloadingEntryScreen({ navigation }) {
         await unloadingApi.create(submitFormData);
         showAlert('Success', 'Unloading entry added successfully');
       }
-      
+
       setModalVisible(false);
       loadEntries();
       loadGodowns();
@@ -373,7 +359,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       render: (value, row) => {
         const hasBeforeImage = row.before_unloading_image;
         const hasAfterImage = row.after_unloading_image;
-        
+
         if (hasBeforeImage && hasAfterImage) {
           return '✅ Complete';
         } else if (!hasBeforeImage && !hasAfterImage) {
