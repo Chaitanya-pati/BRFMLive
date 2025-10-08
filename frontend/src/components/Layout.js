@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Dimensions, useWindowDimensions, Image } from 'react-native';
-import colors from '../theme/colors';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Dimensions,
+  useWindowDimensions,
+  Image,
+} from "react-native";
+import colors from "../theme/colors";
 
 export default function Layout({ children, title, navigation, currentRoute }) {
   const { width } = useWindowDimensions();
@@ -19,12 +29,37 @@ export default function Layout({ children, title, navigation, currentRoute }) {
   }, [isMobile]);
 
   const menuItems = [
-    { name: 'Dashboard', route: 'Home', icon: '📊', section: null },
-    { name: 'Master Data', route: 'MasterView', icon: '📚', section: 'Operations' },
-    { name: 'Gate Entry', route: 'VehicleEntry', icon: '🚪', section: 'Operations' },
-    { name: 'Quality Control', route: 'LabTest', icon: '📋', section: 'Operations' },
-    { name: 'Unloading Entry', route: 'UnloadingEntry', icon: '📦', section: 'Operations' },
-    { name: 'Claim Tracking', route: 'ClaimTracking', icon: '📝', section: 'Operations' },
+    { name: "Dashboard", route: "Home", icon: "📊", section: null },
+    {
+      name: "Master Data",
+      route: "MasterView",
+      icon: "📚",
+      section: "Operations",
+    },
+    {
+      name: "Gate Entry",
+      route: "VehicleEntry",
+      icon: "🚪",
+      section: "Operations",
+    },
+    {
+      name: "Quality Control",
+      route: "LabTest",
+      icon: "📋",
+      section: "Operations",
+    },
+    {
+      name: "Unloading Entry",
+      route: "UnloadingEntry",
+      icon: "📦",
+      section: "Operations",
+    },
+    {
+      name: "Claim Tracking",
+      route: "ClaimTracking",
+      icon: "📝",
+      section: "Operations",
+    },
   ];
 
   const toggleMobileMenu = () => {
@@ -76,8 +111,8 @@ export default function Layout({ children, title, navigation, currentRoute }) {
           >
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
-          <Image 
-            source={require('../../assets/brfm-logo.png')} 
+          <Image
+            source={require("../../assets/brfm-logo.png")}
             style={[styles.logo, isMobile && styles.logoMobile]}
             resizeMode="contain"
           />
@@ -111,12 +146,14 @@ export default function Layout({ children, title, navigation, currentRoute }) {
         )}
 
         {/* Sidebar */}
-        <View style={[
-          styles.sidebar,
-          sidebarCollapsed && !mobileMenuOpen && styles.sidebarCollapsed,
-          isMobile && mobileMenuOpen && styles.sidebarMobileOpen,
-          isMobile && !mobileMenuOpen && styles.sidebarMobileHidden,
-        ]}>
+        <View
+          style={[
+            styles.sidebar,
+            sidebarCollapsed && !mobileMenuOpen && styles.sidebarCollapsed,
+            isMobile && mobileMenuOpen && styles.sidebarMobileOpen,
+            isMobile && !mobileMenuOpen && styles.sidebarMobileHidden,
+          ]}
+        >
           <View style={styles.sidebarHeader}>
             {(!sidebarCollapsed || mobileMenuOpen) && (
               <>
@@ -136,18 +173,25 @@ export default function Layout({ children, title, navigation, currentRoute }) {
               <Text style={styles.sectionLabel}>Operations</Text>
             )}
 
-            {menuItems.slice(1).map((item, index) => renderMenuItem(item, index + 1))}
+            {menuItems
+              .slice(1)
+              .map((item, index) => renderMenuItem(item, index + 1))}
           </ScrollView>
         </View>
 
         {/* Content Area */}
         <View style={[styles.content, isMobile && styles.contentMobile]}>
           <View style={styles.contentHeader}>
-            <Text style={[styles.contentTitle, isMobile && styles.contentTitleMobile]}>{title}</Text>
+            <Text
+              style={[
+                styles.contentTitle,
+                isMobile && styles.contentTitleMobile,
+              ]}
+            >
+              {title}
+            </Text>
           </View>
-          <ScrollView style={styles.contentScroll}>
-            {children}
-          </ScrollView>
+          <ScrollView style={styles.contentScroll}>{children}</ScrollView>
         </View>
       </View>
     </View>
@@ -162,18 +206,19 @@ const styles = StyleSheet.create({
   topBar: {
     backgroundColor: colors.surface,
     paddingHorizontal: Platform.select({ web: 16, default: 12 }),
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'web' ? 12 : 40,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingVertical: 8,
+    paddingTop: Platform.OS === "web" ? 8 : 36,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineVariant,
-    boxShadow: '0 2px 4px rgba(44, 62, 80, 0.08)',
+    boxShadow: "0 2px 4px rgba(44, 62, 80, 0.08)",
+    height: Platform.select({ web: 56, default: 64 }),
   },
   topBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     minWidth: 0,
   },
@@ -186,46 +231,46 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   logo: {
-    height: 40,
-    width: 120,
+    height: 36,
+    width: 110,
     flexShrink: 1,
   },
   logoMobile: {
-    height: 32,
-    width: 100,
+    height: 28,
+    width: 90,
   },
   topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   notificationButton: {
-    position: 'relative',
+    position: "relative",
     padding: 8,
   },
   notificationIcon: {
     fontSize: 20,
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 4,
     right: 4,
     backgroundColor: colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 4,
   },
   notificationBadgeText: {
     color: colors.onError,
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   adminProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   adminAvatar: {
@@ -233,103 +278,104 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: colors.info,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   adminAvatarText: {
     color: colors.onInfo,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   adminName: {
     color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   mainContainer: {
     flex: 1,
-    flexDirection: 'row',
-    position: 'relative',
+    flexDirection: "row",
+    position: "relative",
   },
   mobileOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 999,
   },
   sidebar: {
     width: 200,
-    backgroundColor: '#3d4e5c',
-    boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
+    backgroundColor: "#2c3e50",
+    boxShadow: "2px 0 8px rgba(0, 0, 0, 0.1)",
     zIndex: 1000,
   },
   sidebarCollapsed: {
     width: 70,
   },
   sidebarMobileOpen: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
     width: 250,
-    boxShadow: '2px 0 16px rgba(0, 0, 0, 0.3)',
+    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.3)",
   },
   sidebarMobileHidden: {
-    position: 'absolute',
+    position: "absolute",
     left: -250,
     width: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   sidebarHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'flex-start',
+    borderBottomColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "flex-start",
   },
   sidebarTitle: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   sidebarSubtitle: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: "rgba(255, 255, 255, 0.5)",
     fontSize: 12,
     marginTop: 4,
   },
   sidebarTitleCollapsed: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   menuContainer: {
     flex: 1,
     paddingVertical: 8,
   },
   sectionLabel: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: "rgba(255, 255, 255, 0.4)",
     fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     paddingHorizontal: 20,
     paddingVertical: 12,
     letterSpacing: 0.5,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
     paddingHorizontal: 20,
-    marginHorizontal: 0,
-    borderRadius: 0,
-    marginBottom: 0,
+    marginHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+    transition: "all 0.2s ease",
   },
   menuItemActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderLeftWidth: 3,
-    borderLeftColor: '#4a90e2',
+    backgroundColor: "#34495e",
+    borderLeftWidth: 0,
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
   },
   menuIcon: {
     fontSize: 18,
@@ -337,20 +383,20 @@ const styles = StyleSheet.create({
     width: 20,
   },
   menuText: {
-    color: '#e5e7eb',
+    color: "#e5e7eb",
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   menuTextActive: {
-    color: '#ffffff',
-    fontWeight: '500',
+    color: "#ffffff",
+    fontWeight: "500",
   },
   content: {
     flex: 1,
-    backgroundColor: '#f5f6fa',
+    backgroundColor: "#f5f6fa",
   },
   contentMobile: {
-    width: '100%',
+    width: "100%",
   },
   contentHeader: {
     backgroundColor: colors.surface,
@@ -360,8 +406,8 @@ const styles = StyleSheet.create({
   },
   contentTitle: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontWeight: "600",
+    color: "#1f2937",
   },
   contentTitleMobile: {
     fontSize: 20,
