@@ -393,9 +393,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#f5f6fa",
-    width: '100%',
-    alignSelf: 'stretch',
+    backgroundColor: '#f5f6fa',
   },
   contentMobile: {
     width: "100%",
