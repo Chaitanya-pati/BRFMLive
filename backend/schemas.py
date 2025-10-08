@@ -60,6 +60,12 @@ class VehicleEntryWithLabTests(VehicleEntry):
 class LabTestBase(BaseModel):
     vehicle_entry_id: int
     test_date: Optional[datetime] = None
+    document_no: Optional[str] = None
+    issue_no: Optional[str] = "01"
+    issue_date: Optional[datetime] = None
+    department: Optional[str] = "QA"
+    wheat_variety: Optional[str] = None
+    bill_number: Optional[str] = None
     moisture: Optional[float] = None
     test_weight: Optional[float] = None
     protein_percent: Optional[float] = None

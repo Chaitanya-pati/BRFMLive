@@ -219,7 +219,32 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
     
-    db_lab_test = models.LabTest(**lab_test.dict())
+    # Auto-generate document number based on today's date
+    today = datetime.now().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+    
+    # Count today's lab tests
+    today_tests_count = db.query(models.LabTest).filter(
+        models.LabTest.test_date >= today_start,
+        models.LabTest.test_date <= today_end
+    ).count()
+    
+    # Generate document number (001, 002, etc.)
+    doc_number = str(today_tests_count + 1).zfill(3)
+    
+    # Create lab test with auto-generated fields
+    lab_test_data = lab_test.dict()
+    lab_test_data['document_no'] = doc_number
+    lab_test_data['issue_no'] = "01"
+    lab_test_data['issue_date'] = datetime.now()
+    lab_test_data['department'] = "QA"
+    
+    # Auto-fetch bill number from vehicle entry
+    if not lab_test_data.get('bill_number'):
+        lab_test_data['bill_number'] = vehicle.bill_no
+    
+    db_lab_test = models.LabTest(**lab_test_data)
     db.add(db_lab_test)
     db.commit()
     db.refresh(db_lab_test)

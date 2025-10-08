@@ -50,6 +50,14 @@ class LabTest(Base):
     vehicle_entry_id = Column(Integer, ForeignKey("vehicle_entries.id"), nullable=False)
     test_date = Column(DateTime, default=datetime.utcnow)
     
+    # Document fields
+    document_no = Column(String(50))
+    issue_no = Column(String(10), default="01")
+    issue_date = Column(DateTime, default=datetime.utcnow)
+    department = Column(String(50), default="QA")
+    wheat_variety = Column(String(100))
+    bill_number = Column(String(100))
+    
     moisture = Column(Float)
     test_weight = Column(Float)
     protein_percent = Column(Float)
