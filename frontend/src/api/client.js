@@ -2,16 +2,18 @@ import axios from "axios";
 
 // In Replit, we need to use the public URL, not localhost
 const getApiUrl = () => {
-  if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
+  const envApiUrl = process.env.REACT_APP_API_URL || process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    return envApiUrl;
   }
 
-  // For Replit, construct the backend URL from the current host
   if (typeof window !== 'undefined') {
-    const currentHost = window.location.hostname;
     const protocol = window.location.protocol;
-    // Use the same protocol as the frontend
-    return `${protocol}//${currentHost}:8000/api`;
+    const hostname = window.location.hostname;
+    
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      return `${protocol}//${hostname}:8000/api`;
+    }
   }
 
   return "http://localhost:8000/api";
