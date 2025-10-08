@@ -9,8 +9,9 @@ const getApiUrl = () => {
   // For Replit, construct the backend URL from the current host
   if (typeof window !== 'undefined') {
     const currentHost = window.location.hostname;
-    // Use HTTP (not HTTPS) for the backend on port 8000
-    return `http://${currentHost}:8000/api`;
+    const protocol = window.location.protocol;
+    // Use the same protocol as the frontend
+    return `${protocol}//${currentHost}:8000/api`;
   }
 
   return "http://localhost:8000/api";
