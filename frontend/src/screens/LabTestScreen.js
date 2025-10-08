@@ -159,7 +159,7 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleVehicleChange = async (vehicleId) => {
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
     setSelectedVehicle(vehicle);
 
     // Generate document number based on today's date and count
@@ -177,22 +177,22 @@ export default function LabTestScreen({ navigation }) {
       // Generate 3-digit document number
       const docNumber = String(todayTests.length + 1).padStart(3, '0');
 
-      setFormData({ 
-        ...formData, 
+      setFormData((prev) => ({ 
+        ...prev, 
         vehicle_entry_id: vehicleId,
         bill_number: vehicle?.bill_no || '',
         document_no: docNumber,
-        issue_no: '01'  // 2-digit issue number
-      });
+        issue_no: '01'
+      }));
     } catch (error) {
       console.error('Error generating document number:', error);
-      setFormData({ 
-        ...formData, 
+      setFormData((prev) => ({ 
+        ...prev, 
         vehicle_entry_id: vehicleId,
         bill_number: vehicle?.bill_no || '',
         document_no: '001',
         issue_no: '01'
-      });
+      }));
     }
   };
 
