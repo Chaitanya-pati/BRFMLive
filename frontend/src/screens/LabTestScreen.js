@@ -316,6 +316,76 @@ export default function LabTestScreen({ navigation }) {
     }
   };
 
+  const handleSaveAndRaiseClaim = async () => {
+    if (!formData.vehicle_entry_id) {
+      notify.showWarning("Please select a vehicle");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const submitData = {
+        ...formData,
+        wheat_variety: formData.wheat_variety,
+        bill_number: formData.bill_number,
+        moisture: parseFloat(formData.moisture) || null,
+        test_weight: parseFloat(formData.hectoliter_weight) || null,
+        protein_percent: parseFloat(formData.protein_percent) || null,
+        wet_gluten: parseFloat(formData.wet_gluten) || null,
+        dry_gluten: parseFloat(formData.dry_gluten) || null,
+        falling_number: parseInt(formData.sedimentation_value) || null,
+        chaff_husk: parseFloat(formData.chaff_husk) || null,
+        straws_sticks: parseFloat(formData.straws_sticks) || null,
+        other_foreign_matter: parseFloat(formData.other_foreign_matter) || null,
+        mudballs: parseFloat(formData.mudballs) || null,
+        stones: parseFloat(formData.stones) || null,
+        dust_sand: parseFloat(formData.dust_sand) || null,
+        total_impurities: parseFloat(formData.total_impurities) || null,
+        shriveled_wheat: parseFloat(formData.shriveled_wheat) || null,
+        insect_damage: parseFloat(formData.insect_damage) || null,
+        blackened_wheat: parseFloat(formData.blackened_wheat) || null,
+        sprouted_grains: parseFloat(formData.other_grains) || null,
+        other_grain_damage: parseFloat(formData.soft_wheat) || null,
+        total_dockage: parseFloat(formData.total_dockage) || null,
+        test_date: formData.test_date.toISOString(),
+      };
+
+      let savedLabTest;
+      if (editMode && currentLabTest) {
+        await labTestApi.update(currentLabTest.id, submitData);
+        savedLabTest = currentLabTest;
+        notify.showSuccess("Lab test updated successfully");
+      } else {
+        const response = await labTestApi.create(submitData);
+        savedLabTest = response.data;
+        notify.showSuccess("Lab test created successfully");
+      }
+
+      // Close the lab test modal
+      setModalVisible(false);
+      
+      // Reload lab tests
+      await loadLabTests();
+      await loadVehicles();
+
+      // Open raise claim modal with the saved lab test
+      setSelectedLabTestForClaim(savedLabTest);
+      setClaimFormData({
+        issue_found: "",
+        category_detected: "",
+        claim_date: new Date(),
+        remarks: "",
+      });
+      setRaiseClaimModalVisible(true);
+
+    } catch (error) {
+      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generatePDF = () => {
     if (!selectedVehicle || !formData.vehicle_entry_id) {
       notify.showWarning("Please select a vehicle first");
@@ -1460,6 +1530,19 @@ export default function LabTestScreen({ navigation }) {
                   {loading ? "Saving..." : editMode ? "Update Test" : "Save Test"}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.raiseClaimFormButton,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={handleSaveAndRaiseClaim}
+                disabled={loading}
+              >
+                <Text style={styles.raiseClaimFormButtonText}>
+                  {loading ? "Saving..." : "Save & Raise Claim"}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -1762,6 +1845,14 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "600",
+  },
+  raiseClaimFormButton: {
+    backgroundColor: colors.warning,
+  },
+  raiseClaimFormButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
   claimedText: {
     color: colors.success,
