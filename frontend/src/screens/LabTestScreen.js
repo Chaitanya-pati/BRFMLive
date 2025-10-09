@@ -14,7 +14,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
-import { vehicleApi, labTestApi } from "../api/client";
+import { vehicleApi, labTestApi, claimApi } from "../api/client";
 import colors from "../theme/colors";
 
 export default function LabTestScreen({ navigation }) {
@@ -26,6 +26,16 @@ export default function LabTestScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentLabTest, setCurrentLabTest] = useState(null);
+  
+  // Raise Claim Modal states
+  const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
+  const [selectedLabTestForClaim, setSelectedLabTestForClaim] = useState(null);
+  const [claimFormData, setClaimFormData] = useState({
+    issue_found: "",
+    category_detected: "",
+    claim_date: new Date(),
+    remarks: "",
+  });
 
   const [formData, setFormData] = useState({
     vehicle_entry_id: "",
@@ -867,6 +877,50 @@ export default function LabTestScreen({ navigation }) {
     );
   };
 
+  const openRaiseClaimModal = (labTest) => {
+    setSelectedLabTestForClaim(labTest);
+    setClaimFormData({
+      issue_found: "",
+      category_detected: "",
+      claim_date: new Date(),
+      remarks: "",
+    });
+    setRaiseClaimModalVisible(true);
+  };
+
+  const handleRaiseClaim = async () => {
+    if (!claimFormData.issue_found.trim()) {
+      notify.showError("Please enter the issue found");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await claimApi.create({
+        lab_test_id: selectedLabTestForClaim.id,
+        issue_found: claimFormData.issue_found,
+        category_detected: claimFormData.category_detected || null,
+        claim_date: claimFormData.claim_date.toISOString(),
+        remarks: claimFormData.remarks || null,
+      });
+      
+      notify.showSuccess("Claim raised successfully");
+      setRaiseClaimModalVisible(false);
+      setClaimFormData({
+        issue_found: "",
+        category_detected: "",
+        claim_date: new Date(),
+        remarks: "",
+      });
+      loadLabTests(); // Reload to update claim status
+    } catch (error) {
+      notify.showError("Failed to raise claim");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
     { label: "ID", field: "id", width: 80 },
     {
@@ -900,6 +954,28 @@ export default function LabTestScreen({ navigation }) {
       field: "test_date",
       width: 180,
       render: (value) => new Date(value).toLocaleDateString(),
+    },
+    {
+      label: "Actions",
+      field: "id",
+      width: 150,
+      render: (value, labTest) => {
+        const hasClaim = labTest.has_claim;
+        return (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {!hasClaim ? (
+              <TouchableOpacity
+                style={styles.raiseClaimButton}
+                onPress={() => openRaiseClaimModal(labTest)}
+              >
+                <Text style={styles.raiseClaimButtonText}>Raise Claim</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.claimedText}>Claimed</Text>
+            )}
+          </View>
+        );
+      },
     },
   ];
 
@@ -1388,6 +1464,95 @@ export default function LabTestScreen({ navigation }) {
           </View>
         </ScrollView>
       </Modal>
+
+      {/* Raise Claim Modal */}
+      <Modal
+        visible={raiseClaimModalVisible}
+        onClose={() => setRaiseClaimModalVisible(false)}
+        title="Raise Claim"
+        width="500px"
+      >
+        <View style={styles.claimModalContent}>
+          <Text style={styles.claimLabel}>
+            Lab Test: {selectedLabTestForClaim?.document_no || "N/A"}
+          </Text>
+          <Text style={styles.claimSubLabel}>
+            Vehicle: {selectedLabTestForClaim?.vehicle_entry?.vehicle_number || "N/A"}
+          </Text>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Issue Found *</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={claimFormData.issue_found}
+              onChangeText={(text) =>
+                setClaimFormData({ ...claimFormData, issue_found: text })
+              }
+              placeholder="Describe the issue found..."
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Category Detected</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={claimFormData.category_detected}
+                onValueChange={(value) =>
+                  setClaimFormData({ ...claimFormData, category_detected: value })
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Category" value="" />
+                <Picker.Item label="Quality Issue" value="Quality Issue" />
+                <Picker.Item label="Weight Discrepancy" value="Weight Discrepancy" />
+                <Picker.Item label="Damage" value="Damage" />
+                <Picker.Item label="Contamination" value="Contamination" />
+                <Picker.Item label="Other" value="Other" />
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Remarks</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={claimFormData.remarks}
+              onChangeText={(text) =>
+                setClaimFormData({ ...claimFormData, remarks: text })
+              }
+              placeholder="Additional remarks (optional)..."
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.claimButtonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => setRaiseClaimModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                styles.saveButton,
+                loading && styles.buttonDisabled,
+              ]}
+              onPress={handleRaiseClaim}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? "Submitting..." : "Raise Claim"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
@@ -1586,5 +1751,46 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 14,
+  },
+  raiseClaimButton: {
+    backgroundColor: colors.warning,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  raiseClaimButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  claimedText: {
+    color: colors.success,
+    fontSize: 12,
+    fontWeight: "600",
+    paddingVertical: 6,
+  },
+  claimModalContent: {
+    padding: 20,
+  },
+  claimLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  claimSubLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 20,
+  },
+  claimButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 20,
+  },
+  textArea: {
+    height: 100,
+    paddingTop: 12,
   },
 });
