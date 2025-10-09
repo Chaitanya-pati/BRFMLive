@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import notify from '../utils/notifications';
 import { Picker } from "@react-native-picker/picker";
@@ -18,6 +19,10 @@ import { vehicleApi, labTestApi, claimApi } from "../api/client";
 import colors from "../theme/colors";
 
 export default function LabTestScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+  
   const [labTests, setLabTests] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -1063,7 +1068,7 @@ export default function LabTestScreen({ navigation }) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
-        width="90%"
+        width={isMobile ? "100%" : isTablet ? "85%" : "90%"}
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
@@ -1553,7 +1558,7 @@ export default function LabTestScreen({ navigation }) {
         visible={raiseClaimModalVisible}
         onClose={() => setRaiseClaimModalVisible(false)}
         title="Raise Claim"
-        width="500px"
+        width={isMobile ? "100%" : isTablet ? "70%" : "500px"}
       >
         <View style={styles.claimModalContent}>
           <Text style={styles.claimLabel}>
@@ -1657,9 +1662,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 12,
   },
   docHeaderItem: {
     flex: 1,
+    minWidth: 150,
   },
   docHeaderLabel: {
     fontSize: 12,
@@ -1688,9 +1696,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginBottom: 12,
+    flexWrap: "wrap",
   },
   field: {
     flex: 1,
+    minWidth: Platform.select({ web: 200, default: "100%" }),
   },
   label: {
     fontSize: 14,
@@ -1706,6 +1716,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: colors.surface,
     color: colors.textPrimary,
+    minHeight: 44,
   },
   inputDisabled: {
     backgroundColor: "#f5f5f5",
@@ -1720,6 +1731,7 @@ const styles = StyleSheet.create({
     borderColor: colors.outline,
     borderRadius: 6,
     backgroundColor: colors.surface,
+    minHeight: 44,
   },
   picker: {
     height: Platform.OS === "ios" ? 150 : 50,
@@ -1732,6 +1744,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6,
     marginTop: 8,
+    flexWrap: "wrap",
+    gap: 8,
   },
   totalLabel: {
     fontSize: 14,
@@ -1798,12 +1812,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 12,
     marginTop: 20,
+    flexWrap: "wrap",
   },
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 6,
-    minWidth: 100,
+    minWidth: Platform.select({ web: 100, default: "48%" }),
     alignItems: "center",
   },
   cancelButton: {
@@ -1861,7 +1876,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   claimModalContent: {
-    padding: 20,
+    padding: Platform.select({ web: 20, default: 16 }),
   },
   claimLabel: {
     fontSize: 16,
@@ -1879,9 +1894,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 12,
     marginTop: 20,
+    flexWrap: "wrap",
   },
   textArea: {
     height: 100,
     paddingTop: 12,
+  },
+  formGroup: {
+    marginBottom: 16,
   },
 });
