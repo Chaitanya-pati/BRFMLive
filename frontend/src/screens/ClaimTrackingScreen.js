@@ -13,7 +13,8 @@ import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { claimApi } from '../api/client';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { claimApi, labTestApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function ClaimTrackingScreen({ navigation }) {
@@ -22,12 +23,21 @@ export default function ClaimTrackingScreen({ navigation }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [updateData, setUpdateData] = useState({
     claim_status: '',
     remarks: '',
   });
   const [loading, setLoading] = useState(false);
+  const [labTests, setLabTests] = useState([]);
+  const [newClaimData, setNewClaimData] = useState({
+    lab_test_id: '',
+    issue_found: '',
+    category_detected: '',
+    claim_date: new Date(),
+    remarks: '',
+  });
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
@@ -125,6 +135,59 @@ export default function ClaimTrackingScreen({ navigation }) {
     }
   };
 
+  const loadLabTestsWithoutClaims = async () => {
+    try {
+      const response = await labTestApi.getAll();
+      const testsWithoutClaims = response.data.filter(test => !test.has_claim);
+      setLabTests(testsWithoutClaims);
+    } catch (error) {
+      console.error('Error loading lab tests:', error);
+      notify.showError('Failed to load lab tests');
+    }
+  };
+
+  const openRaiseClaimModal = async () => {
+    await loadLabTestsWithoutClaims();
+    setNewClaimData({
+      lab_test_id: '',
+      issue_found: '',
+      category_detected: '',
+      claim_date: new Date(),
+      remarks: '',
+    });
+    setRaiseClaimModalVisible(true);
+  };
+
+  const handleRaiseClaim = async () => {
+    if (!newClaimData.lab_test_id) {
+      notify.showWarning('Please select a lab test');
+      return;
+    }
+    if (!newClaimData.issue_found) {
+      notify.showWarning('Please enter the issue found');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await claimApi.create({
+        lab_test_id: parseInt(newClaimData.lab_test_id),
+        issue_found: newClaimData.issue_found,
+        category_detected: newClaimData.category_detected || null,
+        claim_date: newClaimData.claim_date.toISOString(),
+        remarks: newClaimData.remarks || null,
+      });
+      notify.showSuccess('Claim raised successfully');
+      setRaiseClaimModalVisible(false);
+      loadClaims();
+    } catch (error) {
+      notify.showError('Failed to raise claim');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
     { label: 'Claim ID', field: 'id', width: 100 },
     {
@@ -203,13 +266,20 @@ export default function ClaimTrackingScreen({ navigation }) {
               </Picker>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[styles.raiseClaimButton, isMobile && styles.raiseClaimButtonMobile]}
+            onPress={openRaiseClaimModal}
+          >
+            <Text style={styles.raiseClaimButtonText}>+ Raise New Claim</Text>
+          </TouchableOpacity>
         </View>
 
         <DataTable
           columns={columns}
           data={filteredClaims}
           onEdit={openUpdateModal}
-          searchable={false} // Search is handled by the TextInput above
+          searchable={false}
         />
       </View>
 
@@ -274,6 +344,79 @@ export default function ClaimTrackingScreen({ navigation }) {
               </View>
             </>
           )}
+        </View>
+      </Modal>
+
+      <Modal
+        visible={raiseClaimModalVisible}
+        onClose={() => setRaiseClaimModalVisible(false)}
+        title="Raise New Claim"
+        width={isMobile ? '95%' : isTablet ? '80%' : '70%'}
+      >
+        <View style={styles.form}>
+          <Text style={styles.label}>Select Lab Test *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={newClaimData.lab_test_id}
+              onValueChange={(value) => setNewClaimData({ ...newClaimData, lab_test_id: value })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select a lab test..." value="" />
+              {labTests.map((test) => (
+                <Picker.Item
+                  key={test.id}
+                  label={`Test #${test.id} - ${test.vehicle_entry?.vehicle_number || 'N/A'} - ${test.vehicle_entry?.supplier?.supplier_name || 'N/A'}`}
+                  value={test.id.toString()}
+                />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Issue Found *</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={newClaimData.issue_found}
+            onChangeText={(text) => setNewClaimData({ ...newClaimData, issue_found: text })}
+            placeholder="Describe the issue found"
+            multiline
+            numberOfLines={3}
+          />
+
+          <Text style={styles.label}>Category Detected</Text>
+          <TextInput
+            style={styles.input}
+            value={newClaimData.category_detected}
+            onChangeText={(text) => setNewClaimData({ ...newClaimData, category_detected: text })}
+            placeholder="Enter category (optional)"
+          />
+
+          <Text style={styles.label}>Remarks</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={newClaimData.remarks}
+            onChangeText={(text) => setNewClaimData({ ...newClaimData, remarks: text })}
+            placeholder="Additional remarks (optional)"
+            multiline
+            numberOfLines={3}
+          />
+
+          <View style={[styles.buttonContainer, isMobile && styles.buttonContainerMobile]}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton, isMobile && styles.buttonMobile]}
+              onPress={() => setRaiseClaimModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled, isMobile && styles.buttonMobile]}
+              onPress={handleRaiseClaim}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? 'Raising Claim...' : 'Raise Claim'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </Layout>
@@ -341,6 +484,24 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 40,
+  },
+  raiseClaimButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 180,
+  },
+  raiseClaimButtonMobile: {
+    width: '100%',
+    marginTop: 12,
+  },
+  raiseClaimButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   mobileCardsContainer: {
     flex: 1,
