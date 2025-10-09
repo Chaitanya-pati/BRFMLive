@@ -356,16 +356,19 @@ export default function LabTestScreen({ navigation }) {
       border: 2px solid black; 
       padding: 5px;
       width: 80px;
-      height: 70px;
+      height: 80px;
       position: absolute;
       left: 0;
       top: 0;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .logo-box img {
-      max-width: 100%;
-      max-height: 100%;
+      max-width: 70px;
+      max-height: 70px;
       object-fit: contain;
     }
 
@@ -384,11 +387,15 @@ export default function LabTestScreen({ navigation }) {
       border: 2px solid black; 
       padding: 8px;
       font-size: 10px;
-      width: 180px;
+      width: 200px;
+      height: 80px;
       position: absolute;
       right: 0;
       top: 0;
       line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .basic-info {
@@ -547,16 +554,16 @@ export default function LabTestScreen({ navigation }) {
   <div class="header">
     <div class="header-row">
       <div class="logo-box">
-        <img src="YOUR_LOGO_URL_HERE" alt="Logo" onerror="this.style.display='none'" />
+        <img src="https://ce943af2-133a-49c4-9b89-498b74daab1d-00-33k2v3rppz17r.janeway.replit.dev/assets/new-logo.png" alt="Logo" />
       </div>
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>
       </div>
       <div class="doc-info">
-        <div>Document No - ${formData.document_no || "001"}</div>
-        <div>Issue No: ${formData.issue_no}</div>
-        <div>Issue Date - ${formData.issue_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
-        <div>Dept. - ${formData.department}</div>
+        <div><strong>Document No:</strong> ${formData.document_no || "001"}</div>
+        <div><strong>Issue No:</strong> ${formData.issue_no}</div>
+        <div><strong>Issue Date:</strong> ${formData.issue_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
+        <div><strong>Dept.:</strong> ${formData.department}</div>
       </div>
     </div>
   </div>
