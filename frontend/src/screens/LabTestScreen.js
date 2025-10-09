@@ -8,7 +8,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import notify from '../utils/notifications';
+import notify from "../utils/notifications";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Layout from "../components/Layout";
@@ -203,7 +203,7 @@ export default function LabTestScreen({ navigation }) {
   const openAddModal = async () => {
     // Load only AVAILABLE vehicles for add mode
     await loadVehicles();
-    
+
     setEditMode(false);
     setCurrentLabTest(null);
     setFormData({
@@ -299,7 +299,9 @@ export default function LabTestScreen({ navigation }) {
       loadLabTests();
       loadVehicles();
     } catch (error) {
-      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(
+        editMode ? "Failed to update lab test" : "Failed to create lab test",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -554,7 +556,8 @@ export default function LabTestScreen({ navigation }) {
   <div class="header">
     <div class="header-row">
       <div class="logo-box">
-        <img src="https://ce943af2-133a-49c4-9b89-498b74daab1d-00-33k2v3rppz17r.janeway.replit.dev/assets/new-logo.png" alt="Logo" />
+        
+        <img src="<img src="https://ce943af2-133a-49c4-9b89-498b74daab1d-00-33k2v3rppz17r.janeway.replit.dev/assets/new-logo.png" alt="Logo" />" alt="Logo" />
       </div>
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>
@@ -800,14 +803,16 @@ export default function LabTestScreen({ navigation }) {
     try {
       const response = await vehicleApi.getAll();
       setVehicles(response.data);
-      
+
       // Find the vehicle for this lab test
-      const vehicle = response.data.find(v => v.id === labTest.vehicle_entry_id);
+      const vehicle = response.data.find(
+        (v) => v.id === labTest.vehicle_entry_id,
+      );
       setSelectedVehicle(vehicle);
     } catch (error) {
       console.error("Error loading vehicles:", error);
     }
-    
+
     setEditMode(true);
     setCurrentLabTest(labTest);
     setFormData({
@@ -817,7 +822,9 @@ export default function LabTestScreen({ navigation }) {
       bill_number: labTest.bill_number || "",
       document_no: labTest.document_no || "",
       issue_no: labTest.issue_no || "01",
-      issue_date: labTest.issue_date ? new Date(labTest.issue_date) : new Date(),
+      issue_date: labTest.issue_date
+        ? new Date(labTest.issue_date)
+        : new Date(),
       department: labTest.department || "QA",
       moisture: labTest.moisture?.toString() || "",
       hectoliter_weight: labTest.test_weight?.toString() || "",
@@ -846,24 +853,24 @@ export default function LabTestScreen({ navigation }) {
       approved: false,
       tested_by: labTest.tested_by || "",
     });
-    
+
     setModalVisible(true);
   };
 
   const handleDelete = async (labTest) => {
     notify.showConfirm(
-      'Confirm Delete',
-      'Are you sure you want to delete this lab test?',
+      "Confirm Delete",
+      "Are you sure you want to delete this lab test?",
       async () => {
         try {
           await labTestApi.delete(labTest.id);
-          notify.showSuccess('Lab test deleted successfully');
+          notify.showSuccess("Lab test deleted successfully");
           loadLabTests();
         } catch (error) {
-          notify.showError('Failed to delete lab test');
+          notify.showError("Failed to delete lab test");
           console.error(error);
         }
-      }
+      },
     );
   };
 
@@ -905,9 +912,9 @@ export default function LabTestScreen({ navigation }) {
 
   return (
     <Layout title="Lab Tests" navigation={navigation} currentRoute="LabTest">
-      <DataTable 
-        columns={columns} 
-        data={labTests} 
+      <DataTable
+        columns={columns}
+        data={labTests}
         onAdd={openAddModal}
         onEdit={handleEdit}
         onDelete={handleDelete}
@@ -916,7 +923,11 @@ export default function LabTestScreen({ navigation }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
+        title={
+          editMode
+            ? "Edit Raw Wheat Quality Report"
+            : "Raw Wheat Quality Report"
+        }
         width="90%"
       >
         <ScrollView style={styles.scrollContainer}>
@@ -960,7 +971,9 @@ export default function LabTestScreen({ navigation }) {
                   <Text style={styles.label}>Select Vehicle *</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={formData.vehicle_entry_id?.toString() || ""}
+                      selectedValue={
+                        formData.vehicle_entry_id?.toString() || ""
+                      }
                       onValueChange={handleVehicleChange}
                       style={styles.picker}
                     >
@@ -1381,7 +1394,11 @@ export default function LabTestScreen({ navigation }) {
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? "Saving..." : editMode ? "Update Test" : "Save Test"}
+                  {loading
+                    ? "Saving..."
+                    : editMode
+                      ? "Update Test"
+                      : "Save Test"}
                 </Text>
               </TouchableOpacity>
             </View>
