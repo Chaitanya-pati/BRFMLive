@@ -34,8 +34,7 @@ export default function MasterViewScreen({ navigation }) {
   const [godownFormData, setGodownFormData] = useState({
     name: '',
     capacity: '',
-    type: '',
-    location: ''
+    type: ''
   });
 
   const [supplierFormData, setSupplierFormData] = useState({
@@ -114,7 +113,7 @@ export default function MasterViewScreen({ navigation }) {
     setEditMode(false);
     setCurrentItem(null);
     if (activeTab === 'godown') {
-      setGodownFormData({ name: '', capacity: '', type: '', location: '' });
+      setGodownFormData({ name: '', capacity: '', type: '' });
       setCurrentGodown(null);
     } else {
       setSupplierFormData({
@@ -138,8 +137,7 @@ export default function MasterViewScreen({ navigation }) {
       setGodownFormData({
         name: item.name,
         capacity: item.capacity.toString(),
-        type: item.type,
-        location: item.location || ''
+        type: item.type
       });
       setCurrentGodown(item);
     } else {
@@ -249,7 +247,6 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
     { field: 'type', label: 'Type', flex: 1 },
     { field: 'current_storage', label: 'Current Storage (tons)', flex: 1.2 },
-    { field: 'location', label: 'Location', flex: 1 },
   ];
 
   const supplierColumns = [
@@ -267,8 +264,7 @@ export default function MasterViewScreen({ navigation }) {
     setGodownFormData({
       name: '',
       capacity: '',
-      type: '',
-      location: '',
+      type: ''
     });
     setModalVisible(true);
   };
@@ -279,8 +275,7 @@ export default function MasterViewScreen({ navigation }) {
     setGodownFormData({
       name: godown.name,
       capacity: godown.capacity.toString(),
-      type: godown.type,
-      location: godown.location || '',
+      type: godown.type
     });
     setActiveTab('godown');
     setModalVisible(true);
@@ -298,7 +293,6 @@ export default function MasterViewScreen({ navigation }) {
         name: godownFormData.name,
         capacity: parseFloat(godownFormData.capacity),
         type: godownFormData.type,
-        location: godownFormData.location,
         current_storage: editMode ? currentGodown?.current_storage || 0 : 0,
       };
 
@@ -398,14 +392,6 @@ export default function MasterViewScreen({ navigation }) {
                     ))}
                   </Picker>
                 </View>
-
-                <Text style={styles.label}>Location</Text>
-                <TextInput
-                  style={styles.input}
-                  value={godownFormData.location}
-                  onChangeText={(text) => setGodownFormData({ ...godownFormData, location: text })}
-                  placeholder="Enter location"
-                />
               </>
             ) : (
               <>
