@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "BRFM Gate Entry",
+    "slug": "brfm-gate-entry",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,18 +13,30 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.brfm.gateentry"
     },
     "android": {
+      "package": "com.brfm.gateentry",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "brfm-gate-entry-app"
+      }
     }
   }
 }
