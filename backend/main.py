@@ -10,10 +10,20 @@ import json
 import os
 import uuid
 from pathlib import Path
+import math
 
 from database import engine, get_db, Base
 import models
 import schemas
+
+def sanitize_float(value):
+    """Convert NaN/Infinity to None for JSON serialization"""
+    if value is None:
+        return None
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+    return value
 
 Base.metadata.create_all(bind=engine)
 
@@ -618,6 +628,10 @@ def create_bin(bin_data: schemas.BinCreate, db: Session = Depends(get_db)):
 @app.get("/api/bins", response_model=List[schemas.Bin])
 def get_bins(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     bins = db.query(models.Bin).offset(skip).limit(limit).all()
+    # Sanitize float values
+    for bin_obj in bins:
+        bin_obj.capacity = sanitize_float(bin_obj.capacity)
+        bin_obj.current_quantity = sanitize_float(bin_obj.current_quantity)
     return bins
 
 @app.get("/api/bins/{bin_id}", response_model=schemas.Bin)
@@ -760,6 +774,16 @@ def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, 
 @app.get("/api/route-magnet-mappings", response_model=List[schemas.RouteMagnetMappingWithDetails])
 def get_route_magnet_mappings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     mappings = db.query(models.RouteMagnetMapping).offset(skip).limit(limit).all()
+    # Sanitize float values in related objects
+    for mapping in mappings:
+        if mapping.destination_bin:
+            mapping.destination_bin.capacity = sanitize_float(mapping.destination_bin.capacity)
+            mapping.destination_bin.current_quantity = sanitize_float(mapping.destination_bin.current_quantity)
+        if mapping.source_bin:
+            mapping.source_bin.capacity = sanitize_float(mapping.source_bin.capacity)
+            mapping.source_bin.current_quantity = sanitize_float(mapping.source_bin.current_quantity)
+        if mapping.source_godown:
+            mapping.source_godown.current_storage = sanitize_float(mapping.source_godown.current_storage)
     return mappings
 
 @app.get("/api/route-magnet-mappings/{mapping_id}", response_model=schemas.RouteMagnetMappingWithDetails)
@@ -1028,6 +1052,16 @@ def get_transfer_sessions(
         query = query.filter(models.TransferSession.status == status)
     
     sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
+    
+    # Sanitize float values
+    for session in sessions:
+        session.transferred_quantity = sanitize_float(session.transferred_quantity)
+        if session.source_godown:
+            session.source_godown.current_storage = sanitize_float(session.source_godown.current_storage)
+        if session.destination_bin:
+            session.destination_bin.capacity = sanitize_float(session.destination_bin.capacity)
+            session.destination_bin.current_quantity = sanitize_float(session.destination_bin.current_quantity)
+    
     return sessions
 
 @app.get("/api/transfer-sessions/{session_id}", response_model=schemas.TransferSessionWithDetails)
