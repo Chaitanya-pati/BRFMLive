@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, useWindowDimensions } from 'react-native';
 import Layout from '../components/Layout';
@@ -90,31 +89,31 @@ export default function PrecleaningBinScreen({ navigation }) {
   useEffect(() => {
     const intervalId = setInterval(() => {
       const activeTransferSessions = transferSessions.filter(session => !session.end_time);
-      
+
       activeTransferSessions.forEach(session => {
         const startTime = new Date(session.start_time);
         const now = new Date();
         const elapsedHours = (now - startTime) / (1000 * 60 * 60);
         const cleaningIntervalHours = session.cleaning_interval_hours || 3;
-        
+
         const intervalsPassed = Math.floor(elapsedHours / cleaningIntervalHours);
-        
+
         if (intervalsPassed > 0) {
           const lastAlertInterval = lastAlertTimes[session.id] || 0;
-          
+
           if (intervalsPassed > lastAlertInterval) {
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
             const hoursElapsed = (intervalsPassed * cleaningIntervalHours).toFixed(1);
-            
+
             const alertMessage = `Cleaning Alert: Transfer session from ${sourceName} to Bin ${destName} has been running for ${hoursElapsed} hours. Magnet cleaning may be required.`;
-            
+
             if (Platform.OS === 'web') {
               alert(alertMessage);
             } else {
               Alert.alert('Cleaning Reminder', alertMessage);
             }
-            
+
             setLastAlertTimes(prev => ({
               ...prev,
               [session.id]: intervalsPassed
@@ -306,7 +305,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       await magnetCleaningRecordApi.delete(record.id);
       await fetchCleaningRecords();
-      
+
       if (Platform.OS === 'web') {
         alert('Cleaning record deleted successfully');
       } else {
@@ -315,7 +314,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error deleting cleaning record:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
-      
+
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -340,11 +339,11 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
       }
-      
+
       if (cleaningRecordFormData.before_cleaning_photo) {
         formData.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
       }
-      
+
       if (cleaningRecordFormData.after_cleaning_photo) {
         formData.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
       }
@@ -390,7 +389,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
         notes: transferSessionFormData.notes,
       });
-      
+
       Alert.alert('Success', 'Transfer session started successfully');
       setModalVisible(false);
       await fetchTransferSessions();
@@ -420,7 +419,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         editingTransferSession.id,
         parseFloat(stopTransferFormData.transferred_quantity)
       );
-      
+
       Alert.alert('Success', 'Transfer session stopped successfully');
       setStopTransferModal(false);
       setLastAlertTimes(prev => {
@@ -460,7 +459,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       await transferSessionApi.delete(session.id);
       await fetchTransferSessions();
-      
+
       if (Platform.OS === 'web') {
         alert('Transfer session deleted successfully');
       } else {
@@ -469,7 +468,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error deleting transfer session:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete transfer session';
-      
+
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -500,7 +499,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       await routeMagnetMappingApi.delete(mapping.id);
       await fetchRouteMappings();
-      
+
       if (Platform.OS === 'web') {
         alert('Route mapping deleted successfully');
       } else {
@@ -509,7 +508,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error deleting route mapping:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete route mapping';
-      
+
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -609,7 +608,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       await binApi.delete(bin.id);
       await fetchBins();
-      
+
       if (Platform.OS === 'web') {
         alert('Bin deleted successfully');
       } else {
@@ -618,7 +617,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error deleting bin:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete bin';
-      
+
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -649,7 +648,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       await magnetApi.delete(magnet.id);
       await fetchMagnets();
-      
+
       if (Platform.OS === 'web') {
         alert('Magnet deleted successfully');
       } else {
@@ -658,7 +657,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error deleting magnet:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete magnet';
-      
+
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -1164,10 +1163,10 @@ export default function PrecleaningBinScreen({ navigation }) {
                 />
 
                 <InputField
-                  label="Cleaning Interval (hours) *"
-                  placeholder="Enter cleaning interval in hours"
+                  label="Cleaning Interval (seconds) *"
                   value={routeMappingFormData.cleaning_interval_hours}
                   onChangeText={(text) => setRouteMappingFormData({ ...routeMappingFormData, cleaning_interval_hours: text })}
+                  placeholder="Enter cleaning interval in seconds"
                   keyboardType="numeric"
                 />
 
