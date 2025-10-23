@@ -116,6 +116,14 @@ export const magnetApi = {
   delete: (id) => api.delete(`/magnets/${id}`),
 };
 
+export const routeMagnetMappingApi = {
+  getAll: () => api.get("/route-magnet-mappings"),
+  getById: (id) => api.get(`/route-magnet-mappings/${id}`),
+  create: (data) => api.post("/route-magnet-mappings", data),
+  update: (id, data) => api.put(`/route-magnet-mappings/${id}`, data),
+  delete: (id) => api.delete(`/route-magnet-mappings/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },

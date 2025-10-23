@@ -723,6 +723,84 @@ def delete_magnet(magnet_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete magnet: {str(e)}")
 
+@app.post("/api/route-magnet-mappings", response_model=schemas.RouteMagnetMapping)
+def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, db: Session = Depends(get_db)):
+    # Validate foreign keys
+    magnet = db.query(models.Magnet).filter(models.Magnet.id == mapping_data.magnet_id).first()
+    if not magnet:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+    
+    godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == mapping_data.source_godown_id).first()
+    if not godown:
+        raise HTTPException(status_code=404, detail="Source godown not found")
+    
+    bin_data = db.query(models.Bin).filter(models.Bin.id == mapping_data.destination_bin_id).first()
+    if not bin_data:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
+    
+    db_mapping = models.RouteMagnetMapping(**mapping_data.dict())
+    db.add(db_mapping)
+    db.commit()
+    db.refresh(db_mapping)
+    return db_mapping
+
+@app.get("/api/route-magnet-mappings", response_model=List[schemas.RouteMagnetMappingWithDetails])
+def get_route_magnet_mappings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    mappings = db.query(models.RouteMagnetMapping).offset(skip).limit(limit).all()
+    return mappings
+
+@app.get("/api/route-magnet-mappings/{mapping_id}", response_model=schemas.RouteMagnetMappingWithDetails)
+def get_route_magnet_mapping(mapping_id: int, db: Session = Depends(get_db)):
+    mapping = db.query(models.RouteMagnetMapping).filter(models.RouteMagnetMapping.id == mapping_id).first()
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Route magnet mapping not found")
+    return mapping
+
+@app.put("/api/route-magnet-mappings/{mapping_id}", response_model=schemas.RouteMagnetMapping)
+def update_route_magnet_mapping(mapping_id: int, mapping_update: schemas.RouteMagnetMappingUpdate, db: Session = Depends(get_db)):
+    db_mapping = db.query(models.RouteMagnetMapping).filter(models.RouteMagnetMapping.id == mapping_id).first()
+    if not db_mapping:
+        raise HTTPException(status_code=404, detail="Route magnet mapping not found")
+
+    update_data = mapping_update.dict(exclude_unset=True)
+    
+    # Validate foreign keys if they're being updated
+    if 'magnet_id' in update_data:
+        magnet = db.query(models.Magnet).filter(models.Magnet.id == update_data['magnet_id']).first()
+        if not magnet:
+            raise HTTPException(status_code=404, detail="Magnet not found")
+    
+    if 'source_godown_id' in update_data:
+        godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == update_data['source_godown_id']).first()
+        if not godown:
+            raise HTTPException(status_code=404, detail="Source godown not found")
+    
+    if 'destination_bin_id' in update_data:
+        bin_data = db.query(models.Bin).filter(models.Bin.id == update_data['destination_bin_id']).first()
+        if not bin_data:
+            raise HTTPException(status_code=404, detail="Destination bin not found")
+    
+    for key, value in update_data.items():
+        setattr(db_mapping, key, value)
+
+    db.commit()
+    db.refresh(db_mapping)
+    return db_mapping
+
+@app.delete("/api/route-magnet-mappings/{mapping_id}")
+def delete_route_magnet_mapping(mapping_id: int, db: Session = Depends(get_db)):
+    db_mapping = db.query(models.RouteMagnetMapping).filter(models.RouteMagnetMapping.id == mapping_id).first()
+    if not db_mapping:
+        raise HTTPException(status_code=404, detail="Route magnet mapping not found")
+
+    try:
+        db.delete(db_mapping)
+        db.commit()
+        return {"message": "Route magnet mapping deleted successfully", "id": mapping_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete route magnet mapping: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

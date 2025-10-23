@@ -231,5 +231,33 @@ class Magnet(MagnetBase):
     class Config:
         from_attributes = True
 
+class RouteMagnetMappingBase(BaseModel):
+    magnet_id: int
+    source_godown_id: int
+    destination_bin_id: int
+    cleaning_interval_hours: int = 3
+
+class RouteMagnetMappingCreate(RouteMagnetMappingBase):
+    pass
+
+class RouteMagnetMappingUpdate(BaseModel):
+    magnet_id: Optional[int] = None
+    source_godown_id: Optional[int] = None
+    destination_bin_id: Optional[int] = None
+    cleaning_interval_hours: Optional[int] = None
+
+class RouteMagnetMapping(RouteMagnetMappingBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class RouteMagnetMappingWithDetails(RouteMagnetMapping):
+    magnet: Magnet
+    source_godown: GodownMaster
+    destination_bin: Bin
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
