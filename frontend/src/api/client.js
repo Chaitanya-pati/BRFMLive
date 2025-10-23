@@ -22,7 +22,7 @@ const getApiUrl = () => {
   return "http://0.0.0.0:8000/api";
 };
 
-const API_URL = "https://brfmlive.onrender.com/api";
+const API_URL = "http://0.0.0.0:8000/api";
 
 export const api = axios.create({
   baseURL: API_URL,
