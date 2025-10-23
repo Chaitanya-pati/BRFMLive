@@ -262,5 +262,31 @@ class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     source_bin: Optional[Bin] = None
     destination_bin: Bin
 
+class MagnetCleaningRecordBase(BaseModel):
+    magnet_id: int
+    cleaning_timestamp: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class MagnetCleaningRecordCreate(MagnetCleaningRecordBase):
+    pass
+
+class MagnetCleaningRecordUpdate(BaseModel):
+    magnet_id: Optional[int] = None
+    cleaning_timestamp: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class MagnetCleaningRecord(MagnetCleaningRecordBase):
+    id: int
+    before_cleaning_photo: Optional[str] = None
+    after_cleaning_photo: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class MagnetCleaningRecordWithDetails(MagnetCleaningRecord):
+    magnet: Magnet
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()

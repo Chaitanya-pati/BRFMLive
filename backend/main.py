@@ -821,6 +821,118 @@ def delete_route_magnet_mapping(mapping_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete route magnet mapping: {str(e)}")
 
+@app.post("/api/magnet-cleaning-records", response_model=schemas.MagnetCleaningRecord)
+async def create_magnet_cleaning_record(
+    magnet_id: int = Form(...),
+    cleaning_timestamp: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    before_cleaning_photo: Optional[UploadFile] = File(None),
+    after_cleaning_photo: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    # Validate magnet exists
+    magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
+    if not magnet:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+    
+    # Parse cleaning timestamp
+    timestamp = None
+    if cleaning_timestamp:
+        try:
+            timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
+        except:
+            timestamp = datetime.utcnow()
+    
+    db_record = models.MagnetCleaningRecord(
+        magnet_id=magnet_id,
+        cleaning_timestamp=timestamp or datetime.utcnow(),
+        notes=notes
+    )
+    
+    if before_cleaning_photo and before_cleaning_photo.filename:
+        db_record.before_cleaning_photo = await save_upload_file(before_cleaning_photo)
+    
+    if after_cleaning_photo and after_cleaning_photo.filename:
+        db_record.after_cleaning_photo = await save_upload_file(after_cleaning_photo)
+    
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+@app.get("/api/magnet-cleaning-records", response_model=List[schemas.MagnetCleaningRecordWithDetails])
+def get_magnet_cleaning_records(
+    magnet_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.MagnetCleaningRecord)
+    if magnet_id:
+        query = query.filter(models.MagnetCleaningRecord.magnet_id == magnet_id)
+    
+    records = query.order_by(models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(skip).limit(limit).all()
+    return records
+
+@app.get("/api/magnet-cleaning-records/{record_id}", response_model=schemas.MagnetCleaningRecordWithDetails)
+def get_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db)):
+    record = db.query(models.MagnetCleaningRecord).filter(models.MagnetCleaningRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Magnet cleaning record not found")
+    return record
+
+@app.put("/api/magnet-cleaning-records/{record_id}", response_model=schemas.MagnetCleaningRecord)
+async def update_magnet_cleaning_record(
+    record_id: int,
+    magnet_id: int = Form(...),
+    cleaning_timestamp: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    before_cleaning_photo: Optional[UploadFile] = File(None),
+    after_cleaning_photo: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    db_record = db.query(models.MagnetCleaningRecord).filter(models.MagnetCleaningRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Magnet cleaning record not found")
+    
+    # Validate magnet exists
+    magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
+    if not magnet:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+    
+    db_record.magnet_id = magnet_id
+    db_record.notes = notes
+    
+    if cleaning_timestamp:
+        try:
+            db_record.cleaning_timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    if before_cleaning_photo and before_cleaning_photo.filename:
+        db_record.before_cleaning_photo = await save_upload_file(before_cleaning_photo)
+    
+    if after_cleaning_photo and after_cleaning_photo.filename:
+        db_record.after_cleaning_photo = await save_upload_file(after_cleaning_photo)
+    
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+@app.delete("/api/magnet-cleaning-records/{record_id}")
+def delete_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db)):
+    db_record = db.query(models.MagnetCleaningRecord).filter(models.MagnetCleaningRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Magnet cleaning record not found")
+    
+    try:
+        db.delete(db_record)
+        db.commit()
+        return {"message": "Magnet cleaning record deleted successfully", "id": record_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete magnet cleaning record: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

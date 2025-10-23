@@ -186,3 +186,17 @@ class RouteMagnetMapping(Base):
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
     source_bin = relationship("Bin", foreign_keys=[source_bin_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+
+class MagnetCleaningRecord(Base):
+    __tablename__ = "magnet_cleaning_records"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    magnet_id = Column(Integer, ForeignKey("magnets.id", ondelete="CASCADE"), nullable=False, index=True)
+    cleaning_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    before_cleaning_photo = Column(String(500))
+    after_cleaning_photo = Column(String(500))
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    magnet = relationship("Magnet")

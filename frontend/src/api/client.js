@@ -124,6 +124,18 @@ export const routeMagnetMappingApi = {
   delete: (id) => api.delete(`/route-magnet-mappings/${id}`),
 };
 
+export const magnetCleaningRecordApi = {
+  getAll: (magnetId) => api.get("/magnet-cleaning-records", { params: magnetId ? { magnet_id: magnetId } : {} }),
+  getById: (id) => api.get(`/magnet-cleaning-records/${id}`),
+  create: (formData) => api.post("/magnet-cleaning-records", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  update: (id, formData) => api.put(`/magnet-cleaning-records/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  delete: (id) => api.delete(`/magnet-cleaning-records/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },

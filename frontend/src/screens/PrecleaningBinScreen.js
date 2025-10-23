@@ -8,7 +8,7 @@ import InputField from '../components/InputField';
 import SelectDropdown from '../components/SelectDropdown';
 import Button from '../components/Button';
 import colors from '../theme/colors';
-import { binApi, magnetApi, routeMagnetMappingApi, godownApi } from '../api/client';
+import { binApi, magnetApi, routeMagnetMappingApi, godownApi, magnetCleaningRecordApi } from '../api/client';
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -18,11 +18,13 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [bins, setBins] = useState([]);
   const [magnets, setMagnets] = useState([]);
   const [routeMappings, setRouteMappings] = useState([]);
+  const [cleaningRecords, setCleaningRecords] = useState([]);
   const [godowns, setGodowns] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingBin, setEditingBin] = useState(null);
   const [editingMagnet, setEditingMagnet] = useState(null);
   const [editingRouteMapping, setEditingRouteMapping] = useState(null);
+  const [editingCleaningRecord, setEditingCleaningRecord] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [binFormData, setBinFormData] = useState({
@@ -47,6 +49,14 @@ export default function PrecleaningBinScreen({ navigation }) {
     cleaning_interval_hours: '3',
   });
 
+  const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
+    magnet_id: '',
+    cleaning_timestamp: new Date().toISOString(),
+    notes: '',
+    before_cleaning_photo: null,
+    after_cleaning_photo: null,
+  });
+
   const statusOptions = [
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' },
@@ -58,6 +68,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     fetchBins();
     fetchMagnets();
     fetchRouteMappings();
+    fetchCleaningRecords();
     fetchGodowns();
   }, []);
 
@@ -106,6 +117,19 @@ export default function PrecleaningBinScreen({ navigation }) {
       setGodowns(response.data);
     } catch (error) {
       console.error('Error fetching godowns:', error);
+    }
+  };
+
+  const fetchCleaningRecords = async () => {
+    try {
+      setLoading(true);
+      const response = await magnetCleaningRecordApi.getAll();
+      setCleaningRecords(response.data);
+    } catch (error) {
+      console.error('Error fetching cleaning records:', error);
+      Alert.alert('Error', 'Failed to load cleaning records');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,6 +186,117 @@ export default function PrecleaningBinScreen({ navigation }) {
       cleaning_interval_hours: String(mapping.cleaning_interval_hours),
     });
     setModalVisible(true);
+  };
+
+  const handleAddCleaningRecord = () => {
+    setEditingBin(null);
+    setEditingMagnet(null);
+    setEditingRouteMapping(null);
+    setEditingCleaningRecord(null);
+    setCleaningRecordFormData({
+      magnet_id: '',
+      cleaning_timestamp: new Date().toISOString(),
+      notes: '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true);
+  };
+
+  const handleEditCleaningRecord = (record) => {
+    setEditingCleaningRecord(record);
+    setEditingBin(null);
+    setEditingMagnet(null);
+    setEditingRouteMapping(null);
+    setCleaningRecordFormData({
+      magnet_id: String(record.magnet_id),
+      cleaning_timestamp: record.cleaning_timestamp,
+      notes: record.notes || '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true);
+  };
+
+  const handleDeleteCleaningRecord = async (record) => {
+    const confirmDelete = Platform.OS === 'web' 
+      ? window.confirm(`Are you sure you want to delete this cleaning record?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to delete this cleaning record?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      await magnetCleaningRecordApi.delete(record.id);
+      await fetchCleaningRecords();
+      
+      if (Platform.OS === 'web') {
+        alert('Cleaning record deleted successfully');
+      } else {
+        Alert.alert('Success', 'Cleaning record deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting cleaning record:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
+      
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitCleaningRecord = async () => {
+    if (!cleaningRecordFormData.magnet_id) {
+      Alert.alert('Error', 'Please select a magnet');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('magnet_id', cleaningRecordFormData.magnet_id);
+      formData.append('cleaning_timestamp', cleaningRecordFormData.cleaning_timestamp);
+      if (cleaningRecordFormData.notes) {
+        formData.append('notes', cleaningRecordFormData.notes);
+      }
+      
+      if (cleaningRecordFormData.before_cleaning_photo) {
+        formData.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
+      }
+      
+      if (cleaningRecordFormData.after_cleaning_photo) {
+        formData.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
+      }
+
+      if (editingCleaningRecord) {
+        await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
+        Alert.alert('Success', 'Cleaning record updated successfully');
+      } else {
+        await magnetCleaningRecordApi.create(formData);
+        Alert.alert('Success', 'Cleaning record added successfully');
+      }
+
+      setModalVisible(false);
+      await fetchCleaningRecords();
+    } catch (error) {
+      console.error('Error saving cleaning record:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteRouteMapping = async (mapping) => {
@@ -473,6 +608,34 @@ export default function PrecleaningBinScreen({ navigation }) {
     { field: 'cleaning_interval_hours', label: 'Cleaning Interval (hrs)', flex: 1 },
   ];
 
+  const cleaningRecordColumns = [
+    { 
+      field: 'magnet', 
+      label: 'Magnet', 
+      flex: 1.5,
+      render: (val) => val?.name || '-'
+    },
+    { 
+      field: 'cleaning_timestamp', 
+      label: 'Cleaning Time', 
+      flex: 2,
+      render: (val) => val ? new Date(val).toLocaleString() : '-'
+    },
+    { 
+      field: 'before_cleaning_photo', 
+      label: 'Before Photo', 
+      flex: 1,
+      render: (val) => val ? '✓' : '-'
+    },
+    { 
+      field: 'after_cleaning_photo', 
+      label: 'After Photo', 
+      flex: 1,
+      render: (val) => val ? '✓' : '-'
+    },
+    { field: 'notes', label: 'Notes', flex: 2 },
+  ];
+
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
       <View style={styles.container}>
@@ -499,6 +662,14 @@ export default function PrecleaningBinScreen({ navigation }) {
           >
             <Text style={[styles.tabText, activeTab === 'routeMappings' && styles.activeTabText]}>
               Route Mappings
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'cleaningRecords' && styles.activeTab]}
+            onPress={() => setActiveTab('cleaningRecords')}
+          >
+            <Text style={[styles.tabText, activeTab === 'cleaningRecords' && styles.activeTabText]}>
+              Cleaning Records
             </Text>
           </TouchableOpacity>
         </View>
@@ -541,7 +712,7 @@ export default function PrecleaningBinScreen({ navigation }) {
               emptyMessage="No magnets found"
             />
           </>
-        ) : (
+        ) : activeTab === 'routeMappings' ? (
           <>
             <View style={styles.headerActions}>
               <Button
@@ -560,6 +731,25 @@ export default function PrecleaningBinScreen({ navigation }) {
               emptyMessage="No route mappings found"
             />
           </>
+        ) : (
+          <>
+            <View style={styles.headerActions}>
+              <Button
+                title="Add Cleaning Record"
+                onPress={handleAddCleaningRecord}
+                variant="primary"
+              />
+            </View>
+
+            <DataTable
+              columns={cleaningRecordColumns}
+              data={cleaningRecords}
+              onEdit={handleEditCleaningRecord}
+              onDelete={handleDeleteCleaningRecord}
+              loading={loading}
+              emptyMessage="No cleaning records found"
+            />
+          </>
         )}
 
         <Modal
@@ -569,8 +759,10 @@ export default function PrecleaningBinScreen({ navigation }) {
             editingBin ? 'Edit Bin' : 
             editingMagnet ? 'Edit Magnet' :
             editingRouteMapping ? 'Edit Route Mapping' :
+            editingCleaningRecord ? 'Edit Cleaning Record' :
             activeTab === 'bins' ? 'Add Bin' : 
-            activeTab === 'magnets' ? 'Add Magnet' : 'Add Route Mapping'
+            activeTab === 'magnets' ? 'Add Magnet' :
+            activeTab === 'routeMappings' ? 'Add Route Mapping' : 'Add Cleaning Record'
           }
         >
           <ScrollView style={styles.modalContent}>
@@ -659,7 +851,7 @@ export default function PrecleaningBinScreen({ navigation }) {
                   />
                 </View>
               </>
-            ) : (
+            ) : (editingRouteMapping || (!editingBin && !editingMagnet && !editingCleaningRecord && activeTab === 'routeMappings')) ? (
               <>
                 <SelectDropdown
                   label="Magnet *"
@@ -728,6 +920,75 @@ export default function PrecleaningBinScreen({ navigation }) {
                   <Button
                     title={editingRouteMapping ? 'Update' : 'Add'}
                     onPress={handleSubmitRouteMapping}
+                    variant="primary"
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <SelectDropdown
+                  label="Magnet *"
+                  value={cleaningRecordFormData.magnet_id}
+                  onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, magnet_id: value })}
+                  options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
+                  placeholder="Select magnet"
+                />
+
+                <InputField
+                  label="Cleaning Timestamp"
+                  placeholder="Cleaning timestamp"
+                  value={cleaningRecordFormData.cleaning_timestamp ? new Date(cleaningRecordFormData.cleaning_timestamp).toLocaleString() : ''}
+                  editable={false}
+                />
+
+                <InputField
+                  label="Before Cleaning Photo"
+                  placeholder="Select photo"
+                  value={cleaningRecordFormData.before_cleaning_photo?.name || 'No file selected'}
+                  editable={false}
+                />
+                {Platform.OS === 'web' && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, before_cleaning_photo: e.target.files[0] })}
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                <InputField
+                  label="After Cleaning Photo"
+                  placeholder="Select photo"
+                  value={cleaningRecordFormData.after_cleaning_photo?.name || 'No file selected'}
+                  editable={false}
+                />
+                {Platform.OS === 'web' && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, after_cleaning_photo: e.target.files[0] })}
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                <InputField
+                  label="Notes"
+                  placeholder="Enter notes (optional)"
+                  value={cleaningRecordFormData.notes}
+                  onChangeText={(text) => setCleaningRecordFormData({ ...cleaningRecordFormData, notes: text })}
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setModalVisible(false)}
+                    variant="outline"
+                  />
+                  <Button
+                    title={editingCleaningRecord ? 'Update' : 'Add'}
+                    onPress={handleSubmitCleaningRecord}
                     variant="primary"
                   />
                 </View>
