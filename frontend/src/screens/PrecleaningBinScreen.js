@@ -23,7 +23,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     bin_number: '',
     capacity: '',
     current_quantity: '',
-    material_type: '',
     status: 'Active',
   });
 
@@ -32,13 +31,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     { label: 'Inactive', value: 'Inactive' },
     { label: 'Full', value: 'Full' },
     { label: 'Maintenance', value: 'Maintenance' },
-  ];
-
-  const materialOptions = [
-    { label: 'Wheat', value: 'Wheat' },
-    { label: 'Rice', value: 'Rice' },
-    { label: 'Corn', value: 'Corn' },
-    { label: 'Barley', value: 'Barley' },
   ];
 
   useEffect(() => {
@@ -64,7 +56,6 @@ export default function PrecleaningBinScreen({ navigation }) {
       bin_number: '',
       capacity: '',
       current_quantity: '',
-      material_type: '',
       status: 'Active',
     });
     setModalVisible(true);
@@ -76,7 +67,6 @@ export default function PrecleaningBinScreen({ navigation }) {
       bin_number: bin.bin_number,
       capacity: String(bin.capacity),
       current_quantity: String(bin.current_quantity || 0),
-      material_type: bin.material_type || '',
       status: bin.status,
     });
     setModalVisible(true);
@@ -150,7 +140,6 @@ export default function PrecleaningBinScreen({ navigation }) {
         bin_number: formData.bin_number.trim(),
         capacity: capacity,
         current_quantity: currentQuantity,
-        material_type: formData.material_type || null,
         status: formData.status,
       };
 
@@ -176,7 +165,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     { field: 'bin_number', label: 'Bin Number', flex: 1 },
     { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
     { field: 'current_quantity', label: 'Current Qty (tons)', flex: 1 },
-    { field: 'material_type', label: 'Material Type', flex: 1 },
     { field: 'status', label: 'Status', flex: 1 },
   ];
 
@@ -227,14 +215,6 @@ export default function PrecleaningBinScreen({ navigation }) {
               value={formData.current_quantity}
               onChangeText={(text) => setFormData({ ...formData, current_quantity: text })}
               keyboardType="numeric"
-            />
-
-            <SelectDropdown
-              label="Material Type"
-              value={formData.material_type}
-              onValueChange={(value) => setFormData({ ...formData, material_type: value })}
-              options={materialOptions}
-              placeholder="Select material type"
             />
 
             <SelectDropdown
