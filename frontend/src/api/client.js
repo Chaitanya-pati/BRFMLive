@@ -108,6 +108,14 @@ export const binApi = {
   delete: (id) => api.delete(`/bins/${id}`),
 };
 
+export const magnetApi = {
+  getAll: () => api.get("/magnets"),
+  getById: (id) => api.get(`/magnets/${id}`),
+  create: (data) => api.post("/magnets", data),
+  update: (id, data) => api.put(`/magnets/${id}`, data),
+  delete: (id) => api.delete(`/magnets/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },

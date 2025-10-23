@@ -210,5 +210,26 @@ class Bin(BinBase):
     class Config:
         from_attributes = True
 
+class MagnetBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    status: BinStatusEnum = BinStatusEnum.ACTIVE
+
+class MagnetCreate(MagnetBase):
+    pass
+
+class MagnetUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[BinStatusEnum] = None
+
+class Magnet(MagnetBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()

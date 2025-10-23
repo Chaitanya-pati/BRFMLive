@@ -665,6 +665,64 @@ def delete_bin(bin_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete bin: {str(e)}")
 
+@app.post("/api/magnets", response_model=schemas.Magnet)
+def create_magnet(magnet_data: schemas.MagnetCreate, db: Session = Depends(get_db)):
+    db_magnet = models.Magnet(**magnet_data.dict())
+    db.add(db_magnet)
+    db.commit()
+    db.refresh(db_magnet)
+    return db_magnet
+
+@app.get("/api/magnets", response_model=List[schemas.Magnet])
+def get_magnets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    magnets = db.query(models.Magnet).offset(skip).limit(limit).all()
+    return magnets
+
+@app.get("/api/magnets/{magnet_id}", response_model=schemas.Magnet)
+def get_magnet(magnet_id: int, db: Session = Depends(get_db)):
+    magnet_data = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
+    if not magnet_data:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+    return magnet_data
+
+@app.put("/api/magnets/{magnet_id}", response_model=schemas.Magnet)
+def update_magnet(magnet_id: int, magnet_update: schemas.MagnetUpdate, db: Session = Depends(get_db)):
+    db_magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
+    if not db_magnet:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+
+    update_data = magnet_update.dict(exclude_unset=True)
+    
+    # Check for duplicate name if it's being updated
+    if 'name' in update_data and update_data['name'] != db_magnet.name:
+        existing_magnet = db.query(models.Magnet).filter(
+            models.Magnet.name == update_data['name'],
+            models.Magnet.id != magnet_id
+        ).first()
+        if existing_magnet:
+            raise HTTPException(status_code=400, detail="Magnet name already exists")
+    
+    for key, value in update_data.items():
+        setattr(db_magnet, key, value)
+
+    db.commit()
+    db.refresh(db_magnet)
+    return db_magnet
+
+@app.delete("/api/magnets/{magnet_id}")
+def delete_magnet(magnet_id: int, db: Session = Depends(get_db)):
+    db_magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
+    if not db_magnet:
+        raise HTTPException(status_code=404, detail="Magnet not found")
+
+    try:
+        db.delete(db_magnet)
+        db.commit()
+        return {"message": "Magnet deleted successfully", "id": magnet_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete magnet: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
