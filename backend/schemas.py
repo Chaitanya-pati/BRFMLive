@@ -8,6 +8,12 @@ class ClaimStatusEnum(str, Enum):
     IN_PROGRESS = "In Progress"
     CLOSED = "Closed"
 
+class BinStatusEnum(str, Enum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
+    MAINTENANCE = "Maintenance"
+    FULL = "Full"
+
 class SupplierBase(BaseModel):
     supplier_name: str
     contact_person: Optional[str] = None
@@ -178,6 +184,31 @@ class UnloadingEntry(UnloadingEntryBase):
 class UnloadingEntryWithDetails(UnloadingEntry):
     vehicle_entry: VehicleEntryWithSupplier
     godown: GodownMaster
+
+class BinBase(BaseModel):
+    bin_number: str
+    capacity: float
+    current_quantity: Optional[float] = 0.0
+    material_type: Optional[str] = None
+    status: BinStatusEnum = BinStatusEnum.ACTIVE
+
+class BinCreate(BinBase):
+    pass
+
+class BinUpdate(BaseModel):
+    bin_number: Optional[str] = None
+    capacity: Optional[float] = None
+    current_quantity: Optional[float] = None
+    material_type: Optional[str] = None
+    status: Optional[BinStatusEnum] = None
+
+class Bin(BinBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()

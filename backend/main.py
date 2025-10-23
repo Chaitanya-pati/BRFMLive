@@ -607,6 +607,50 @@ def delete_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Unloading entry deleted successfully"}
 
+@app.post("/api/bins", response_model=schemas.Bin)
+def create_bin(bin_data: schemas.BinCreate, db: Session = Depends(get_db)):
+    db_bin = models.Bin(**bin_data.dict())
+    db.add(db_bin)
+    db.commit()
+    db.refresh(db_bin)
+    return db_bin
+
+@app.get("/api/bins", response_model=List[schemas.Bin])
+def get_bins(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    bins = db.query(models.Bin).offset(skip).limit(limit).all()
+    return bins
+
+@app.get("/api/bins/{bin_id}", response_model=schemas.Bin)
+def get_bin(bin_id: int, db: Session = Depends(get_db)):
+    bin_data = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
+    if not bin_data:
+        raise HTTPException(status_code=404, detail="Bin not found")
+    return bin_data
+
+@app.put("/api/bins/{bin_id}", response_model=schemas.Bin)
+def update_bin(bin_id: int, bin_update: schemas.BinUpdate, db: Session = Depends(get_db)):
+    db_bin = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
+    if not db_bin:
+        raise HTTPException(status_code=404, detail="Bin not found")
+
+    update_data = bin_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_bin, key, value)
+
+    db.commit()
+    db.refresh(db_bin)
+    return db_bin
+
+@app.delete("/api/bins/{bin_id}")
+def delete_bin(bin_id: int, db: Session = Depends(get_db)):
+    db_bin = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
+    if not db_bin:
+        raise HTTPException(status_code=404, detail="Bin not found")
+
+    db.delete(db_bin)
+    db.commit()
+    return {"message": "Bin deleted successfully"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

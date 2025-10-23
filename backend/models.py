@@ -9,6 +9,12 @@ class ClaimStatus(str, enum.Enum):
     IN_PROGRESS = "In Progress"
     CLOSED = "Closed"
 
+class BinStatus(str, enum.Enum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
+    MAINTENANCE = "Maintenance"
+    FULL = "Full"
+
 class Supplier(Base):
     __tablename__ = "suppliers"
     
@@ -141,3 +147,15 @@ class UnloadingEntry(Base):
     
     vehicle_entry = relationship("VehicleEntry")
     godown = relationship("GodownMaster", back_populates="unloading_entries")
+
+class Bin(Base):
+    __tablename__ = "bins"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    bin_number = Column(String(100), nullable=False, unique=True)
+    capacity = Column(Float, nullable=False)
+    current_quantity = Column(Float, default=0.0)
+    material_type = Column(String(100))
+    status = Column(Enum(BinStatus), default=BinStatus.ACTIVE, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
