@@ -8,6 +8,7 @@ import LabTestScreen from './src/screens/LabTestScreen';
 import ClaimTrackingScreen from './src/screens/ClaimTrackingScreen';
 import MasterViewScreen from './src/screens/MasterViewScreen';
 import UnloadingEntryScreen from './src/screens/UnloadingEntryScreen';
+import PrecleaningBinScreen from './src/screens/PrecleaningBinScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ export default function App() {
         <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} />
         <Stack.Screen name="MasterView" component={MasterViewScreen} />
         <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
+        <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
