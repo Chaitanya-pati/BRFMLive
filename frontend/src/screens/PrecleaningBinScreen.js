@@ -49,7 +49,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     source_godown_id: '',
     source_bin_id: '',
     destination_bin_id: '',
-    cleaning_interval_hours: '3',
+    cleaning_interval_hours: '300', // in seconds
   });
 
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
@@ -93,10 +93,10 @@ export default function PrecleaningBinScreen({ navigation }) {
       activeTransferSessions.forEach(session => {
         const startTime = new Date(session.start_time);
         const now = new Date();
-        const elapsedHours = (now - startTime) / (1000 * 60 * 60);
-        const cleaningIntervalHours = session.cleaning_interval_hours || 3;
+        const elapsedSeconds = (now - startTime) / 1000;
+        const cleaningIntervalSeconds = session.cleaning_interval_hours || 300; // default 5 minutes
 
-        const intervalsPassed = Math.floor(elapsedHours / cleaningIntervalHours);
+        const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
 
         if (intervalsPassed > 0) {
           const lastAlertInterval = lastAlertTimes[session.id] || 0;
@@ -104,14 +104,26 @@ export default function PrecleaningBinScreen({ navigation }) {
           if (intervalsPassed > lastAlertInterval) {
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
-            const hoursElapsed = (intervalsPassed * cleaningIntervalHours).toFixed(1);
+            const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
+            const minutes = Math.floor(timeElapsed / 60);
+            const seconds = Math.floor(timeElapsed % 60);
+            const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
-            const alertMessage = `Cleaning Alert: Transfer session from ${sourceName} to Bin ${destName} has been running for ${hoursElapsed} hours. Magnet cleaning may be required.`;
+            const alertMessage = `🔔 Magnet Cleaning Required!\n\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\n\nPlease clean the magnet now!`;
 
+            // Play notification sound
             if (Platform.OS === 'web') {
-              alert(alertMessage);
+              try {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+l9r0yHosBSJ1xe/glEILElyx6OyrWBUIRJze8L9qIAUuhM/z1YU1Bhxqvu7mnEoODlOq5O+zYBoHPJXY88p8LgUecL/v45dGChFcsujuq1oVB0Kb3fLBaiEELIHN89OENAM');
+                audio.play().catch(() => {});
+              } catch (e) {}
+              
+              // Show custom notification with bell icon
+              showCleaningNotification(alertMessage, session.id);
             } else {
-              Alert.alert('Cleaning Reminder', alertMessage);
+              Alert.alert('🔔 Cleaning Reminder', alertMessage, [
+                { text: 'OK', style: 'default' }
+              ]);
             }
 
             setLastAlertTimes(prev => ({
@@ -121,10 +133,114 @@ export default function PrecleaningBinScreen({ navigation }) {
           }
         }
       });
-    }, 60000);
+    }, 5000); // Check every 5 seconds
 
     return () => clearInterval(intervalId);
   }, [transferSessions, godowns, bins, lastAlertTimes]);
+
+  const showCleaningNotification = (message, sessionId) => {
+    // Remove any existing notifications for this session
+    const existingNotification = document.getElementById(`cleaning-notification-${sessionId}`);
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    const notification = document.createElement('div');
+    notification.id = `cleaning-notification-${sessionId}`;
+    notification.className = 'cleaning-notification';
+    
+    notification.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        padding: 20px 24px;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.4), 0 0 0 1px rgba(255,255,255,0.1);
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        z-index: 10000;
+        animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), shake 0.5s ease-in-out 0.4s;
+        min-width: 350px;
+        max-width: 500px;
+        border: 2px solid rgba(255,255,255,0.2);
+      ">
+        <div style="
+          background: rgba(255,255,255,0.25);
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 28px;
+          animation: bellRing 1s ease-in-out infinite;
+          flex-shrink: 0;
+        ">🔔</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+            ⚠️ MAGNET CLEANING REQUIRED
+          </div>
+          <div style="font-size: 14px; opacity: 0.95; white-space: pre-line; line-height: 1.5;">
+            ${message.replace(/🔔 Magnet Cleaning Required!\n\n/, '')}
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+          padding: 0;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
+      </div>
+    `;
+
+    // Add animation styles if not already present
+    if (!document.getElementById('cleaning-notification-styles')) {
+      const style = document.createElement('style');
+      style.id = 'cleaning-notification-styles';
+      style.textContent = `
+        @keyframes slideInRight {
+          from {
+            transform: translateX(500px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        @keyframes bellRing {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30% { transform: rotate(-15deg); }
+          20%, 40% { transform: rotate(15deg); }
+          50% { transform: rotate(0deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(notification);
+
+    // Keep notification visible (don't auto-remove for cleaning alerts)
+  };
 
   const fetchBins = async () => {
     try {
@@ -785,7 +901,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       flex: 1.5,
       render: (val) => val?.bin_number || '-'
     },
-    { field: 'cleaning_interval_hours', label: 'Cleaning Interval (hrs)', flex: 1 },
+    { field: 'cleaning_interval_hours', label: 'Cleaning Interval (sec)', flex: 1 },
   ];
 
   const cleaningRecordColumns = [
@@ -1166,7 +1282,7 @@ export default function PrecleaningBinScreen({ navigation }) {
                   label="Cleaning Interval (seconds) *"
                   value={routeMappingFormData.cleaning_interval_hours}
                   onChangeText={(text) => setRouteMappingFormData({ ...routeMappingFormData, cleaning_interval_hours: text })}
-                  placeholder="Enter cleaning interval in seconds"
+                  placeholder="e.g., 300 (for 5 minutes)"
                   keyboardType="numeric"
                 />
 
