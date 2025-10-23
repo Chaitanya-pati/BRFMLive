@@ -13,16 +13,17 @@ const getApiUrl = () => {
     const hostname = window.location.hostname;
 
     if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
-      // Use the backend port with proper URL construction
-      const backendHostname = hostname.replace(/:\d+/, ""); // Remove any port from hostname
-      return `${protocol}//${backendHostname}-8000.${hostname.split(".").slice(-2).join(".")}/api`;
+      // In Replit, backend is on the same domain but port 8000
+      return `${protocol}//${hostname}:8000/api`;
     }
   }
 
   return "http://0.0.0.0:8000/api";
 };
 
-const API_URL = "http://0.0.0.0:8000/api";
+const API_URL = getApiUrl();
+
+console.log("API Base URL:", API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,
