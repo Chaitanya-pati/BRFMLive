@@ -49,7 +49,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     source_godown_id: '',
     source_bin_id: '',
     destination_bin_id: '',
-    cleaning_interval_hours: '300', // in seconds
+    cleaning_interval_hours: '30', // in seconds (30 seconds for easy testing)
   });
 
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
