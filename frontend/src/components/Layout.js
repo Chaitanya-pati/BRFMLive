@@ -223,7 +223,7 @@ export default function Layout({ children, title, navigation, currentRoute }) {
       section: "Operations",
     },
     {
-      name: "Precleaning Bin",
+      name: "Precleaning Process",
       route: "PrecleaningBin",
       icon: BinIcon,
       section: "Operations",

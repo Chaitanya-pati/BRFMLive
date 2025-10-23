@@ -159,7 +159,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   ];
 
   return (
-    <Layout title="Precleaning Bin" navigation={navigation} currentRoute="PrecleaningBin">
+    <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
       <View style={styles.container}>
         <View style={styles.headerActions}>
           <Button
