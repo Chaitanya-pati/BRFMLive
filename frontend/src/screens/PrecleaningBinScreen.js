@@ -40,7 +40,9 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const [routeMappingFormData, setRouteMappingFormData] = useState({
     magnet_id: '',
+    source_type: 'godown', // 'godown' or 'bin'
     source_godown_id: '',
+    source_bin_id: '',
     destination_bin_id: '',
     cleaning_interval_hours: '3',
   });
@@ -137,7 +139,9 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingRouteMapping(null);
     setRouteMappingFormData({
       magnet_id: '',
+      source_type: 'godown',
       source_godown_id: '',
+      source_bin_id: '',
       destination_bin_id: '',
       cleaning_interval_hours: '3',
     });
@@ -148,9 +152,12 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingRouteMapping(mapping);
     setEditingBin(null);
     setEditingMagnet(null);
+    const sourceType = mapping.source_godown_id ? 'godown' : 'bin';
     setRouteMappingFormData({
       magnet_id: String(mapping.magnet_id),
-      source_godown_id: String(mapping.source_godown_id),
+      source_type: sourceType,
+      source_godown_id: mapping.source_godown_id ? String(mapping.source_godown_id) : '',
+      source_bin_id: mapping.source_bin_id ? String(mapping.source_bin_id) : '',
       destination_bin_id: String(mapping.destination_bin_id),
       cleaning_interval_hours: String(mapping.cleaning_interval_hours),
     });
@@ -198,7 +205,11 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleSubmitRouteMapping = async () => {
-    if (!routeMappingFormData.magnet_id || !routeMappingFormData.source_godown_id || 
+    const sourceId = routeMappingFormData.source_type === 'godown' 
+      ? routeMappingFormData.source_godown_id 
+      : routeMappingFormData.source_bin_id;
+
+    if (!routeMappingFormData.magnet_id || !sourceId || 
         !routeMappingFormData.destination_bin_id || !routeMappingFormData.cleaning_interval_hours) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -208,10 +219,18 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       const mappingData = {
         magnet_id: parseInt(routeMappingFormData.magnet_id),
-        source_godown_id: parseInt(routeMappingFormData.source_godown_id),
         destination_bin_id: parseInt(routeMappingFormData.destination_bin_id),
         cleaning_interval_hours: parseInt(routeMappingFormData.cleaning_interval_hours),
       };
+
+      // Add the appropriate source ID
+      if (routeMappingFormData.source_type === 'godown') {
+        mappingData.source_godown_id = parseInt(routeMappingFormData.source_godown_id);
+        mappingData.source_bin_id = null;
+      } else {
+        mappingData.source_bin_id = parseInt(routeMappingFormData.source_bin_id);
+        mappingData.source_godown_id = null;
+      }
 
       if (editingRouteMapping) {
         await routeMagnetMappingApi.update(editingRouteMapping.id, mappingData);
@@ -433,10 +452,17 @@ export default function PrecleaningBinScreen({ navigation }) {
       render: (val) => val?.name || '-'
     },
     { 
-      field: 'source_godown', 
-      label: 'Source Godown', 
+      field: 'source', 
+      label: 'Source', 
       flex: 1.5,
-      render: (val) => val?.name || '-'
+      render: (val, row) => {
+        if (row.source_godown) {
+          return `Godown: ${row.source_godown.name}`;
+        } else if (row.source_bin) {
+          return `Bin: ${row.source_bin.bin_number}`;
+        }
+        return '-';
+      }
     },
     { 
       field: 'destination_bin', 
@@ -644,12 +670,38 @@ export default function PrecleaningBinScreen({ navigation }) {
                 />
 
                 <SelectDropdown
-                  label="Source Godown *"
-                  value={routeMappingFormData.source_godown_id}
-                  onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_godown_id: value })}
-                  options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
-                  placeholder="Select source godown"
+                  label="Source Type *"
+                  value={routeMappingFormData.source_type}
+                  onValueChange={(value) => setRouteMappingFormData({ 
+                    ...routeMappingFormData, 
+                    source_type: value,
+                    source_godown_id: '',
+                    source_bin_id: ''
+                  })}
+                  options={[
+                    { label: 'Godown', value: 'godown' },
+                    { label: 'Bin', value: 'bin' }
+                  ]}
+                  placeholder="Select source type"
                 />
+
+                {routeMappingFormData.source_type === 'godown' ? (
+                  <SelectDropdown
+                    label="Source Godown *"
+                    value={routeMappingFormData.source_godown_id}
+                    onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_godown_id: value })}
+                    options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
+                    placeholder="Select source godown"
+                  />
+                ) : (
+                  <SelectDropdown
+                    label="Source Bin *"
+                    value={routeMappingFormData.source_bin_id}
+                    onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_bin_id: value })}
+                    options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
+                    placeholder="Select source bin"
+                  />
+                )}
 
                 <SelectDropdown
                   label="Destination Bin *"

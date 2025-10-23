@@ -175,7 +175,8 @@ class RouteMagnetMapping(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=False)
-    source_godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
+    source_godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=True)
+    source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=True)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -183,4 +184,5 @@ class RouteMagnetMapping(Base):
     
     magnet = relationship("Magnet")
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])

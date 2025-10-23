@@ -725,14 +725,27 @@ def delete_magnet(magnet_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/route-magnet-mappings", response_model=schemas.RouteMagnetMapping)
 def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, db: Session = Depends(get_db)):
+    # Validate that either source_godown_id or source_bin_id is provided
+    if not mapping_data.source_godown_id and not mapping_data.source_bin_id:
+        raise HTTPException(status_code=400, detail="Either source_godown_id or source_bin_id must be provided")
+    
+    if mapping_data.source_godown_id and mapping_data.source_bin_id:
+        raise HTTPException(status_code=400, detail="Cannot specify both source_godown_id and source_bin_id")
+    
     # Validate foreign keys
     magnet = db.query(models.Magnet).filter(models.Magnet.id == mapping_data.magnet_id).first()
     if not magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
     
-    godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == mapping_data.source_godown_id).first()
-    if not godown:
-        raise HTTPException(status_code=404, detail="Source godown not found")
+    if mapping_data.source_godown_id:
+        godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == mapping_data.source_godown_id).first()
+        if not godown:
+            raise HTTPException(status_code=404, detail="Source godown not found")
+    
+    if mapping_data.source_bin_id:
+        source_bin = db.query(models.Bin).filter(models.Bin.id == mapping_data.source_bin_id).first()
+        if not source_bin:
+            raise HTTPException(status_code=404, detail="Source bin not found")
     
     bin_data = db.query(models.Bin).filter(models.Bin.id == mapping_data.destination_bin_id).first()
     if not bin_data:
@@ -771,9 +784,16 @@ def update_route_magnet_mapping(mapping_id: int, mapping_update: schemas.RouteMa
             raise HTTPException(status_code=404, detail="Magnet not found")
     
     if 'source_godown_id' in update_data:
-        godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == update_data['source_godown_id']).first()
-        if not godown:
-            raise HTTPException(status_code=404, detail="Source godown not found")
+        if update_data['source_godown_id']:
+            godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == update_data['source_godown_id']).first()
+            if not godown:
+                raise HTTPException(status_code=404, detail="Source godown not found")
+    
+    if 'source_bin_id' in update_data:
+        if update_data['source_bin_id']:
+            source_bin = db.query(models.Bin).filter(models.Bin.id == update_data['source_bin_id']).first()
+            if not source_bin:
+                raise HTTPException(status_code=404, detail="Source bin not found")
     
     if 'destination_bin_id' in update_data:
         bin_data = db.query(models.Bin).filter(models.Bin.id == update_data['destination_bin_id']).first()

@@ -233,7 +233,8 @@ class Magnet(MagnetBase):
 
 class RouteMagnetMappingBase(BaseModel):
     magnet_id: int
-    source_godown_id: int
+    source_godown_id: Optional[int] = None
+    source_bin_id: Optional[int] = None
     destination_bin_id: int
     cleaning_interval_hours: int = 3
 
@@ -243,6 +244,7 @@ class RouteMagnetMappingCreate(RouteMagnetMappingBase):
 class RouteMagnetMappingUpdate(BaseModel):
     magnet_id: Optional[int] = None
     source_godown_id: Optional[int] = None
+    source_bin_id: Optional[int] = None
     destination_bin_id: Optional[int] = None
     cleaning_interval_hours: Optional[int] = None
 
@@ -256,7 +258,8 @@ class RouteMagnetMapping(RouteMagnetMappingBase):
 
 class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     magnet: Magnet
-    source_godown: GodownMaster
+    source_godown: Optional[GodownMaster] = None
+    source_bin: Optional[Bin] = None
     destination_bin: Bin
 
 # Resolve forward references
