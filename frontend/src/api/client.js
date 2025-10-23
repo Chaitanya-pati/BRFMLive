@@ -9,16 +9,16 @@ const getApiUrl = () => {
   }
 
   if (typeof window !== "undefined") {
-    const protocol = window.location.protocol;
     const hostname = window.location.hostname;
 
     if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
       // In Replit, backend is on the same domain but port 8000
-      return `${protocol}//${hostname}:8000/api`;
+      // Use the backend URL directly
+      return `https://${hostname.replace(/:\d+$/, '')}:8000/api`;
     }
   }
 
-  return "http://0.0.0.0:8000/api";
+  return "http://localhost:8000/api";
 };
 
 const API_URL = getApiUrl();
