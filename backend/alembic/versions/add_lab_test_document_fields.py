@@ -1,20 +1,22 @@
 
 """add lab test document fields
 
-Revision ID: add_lab_test_doc_fields
+Revision ID: add_lab_test_doc_001
 Revises: add_category_field
 Create Date: 2025-01-23 00:00:00.000000
 
 """
+from typing import Sequence, Union
+
 from alembic import op
 import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'add_lab_test_doc_fields'
-down_revision = 'add_category_field'
-branch_labels = None
-depends_on = None
+revision: str = 'add_lab_test_doc_001'
+down_revision: Union[str, None] = 'add_category_field'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
