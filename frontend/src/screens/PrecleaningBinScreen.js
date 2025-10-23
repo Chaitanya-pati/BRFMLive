@@ -88,20 +88,34 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      const activeTransferSessions = transferSessions.filter(session => !session.end_time);
+      const activeTransferSessions = transferSessions.filter(session => !session.stop_timestamp);
+      
+      console.log('🔍 Checking notifications...', {
+        totalSessions: transferSessions.length,
+        activeSessions: activeTransferSessions.length
+      });
 
       activeTransferSessions.forEach(session => {
-        const startTime = new Date(session.start_time);
+        const startTime = new Date(session.start_timestamp);
         const now = new Date();
         const elapsedSeconds = (now - startTime) / 1000;
         const cleaningIntervalSeconds = session.cleaning_interval_hours || 300; // default 5 minutes
 
         const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+        
+        console.log(`📊 Session ${session.id}:`, {
+          elapsed: Math.floor(elapsedSeconds),
+          interval: cleaningIntervalSeconds,
+          intervalsPassed,
+          lastAlert: lastAlertTimes[session.id] || 0
+        });
 
         if (intervalsPassed > 0) {
           const lastAlertInterval = lastAlertTimes[session.id] || 0;
 
           if (intervalsPassed > lastAlertInterval) {
+            console.log('🔔 Triggering notification for session', session.id);
+            
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
             const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
@@ -116,7 +130,9 @@ export default function PrecleaningBinScreen({ navigation }) {
               try {
                 const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+l9r0yHosBSJ1xe/glEILElyx6OyrWBUIRJze8L9qIAUuhM/z1YU1Bhxqvu7mnEoODlOq5O+zYBoHPJXY88p8LgUecL/v45dGChFcsujuq1oVB0Kb3fLBaiEELIHN89OENAM');
                 audio.play().catch(() => {});
-              } catch (e) {}
+              } catch (e) {
+                console.error('Audio play error:', e);
+              }
               
               // Show custom notification with bell icon
               showCleaningNotification(alertMessage, session.id);
