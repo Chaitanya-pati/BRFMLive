@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@expo/webpack-config": "^19.0.1"
+    "@expo/webpack-config": "^19.0.1",
+    "babel-preset-expo": "^54.0.6"
   }
 }
