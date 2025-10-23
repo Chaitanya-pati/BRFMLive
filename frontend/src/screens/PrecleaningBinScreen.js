@@ -83,32 +83,46 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDelete = async (bin) => {
-    Alert.alert(
-      'Confirm Delete',
-      `Are you sure you want to delete bin ${bin.bin_number}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const response = await binApi.delete(bin.id);
-              console.log('Delete response:', response);
-              await fetchBins();
-              Alert.alert('Success', 'Bin deleted successfully');
-            } catch (error) {
-              console.error('Error deleting bin:', error);
-              console.error('Error details:', error.response);
-              Alert.alert('Error', error.response?.data?.detail || error.message || 'Failed to delete bin');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    const confirmDelete = Platform.OS === 'web' 
+      ? window.confirm(`Are you sure you want to delete bin ${bin.bin_number}?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to delete bin ${bin.bin_number}?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      console.log('Deleting bin with ID:', bin.id);
+      const response = await binApi.delete(bin.id);
+      console.log('Delete response:', response);
+      await fetchBins();
+      
+      if (Platform.OS === 'web') {
+        alert('Bin deleted successfully');
+      } else {
+        Alert.alert('Success', 'Bin deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting bin:', error);
+      console.error('Error details:', error.response);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete bin';
+      
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
