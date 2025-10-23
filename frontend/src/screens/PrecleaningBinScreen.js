@@ -29,6 +29,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [editingTransferSession, setEditingTransferSession] = useState(null);
   const [stopTransferModal, setStopTransferModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lastAlertTimes, setLastAlertTimes] = useState({});
 
   const [binFormData, setBinFormData] = useState({
     bin_number: '',
@@ -85,6 +86,46 @@ export default function PrecleaningBinScreen({ navigation }) {
     fetchGodowns();
     fetchTransferSessions();
   }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const activeTransferSessions = transferSessions.filter(session => !session.end_time);
+      
+      activeTransferSessions.forEach(session => {
+        const startTime = new Date(session.start_time);
+        const now = new Date();
+        const elapsedHours = (now - startTime) / (1000 * 60 * 60);
+        const cleaningIntervalHours = session.cleaning_interval_hours || 3;
+        
+        const intervalsPassed = Math.floor(elapsedHours / cleaningIntervalHours);
+        
+        if (intervalsPassed > 0) {
+          const lastAlertInterval = lastAlertTimes[session.id] || 0;
+          
+          if (intervalsPassed > lastAlertInterval) {
+            const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
+            const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
+            const hoursElapsed = (intervalsPassed * cleaningIntervalHours).toFixed(1);
+            
+            const alertMessage = `Cleaning Alert: Transfer session from ${sourceName} to Bin ${destName} has been running for ${hoursElapsed} hours. Magnet cleaning may be required.`;
+            
+            if (Platform.OS === 'web') {
+              alert(alertMessage);
+            } else {
+              Alert.alert('Cleaning Reminder', alertMessage);
+            }
+            
+            setLastAlertTimes(prev => ({
+              ...prev,
+              [session.id]: intervalsPassed
+            }));
+          }
+        }
+      });
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [transferSessions, godowns, bins, lastAlertTimes]);
 
   const fetchBins = async () => {
     try {
@@ -382,6 +423,11 @@ export default function PrecleaningBinScreen({ navigation }) {
       
       Alert.alert('Success', 'Transfer session stopped successfully');
       setStopTransferModal(false);
+      setLastAlertTimes(prev => {
+        const updated = { ...prev };
+        delete updated[editingTransferSession.id];
+        return updated;
+      });
       setEditingTransferSession(null);
       await fetchTransferSessions();
       await fetchBins();

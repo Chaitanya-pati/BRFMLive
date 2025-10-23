@@ -202,6 +202,7 @@ class TransferSession(Base):
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
     status = Column(Enum(TransferSessionStatus), default=TransferSessionStatus.ACTIVE, nullable=False)
+    cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

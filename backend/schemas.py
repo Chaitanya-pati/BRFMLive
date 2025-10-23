@@ -286,6 +286,7 @@ class TransferSession(TransferSessionBase):
     stop_timestamp: Optional[datetime] = None
     transferred_quantity: Optional[float] = None
     status: TransferSessionStatusEnum
+    cleaning_interval_hours: int
     created_at: datetime
     updated_at: datetime
     

@@ -981,24 +981,27 @@ def start_transfer_session(
     if not destination_bin:
         raise HTTPException(status_code=404, detail="Destination bin not found")
     
+    # Get cleaning interval from route mapping
+    route_mapping = db.query(models.RouteMagnetMapping).filter(
+        models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
+        models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
+    ).first()
+    
+    cleaning_interval = route_mapping.cleaning_interval_hours if route_mapping else 3
+    
     # Create new transfer session
     db_session = models.TransferSession(
         source_godown_id=session_data.source_godown_id,
         destination_bin_id=session_data.destination_bin_id,
         start_timestamp=datetime.utcnow(),
         status=models.TransferSessionStatus.ACTIVE,
+        cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
     )
     
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
-    
-    # Retrieve route magnets for this transfer route
-    route_magnets = db.query(models.RouteMagnetMapping).filter(
-        models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
-        models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
-    ).all()
     
     return db_session
 
