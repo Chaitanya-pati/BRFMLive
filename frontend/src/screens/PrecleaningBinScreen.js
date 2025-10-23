@@ -109,7 +109,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setModalVisible(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (bin) => {
     Alert.alert(
       'Confirm Delete',
       'Are you sure you want to delete this bin?',
@@ -118,8 +118,17 @@ export default function PrecleaningBinScreen({ navigation }) {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setBins(bins.filter(bin => bin.id !== id));
+          onPress: async () => {
+            try {
+              // TODO: Replace with actual API call when backend endpoint is ready
+              // await axios.delete(`${API_URL}/api/precleaning-bins/${bin.id}`);
+              
+              setBins(bins.filter(b => b.id !== bin.id));
+              Alert.alert('Success', 'Bin deleted successfully');
+            } catch (error) {
+              console.error('Error deleting bin:', error);
+              Alert.alert('Error', 'Failed to delete bin');
+            }
           },
         },
       ]
@@ -173,7 +182,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           columns={columns}
           data={bins}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onDelete={(bin) => handleDelete(bin)}
           loading={loading}
           emptyMessage="No bins found"
         />
