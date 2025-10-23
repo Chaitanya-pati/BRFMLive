@@ -19,12 +19,15 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [magnets, setMagnets] = useState([]);
   const [routeMappings, setRouteMappings] = useState([]);
   const [cleaningRecords, setCleaningRecords] = useState([]);
+  const [transferSessions, setTransferSessions] = useState([]);
   const [godowns, setGodowns] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingBin, setEditingBin] = useState(null);
   const [editingMagnet, setEditingMagnet] = useState(null);
   const [editingRouteMapping, setEditingRouteMapping] = useState(null);
   const [editingCleaningRecord, setEditingCleaningRecord] = useState(null);
+  const [editingTransferSession, setEditingTransferSession] = useState(null);
+  const [stopTransferModal, setStopTransferModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [binFormData, setBinFormData] = useState({
@@ -57,6 +60,16 @@ export default function PrecleaningBinScreen({ navigation }) {
     after_cleaning_photo: null,
   });
 
+  const [transferSessionFormData, setTransferSessionFormData] = useState({
+    source_godown_id: '',
+    destination_bin_id: '',
+    notes: '',
+  });
+
+  const [stopTransferFormData, setStopTransferFormData] = useState({
+    transferred_quantity: '',
+  });
+
   const statusOptions = [
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' },
@@ -70,6 +83,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     fetchRouteMappings();
     fetchCleaningRecords();
     fetchGodowns();
+    fetchTransferSessions();
   }, []);
 
   const fetchBins = async () => {
@@ -128,6 +142,19 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error fetching cleaning records:', error);
       Alert.alert('Error', 'Failed to load cleaning records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTransferSessions = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/transfer-sessions');
+      setTransferSessions(response.data);
+    } catch (error) {
+      console.error('Error fetching transfer sessions:', error);
+      Alert.alert('Error', 'Failed to load transfer sessions');
     } finally {
       setLoading(false);
     }
@@ -294,6 +321,113 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error saving cleaning record:', error);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartTransfer = () => {
+    setEditingTransferSession(null);
+    setTransferSessionFormData({
+      source_godown_id: '',
+      destination_bin_id: '',
+      notes: '',
+    });
+    setModalVisible(true);
+  };
+
+  const handleSubmitStartTransfer = async () => {
+    if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id) {
+      Alert.alert('Error', 'Please select both source godown and destination bin');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post('/transfer-sessions/start', {
+        source_godown_id: parseInt(transferSessionFormData.source_godown_id),
+        destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
+        notes: transferSessionFormData.notes,
+      });
+      
+      Alert.alert('Success', 'Transfer session started successfully');
+      setModalVisible(false);
+      await fetchTransferSessions();
+    } catch (error) {
+      console.error('Error starting transfer:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to start transfer session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStopTransfer = (session) => {
+    setEditingTransferSession(session);
+    setStopTransferFormData({ transferred_quantity: '' });
+    setStopTransferModal(true);
+  };
+
+  const handleSubmitStopTransfer = async () => {
+    if (!stopTransferFormData.transferred_quantity) {
+      Alert.alert('Error', 'Please enter transferred quantity');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post(`/transfer-sessions/${editingTransferSession.id}/stop`, null, {
+        params: { transferred_quantity: parseFloat(stopTransferFormData.transferred_quantity) }
+      });
+      
+      Alert.alert('Success', 'Transfer session stopped successfully');
+      setStopTransferModal(false);
+      setEditingTransferSession(null);
+      await fetchTransferSessions();
+      await fetchBins();
+      await fetchGodowns();
+    } catch (error) {
+      console.error('Error stopping transfer:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to stop transfer session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTransferSession = async (session) => {
+    const confirmDelete = Platform.OS === 'web' 
+      ? window.confirm(`Are you sure you want to delete this transfer session?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to delete this transfer session?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      await api.delete(`/transfer-sessions/${session.id}`);
+      await fetchTransferSessions();
+      
+      if (Platform.OS === 'web') {
+        alert('Transfer session deleted successfully');
+      } else {
+        Alert.alert('Success', 'Transfer session deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting transfer session:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete transfer session';
+      
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -636,6 +770,45 @@ export default function PrecleaningBinScreen({ navigation }) {
     { field: 'notes', label: 'Notes', flex: 2 },
   ];
 
+  const transferSessionColumns = [
+    { 
+      field: 'source_godown', 
+      label: 'Source Godown', 
+      flex: 1.5,
+      render: (val) => val?.name || '-'
+    },
+    { 
+      field: 'destination_bin', 
+      label: 'Destination Bin', 
+      flex: 1.5,
+      render: (val) => val?.bin_number || '-'
+    },
+    { 
+      field: 'start_timestamp', 
+      label: 'Start Time', 
+      flex: 2,
+      render: (val) => val ? new Date(val).toLocaleString() : '-'
+    },
+    { 
+      field: 'stop_timestamp', 
+      label: 'Stop Time', 
+      flex: 2,
+      render: (val) => val ? new Date(val).toLocaleString() : '-'
+    },
+    { 
+      field: 'transferred_quantity', 
+      label: 'Quantity (tons)', 
+      flex: 1,
+      render: (val) => val ? val.toFixed(2) : '-'
+    },
+    { 
+      field: 'status', 
+      label: 'Status', 
+      flex: 1,
+      render: (val) => val ? val.toUpperCase() : '-'
+    },
+  ];
+
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
       <View style={styles.container}>
@@ -670,6 +843,14 @@ export default function PrecleaningBinScreen({ navigation }) {
           >
             <Text style={[styles.tabText, activeTab === 'cleaningRecords' && styles.activeTabText]}>
               Cleaning Records
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'transferSessions' && styles.activeTab]}
+            onPress={() => setActiveTab('transferSessions')}
+          >
+            <Text style={[styles.tabText, activeTab === 'transferSessions' && styles.activeTabText]}>
+              Transfer Sessions
             </Text>
           </TouchableOpacity>
         </View>
@@ -731,6 +912,26 @@ export default function PrecleaningBinScreen({ navigation }) {
               emptyMessage="No route mappings found"
             />
           </>
+        ) : activeTab === 'transferSessions' ? (
+          <>
+            <View style={styles.headerActions}>
+              <Button
+                title="Start Transfer"
+                onPress={handleStartTransfer}
+                variant="primary"
+              />
+            </View>
+
+            <DataTable
+              columns={transferSessionColumns}
+              data={transferSessions}
+              onEdit={(session) => session.status === 'active' ? handleStopTransfer(session) : null}
+              onDelete={handleDeleteTransferSession}
+              loading={loading}
+              emptyMessage="No transfer sessions found"
+              editLabel={(row) => row.status === 'active' ? 'Stop' : null}
+            />
+          </>
         ) : (
           <>
             <View style={styles.headerActions}>
@@ -762,7 +963,8 @@ export default function PrecleaningBinScreen({ navigation }) {
             editingCleaningRecord ? 'Edit Cleaning Record' :
             activeTab === 'bins' ? 'Add Bin' : 
             activeTab === 'magnets' ? 'Add Magnet' :
-            activeTab === 'routeMappings' ? 'Add Route Mapping' : 'Add Cleaning Record'
+            activeTab === 'routeMappings' ? 'Add Route Mapping' :
+            activeTab === 'transferSessions' ? 'Start Transfer Session' : 'Add Cleaning Record'
           }
         >
           <ScrollView style={styles.modalContent}>
@@ -924,6 +1126,46 @@ export default function PrecleaningBinScreen({ navigation }) {
                   />
                 </View>
               </>
+            ) : activeTab === 'transferSessions' ? (
+              <>
+                <SelectDropdown
+                  label="Source Godown *"
+                  value={transferSessionFormData.source_godown_id}
+                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, source_godown_id: value })}
+                  options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
+                  placeholder="Select source godown"
+                />
+
+                <SelectDropdown
+                  label="Destination Bin *"
+                  value={transferSessionFormData.destination_bin_id}
+                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, destination_bin_id: value })}
+                  options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
+                  placeholder="Select destination bin"
+                />
+
+                <InputField
+                  label="Notes"
+                  placeholder="Enter notes (optional)"
+                  value={transferSessionFormData.notes}
+                  onChangeText={(text) => setTransferSessionFormData({ ...transferSessionFormData, notes: text })}
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setModalVisible(false)}
+                    variant="outline"
+                  />
+                  <Button
+                    title="Start Transfer"
+                    onPress={handleSubmitStartTransfer}
+                    variant="primary"
+                  />
+                </View>
+              </>
             ) : (
               <>
                 <SelectDropdown
@@ -994,6 +1236,35 @@ export default function PrecleaningBinScreen({ navigation }) {
                 </View>
               </>
             )}
+          </ScrollView>
+        </Modal>
+
+        <Modal
+          visible={stopTransferModal}
+          onClose={() => setStopTransferModal(false)}
+          title="Stop Transfer Session"
+        >
+          <ScrollView style={styles.modalContent}>
+            <InputField
+              label="Transferred Quantity (tons) *"
+              placeholder="Enter quantity in tons"
+              value={stopTransferFormData.transferred_quantity}
+              onChangeText={(text) => setStopTransferFormData({ ...stopTransferFormData, transferred_quantity: text })}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Cancel"
+                onPress={() => setStopTransferModal(false)}
+                variant="outline"
+              />
+              <Button
+                title="Stop Transfer"
+                onPress={handleSubmitStopTransfer}
+                variant="primary"
+              />
+            </View>
           </ScrollView>
         </Modal>
       </View>

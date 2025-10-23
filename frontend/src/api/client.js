@@ -136,6 +136,15 @@ export const magnetCleaningRecordApi = {
   delete: (id) => api.delete(`/magnet-cleaning-records/${id}`),
 };
 
+export const transferSessionApi = {
+  getAll: (status) => api.get("/transfer-sessions", { params: status ? { status } : {} }),
+  getById: (id) => api.get(`/transfer-sessions/${id}`),
+  start: (data) => api.post("/transfer-sessions/start", data),
+  stop: (id, transferred_quantity) => api.post(`/transfer-sessions/${id}/stop`, null, { params: { transferred_quantity } }),
+  update: (id, data) => api.put(`/transfer-sessions/${id}`, data),
+  delete: (id) => api.delete(`/transfer-sessions/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },
