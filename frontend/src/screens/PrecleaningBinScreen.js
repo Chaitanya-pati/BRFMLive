@@ -8,6 +8,7 @@ import InputField from '../components/InputField';
 import SelectDropdown from '../components/SelectDropdown';
 import Button from '../components/Button';
 import colors from '../theme/colors';
+import { binApi } from '../api/client';
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -23,23 +24,21 @@ export default function PrecleaningBinScreen({ navigation }) {
     capacity: '',
     current_quantity: '',
     material_type: '',
-    status: 'empty',
-    location: '',
-    notes: '',
+    status: 'Active',
   });
 
   const statusOptions = [
-    { label: 'Empty', value: 'empty' },
-    { label: 'In Use', value: 'in_use' },
-    { label: 'Full', value: 'full' },
-    { label: 'Maintenance', value: 'maintenance' },
+    { label: 'Active', value: 'Active' },
+    { label: 'Inactive', value: 'Inactive' },
+    { label: 'Full', value: 'Full' },
+    { label: 'Maintenance', value: 'Maintenance' },
   ];
 
   const materialOptions = [
-    { label: 'Wheat', value: 'wheat' },
-    { label: 'Rice', value: 'rice' },
-    { label: 'Corn', value: 'corn' },
-    { label: 'Barley', value: 'barley' },
+    { label: 'Wheat', value: 'Wheat' },
+    { label: 'Rice', value: 'Rice' },
+    { label: 'Corn', value: 'Corn' },
+    { label: 'Barley', value: 'Barley' },
   ];
 
   useEffect(() => {
@@ -49,30 +48,8 @@ export default function PrecleaningBinScreen({ navigation }) {
   const fetchBins = async () => {
     try {
       setLoading(true);
-      // Simulated data - replace with actual API call
-      const mockData = [
-        {
-          id: 1,
-          bin_number: 'BIN-001',
-          capacity: '1000',
-          current_quantity: '750',
-          material_type: 'Wheat',
-          status: 'in_use',
-          location: 'Warehouse A',
-          notes: 'Regular cleaning schedule',
-        },
-        {
-          id: 2,
-          bin_number: 'BIN-002',
-          capacity: '1000',
-          current_quantity: '0',
-          material_type: '',
-          status: 'empty',
-          location: 'Warehouse A',
-          notes: '',
-        },
-      ];
-      setBins(mockData);
+      const response = await binApi.getAll();
+      setBins(response.data);
     } catch (error) {
       console.error('Error fetching bins:', error);
       Alert.alert('Error', 'Failed to load bins');
@@ -88,9 +65,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       capacity: '',
       current_quantity: '',
       material_type: '',
-      status: 'empty',
-      location: '',
-      notes: '',
+      status: 'Active',
     });
     setModalVisible(true);
   };
@@ -99,12 +74,10 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingBin(bin);
     setFormData({
       bin_number: bin.bin_number,
-      capacity: bin.capacity,
-      current_quantity: bin.current_quantity,
-      material_type: bin.material_type,
+      capacity: String(bin.capacity),
+      current_quantity: String(bin.current_quantity || ''),
+      material_type: bin.material_type || '',
       status: bin.status,
-      location: bin.location,
-      notes: bin.notes,
     });
     setModalVisible(true);
   };
@@ -120,10 +93,8 @@ export default function PrecleaningBinScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Replace with actual API call when backend endpoint is ready
-              // await axios.delete(`${API_URL}/api/precleaning-bins/${bin.id}`);
-              
-              setBins(bins.filter(b => b.id !== bin.id));
+              await binApi.delete(bin.id);
+              await fetchBins();
               Alert.alert('Success', 'Bin deleted successfully');
             } catch (error) {
               console.error('Error deleting bin:', error);
@@ -135,27 +106,35 @@ export default function PrecleaningBinScreen({ navigation }) {
     );
   };
 
-  const handleSubmit = () => {
-    if (!formData.bin_number || !formData.capacity || !formData.location) {
-      Alert.alert('Error', 'Please fill in all required fields');
+  const handleSubmit = async () => {
+    if (!formData.bin_number || !formData.capacity) {
+      Alert.alert('Error', 'Please fill in all required fields (Bin Number and Capacity)');
       return;
     }
 
-    if (editingBin) {
-      setBins(bins.map(bin =>
-        bin.id === editingBin.id
-          ? { ...bin, ...formData }
-          : bin
-      ));
-    } else {
-      const newBin = {
-        id: bins.length + 1,
-        ...formData,
+    try {
+      const binData = {
+        bin_number: formData.bin_number,
+        capacity: parseFloat(formData.capacity),
+        current_quantity: formData.current_quantity ? parseFloat(formData.current_quantity) : 0.0,
+        material_type: formData.material_type || null,
+        status: formData.status,
       };
-      setBins([...bins, newBin]);
-    }
 
-    setModalVisible(false);
+      if (editingBin) {
+        await binApi.update(editingBin.id, binData);
+        Alert.alert('Success', 'Bin updated successfully');
+      } else {
+        await binApi.create(binData);
+        Alert.alert('Success', 'Bin added successfully');
+      }
+
+      setModalVisible(false);
+      await fetchBins();
+    } catch (error) {
+      console.error('Error saving bin:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to save bin');
+    }
   };
 
   const columns = [
@@ -164,7 +143,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     { field: 'current_quantity', label: 'Current Qty (tons)', flex: 1 },
     { field: 'material_type', label: 'Material Type', flex: 1 },
     { field: 'status', label: 'Status', flex: 1 },
-    { field: 'location', label: 'Location', flex: 1 },
   ];
 
   return (
@@ -230,22 +208,6 @@ export default function PrecleaningBinScreen({ navigation }) {
               onValueChange={(value) => setFormData({ ...formData, status: value })}
               options={statusOptions}
               placeholder="Select status"
-            />
-
-            <InputField
-              label="Location *"
-              placeholder="Enter location"
-              value={formData.location}
-              onChangeText={(text) => setFormData({ ...formData, location: text })}
-            />
-
-            <InputField
-              label="Notes"
-              placeholder="Enter notes"
-              value={formData.notes}
-              onChangeText={(text) => setFormData({ ...formData, notes: text })}
-              multiline
-              numberOfLines={3}
             />
 
             <View style={styles.buttonContainer}>

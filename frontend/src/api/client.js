@@ -100,6 +100,14 @@ export const unloadingApi = {
   delete: (id) => api.delete(`/unloading-entries/${id}`),
 };
 
+export const binApi = {
+  getAll: () => api.get("/bins"),
+  getById: (id) => api.get(`/bins/${id}`),
+  create: (data) => api.post("/bins", data),
+  update: (id, data) => api.put(`/bins/${id}`, data),
+  delete: (id) => api.delete(`/bins/${id}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },
