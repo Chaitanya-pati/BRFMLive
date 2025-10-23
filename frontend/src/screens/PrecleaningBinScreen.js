@@ -8,7 +8,7 @@ import InputField from '../components/InputField';
 import SelectDropdown from '../components/SelectDropdown';
 import Button from '../components/Button';
 import colors from '../theme/colors';
-import { binApi, magnetApi, routeMagnetMappingApi, godownApi, magnetCleaningRecordApi } from '../api/client';
+import { binApi, magnetApi, routeMagnetMappingApi, godownApi, magnetCleaningRecordApi, transferSessionApi } from '../api/client';
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -150,7 +150,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const fetchTransferSessions = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/transfer-sessions');
+      const response = await transferSessionApi.getAll();
       setTransferSessions(response.data);
     } catch (error) {
       console.error('Error fetching transfer sessions:', error);
@@ -344,7 +344,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await api.post('/transfer-sessions/start', {
+      await transferSessionApi.start({
         source_godown_id: parseInt(transferSessionFormData.source_godown_id),
         destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
         notes: transferSessionFormData.notes,
@@ -375,9 +375,10 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await api.post(`/transfer-sessions/${editingTransferSession.id}/stop`, null, {
-        params: { transferred_quantity: parseFloat(stopTransferFormData.transferred_quantity) }
-      });
+      await transferSessionApi.stop(
+        editingTransferSession.id,
+        parseFloat(stopTransferFormData.transferred_quantity)
+      );
       
       Alert.alert('Success', 'Transfer session stopped successfully');
       setStopTransferModal(false);
@@ -411,7 +412,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await api.delete(`/transfer-sessions/${session.id}`);
+      await transferSessionApi.delete(session.id);
       await fetchTransferSessions();
       
       if (Platform.OS === 'web') {
