@@ -82,7 +82,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setModalVisible(true);
   };
 
-  const handleDelete = (bin) => {
+  const handleDelete = async (bin) => {
     Alert.alert(
       'Confirm Delete',
       `Are you sure you want to delete bin ${bin.bin_number}?`,
@@ -94,12 +94,14 @@ export default function PrecleaningBinScreen({ navigation }) {
           onPress: async () => {
             try {
               setLoading(true);
-              await binApi.delete(bin.id);
+              const response = await binApi.delete(bin.id);
+              console.log('Delete response:', response);
               await fetchBins();
               Alert.alert('Success', 'Bin deleted successfully');
             } catch (error) {
               console.error('Error deleting bin:', error);
-              Alert.alert('Error', error.response?.data?.detail || 'Failed to delete bin');
+              console.error('Error details:', error.response);
+              Alert.alert('Error', error.response?.data?.detail || error.message || 'Failed to delete bin');
             } finally {
               setLoading(false);
             }
@@ -179,7 +181,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           columns={columns}
           data={bins}
           onEdit={handleEdit}
-          onDelete={(bin) => handleDelete(bin)}
+          onDelete={handleDelete}
           loading={loading}
           emptyMessage="No bins found"
         />
