@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_source_bin_col'
-down_revision = 'add_route_magnet_mappings_table'
+down_revision = '3533733002c8'
 branch_labels = None
 depends_on = None
 
