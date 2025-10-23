@@ -813,48 +813,55 @@ export default function PrecleaningBinScreen({ navigation }) {
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
       <View style={styles.container}>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'bins' && styles.activeTab]}
-            onPress={() => setActiveTab('bins')}
-          >
-            <Text style={[styles.tabText, activeTab === 'bins' && styles.activeTabText]}>
-              Bins
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'magnets' && styles.activeTab]}
-            onPress={() => setActiveTab('magnets')}
-          >
-            <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText]}>
-              Magnets
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'routeMappings' && styles.activeTab]}
-            onPress={() => setActiveTab('routeMappings')}
-          >
-            <Text style={[styles.tabText, activeTab === 'routeMappings' && styles.activeTabText]}>
-              Route Mappings
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'cleaningRecords' && styles.activeTab]}
-            onPress={() => setActiveTab('cleaningRecords')}
-          >
-            <Text style={[styles.tabText, activeTab === 'cleaningRecords' && styles.activeTabText]}>
-              Cleaning Records
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'transferSessions' && styles.activeTab]}
-            onPress={() => setActiveTab('transferSessions')}
-          >
-            <Text style={[styles.tabText, activeTab === 'transferSessions' && styles.activeTabText]}>
-              Transfer Sessions
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabScrollView}
+          contentContainerStyle={styles.tabScrollContent}
+        >
+          <View style={[styles.tabContainer, isMobile && styles.tabContainerMobile]}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'bins' && styles.activeTab, isMobile && styles.tabMobile]}
+              onPress={() => setActiveTab('bins')}
+            >
+              <Text style={[styles.tabText, activeTab === 'bins' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
+                Bins
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'magnets' && styles.activeTab, isMobile && styles.tabMobile]}
+              onPress={() => setActiveTab('magnets')}
+            >
+              <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
+                Magnets
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'routeMappings' && styles.activeTab, isMobile && styles.tabMobile]}
+              onPress={() => setActiveTab('routeMappings')}
+            >
+              <Text style={[styles.tabText, activeTab === 'routeMappings' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
+                {isMobile ? 'Routes' : 'Route Mappings'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'cleaningRecords' && styles.activeTab, isMobile && styles.tabMobile]}
+              onPress={() => setActiveTab('cleaningRecords')}
+            >
+              <Text style={[styles.tabText, activeTab === 'cleaningRecords' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
+                {isMobile ? 'Cleaning' : 'Cleaning Records'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'transferSessions' && styles.activeTab, isMobile && styles.tabMobile]}
+              onPress={() => setActiveTab('transferSessions')}
+            >
+              <Text style={[styles.tabText, activeTab === 'transferSessions' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
+                {isMobile ? 'Transfers' : 'Transfer Sessions'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
         {activeTab === 'bins' ? (
           <>
@@ -1281,17 +1288,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  tabContainer: {
-    flexDirection: 'row',
+  tabScrollView: {
+    flexGrow: 0,
     marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray[300],
+  },
+  tabScrollContent: {
+    flexGrow: 1,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+  },
+  tabContainerMobile: {
+    paddingHorizontal: 8,
   },
   tab: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    whiteSpace: 'nowrap',
+  },
+  tabMobile: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   activeTab: {
     borderBottomColor: colors.primary,
@@ -1300,6 +1321,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: colors.gray[600],
+  },
+  tabTextMobile: {
+    fontSize: 14,
   },
   activeTabText: {
     color: colors.primary,
