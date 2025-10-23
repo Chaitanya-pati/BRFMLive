@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '3533733991b8'
-down_revision: Union[str, Sequence[str], None] = 'add_source_bin_to_route_mappings'
+down_revision: Union[str, Sequence[str], None] = 'add_source_bin_col'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

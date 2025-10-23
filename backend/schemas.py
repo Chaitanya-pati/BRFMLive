@@ -14,6 +14,11 @@ class BinStatusEnum(str, Enum):
     MAINTENANCE = "Maintenance"
     FULL = "Full"
 
+class TransferSessionStatusEnum(str, Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 class SupplierBase(BaseModel):
     supplier_name: str
     contact_person: Optional[str] = None
@@ -262,8 +267,39 @@ class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     source_bin: Optional[Bin] = None
     destination_bin: Bin
 
+class TransferSessionBase(BaseModel):
+    source_godown_id: int
+    destination_bin_id: int
+    notes: Optional[str] = None
+
+class TransferSessionCreate(TransferSessionBase):
+    pass
+
+class TransferSessionUpdate(BaseModel):
+    transferred_quantity: Optional[float] = None
+    status: Optional[TransferSessionStatusEnum] = None
+    notes: Optional[str] = None
+
+class TransferSession(TransferSessionBase):
+    id: int
+    start_timestamp: datetime
+    stop_timestamp: Optional[datetime] = None
+    transferred_quantity: Optional[float] = None
+    status: TransferSessionStatusEnum
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class TransferSessionWithDetails(TransferSession):
+    source_godown: GodownMaster
+    destination_bin: Bin
+    cleaning_records: list['MagnetCleaningRecord'] = []
+
 class MagnetCleaningRecordBase(BaseModel):
     magnet_id: int
+    transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
 
@@ -272,6 +308,7 @@ class MagnetCleaningRecordCreate(MagnetCleaningRecordBase):
 
 class MagnetCleaningRecordUpdate(BaseModel):
     magnet_id: Optional[int] = None
+    transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
 
@@ -287,6 +324,8 @@ class MagnetCleaningRecord(MagnetCleaningRecordBase):
 
 class MagnetCleaningRecordWithDetails(MagnetCleaningRecord):
     magnet: Magnet
+    transfer_session: Optional[TransferSession] = None
 
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
+TransferSessionWithDetails.model_rebuild()

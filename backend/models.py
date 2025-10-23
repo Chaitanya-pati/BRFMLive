@@ -15,6 +15,11 @@ class BinStatus(str, enum.Enum):
     MAINTENANCE = "Maintenance"
     FULL = "Full"
 
+class TransferSessionStatus(str, enum.Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 class Supplier(Base):
     __tablename__ = "suppliers"
     
@@ -187,11 +192,30 @@ class RouteMagnetMapping(Base):
     source_bin = relationship("Bin", foreign_keys=[source_bin_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
 
+class TransferSession(Base):
+    __tablename__ = "transfer_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    source_godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
+    destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    start_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    stop_timestamp = Column(DateTime, nullable=True)
+    transferred_quantity = Column(Float, nullable=True)
+    status = Column(Enum(TransferSessionStatus), default=TransferSessionStatus.ACTIVE, nullable=False)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    cleaning_records = relationship("MagnetCleaningRecord", back_populates="transfer_session")
+
 class MagnetCleaningRecord(Base):
     __tablename__ = "magnet_cleaning_records"
     
     id = Column(Integer, primary_key=True, index=True)
     magnet_id = Column(Integer, ForeignKey("magnets.id", ondelete="CASCADE"), nullable=False, index=True)
+    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id", ondelete="SET NULL"), nullable=True, index=True)
     cleaning_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     before_cleaning_photo = Column(String(500))
     after_cleaning_photo = Column(String(500))
@@ -200,3 +224,4 @@ class MagnetCleaningRecord(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     magnet = relationship("Magnet")
+    transfer_session = relationship("TransferSession", back_populates="cleaning_records")

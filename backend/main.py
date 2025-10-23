@@ -824,6 +824,7 @@ def delete_route_magnet_mapping(mapping_id: int, db: Session = Depends(get_db)):
 @app.post("/api/magnet-cleaning-records", response_model=schemas.MagnetCleaningRecord)
 async def create_magnet_cleaning_record(
     magnet_id: int = Form(...),
+    transfer_session_id: Optional[int] = Form(None),
     cleaning_timestamp: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     before_cleaning_photo: Optional[UploadFile] = File(None),
@@ -835,6 +836,12 @@ async def create_magnet_cleaning_record(
     if not magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
     
+    # Validate transfer session if provided
+    if transfer_session_id:
+        transfer_session = db.query(models.TransferSession).filter(models.TransferSession.id == transfer_session_id).first()
+        if not transfer_session:
+            raise HTTPException(status_code=404, detail="Transfer session not found")
+    
     # Parse cleaning timestamp
     timestamp = None
     if cleaning_timestamp:
@@ -845,6 +852,7 @@ async def create_magnet_cleaning_record(
     
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
+        transfer_session_id=transfer_session_id,
         cleaning_timestamp=timestamp or datetime.utcnow(),
         notes=notes
     )
@@ -932,6 +940,208 @@ def delete_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db))
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete magnet cleaning record: {str(e)}")
+
+# Transfer Session endpoints
+@app.post("/api/transfer-sessions/start", response_model=schemas.TransferSessionWithDetails)
+def start_transfer_session(
+    session_data: schemas.TransferSessionCreate,
+    db: Session = Depends(get_db)
+):
+    # Validate source godown exists
+    source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == session_data.source_godown_id).first()
+    if not source_godown:
+        raise HTTPException(status_code=404, detail="Source godown not found")
+    
+    # Validate destination bin exists
+    destination_bin = db.query(models.Bin).filter(models.Bin.id == session_data.destination_bin_id).first()
+    if not destination_bin:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
+    
+    # Create new transfer session
+    db_session = models.TransferSession(
+        source_godown_id=session_data.source_godown_id,
+        destination_bin_id=session_data.destination_bin_id,
+        start_timestamp=datetime.utcnow(),
+        status=models.TransferSessionStatus.ACTIVE,
+        notes=session_data.notes
+    )
+    
+    db.add(db_session)
+    db.commit()
+    db.refresh(db_session)
+    
+    # Retrieve route magnets for this transfer route
+    route_magnets = db.query(models.RouteMagnetMapping).filter(
+        models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
+        models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
+    ).all()
+    
+    return db_session
+
+@app.post("/api/transfer-sessions/{session_id}/stop", response_model=schemas.TransferSessionWithDetails)
+def stop_transfer_session(
+    session_id: int,
+    transferred_quantity: float,
+    db: Session = Depends(get_db)
+):
+    # Get the transfer session
+    db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Transfer session not found")
+    
+    if db_session.status != models.TransferSessionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Transfer session is not active")
+    
+    # Update session
+    db_session.stop_timestamp = datetime.utcnow()
+    db_session.transferred_quantity = transferred_quantity
+    db_session.status = models.TransferSessionStatus.COMPLETED
+    
+    # Update source godown quantity (subtract)
+    source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
+    if source_godown:
+        source_godown.current_storage = max(0, (source_godown.current_storage or 0) - transferred_quantity)
+    
+    # Update destination bin quantity (add)
+    destination_bin = db.query(models.Bin).filter(models.Bin.id == db_session.destination_bin_id).first()
+    if destination_bin:
+        destination_bin.current_quantity = (destination_bin.current_quantity or 0) + transferred_quantity
+        
+        # Check if bin is full
+        if destination_bin.current_quantity >= destination_bin.capacity:
+            destination_bin.status = models.BinStatus.FULL
+    
+    db.commit()
+    db.refresh(db_session)
+    return db_session
+
+@app.get("/api/transfer-sessions", response_model=List[schemas.TransferSessionWithDetails])
+def get_transfer_sessions(
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.TransferSession)
+    
+    if status:
+        query = query.filter(models.TransferSession.status == status)
+    
+    sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
+    return sessions
+
+@app.get("/api/transfer-sessions/{session_id}", response_model=schemas.TransferSessionWithDetails)
+def get_transfer_session(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Transfer session not found")
+    return session
+
+@app.put("/api/transfer-sessions/{session_id}", response_model=schemas.TransferSession)
+def update_transfer_session(
+    session_id: int,
+    session_update: schemas.TransferSessionUpdate,
+    db: Session = Depends(get_db)
+):
+    db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Transfer session not found")
+    
+    update_data = session_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_session, key, value)
+    
+    db.commit()
+    db.refresh(db_session)
+    return db_session
+
+@app.delete("/api/transfer-sessions/{session_id}")
+def delete_transfer_session(session_id: int, db: Session = Depends(get_db)):
+    db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Transfer session not found")
+    
+    try:
+        db.delete(db_session)
+        db.commit()
+        return {"message": "Transfer session deleted successfully", "id": session_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete transfer session: {str(e)}")
+
+# Reporting endpoints
+@app.get("/api/reports/cleaning-history")
+def get_cleaning_history_report(
+    magnet_id: Optional[int] = None,
+    transfer_session_id: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.MagnetCleaningRecord)
+    
+    if magnet_id:
+        query = query.filter(models.MagnetCleaningRecord.magnet_id == magnet_id)
+    
+    if transfer_session_id:
+        query = query.filter(models.MagnetCleaningRecord.transfer_session_id == transfer_session_id)
+    
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp >= start_dt)
+        except:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp <= end_dt)
+        except:
+            pass
+    
+    records = query.order_by(models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(skip).limit(limit).all()
+    return records
+
+@app.get("/api/reports/transfer-details")
+def get_transfer_details_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.TransferSession)
+    
+    if status:
+        query = query.filter(models.TransferSession.status == status)
+    
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            query = query.filter(models.TransferSession.start_timestamp >= start_dt)
+        except:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            query = query.filter(models.TransferSession.start_timestamp <= end_dt)
+        except:
+            pass
+    
+    sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
+    
+    # Prepare detailed transfer reports with cleaning records
+    result = []
+    for session in sessions:
+        session_dict = schemas.TransferSessionWithDetails.model_validate(session).model_dump()
+        result.append(session_dict)
+    
+    return result
 
 if __name__ == "__main__":
     import uvicorn
