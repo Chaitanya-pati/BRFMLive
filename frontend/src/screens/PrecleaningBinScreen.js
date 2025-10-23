@@ -150,12 +150,12 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'bin_number', label: 'Bin Number', type: 'text' },
-    { key: 'capacity', label: 'Capacity (tons)', type: 'text' },
-    { key: 'current_quantity', label: 'Current Qty (tons)', type: 'text' },
-    { key: 'material_type', label: 'Material Type', type: 'text' },
-    { key: 'status', label: 'Status', type: 'badge' },
-    { key: 'location', label: 'Location', type: 'text' },
+    { field: 'bin_number', label: 'Bin Number', flex: 1 },
+    { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
+    { field: 'current_quantity', label: 'Current Qty (tons)', flex: 1 },
+    { field: 'material_type', label: 'Material Type', flex: 1 },
+    { field: 'status', label: 'Status', flex: 1 },
+    { field: 'location', label: 'Location', flex: 1 },
   ];
 
   return (
