@@ -151,8 +151,8 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const columns = [
     { key: 'bin_number', label: 'Bin Number', type: 'text' },
-    { key: 'capacity', label: 'Capacity (kg)', type: 'text' },
-    { key: 'current_quantity', label: 'Current Qty (kg)', type: 'text' },
+    { key: 'capacity', label: 'Capacity (tons)', type: 'text' },
+    { key: 'current_quantity', label: 'Current Qty (tons)', type: 'text' },
     { key: 'material_type', label: 'Material Type', type: 'text' },
     { key: 'status', label: 'Status', type: 'badge' },
     { key: 'location', label: 'Location', type: 'text' },
@@ -192,16 +192,16 @@ export default function PrecleaningBinScreen({ navigation }) {
             />
 
             <InputField
-              label="Capacity (kg) *"
-              placeholder="Enter capacity"
+              label="Capacity (tons) *"
+              placeholder="Enter capacity in tons"
               value={formData.capacity}
               onChangeText={(text) => setFormData({ ...formData, capacity: text })}
               keyboardType="numeric"
             />
 
             <InputField
-              label="Current Quantity (kg)"
-              placeholder="Enter current quantity"
+              label="Current Quantity (tons)"
+              placeholder="Enter current quantity in tons"
               value={formData.current_quantity}
               onChangeText={(text) => setFormData({ ...formData, current_quantity: text })}
               keyboardType="numeric"
