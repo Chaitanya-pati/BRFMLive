@@ -806,7 +806,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'status', 
       label: 'Status', 
       flex: 1,
-      render: (val) => val ? val.toUpperCase() : '-'
+      render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
     },
   ];
 
@@ -926,11 +926,15 @@ export default function PrecleaningBinScreen({ navigation }) {
             <DataTable
               columns={transferSessionColumns}
               data={transferSessions}
-              onEdit={(session) => session.status === 'active' ? handleStopTransfer(session) : null}
+              onEdit={(session) => {
+                if (session.status?.toLowerCase() === 'active') {
+                  handleStopTransfer(session);
+                }
+              }}
               onDelete={handleDeleteTransferSession}
               loading={loading}
               emptyMessage="No transfer sessions found"
-              editLabel={(row) => row.status === 'active' ? 'Stop' : null}
+              editLabel={(row) => row.status?.toLowerCase() === 'active' ? 'Stop' : null}
             />
           </>
         ) : (
