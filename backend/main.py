@@ -634,6 +634,16 @@ def update_bin(bin_id: int, bin_update: schemas.BinUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Bin not found")
 
     update_data = bin_update.dict(exclude_unset=True)
+    
+    # Check for duplicate bin_number if it's being updated
+    if 'bin_number' in update_data and update_data['bin_number'] != db_bin.bin_number:
+        existing_bin = db.query(models.Bin).filter(
+            models.Bin.bin_number == update_data['bin_number'],
+            models.Bin.id != bin_id
+        ).first()
+        if existing_bin:
+            raise HTTPException(status_code=400, detail="Bin number already exists")
+    
     for key, value in update_data.items():
         setattr(db_bin, key, value)
 
@@ -647,9 +657,13 @@ def delete_bin(bin_id: int, db: Session = Depends(get_db)):
     if not db_bin:
         raise HTTPException(status_code=404, detail="Bin not found")
 
-    db.delete(db_bin)
-    db.commit()
-    return {"message": "Bin deleted successfully"}
+    try:
+        db.delete(db_bin)
+        db.commit()
+        return {"message": "Bin deleted successfully", "id": bin_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete bin: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

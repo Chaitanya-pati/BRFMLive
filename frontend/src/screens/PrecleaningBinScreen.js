@@ -75,7 +75,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setFormData({
       bin_number: bin.bin_number,
       capacity: String(bin.capacity),
-      current_quantity: String(bin.current_quantity || ''),
+      current_quantity: String(bin.current_quantity || 0),
       material_type: bin.material_type || '',
       status: bin.status,
     });
@@ -85,7 +85,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const handleDelete = (bin) => {
     Alert.alert(
       'Confirm Delete',
-      'Are you sure you want to delete this bin?',
+      `Are you sure you want to delete bin ${bin.bin_number}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -93,12 +93,15 @@ export default function PrecleaningBinScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
+              setLoading(true);
               await binApi.delete(bin.id);
               await fetchBins();
               Alert.alert('Success', 'Bin deleted successfully');
             } catch (error) {
               console.error('Error deleting bin:', error);
-              Alert.alert('Error', 'Failed to delete bin');
+              Alert.alert('Error', error.response?.data?.detail || 'Failed to delete bin');
+            } finally {
+              setLoading(false);
             }
           },
         },
@@ -112,11 +115,25 @@ export default function PrecleaningBinScreen({ navigation }) {
       return;
     }
 
+    const capacity = parseFloat(formData.capacity);
+    const currentQuantity = formData.current_quantity ? parseFloat(formData.current_quantity) : 0.0;
+
+    if (isNaN(capacity) || capacity <= 0) {
+      Alert.alert('Error', 'Please enter a valid capacity');
+      return;
+    }
+
+    if (isNaN(currentQuantity) || currentQuantity < 0) {
+      Alert.alert('Error', 'Please enter a valid current quantity');
+      return;
+    }
+
     try {
+      setLoading(true);
       const binData = {
-        bin_number: formData.bin_number,
-        capacity: parseFloat(formData.capacity),
-        current_quantity: formData.current_quantity ? parseFloat(formData.current_quantity) : 0.0,
+        bin_number: formData.bin_number.trim(),
+        capacity: capacity,
+        current_quantity: currentQuantity,
         material_type: formData.material_type || null,
         status: formData.status,
       };
@@ -134,6 +151,8 @@ export default function PrecleaningBinScreen({ navigation }) {
     } catch (error) {
       console.error('Error saving bin:', error);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save bin');
+    } finally {
+      setLoading(false);
     }
   };
 
