@@ -894,9 +894,15 @@ export default function PrecleaningBinScreen({ navigation }) {
   const routeMappingColumns = [
     { field: 'id', label: 'ID', flex: 0.4 },
     { 
+      field: 'magnet', 
+      label: 'Magnet', 
+      flex: 1.2, 
+      render: (item) => item.magnet?.name || 'N/A'
+    },
+    { 
       field: 'route_flow', 
       label: 'Route Flow', 
-      flex: 2.5, 
+      flex: 2.2, 
       render: (item) => {
         const source = item.source_godown 
           ? `Godown: ${item.source_godown.name}` 
@@ -904,8 +910,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             ? `Bin: ${item.source_bin.bin_number}` 
             : 'N/A';
         const destination = item.destination_bin?.bin_number || 'N/A';
-        const magnet = item.magnet?.name || 'N/A';
-        return `${source} → [${magnet}] → Bin: ${destination}`;
+        return `${source} → Bin: ${destination}`;
       }
     },
     { 
