@@ -372,7 +372,19 @@ export default function PrecleaningBinScreen({ navigation }) {
       setTransferSessions(response.data);
     } catch (error) {
       console.error('Error fetching transfer sessions:', error);
-      Alert.alert('Error', 'Failed to load transfer sessions');
+      
+      let errorMessage = 'Unable to load transfer sessions. Please try again.';
+      if (error.message === 'Network Error' || !error.response) {
+        errorMessage = '🔌 Connection Error\n\nUnable to connect to the server. Please check your internet connection and refresh the page.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = '🔧 Server Error\n\nThe server encountered an error. Please try again in a moment.';
+      }
+      
+      if (Platform.OS === 'web') {
+        console.error(errorMessage);
+      } else {
+        Alert.alert('⚠️ Loading Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -581,7 +593,15 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const handleSubmitStartTransfer = async () => {
     if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id) {
-      Alert.alert('Error', 'Please select both source godown and destination bin');
+      if (Platform.OS === 'web') {
+        alert('⚠️ Missing Information\n\nPlease select both:\n• Source Godown\n• Destination Bin\n\nThese are required to start the transfer.');
+      } else {
+        Alert.alert(
+          '⚠️ Missing Information',
+          'Please select both source godown and destination bin to start the transfer.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
       return;
     }
 
@@ -596,13 +616,63 @@ export default function PrecleaningBinScreen({ navigation }) {
       console.log('✅ Transfer session started:', response.data);
       console.log('Cleaning interval (seconds):', response.data.cleaning_interval_hours);
 
-      Alert.alert('Success', 'Transfer session started successfully');
+      const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
+      const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
+      const magnetName = response.data.magnet?.name || 'Unknown';
+      const intervalSec = response.data.cleaning_interval_hours || 300;
+      const intervalMin = Math.floor(intervalSec / 60);
+      const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
+
+      if (Platform.OS === 'web') {
+        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\nYou will receive notifications when magnet cleaning is required.`);
+      } else {
+        Alert.alert(
+          '✅ Transfer Started',
+          `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}\n\nYou will receive notifications when cleaning is required.`,
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
+      
       setModalVisible(false);
       await fetchTransferSessions();
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
       console.error('Error details:', error.response?.data);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to start transfer session');
+      
+      let errorMessage = 'An unexpected error occurred while starting the transfer.';
+      let errorTitle = '❌ Transfer Failed';
+      
+      if (error.response?.status === 404) {
+        const detail = error.response?.data?.detail || '';
+        if (detail.includes('No route mapping found')) {
+          errorTitle = '⚠️ Route Not Configured';
+          const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'selected godown';
+          const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'selected bin';
+          errorMessage = `No route mapping exists for:\n${sourceName} → Bin ${destBin}\n\n📋 To fix this:\n1. Go to "Route Mappings" tab\n2. Click "Add Route Mapping"\n3. Configure the route with a magnet and cleaning interval\n\nThen try starting the transfer again.`;
+        } else if (detail.includes('godown not found')) {
+          errorTitle = '❌ Source Godown Not Found';
+          errorMessage = 'The selected source godown no longer exists. Please refresh and try again.';
+        } else if (detail.includes('bin not found')) {
+          errorTitle = '❌ Destination Bin Not Found';
+          errorMessage = 'The selected destination bin no longer exists. Please refresh and try again.';
+        } else {
+          errorMessage = detail;
+        }
+      } else if (error.response?.status === 400) {
+        errorTitle = '⚠️ Invalid Request';
+        errorMessage = error.response?.data?.detail || 'Please check your selections and try again.';
+      } else if (error.message === 'Network Error' || !error.response) {
+        errorTitle = '🔌 Connection Error';
+        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else {
+        errorMessage = error.response?.data?.detail || errorMessage;
+      }
+
+      if (Platform.OS === 'web') {
+        alert(`${errorTitle}\n\n${errorMessage}`);
+      } else {
+        Alert.alert(errorTitle, errorMessage, [{ text: 'OK', style: 'default' }]);
+      }
     } finally {
       setLoading(false);
     }
@@ -616,18 +686,49 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const handleSubmitStopTransfer = async () => {
     if (!stopTransferFormData.transferred_quantity) {
-      Alert.alert('Error', 'Please enter transferred quantity');
+      if (Platform.OS === 'web') {
+        alert('⚠️ Quantity Required\n\nPlease enter the quantity that was transferred (in tons) before stopping the session.');
+      } else {
+        Alert.alert(
+          '⚠️ Quantity Required',
+          'Please enter the transferred quantity in tons.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
+      return;
+    }
+
+    const quantity = parseFloat(stopTransferFormData.transferred_quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      if (Platform.OS === 'web') {
+        alert('⚠️ Invalid Quantity\n\nPlease enter a valid positive number for the transferred quantity.');
+      } else {
+        Alert.alert(
+          '⚠️ Invalid Quantity',
+          'Please enter a valid positive number.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
       return;
     }
 
     try {
       setLoading(true);
-      await transferSessionApi.stop(
-        editingTransferSession.id,
-        parseFloat(stopTransferFormData.transferred_quantity)
-      );
+      await transferSessionApi.stop(editingTransferSession.id, quantity);
 
-      Alert.alert('Success', 'Transfer session stopped successfully');
+      const sourceName = editingTransferSession.source_godown?.name || 'Unknown';
+      const destBin = editingTransferSession.destination_bin?.bin_number || 'Unknown';
+
+      if (Platform.OS === 'web') {
+        alert(`✅ Transfer Completed Successfully!\n\n📦 Quantity: ${quantity} tons\n📍 Route: ${sourceName} → Bin ${destBin}\n\nGodown and bin quantities have been updated.`);
+      } else {
+        Alert.alert(
+          '✅ Transfer Completed',
+          `${quantity} tons transferred from ${sourceName} to Bin ${destBin}.\n\nQuantities have been updated.`,
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
+
       setStopTransferModal(false);
       setLastAlertTimes(prev => {
         const updated = { ...prev };
@@ -640,7 +741,34 @@ export default function PrecleaningBinScreen({ navigation }) {
       await fetchGodowns();
     } catch (error) {
       console.error('Error stopping transfer:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to stop transfer session');
+      
+      let errorMessage = 'An unexpected error occurred while stopping the transfer.';
+      let errorTitle = '❌ Stop Transfer Failed';
+      
+      if (error.response?.status === 404) {
+        errorTitle = '❌ Transfer Not Found';
+        errorMessage = 'This transfer session no longer exists. It may have already been stopped.';
+      } else if (error.response?.status === 400) {
+        const detail = error.response?.data?.detail || '';
+        if (detail.includes('not active')) {
+          errorTitle = '⚠️ Transfer Already Stopped';
+          errorMessage = 'This transfer session has already been stopped.';
+        } else {
+          errorTitle = '⚠️ Invalid Request';
+          errorMessage = detail || 'Please check the transferred quantity and try again.';
+        }
+      } else if (error.message === 'Network Error' || !error.response) {
+        errorTitle = '🔌 Connection Error';
+        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else {
+        errorMessage = error.response?.data?.detail || errorMessage;
+      }
+
+      if (Platform.OS === 'web') {
+        alert(`${errorTitle}\n\n${errorMessage}`);
+      } else {
+        Alert.alert(errorTitle, errorMessage, [{ text: 'OK', style: 'default' }]);
+      }
     } finally {
       setLoading(false);
     }
