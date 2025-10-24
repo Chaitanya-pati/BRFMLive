@@ -125,12 +125,13 @@ export default function PrecleaningBinScreen({ navigation }) {
 
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
+            const magnetName = session.magnet?.name || magnets.find(m => m.id === session.magnet_id)?.name || 'Unknown';
             const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
             const minutes = Math.floor(timeElapsed / 60);
             const seconds = Math.floor(timeElapsed % 60);
             const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
-            const alertMessage = `🔔 Magnet Cleaning Required!\n\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\n\nPlease clean the magnet now!`;
+            const alertMessage = `🔔 Magnet Cleaning Required!\n\nMagnet: ${magnetName}\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\n\nPlease clean the magnet now!`;
 
             // Play notification sound
             if (Platform.OS === 'web') {
@@ -172,6 +173,11 @@ export default function PrecleaningBinScreen({ navigation }) {
     notification.id = `cleaning-notification-${sessionId}`;
     notification.className = 'cleaning-notification';
 
+    const messageLines = message.split('\n').filter(line => line.trim());
+    const magnetLine = messageLines.find(line => line.startsWith('Magnet:')) || '';
+    const transferLine = messageLines.find(line => line.startsWith('Transfer from')) || '';
+    const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
+    
     notification.innerHTML = `
       <div style="
         position: fixed;
@@ -187,7 +193,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         gap: 16px;
         z-index: 10000;
         animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), shake 0.5s ease-in-out 0.4s;
-        min-width: 350px;
+        min-width: 380px;
         max-width: 500px;
         border: 2px solid rgba(255,255,255,0.2);
       ">
@@ -207,8 +213,10 @@ export default function PrecleaningBinScreen({ navigation }) {
           <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
             ⚠️ MAGNET CLEANING REQUIRED
           </div>
-          <div style="font-size: 14px; opacity: 0.95; white-space: pre-line; line-height: 1.5;">
-            ${message.replace(/🔔 Magnet Cleaning Required!\n\n/, '')}
+          <div style="font-size: 14px; opacity: 0.95; line-height: 1.6;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${magnetLine}</div>
+            <div style="margin-bottom: 2px;">${transferLine}</div>
+            <div style="font-weight: 600; color: #fef3c7;">${timeLine}</div>
           </div>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" style="
@@ -966,25 +974,31 @@ export default function PrecleaningBinScreen({ navigation }) {
     { 
       field: 'source_godown', 
       label: 'Source Godown', 
-      flex: 1.5,
+      flex: 1.2,
       render: (val) => val?.name || '-'
     },
     { 
       field: 'destination_bin', 
       label: 'Destination Bin', 
-      flex: 1.5,
+      flex: 1.2,
       render: (val) => val?.bin_number || '-'
+    },
+    { 
+      field: 'magnet', 
+      label: 'Magnet', 
+      flex: 1.2,
+      render: (val) => val?.name || '-'
     },
     { 
       field: 'start_timestamp', 
       label: 'Start Time', 
-      flex: 2,
+      flex: 1.5,
       render: (val) => val ? new Date(val).toLocaleString() : '-'
     },
     { 
       field: 'stop_timestamp', 
       label: 'Stop Time', 
-      flex: 2,
+      flex: 1.5,
       render: (val) => val ? new Date(val).toLocaleString() : '-'
     },
     { 
@@ -996,7 +1010,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     { 
       field: 'status', 
       label: 'Status', 
-      flex: 1,
+      flex: 0.8,
       render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
     },
   ];

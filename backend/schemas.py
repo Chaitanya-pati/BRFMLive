@@ -270,6 +270,7 @@ class RouteMagnetMappingWithDetails(RouteMagnetMapping):
 class TransferSessionBase(BaseModel):
     source_godown_id: int
     destination_bin_id: int
+    magnet_id: Optional[int] = None
     notes: Optional[str] = None
 
 class TransferSessionCreate(TransferSessionBase):
@@ -296,6 +297,7 @@ class TransferSession(TransferSessionBase):
 class TransferSessionWithDetails(TransferSession):
     source_godown: GodownMaster
     destination_bin: Bin
+    magnet: Optional[Magnet] = None
     cleaning_records: list['MagnetCleaningRecord'] = []
 
 class MagnetCleaningRecordBase(BaseModel):

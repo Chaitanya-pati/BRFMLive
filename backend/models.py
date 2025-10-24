@@ -198,6 +198,7 @@ class TransferSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     source_godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=True)
     start_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
@@ -209,6 +210,7 @@ class TransferSession(Base):
     
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    magnet = relationship("Magnet", foreign_keys=[magnet_id])
     cleaning_records = relationship("MagnetCleaningRecord", back_populates="transfer_session")
 
 class MagnetCleaningRecord(Base):
