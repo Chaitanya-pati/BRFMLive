@@ -100,7 +100,13 @@ export default function PrecleaningBinScreen({ navigation }) {
 
       console.log('🔍 Checking notifications...', {
         totalSessions: transferSessions.length,
-        activeSessions: activeTransferSessions.length
+        activeSessions: activeTransferSessions.length,
+        sessions: transferSessions.map(s => ({
+          id: s.id,
+          status: s.status,
+          hasStopTime: !!s.stop_timestamp,
+          interval: s.cleaning_interval_hours
+        }))
       });
 
       activeTransferSessions.forEach(session => {
@@ -111,11 +117,14 @@ export default function PrecleaningBinScreen({ navigation }) {
 
         const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
 
-        console.log(`📊 Session ${session.id}:`, {
+        console.log(`📊 Session ${session.id} details:`, {
+          startTime: session.start_timestamp,
+          now: now.toISOString(),
           elapsed: Math.floor(elapsedSeconds),
           interval: cleaningIntervalSeconds,
           intervalsPassed,
-          lastAlert: lastAlertTimes[session.id] || 0
+          lastAlert: lastAlertTimes[session.id] || 0,
+          shouldAlert: intervalsPassed > (lastAlertTimes[session.id] || 0)
         });
 
         if (intervalsPassed > 0) {
@@ -564,17 +573,21 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await transferSessionApi.start({
+      const response = await transferSessionApi.start({
         source_godown_id: parseInt(transferSessionFormData.source_godown_id),
         destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
         notes: transferSessionFormData.notes,
       });
 
+      console.log('✅ Transfer session started:', response.data);
+      console.log('Cleaning interval (seconds):', response.data.cleaning_interval_hours);
+
       Alert.alert('Success', 'Transfer session started successfully');
       setModalVisible(false);
       await fetchTransferSessions();
     } catch (error) {
-      console.error('Error starting transfer:', error);
+      console.error('❌ Error starting transfer:', error);
+      console.error('Error details:', error.response?.data);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to start transfer session');
     } finally {
       setLoading(false);
