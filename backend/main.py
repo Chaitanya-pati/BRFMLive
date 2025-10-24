@@ -1015,6 +1015,14 @@ def start_transfer_session(
 
     print(f"✅ Created transfer session: ID={db_session.id}, status={db_session.status}, interval={db_session.cleaning_interval_hours}s, magnet_id={db_session.magnet_id}")
 
+    # Sanitize float values before returning
+    db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
+    if db_session.source_godown:
+        db_session.source_godown.current_storage = sanitize_float(db_session.source_godown.current_storage)
+    if db_session.destination_bin:
+        db_session.destination_bin.capacity = sanitize_float(db_session.destination_bin.capacity)
+        db_session.destination_bin.current_quantity = sanitize_float(db_session.destination_bin.current_quantity)
+
     return db_session
 
 @app.post("/api/transfer-sessions/{session_id}/stop", response_model=schemas.TransferSessionWithDetails)
@@ -1052,6 +1060,15 @@ def stop_transfer_session(
 
     db.commit()
     db.refresh(db_session)
+    
+    # Sanitize float values before returning
+    db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
+    if db_session.source_godown:
+        db_session.source_godown.current_storage = sanitize_float(db_session.source_godown.current_storage)
+    if db_session.destination_bin:
+        db_session.destination_bin.capacity = sanitize_float(db_session.destination_bin.capacity)
+        db_session.destination_bin.current_quantity = sanitize_float(db_session.destination_bin.current_quantity)
+    
     return db_session
 
 @app.get("/api/transfer-sessions", response_model=List[schemas.TransferSessionWithDetails])
