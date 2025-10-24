@@ -1,3 +1,4 @@
+
 """add_magnet_id_to_transfer_sessions
 
 Revision ID: 1ccfa987e27c
@@ -19,10 +20,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-    pass
+    """Add magnet_id column to transfer_sessions table."""
+    op.add_column('transfer_sessions', sa.Column('magnet_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_transfer_sessions_magnet', 'transfer_sessions', 'magnets', ['magnet_id'], ['id'])
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    pass
+    """Remove magnet_id column from transfer_sessions table."""
+    op.drop_constraint('fk_transfer_sessions_magnet', 'transfer_sessions', type_='foreignkey')
+    op.drop_column('transfer_sessions', 'magnet_id')
