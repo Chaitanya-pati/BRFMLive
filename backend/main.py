@@ -171,14 +171,14 @@ def get_lab_tested_vehicles(db: Session = Depends(get_db)):
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
 def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
-    
+
     # Convert binary image paths to strings
     for vehicle in vehicles:
         if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
             vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
         if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
             vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
-    
+
     return vehicles
 
 @app.get("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntryWithSupplier)
@@ -186,13 +186,13 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
-    
+
     # Convert binary image paths to strings
     if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
         vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
     if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
         vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
-    
+
     return vehicle
 
 @app.put("/api/vehicles/{vehicle_id}", response_model=schemas.VehicleEntry)
@@ -528,7 +528,7 @@ async def create_unloading_entry(
 @app.get("/api/unloading-entries", response_model=List[schemas.UnloadingEntryWithDetails])
 def get_unloading_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     entries = db.query(models.UnloadingEntry).offset(skip).limit(limit).all()
-    
+
     # Images are already stored as strings in UnloadingEntry, no conversion needed
     return entries
 
@@ -648,7 +648,7 @@ def update_bin(bin_id: int, bin_update: schemas.BinUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Bin not found")
 
     update_data = bin_update.dict(exclude_unset=True)
-    
+
     # Check for duplicate bin_number if it's being updated
     if 'bin_number' in update_data and update_data['bin_number'] != db_bin.bin_number:
         existing_bin = db.query(models.Bin).filter(
@@ -657,7 +657,7 @@ def update_bin(bin_id: int, bin_update: schemas.BinUpdate, db: Session = Depends
         ).first()
         if existing_bin:
             raise HTTPException(status_code=400, detail="Bin number already exists")
-    
+
     for key, value in update_data.items():
         setattr(db_bin, key, value)
 
@@ -706,7 +706,7 @@ def update_magnet(magnet_id: int, magnet_update: schemas.MagnetUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Magnet not found")
 
     update_data = magnet_update.dict(exclude_unset=True)
-    
+
     # Check for duplicate name if it's being updated
     if 'name' in update_data and update_data['name'] != db_magnet.name:
         existing_magnet = db.query(models.Magnet).filter(
@@ -715,7 +715,7 @@ def update_magnet(magnet_id: int, magnet_update: schemas.MagnetUpdate, db: Sessi
         ).first()
         if existing_magnet:
             raise HTTPException(status_code=400, detail="Magnet name already exists")
-    
+
     for key, value in update_data.items():
         setattr(db_magnet, key, value)
 
@@ -742,29 +742,29 @@ def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, 
     # Validate that either source_godown_id or source_bin_id is provided
     if not mapping_data.source_godown_id and not mapping_data.source_bin_id:
         raise HTTPException(status_code=400, detail="Either source_godown_id or source_bin_id must be provided")
-    
+
     if mapping_data.source_godown_id and mapping_data.source_bin_id:
         raise HTTPException(status_code=400, detail="Cannot specify both source_godown_id and source_bin_id")
-    
+
     # Validate foreign keys
     magnet = db.query(models.Magnet).filter(models.Magnet.id == mapping_data.magnet_id).first()
     if not magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     if mapping_data.source_godown_id:
         godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == mapping_data.source_godown_id).first()
         if not godown:
             raise HTTPException(status_code=404, detail="Source godown not found")
-    
+
     if mapping_data.source_bin_id:
         source_bin = db.query(models.Bin).filter(models.Bin.id == mapping_data.source_bin_id).first()
         if not source_bin:
             raise HTTPException(status_code=404, detail="Source bin not found")
-    
+
     bin_data = db.query(models.Bin).filter(models.Bin.id == mapping_data.destination_bin_id).first()
     if not bin_data:
         raise HTTPException(status_code=404, detail="Destination bin not found")
-    
+
     db_mapping = models.RouteMagnetMapping(**mapping_data.dict())
     db.add(db_mapping)
     db.commit()
@@ -772,8 +772,9 @@ def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, 
     return db_mapping
 
 @app.get("/api/route-magnet-mappings", response_model=List[schemas.RouteMagnetMappingWithDetails])
-def get_route_magnet_mappings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    mappings = db.query(models.RouteMagnetMapping).offset(skip).limit(limit).all()
+def get_route_magnet_mappings(db: Session = Depends(get_db)):
+    """Get all route magnet mappings with related details"""
+    mappings = db.query(models.RouteMagnetMapping).all()
     # Sanitize float values in related objects
     for mapping in mappings:
         if mapping.destination_bin:
@@ -800,30 +801,30 @@ def update_route_magnet_mapping(mapping_id: int, mapping_update: schemas.RouteMa
         raise HTTPException(status_code=404, detail="Route magnet mapping not found")
 
     update_data = mapping_update.dict(exclude_unset=True)
-    
+
     # Validate foreign keys if they're being updated
     if 'magnet_id' in update_data:
         magnet = db.query(models.Magnet).filter(models.Magnet.id == update_data['magnet_id']).first()
         if not magnet:
             raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     if 'source_godown_id' in update_data:
         if update_data['source_godown_id']:
             godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == update_data['source_godown_id']).first()
             if not godown:
                 raise HTTPException(status_code=404, detail="Source godown not found")
-    
+
     if 'source_bin_id' in update_data:
         if update_data['source_bin_id']:
             source_bin = db.query(models.Bin).filter(models.Bin.id == update_data['source_bin_id']).first()
             if not source_bin:
                 raise HTTPException(status_code=404, detail="Source bin not found")
-    
+
     if 'destination_bin_id' in update_data:
         bin_data = db.query(models.Bin).filter(models.Bin.id == update_data['destination_bin_id']).first()
         if not bin_data:
             raise HTTPException(status_code=404, detail="Destination bin not found")
-    
+
     for key, value in update_data.items():
         setattr(db_mapping, key, value)
 
@@ -859,13 +860,13 @@ async def create_magnet_cleaning_record(
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     # Validate transfer session if provided
     if transfer_session_id:
         transfer_session = db.query(models.TransferSession).filter(models.TransferSession.id == transfer_session_id).first()
         if not transfer_session:
             raise HTTPException(status_code=404, detail="Transfer session not found")
-    
+
     # Parse cleaning timestamp
     timestamp = None
     if cleaning_timestamp:
@@ -873,20 +874,20 @@ async def create_magnet_cleaning_record(
             timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
         except:
             timestamp = datetime.utcnow()
-    
+
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
         transfer_session_id=transfer_session_id,
         cleaning_timestamp=timestamp or datetime.utcnow(),
         notes=notes
     )
-    
+
     if before_cleaning_photo and before_cleaning_photo.filename:
         db_record.before_cleaning_photo = await save_upload_file(before_cleaning_photo)
-    
+
     if after_cleaning_photo and after_cleaning_photo.filename:
         db_record.after_cleaning_photo = await save_upload_file(after_cleaning_photo)
-    
+
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
@@ -902,7 +903,7 @@ def get_magnet_cleaning_records(
     query = db.query(models.MagnetCleaningRecord)
     if magnet_id:
         query = query.filter(models.MagnetCleaningRecord.magnet_id == magnet_id)
-    
+
     records = query.order_by(models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(skip).limit(limit).all()
     return records
 
@@ -926,27 +927,27 @@ async def update_magnet_cleaning_record(
     db_record = db.query(models.MagnetCleaningRecord).filter(models.MagnetCleaningRecord.id == record_id).first()
     if not db_record:
         raise HTTPException(status_code=404, detail="Magnet cleaning record not found")
-    
+
     # Validate magnet exists
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     db_record.magnet_id = magnet_id
     db_record.notes = notes
-    
+
     if cleaning_timestamp:
         try:
             db_record.cleaning_timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
         except:
             pass
-    
+
     if before_cleaning_photo and before_cleaning_photo.filename:
         db_record.before_cleaning_photo = await save_upload_file(before_cleaning_photo)
-    
+
     if after_cleaning_photo and after_cleaning_photo.filename:
         db_record.after_cleaning_photo = await save_upload_file(after_cleaning_photo)
-    
+
     db.commit()
     db.refresh(db_record)
     return db_record
@@ -956,7 +957,7 @@ def delete_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db))
     db_record = db.query(models.MagnetCleaningRecord).filter(models.MagnetCleaningRecord.id == record_id).first()
     if not db_record:
         raise HTTPException(status_code=404, detail="Magnet cleaning record not found")
-    
+
     try:
         db.delete(db_record)
         db.commit()
@@ -975,20 +976,20 @@ def start_transfer_session(
     source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == session_data.source_godown_id).first()
     if not source_godown:
         raise HTTPException(status_code=404, detail="Source godown not found")
-    
+
     # Validate destination bin exists
     destination_bin = db.query(models.Bin).filter(models.Bin.id == session_data.destination_bin_id).first()
     if not destination_bin:
         raise HTTPException(status_code=404, detail="Destination bin not found")
-    
+
     # Get cleaning interval from route mapping
     route_mapping = db.query(models.RouteMagnetMapping).filter(
         models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
         models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
     ).first()
-    
+
     cleaning_interval = route_mapping.cleaning_interval_hours if route_mapping else 3
-    
+
     # Create new transfer session
     db_session = models.TransferSession(
         source_godown_id=session_data.source_godown_id,
@@ -998,11 +999,11 @@ def start_transfer_session(
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
     )
-    
+
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
-    
+
     return db_session
 
 @app.post("/api/transfer-sessions/{session_id}/stop", response_model=schemas.TransferSessionWithDetails)
@@ -1015,29 +1016,29 @@ def stop_transfer_session(
     db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Transfer session not found")
-    
+
     if db_session.status != models.TransferSessionStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Transfer session is not active")
-    
+
     # Update session
     db_session.stop_timestamp = datetime.utcnow()
     db_session.transferred_quantity = transferred_quantity
     db_session.status = models.TransferSessionStatus.COMPLETED
-    
+
     # Update source godown quantity (subtract)
     source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
     if source_godown:
         source_godown.current_storage = max(0, (source_godown.current_storage or 0) - transferred_quantity)
-    
+
     # Update destination bin quantity (add)
     destination_bin = db.query(models.Bin).filter(models.Bin.id == db_session.destination_bin_id).first()
     if destination_bin:
         destination_bin.current_quantity = (destination_bin.current_quantity or 0) + transferred_quantity
-        
+
         # Check if bin is full
         if destination_bin.current_quantity >= destination_bin.capacity:
             destination_bin.status = models.BinStatus.FULL
-    
+
     db.commit()
     db.refresh(db_session)
     return db_session
@@ -1050,12 +1051,12 @@ def get_transfer_sessions(
     db: Session = Depends(get_db)
 ):
     query = db.query(models.TransferSession)
-    
+
     if status:
         query = query.filter(models.TransferSession.status == status)
-    
+
     sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
-    
+
     # Sanitize float values
     for session in sessions:
         session.transferred_quantity = sanitize_float(session.transferred_quantity)
@@ -1064,7 +1065,7 @@ def get_transfer_sessions(
         if session.destination_bin:
             session.destination_bin.capacity = sanitize_float(session.destination_bin.capacity)
             session.destination_bin.current_quantity = sanitize_float(session.destination_bin.current_quantity)
-    
+
     return sessions
 
 @app.get("/api/transfer-sessions/{session_id}", response_model=schemas.TransferSessionWithDetails)
@@ -1083,11 +1084,11 @@ def update_transfer_session(
     db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Transfer session not found")
-    
+
     update_data = session_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_session, key, value)
-    
+
     db.commit()
     db.refresh(db_session)
     return db_session
@@ -1097,7 +1098,7 @@ def delete_transfer_session(session_id: int, db: Session = Depends(get_db)):
     db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Transfer session not found")
-    
+
     try:
         db.delete(db_session)
         db.commit()
@@ -1118,27 +1119,27 @@ def get_cleaning_history_report(
     db: Session = Depends(get_db)
 ):
     query = db.query(models.MagnetCleaningRecord)
-    
+
     if magnet_id:
         query = query.filter(models.MagnetCleaningRecord.magnet_id == magnet_id)
-    
+
     if transfer_session_id:
         query = query.filter(models.MagnetCleaningRecord.transfer_session_id == transfer_session_id)
-    
+
     if start_date:
         try:
             start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
             query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp >= start_dt)
         except:
             pass
-    
+
     if end_date:
         try:
             end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp <= end_dt)
         except:
             pass
-    
+
     records = query.order_by(models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(skip).limit(limit).all()
     return records
 
@@ -1152,32 +1153,32 @@ def get_transfer_details_report(
     db: Session = Depends(get_db)
 ):
     query = db.query(models.TransferSession)
-    
+
     if status:
         query = query.filter(models.TransferSession.status == status)
-    
+
     if start_date:
         try:
             start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
             query = query.filter(models.TransferSession.start_timestamp >= start_dt)
         except:
             pass
-    
+
     if end_date:
         try:
             end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             query = query.filter(models.TransferSession.start_timestamp <= end_dt)
         except:
             pass
-    
+
     sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
-    
+
     # Prepare detailed transfer reports with cleaning records
     result = []
     for session in sessions:
         session_dict = schemas.TransferSessionWithDetails.model_validate(session).model_dump()
         result.append(session_dict)
-    
+
     return result
 
 @app.get("/api/godowns", response_model=List[schemas.GodownMaster])
@@ -1205,10 +1206,10 @@ def update_godown(godown_id: int, godown: schemas.GodownMasterUpdate, db: Sessio
     db_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
     if not db_godown:
         raise HTTPException(status_code=404, detail="Godown not found")
-    
+
     for key, value in godown.dict(exclude_unset=True).items():
         setattr(db_godown, key, value)
-    
+
     db.commit()
     db.refresh(db_godown)
     return db_godown
@@ -1218,7 +1219,7 @@ def delete_godown(godown_id: int, db: Session = Depends(get_db)):
     db_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == godown_id).first()
     if not db_godown:
         raise HTTPException(status_code=404, detail="Godown not found")
-    
+
     db.delete(db_godown)
     db.commit()
     return {"message": "Godown deleted successfully"}
@@ -1248,10 +1249,10 @@ def update_bin(bin_id: int, bin_data: schemas.BinUpdate, db: Session = Depends(g
     db_bin = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
     if not db_bin:
         raise HTTPException(status_code=404, detail="Bin not found")
-    
+
     for key, value in bin_data.dict(exclude_unset=True).items():
         setattr(db_bin, key, value)
-    
+
     db.commit()
     db.refresh(db_bin)
     return db_bin
@@ -1261,7 +1262,7 @@ def delete_bin(bin_id: int, db: Session = Depends(get_db)):
     db_bin = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
     if not db_bin:
         raise HTTPException(status_code=404, detail="Bin not found")
-    
+
     db.delete(db_bin)
     db.commit()
     return {"message": "Bin deleted successfully"}
@@ -1291,10 +1292,10 @@ def update_magnet(magnet_id: int, magnet: schemas.MagnetUpdate, db: Session = De
     db_magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not db_magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     for key, value in magnet.dict(exclude_unset=True).items():
         setattr(db_magnet, key, value)
-    
+
     db.commit()
     db.refresh(db_magnet)
     return db_magnet
@@ -1304,7 +1305,7 @@ def delete_magnet(magnet_id: int, db: Session = Depends(get_db)):
     db_magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not db_magnet:
         raise HTTPException(status_code=404, detail="Magnet not found")
-    
+
     db.delete(db_magnet)
     db.commit()
     return {"message": "Magnet deleted successfully"}

@@ -904,13 +904,14 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'magnet', 
       label: 'Magnet', 
       flex: 1.2, 
-      render: (item) => item.magnet?.name || 'N/A'
+      render: (val, item) => item?.magnet?.name || 'N/A'
     },
     { 
       field: 'route_flow', 
       label: 'Route Flow', 
       flex: 2.2, 
-      render: (item) => {
+      render: (val, item) => {
+        if (!item) return 'N/A';
         const source = item.source_godown 
           ? `Godown: ${item.source_godown.name}` 
           : item.source_bin 
@@ -924,7 +925,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'magnet_status', 
       label: 'Magnet Status', 
       flex: 0.8, 
-      render: (item) => item.magnet?.status || 'N/A' 
+      render: (val, item) => item?.magnet?.status || 'N/A' 
     },
     { 
       field: 'cleaning_interval_hours', 
