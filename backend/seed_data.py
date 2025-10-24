@@ -69,9 +69,38 @@ def seed_godowns_and_bins():
         db.commit()
         print(f"Added {bins_added} new bins")
         
+        # Add 10 Magnets
+        magnets_data = [
+            {"name": "Magnet-M1", "description": "High-strength permanent magnet for main conveyor", "status": "Active"},
+            {"name": "Magnet-M2", "description": "Standard magnetic separator unit", "status": "Active"},
+            {"name": "Magnet-M3", "description": "Heavy-duty electromagnetic cleaner", "status": "Active"},
+            {"name": "Magnet-M4", "description": "Drum-type magnetic separator", "status": "Active"},
+            {"name": "Magnet-M5", "description": "Overhead suspended magnetic separator", "status": "Active"},
+            {"name": "Magnet-M6", "description": "Inline magnetic trap", "status": "Active"},
+            {"name": "Magnet-M7", "description": "Rotating drum magnet cleaner", "status": "Active"},
+            {"name": "Magnet-M8", "description": "Belt-type magnetic separator", "status": "Active"},
+            {"name": "Magnet-M9", "description": "Grate magnet for bin entry", "status": "Active"},
+            {"name": "Magnet-M10", "description": "Drawer magnet for transfer points", "status": "Active"},
+        ]
+        
+        magnets_added = 0
+        for magnet_data in magnets_data:
+            # Check if magnet already exists
+            existing = db.query(models.Magnet).filter(
+                models.Magnet.name == magnet_data["name"]
+            ).first()
+            if not existing:
+                magnet = models.Magnet(**magnet_data)
+                db.add(magnet)
+                magnets_added += 1
+        
+        db.commit()
+        print(f"Added {magnets_added} new magnets")
+        
         print("\nSeeding completed successfully!")
         print(f"Total godowns in database: {db.query(models.GodownMaster).count()}")
         print(f"Total bins in database: {db.query(models.Bin).count()}")
+        print(f"Total magnets in database: {db.query(models.Magnet).count()}")
         
     except Exception as e:
         print(f"Error seeding data: {e}")
