@@ -81,10 +81,17 @@ export default function PrecleaningBinScreen({ navigation }) {
     fetchBins();
     fetchMagnets();
     fetchRouteMappings();
-    fetchCleaningRecords();
     fetchGodowns();
+    fetchCleaningRecords();
     fetchTransferSessions();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'routeMappings') {
+      fetchRouteMappings();
+      fetchGodowns();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
