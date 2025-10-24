@@ -49,7 +49,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     source_godown_id: '',
     source_bin_id: '',
     destination_bin_id: '',
-    cleaning_interval_hours: '30', // in seconds (30 seconds for easy testing)
+    cleaning_interval_hours: '300', // in seconds (300 = 5 minutes)
   });
 
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
@@ -412,7 +412,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       source_godown_id: '',
       source_bin_id: '',
       destination_bin_id: '',
-      cleaning_interval_hours: '3',
+      cleaning_interval_hours: '300', // 5 minutes in seconds
     });
     setModalVisible(true);
   };
@@ -997,7 +997,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     },
     { 
       field: 'cleaning_interval_hours', 
-      label: 'Cleaning Interval (hrs)', 
+      label: 'Cleaning Interval (sec)', 
       flex: 1 
     },
   ];
@@ -1386,7 +1386,7 @@ export default function PrecleaningBinScreen({ navigation }) {
                   label="Cleaning Interval (seconds) *"
                   value={routeMappingFormData.cleaning_interval_hours}
                   onChangeText={(text) => setRouteMappingFormData({ ...routeMappingFormData, cleaning_interval_hours: text })}
-                  placeholder="e.g., 300 (for 5 minutes)"
+                  placeholder="e.g., 300 (5 min) or 1800 (30 min)"
                   keyboardType="numeric"
                 />
 
