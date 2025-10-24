@@ -5,7 +5,7 @@ integrations = ["python_database:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["libxcrypt"]
+packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
 
 [workflows]
 runButton = "Project"
@@ -44,7 +44,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000"
+args = "cd frontend && npx expo start --web --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -61,10 +61,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5001
-externalPort = 3003
-
-[[ports]]
 localPort = 8000
 externalPort = 8000
 
@@ -75,6 +71,10 @@ externalPort = 3001
 [[ports]]
 localPort = 34727
 externalPort = 3002
+
+[[ports]]
+localPort = 36051
+externalPort = 3003
 
 [[ports]]
 localPort = 36719
