@@ -54,6 +54,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
     magnet_id: '',
+    transfer_session_id: '',
     cleaning_timestamp: new Date().toISOString(),
     notes: '',
     before_cleaning_photo: null,
@@ -130,8 +131,13 @@ export default function PrecleaningBinScreen({ navigation }) {
             const minutes = Math.floor(timeElapsed / 60);
             const seconds = Math.floor(timeElapsed % 60);
             const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+            
+            // Format cleaning interval
+            const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
+            const intervalSeconds = cleaningIntervalSeconds % 60;
+            const intervalString = intervalMinutes > 0 ? `${intervalMinutes}m ${intervalSeconds}s` : `${intervalSeconds}s`;
 
-            const alertMessage = `🔔 Magnet Cleaning Required!\n\nMagnet: ${magnetName}\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\n\nPlease clean the magnet now!`;
+            const alertMessage = `🔔 Magnet Cleaning Required!\n\nMagnet: ${magnetName}\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\n\nPlease clean the magnet now!`;
 
             // Play notification sound
             if (Platform.OS === 'web') {
@@ -143,7 +149,7 @@ export default function PrecleaningBinScreen({ navigation }) {
               }
 
               // Show custom notification with bell icon
-              showCleaningNotification(alertMessage, session.id);
+              showCleaningNotification(alertMessage, session.id, intervalString);
             } else {
               Alert.alert('🔔 Cleaning Reminder', alertMessage, [
                 { text: 'OK', style: 'default' }
@@ -160,9 +166,9 @@ export default function PrecleaningBinScreen({ navigation }) {
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(intervalId);
-  }, [transferSessions, godowns, bins, lastAlertTimes]);
+  }, [transferSessions, godowns, bins, magnets, lastAlertTimes]);
 
-  const showCleaningNotification = (message, sessionId) => {
+  const showCleaningNotification = (message, sessionId, intervalString) => {
     // Remove any existing notifications for this session
     const existingNotification = document.getElementById(`cleaning-notification-${sessionId}`);
     if (existingNotification) {
@@ -177,6 +183,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     const magnetLine = messageLines.find(line => line.startsWith('Magnet:')) || '';
     const transferLine = messageLines.find(line => line.startsWith('Transfer from')) || '';
     const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
+    const intervalLine = messageLines.find(line => line.startsWith('Cleaning Interval:')) || '';
     
     notification.innerHTML = `
       <div style="
@@ -216,7 +223,8 @@ export default function PrecleaningBinScreen({ navigation }) {
           <div style="font-size: 14px; opacity: 0.95; line-height: 1.6;">
             <div style="font-weight: 600; margin-bottom: 4px;">${magnetLine}</div>
             <div style="margin-bottom: 2px;">${transferLine}</div>
-            <div style="font-weight: 600; color: #fef3c7;">${timeLine}</div>
+            <div style="font-weight: 600; color: #fef3c7; margin-bottom: 2px;">${timeLine}</div>
+            <div style="font-size: 12px; opacity: 0.85;">${intervalLine}</div>
           </div>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" style="
@@ -409,6 +417,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingCleaningRecord(null);
     setCleaningRecordFormData({
       magnet_id: '',
+      transfer_session_id: '',
       cleaning_timestamp: new Date().toISOString(),
       notes: '',
       before_cleaning_photo: null,
@@ -482,6 +491,9 @@ export default function PrecleaningBinScreen({ navigation }) {
       setLoading(true);
       const formData = new FormData();
       formData.append('magnet_id', cleaningRecordFormData.magnet_id);
+      if (cleaningRecordFormData.transfer_session_id) {
+        formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
+      }
       formData.append('cleaning_timestamp', cleaningRecordFormData.cleaning_timestamp);
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
@@ -502,6 +514,27 @@ export default function PrecleaningBinScreen({ navigation }) {
         await magnetCleaningRecordApi.create(formData);
         Alert.alert('Success', 'Cleaning record added successfully');
       }
+
+      // Find active transfer sessions using this magnet and reset their timers
+      const magnetId = parseInt(cleaningRecordFormData.magnet_id);
+      const activeSessions = transferSessions.filter(
+        session => session.magnet_id === magnetId && !session.stop_timestamp
+      );
+
+      // Reset timer for sessions using this magnet
+      const updatedAlertTimes = { ...lastAlertTimes };
+      activeSessions.forEach(session => {
+        updatedAlertTimes[session.id] = 0; // Reset to 0 to start counting again
+        
+        // Remove notification from UI if on web
+        if (Platform.OS === 'web') {
+          const notification = document.getElementById(`cleaning-notification-${session.id}`);
+          if (notification) {
+            notification.remove();
+          }
+        }
+      });
+      setLastAlertTimes(updatedAlertTimes);
 
       setModalVisible(false);
       await fetchCleaningRecords();
@@ -1388,10 +1421,35 @@ export default function PrecleaningBinScreen({ navigation }) {
                 <SelectDropdown
                   label="Magnet *"
                   value={cleaningRecordFormData.magnet_id}
-                  onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, magnet_id: value })}
+                  onValueChange={(value) => {
+                    // Auto-select active transfer session for this magnet
+                    const activeSession = transferSessions.find(
+                      s => s.magnet_id === parseInt(value) && !s.stop_timestamp
+                    );
+                    setCleaningRecordFormData({ 
+                      ...cleaningRecordFormData, 
+                      magnet_id: value,
+                      transfer_session_id: activeSession ? String(activeSession.id) : ''
+                    });
+                  }}
                   options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
                   placeholder="Select magnet"
                 />
+
+                {cleaningRecordFormData.magnet_id && (
+                  <SelectDropdown
+                    label="Transfer Session (optional)"
+                    value={cleaningRecordFormData.transfer_session_id}
+                    onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, transfer_session_id: value })}
+                    options={transferSessions
+                      .filter(s => s.magnet_id === parseInt(cleaningRecordFormData.magnet_id))
+                      .map(s => ({ 
+                        label: `${s.source_godown?.name || 'N/A'} → ${s.destination_bin?.bin_number || 'N/A'} (${s.status})`, 
+                        value: String(s.id) 
+                      }))}
+                    placeholder="Select transfer session"
+                  />
+                )}
 
                 <InputField
                   label="Cleaning Timestamp"
