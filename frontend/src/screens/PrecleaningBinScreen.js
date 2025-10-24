@@ -624,11 +624,11 @@ export default function PrecleaningBinScreen({ navigation }) {
       const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
 
       if (Platform.OS === 'web') {
-        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\nYou will receive notifications when magnet cleaning is required.`);
+        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\n🔔 First notification will appear in ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
       } else {
         Alert.alert(
           '✅ Transfer Started',
-          `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}\n\nYou will receive notifications when cleaning is required.`,
+          `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}\n\nFirst notification in ${intervalDisplay}`,
           [{ text: 'OK', style: 'default' }]
         );
       }
