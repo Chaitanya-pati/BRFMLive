@@ -1013,6 +1013,8 @@ def start_transfer_session(
     db.commit()
     db.refresh(db_session)
 
+    print(f"✅ Created transfer session: ID={db_session.id}, status={db_session.status}, interval={db_session.cleaning_interval_hours}s, magnet_id={db_session.magnet_id}")
+
     return db_session
 
 @app.post("/api/transfer-sessions/{session_id}/stop", response_model=schemas.TransferSessionWithDetails)
@@ -1065,6 +1067,10 @@ def get_transfer_sessions(
         query = query.filter(models.TransferSession.status == status)
 
     sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
+
+    print(f"📊 Fetching transfer sessions: total={len(sessions)}")
+    for session in sessions:
+        print(f"   Session {session.id}: status={session.status}, interval={session.cleaning_interval_hours}s, stop={session.stop_timestamp}, magnet={session.magnet_id}")
 
     # Sanitize float values
     for session in sessions:

@@ -96,16 +96,22 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      const activeTransferSessions = transferSessions.filter(session => !session.stop_timestamp);
+      // Filter for ACTIVE sessions (status-based, not just stop_timestamp)
+      const activeTransferSessions = transferSessions.filter(session => 
+        session.status?.toLowerCase() === 'active' && !session.stop_timestamp
+      );
 
       console.log('🔍 Checking notifications...', {
         totalSessions: transferSessions.length,
         activeSessions: activeTransferSessions.length,
+        rawSessions: transferSessions,
         sessions: transferSessions.map(s => ({
           id: s.id,
           status: s.status,
           hasStopTime: !!s.stop_timestamp,
-          interval: s.cleaning_interval_hours
+          interval: s.cleaning_interval_hours,
+          magnet_id: s.magnet_id,
+          start_time: s.start_timestamp
         }))
       });
 
@@ -355,6 +361,14 @@ export default function PrecleaningBinScreen({ navigation }) {
     try {
       setLoading(true);
       const response = await transferSessionApi.getAll();
+      console.log('📦 Fetched transfer sessions:', response.data);
+      console.log('📊 Session details:', response.data.map(s => ({
+        id: s.id,
+        status: s.status,
+        stop_timestamp: s.stop_timestamp,
+        cleaning_interval: s.cleaning_interval_hours,
+        magnet_id: s.magnet_id
+      })));
       setTransferSessions(response.data);
     } catch (error) {
       console.error('Error fetching transfer sessions:', error);
