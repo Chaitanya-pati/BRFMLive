@@ -3,6 +3,22 @@
 ## Overview
 This full-stack, cross-platform application manages supplier information, vehicle entries, and laboratory quality testing for raw wheat. It provides a unified codebase for Android, iOS, and Web platforms, backed by a REST API. The system focuses on managing supplier master data, vehicle entry registration with photo capture, and comprehensive lab test recording for wheat quality, including an integrated system for Godown (warehouse) management, unloading entries, and quality claim tracking.
 
+## 🚀 Quick Setup (After Cloning to New Replit)
+
+When you clone this project to a new Replit, run this **one-time setup**:
+
+```bash
+bash setup_new_clone.sh
+```
+
+This script will:
+- ✅ Wait for PostgreSQL to start
+- ✅ Create the uploads directory
+- ✅ Run all database migrations
+- ✅ Optionally seed sample data
+
+After setup completes, just click the **Run** button to start the application!
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
