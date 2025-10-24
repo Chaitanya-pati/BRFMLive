@@ -89,7 +89,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   useEffect(() => {
     const intervalId = setInterval(() => {
       const activeTransferSessions = transferSessions.filter(session => !session.stop_timestamp);
-      
+
       console.log('🔍 Checking notifications...', {
         totalSessions: transferSessions.length,
         activeSessions: activeTransferSessions.length
@@ -102,7 +102,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         const cleaningIntervalSeconds = session.cleaning_interval_hours || 300; // default 5 minutes
 
         const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
-        
+
         console.log(`📊 Session ${session.id}:`, {
           elapsed: Math.floor(elapsedSeconds),
           interval: cleaningIntervalSeconds,
@@ -115,7 +115,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
           if (intervalsPassed > lastAlertInterval) {
             console.log('🔔 Triggering notification for session', session.id);
-            
+
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
             const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
@@ -133,7 +133,7 @@ export default function PrecleaningBinScreen({ navigation }) {
               } catch (e) {
                 console.error('Audio play error:', e);
               }
-              
+
               // Show custom notification with bell icon
               showCleaningNotification(alertMessage, session.id);
             } else {
@@ -164,7 +164,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     const notification = document.createElement('div');
     notification.id = `cleaning-notification-${sessionId}`;
     notification.className = 'cleaning-notification';
-    
+
     notification.innerHTML = `
       <div style="
         position: fixed;
@@ -892,32 +892,33 @@ export default function PrecleaningBinScreen({ navigation }) {
   ];
 
   const routeMappingColumns = [
+    { field: 'id', label: 'ID', flex: 0.4 },
     { 
-      field: 'magnet', 
-      label: 'Magnet', 
-      flex: 1.5,
-      render: (val) => val?.name || '-'
-    },
-    { 
-      field: 'source', 
-      label: 'Source', 
-      flex: 1.5,
-      render: (val, row) => {
-        if (row.source_godown) {
-          return `Godown: ${row.source_godown.name}`;
-        } else if (row.source_bin) {
-          return `Bin: ${row.source_bin.bin_number}`;
-        }
-        return '-';
+      field: 'route_flow', 
+      label: 'Route Flow', 
+      flex: 2.5, 
+      render: (item) => {
+        const source = item.source_godown 
+          ? `Godown: ${item.source_godown.name}` 
+          : item.source_bin 
+            ? `Bin: ${item.source_bin.bin_number}` 
+            : 'N/A';
+        const destination = item.destination_bin?.bin_number || 'N/A';
+        const magnet = item.magnet?.name || 'N/A';
+        return `${source} → [${magnet}] → Bin: ${destination}`;
       }
     },
     { 
-      field: 'destination_bin', 
-      label: 'Destination Bin', 
-      flex: 1.5,
-      render: (val) => val?.bin_number || '-'
+      field: 'magnet_status', 
+      label: 'Magnet Status', 
+      flex: 0.8, 
+      render: (item) => item.magnet?.status || 'N/A' 
     },
-    { field: 'cleaning_interval_hours', label: 'Cleaning Interval (sec)', flex: 1 },
+    { 
+      field: 'cleaning_interval_hours', 
+      label: 'Cleaning Interval (hrs)', 
+      flex: 1 
+    },
   ];
 
   const cleaningRecordColumns = [
@@ -1519,5 +1520,29 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
     marginTop: 24,
+  },
+  routeFlowPreview: {
+    backgroundColor: '#f0f9ff',
+    padding: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+    marginBottom: 16,
+  },
+  routeFlowTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  routeFlowText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    lineHeight: 20,
+  },
+  routeFlowMagnet: {
+    fontWeight: '700',
+    color: colors.primary,
   },
 });
