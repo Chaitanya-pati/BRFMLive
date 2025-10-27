@@ -141,49 +141,97 @@ export default function PrecleaningBinScreen({ navigation }) {
 
             const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
             const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
-            const magnetName = session.magnet?.name || magnets.find(m => m.id === session.magnet_id)?.name || 'Unknown';
-            const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
-            const minutes = Math.floor(timeElapsed / 60);
-            const seconds = Math.floor(timeElapsed % 60);
-            const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
             
-            // Format cleaning interval
-            const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
-            const intervalSeconds = cleaningIntervalSeconds % 60;
-            const intervalString = intervalMinutes > 0 ? `${intervalMinutes}m ${intervalSeconds}s` : `${intervalSeconds}s`;
+            // Find ALL magnets on this route (same source godown -> destination bin)
+            const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
+              mapping.source_godown_id === session.source_godown_id &&
+              mapping.destination_bin_id === session.destination_bin_id
+            );
 
-            const alertMessage = `🔔 Magnet Cleaning Required!\n\nMagnet: ${magnetName}\nTransfer from ${sourceName} to Bin ${destName}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\n\nPlease clean the magnet now!`;
+            // Check which magnets have been cleaned recently (within the interval)
+            const uncleanedMagnets = [];
+            const cleanedMagnets = [];
 
-            // Play notification sound
-            if (Platform.OS === 'web') {
-              try {
-                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+l9r0yHosBSJ1xe/glEILElyx6OyrWBUIRJze8L9qIAUuhM/z1YU1Bhxqvu7mnEoODlOq5O+zYBoHPJXY88p8LgUecL/v45dGChFcsujuq1oVB0Kb3fLBaiEELIHN89OENAM');
-                audio.play().catch(() => {});
-              } catch (e) {
-                console.error('Audio play error:', e);
+            routeMagnetsOnThisRoute.forEach(mapping => {
+              const magnet = magnets.find(m => m.id === mapping.magnet_id);
+              if (!magnet) return;
+
+              // Find the most recent cleaning record for this magnet during this session
+              const recentCleaningRecord = cleaningRecords
+                .filter(record => record.magnet_id === mapping.magnet_id)
+                .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+
+              // Check if the magnet was cleaned within the current interval
+              if (recentCleaningRecord) {
+                const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
+                const timeSinceCleaning = (now - cleaningTime) / 1000;
+                
+                if (timeSinceCleaning < cleaningIntervalSeconds) {
+                  cleanedMagnets.push(magnet);
+                } else {
+                  uncleanedMagnets.push(magnet);
+                }
+              } else {
+                uncleanedMagnets.push(magnet);
+              }
+            });
+
+            // Only show notification if there are uncleaned magnets
+            if (uncleanedMagnets.length > 0) {
+              const timeElapsed = (intervalsPassed * cleaningIntervalSeconds);
+              const minutes = Math.floor(timeElapsed / 60);
+              const seconds = Math.floor(timeElapsed % 60);
+              const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+              
+              // Format cleaning interval
+              const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
+              const intervalSeconds = cleaningIntervalSeconds % 60;
+              const intervalString = intervalMinutes > 0 ? `${intervalMinutes}m ${intervalSeconds}s` : `${intervalSeconds}s`;
+
+              const totalMagnetsOnRoute = routeMagnetsOnThisRoute.length;
+              const magnetNames = uncleanedMagnets.map(m => m.name).join(', ');
+              
+              const alertMessage = `🔔 Magnet Cleaning Required!\n\nTransfer from ${sourceName} to Bin ${destName}\nUncleaned Magnets: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute}\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\n\nPlease clean the ${uncleanedMagnets.length === 1 ? 'magnet' : 'magnets'} now!`;
+
+              // Play notification sound
+              if (Platform.OS === 'web') {
+                try {
+                  const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+l9r0yHosBSJ1xe/glEILElyx6OyrWBUIRJze8L9qIAUuhM/z1YU1Bhxqvu7mnEoODlOq5O+zYBoHPJXY88p8LgUecL/v45dGChFcsujuq1oVB0Kb3fLBaiEELIHN89OENAM');
+                  audio.play().catch(() => {});
+                } catch (e) {
+                  console.error('Audio play error:', e);
+                }
+
+                // Show custom notification with bell icon
+                showCleaningNotification(alertMessage, session.id, intervalString, uncleanedMagnets.length, totalMagnetsOnRoute);
+              } else {
+                Alert.alert('🔔 Cleaning Reminder', alertMessage, [
+                  { text: 'OK', style: 'default' }
+                ]);
               }
 
-              // Show custom notification with bell icon
-              showCleaningNotification(alertMessage, session.id, intervalString);
+              setLastAlertTimes(prev => ({
+                ...prev,
+                [session.id]: intervalsPassed
+              }));
             } else {
-              Alert.alert('🔔 Cleaning Reminder', alertMessage, [
-                { text: 'OK', style: 'default' }
-              ]);
+              // All magnets are cleaned, remove notification if exists
+              if (Platform.OS === 'web') {
+                const notification = document.getElementById(`cleaning-notification-${session.id}`);
+                if (notification) {
+                  notification.remove();
+                }
+              }
             }
-
-            setLastAlertTimes(prev => ({
-              ...prev,
-              [session.id]: intervalsPassed
-            }));
           }
         }
       });
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(intervalId);
-  }, [transferSessions, godowns, bins, magnets, lastAlertTimes]);
+  }, [transferSessions, godowns, bins, magnets, lastAlertTimes, routeMappings, cleaningRecords]);
 
-  const showCleaningNotification = (message, sessionId, intervalString) => {
+  const showCleaningNotification = (message, sessionId, intervalString, uncleanedCount, totalCount) => {
     // Remove any existing notifications for this session
     const existingNotification = document.getElementById(`cleaning-notification-${sessionId}`);
     if (existingNotification) {
@@ -195,8 +243,9 @@ export default function PrecleaningBinScreen({ navigation }) {
     notification.className = 'cleaning-notification';
 
     const messageLines = message.split('\n').filter(line => line.trim());
-    const magnetLine = messageLines.find(line => line.startsWith('Magnet:')) || '';
     const transferLine = messageLines.find(line => line.startsWith('Transfer from')) || '';
+    const uncleanedLine = messageLines.find(line => line.startsWith('Uncleaned Magnets:')) || '';
+    const magnetsLine = messageLines.find(line => line.startsWith('Magnets:')) || '';
     const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
     const intervalLine = messageLines.find(line => line.startsWith('Cleaning Interval:')) || '';
     
@@ -215,8 +264,8 @@ export default function PrecleaningBinScreen({ navigation }) {
         gap: 16px;
         z-index: 10000;
         animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), shake 0.5s ease-in-out 0.4s;
-        min-width: 380px;
-        max-width: 500px;
+        min-width: 400px;
+        max-width: 520px;
         border: 2px solid rgba(255,255,255,0.2);
       ">
         <div style="
@@ -236,9 +285,18 @@ export default function PrecleaningBinScreen({ navigation }) {
             ⚠️ MAGNET CLEANING REQUIRED
           </div>
           <div style="font-size: 14px; opacity: 0.95; line-height: 1.6;">
-            <div style="font-weight: 600; margin-bottom: 4px;">${magnetLine}</div>
-            <div style="margin-bottom: 2px;">${transferLine}</div>
-            <div style="font-weight: 600; color: #fef3c7; margin-bottom: 2px;">${timeLine}</div>
+            <div style="margin-bottom: 4px;">${transferLine}</div>
+            <div style="
+              background: rgba(255,255,255,0.2);
+              padding: 8px 12px;
+              border-radius: 8px;
+              margin: 8px 0;
+              font-weight: 700;
+              font-size: 15px;
+              border-left: 3px solid #fef3c7;
+            ">${uncleanedLine}</div>
+            <div style="font-size: 13px; margin-bottom: 4px; opacity: 0.9;">${magnetsLine}</div>
+            <div style="font-weight: 600; color: #fef3c7; margin-top: 8px; margin-bottom: 2px;">${timeLine}</div>
             <div style="font-size: 12px; opacity: 0.85;">${intervalLine}</div>
           </div>
         </div>
