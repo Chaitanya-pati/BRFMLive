@@ -30,6 +30,6 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "^54.0.3"
+    "babel-preset-expo": "^54.0.6"
   }
 }
