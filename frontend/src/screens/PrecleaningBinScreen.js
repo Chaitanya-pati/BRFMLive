@@ -156,22 +156,36 @@ export default function PrecleaningBinScreen({ navigation }) {
               const magnet = magnets.find(m => m.id === mapping.magnet_id);
               if (!magnet) return;
 
-              // Find the most recent cleaning record for this magnet during this session
+              // Find the most recent cleaning record for this magnet ONLY for the current transfer session
               const recentCleaningRecord = cleaningRecords
-                .filter(record => record.magnet_id === mapping.magnet_id)
+                .filter(record => 
+                  record.magnet_id === mapping.magnet_id && 
+                  record.transfer_session_id === session.id
+                )
                 .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+
+              console.log(`🔍 Checking magnet ${magnet.name} (ID: ${magnet.id}):`, {
+                hasCleaningRecord: !!recentCleaningRecord,
+                cleaningTime: recentCleaningRecord?.cleaning_timestamp,
+                sessionId: session.id
+              });
 
               // Check if the magnet was cleaned within the current interval
               if (recentCleaningRecord) {
                 const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
                 const timeSinceCleaning = (now - cleaningTime) / 1000;
                 
+                console.log(`  Time since cleaning: ${Math.floor(timeSinceCleaning)}s, Interval: ${cleaningIntervalSeconds}s`);
+                
                 if (timeSinceCleaning < cleaningIntervalSeconds) {
+                  console.log(`  ✅ Magnet ${magnet.name} is clean (cleaned ${Math.floor(timeSinceCleaning)}s ago)`);
                   cleanedMagnets.push(magnet);
                 } else {
+                  console.log(`  ❌ Magnet ${magnet.name} needs cleaning (last cleaned ${Math.floor(timeSinceCleaning)}s ago)`);
                   uncleanedMagnets.push(magnet);
                 }
               } else {
+                console.log(`  ❌ Magnet ${magnet.name} needs cleaning (never cleaned in this session)`);
                 uncleanedMagnets.push(magnet);
               }
             });
