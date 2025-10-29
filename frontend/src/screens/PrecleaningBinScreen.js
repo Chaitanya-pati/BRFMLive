@@ -121,7 +121,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         if (intervalsPassed > 0) {
           const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
           const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
-          
+
           // Find ALL magnets on this route (same source godown -> destination bin)
           const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
             mapping.source_godown_id === session.source_godown_id &&
@@ -144,17 +144,24 @@ export default function PrecleaningBinScreen({ navigation }) {
               )
               .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
 
-            // A magnet is considered "cleaned" if it has a cleaning record within the CURRENT interval period
+            // Calculate the start of the current interval period
+            const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+            const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
+
+            console.log(`  🔍 Magnet ${magnet.name}: Interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
+
+            // A magnet is considered "cleaned" if it has a cleaning record AFTER the current interval started
             if (recentCleaningRecord) {
               const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
-              const timeSinceCleaningSeconds = (now - cleaningTime) / 1000;
-              
-              // If cleaned within the current interval, it's clean
-              if (timeSinceCleaningSeconds < cleaningIntervalSeconds) {
-                console.log(`  ✅ Magnet ${magnet.name} is CLEAN (cleaned ${Math.floor(timeSinceCleaningSeconds)}s ago)`);
+
+              console.log(`  📝 Last cleaning: ${cleaningTime.toLocaleTimeString()} (interval start: ${currentIntervalStartTime.toLocaleTimeString()})`);
+
+              // Check if cleaning happened AFTER the current interval started
+              if (cleaningTime >= currentIntervalStartTime) {
+                console.log(`  ✅ Magnet ${magnet.name} is CLEAN (cleaned after interval ${currentIntervalNumber} started)`);
                 cleanedMagnets.push(magnet);
               } else {
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned ${Math.floor(timeSinceCleaningSeconds)}s ago)`);
+                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (cleaned BEFORE interval ${currentIntervalNumber} started)`);
                 uncleanedMagnets.push(magnet);
               }
             } else {
@@ -170,7 +177,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             const minutes = Math.floor(timeElapsed / 60);
             const seconds = Math.floor(timeElapsed % 60);
             const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-            
+
             // Format cleaning interval
             const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
             const intervalSeconds = cleaningIntervalSeconds % 60;
@@ -178,7 +185,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
             const totalMagnetsOnRoute = routeMagnetsOnThisRoute.length;
             const magnetNames = uncleanedMagnets.map(m => m.name).join(', ');
-            
+
             const alertMessage = `🔔 MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\n\n⚠️ Please create cleaning record NOW!`;
 
             console.log(`🔔 ALERT EVERY 5 SECONDS for session ${session.id}: ${uncleanedMagnets.length} magnet(s) need cleaning`);
@@ -231,12 +238,12 @@ export default function PrecleaningBinScreen({ navigation }) {
     notification.className = 'cleaning-notification';
 
     const messageLines = message.split('\n').filter(line => line.trim());
-    const transferLine = messageLines.find(line => line.startsWith('Transfer from')) || '';
-    const uncleanedLine = messageLines.find(line => line.startsWith('Uncleaned Magnets:')) || '';
+    const transferLine = messageLines.find(line => line.startsWith('Transfer')) || '';
+    const uncleanedLine = messageLines.find(line => line.startsWith('Uncleaned:')) || '';
     const magnetsLine = messageLines.find(line => line.startsWith('Magnets:')) || '';
     const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
     const intervalLine = messageLines.find(line => line.startsWith('Cleaning Interval:')) || '';
-    
+
     notification.innerHTML = `
       <div style="
         position: fixed;
@@ -418,14 +425,14 @@ export default function PrecleaningBinScreen({ navigation }) {
       setTransferSessions(response.data);
     } catch (error) {
       console.error('Error fetching transfer sessions:', error);
-      
+
       let errorMessage = 'Unable to load transfer sessions. Please try again.';
       if (error.message === 'Network Error' || !error.response) {
         errorMessage = '🔌 Connection Error\n\nUnable to connect to the server. Please check your internet connection and refresh the page.';
       } else if (error.response?.status >= 500) {
         errorMessage = '🔧 Server Error\n\nThe server encountered an error. Please try again in a moment.';
       }
-      
+
       if (Platform.OS === 'web') {
         console.error(errorMessage);
       } else {
@@ -597,28 +604,28 @@ export default function PrecleaningBinScreen({ navigation }) {
       }
 
       setModalVisible(false);
-      
+
       // Refresh cleaning records immediately to get the latest data
       console.log('🔄 Refreshing cleaning records after submission...');
       const updatedCleaningRecordsResponse = await magnetCleaningRecordApi.getAll();
       setCleaningRecords(updatedCleaningRecordsResponse.data);
-      
+
       // Check the session for this cleaning record
       const sessionId = cleaningRecordFormData.transfer_session_id ? parseInt(cleaningRecordFormData.transfer_session_id) : null;
-      
+
       if (sessionId && Platform.OS === 'web') {
         const session = transferSessions.find(s => s.id === sessionId);
-        
+
         if (session && session.status?.toLowerCase() === 'active' && !session.stop_timestamp) {
           // Find all magnets on this route
           const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
             mapping.source_godown_id === session.source_godown_id &&
             mapping.destination_bin_id === session.destination_bin_id
           );
-          
+
           const cleaningIntervalSeconds = session.cleaning_interval_hours || 300;
           const now = new Date();
-          
+
           // Check if ALL magnets on this route are now cleaned WITHIN THE CURRENT INTERVAL
           const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
             const recentCleaningRecord = updatedCleaningRecordsResponse.data
@@ -627,23 +634,23 @@ export default function PrecleaningBinScreen({ navigation }) {
                 record.transfer_session_id === session.id
               )
               .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
-            
+
             if (!recentCleaningRecord) {
               console.log(`  ❌ Magnet ${mapping.magnet_id}: No cleaning record`);
               return false;
             }
-            
+
             const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
             const timeSinceCleaningSeconds = (now - cleaningTime) / 1000;
-            
+
             const isCleaned = timeSinceCleaningSeconds < cleaningIntervalSeconds;
             console.log(`  ${isCleaned ? '✅' : '❌'} Magnet ${mapping.magnet_id}: cleaned ${Math.floor(timeSinceCleaningSeconds)}s ago`);
-            
+
             return isCleaned;
           });
-          
+
           console.log(`✅ Cleaning record submitted for session ${session.id}: All magnets cleaned? ${allMagnetsCleaned}`);
-          
+
           // If all magnets are cleaned, IMMEDIATELY remove the notification
           if (allMagnetsCleaned) {
             const notification = document.getElementById(`cleaning-notification-${session.id}`);
@@ -715,16 +722,16 @@ export default function PrecleaningBinScreen({ navigation }) {
           [{ text: 'OK', style: 'default' }]
         );
       }
-      
+
       setModalVisible(false);
       await fetchTransferSessions();
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
       console.error('Error details:', error.response?.data);
-      
+
       let errorMessage = 'An unexpected error occurred while starting the transfer.';
       let errorTitle = '❌ Transfer Failed';
-      
+
       if (error.response?.status === 404) {
         const detail = error.response?.data?.detail || '';
         if (detail.includes('No route mapping found')) {
@@ -824,10 +831,10 @@ export default function PrecleaningBinScreen({ navigation }) {
       await fetchGodowns();
     } catch (error) {
       console.error('Error stopping transfer:', error);
-      
+
       let errorMessage = 'An unexpected error occurred while stopping the transfer.';
       let errorTitle = '❌ Stop Transfer Failed';
-      
+
       if (error.response?.status === 404) {
         errorTitle = '❌ Transfer Not Found';
         errorMessage = 'This transfer session no longer exists. It may have already been stopped.';
