@@ -625,6 +625,15 @@ export default function PrecleaningBinScreen({ navigation }) {
 
           const cleaningIntervalSeconds = session.cleaning_interval_hours || 300;
           const now = new Date();
+          const startTime = new Date(session.start_timestamp);
+          const elapsedSeconds = (now - startTime) / 1000;
+          
+          // Calculate current interval number
+          const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+          const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
+
+          console.log(`🔍 Checking cleaning status after submission for session ${session.id}`);
+          console.log(`   Current interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
 
           // Check if ALL magnets on this route are now cleaned WITHIN THE CURRENT INTERVAL
           const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
@@ -641,24 +650,22 @@ export default function PrecleaningBinScreen({ navigation }) {
             }
 
             const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
-            const timeSinceCleaningSeconds = (now - cleaningTime) / 1000;
-
-            const isCleaned = timeSinceCleaningSeconds < cleaningIntervalSeconds;
-            console.log(`  ${isCleaned ? '✅' : '❌'} Magnet ${mapping.magnet_id}: cleaned ${Math.floor(timeSinceCleaningSeconds)}s ago`);
+            
+            // Check if cleaning happened AFTER the current interval started
+            const isCleaned = cleaningTime >= currentIntervalStartTime;
+            console.log(`  ${isCleaned ? '✅' : '❌'} Magnet ${mapping.magnet_id}: last cleaned at ${cleaningTime.toLocaleTimeString()}, interval started at ${currentIntervalStartTime.toLocaleTimeString()}`);
 
             return isCleaned;
           });
 
           console.log(`✅ Cleaning record submitted for session ${session.id}: All magnets cleaned? ${allMagnetsCleaned}`);
 
-          // If all magnets are cleaned, IMMEDIATELY remove the notification
-          if (allMagnetsCleaned) {
-            const notification = document.getElementById(`cleaning-notification-${session.id}`);
-            if (notification) {
-              console.log(`🗑️ IMMEDIATELY removing notification for session ${session.id} - all magnets cleaned!`);
-              notification.remove();
-            }
-          } else {
+          // IMMEDIATELY remove the notification if all magnets are cleaned
+          const notification = document.getElementById(`cleaning-notification-${session.id}`);
+          if (allMagnetsCleaned && notification) {
+            console.log(`🗑️ IMMEDIATELY removing notification for session ${session.id} - all magnets cleaned!`);
+            notification.remove();
+          } else if (!allMagnetsCleaned) {
             console.log(`⚠️ Session ${session.id} still has uncleaned magnets - notification will continue`);
           }
         }
