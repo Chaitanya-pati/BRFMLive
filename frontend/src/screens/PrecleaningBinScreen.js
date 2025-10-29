@@ -616,61 +616,55 @@ export default function PrecleaningBinScreen({ navigation }) {
 
       setModalVisible(false);
       
-      // Refresh cleaning records first to get the latest data
-      await fetchCleaningRecords();
+      // Refresh cleaning records immediately to get the latest data
+      const updatedCleaningRecordsResponse = await magnetCleaningRecordApi.getAll();
+      setCleaningRecords(updatedCleaningRecordsResponse.data);
       
-      // After refreshing, check all active transfer sessions to see if all magnets are now cleaned
-      const magnetId = parseInt(cleaningRecordFormData.magnet_id);
+      // Check the session for this cleaning record
       const sessionId = cleaningRecordFormData.transfer_session_id ? parseInt(cleaningRecordFormData.transfer_session_id) : null;
       
-      // Get updated cleaning records
-      const updatedCleaningRecords = await magnetCleaningRecordApi.getAll();
-      
-      // Check all active sessions
-      const activeTransferSessions = transferSessions.filter(session => 
-        session.status?.toLowerCase() === 'active' && !session.stop_timestamp
-      );
-      
-      activeTransferSessions.forEach(session => {
-        // Find all magnets on this route
-        const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
-          mapping.source_godown_id === session.source_godown_id &&
-          mapping.destination_bin_id === session.destination_bin_id
-        );
+      if (sessionId && Platform.OS === 'web') {
+        const session = transferSessions.find(s => s.id === sessionId);
         
-        const cleaningIntervalSeconds = session.cleaning_interval_hours || 300;
-        const now = new Date();
-        
-        // Check if ALL magnets on this route are now cleaned WITHIN THE INTERVAL
-        const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
-          // Find the most recent cleaning record for this magnet in this session
-          const recentCleaningRecord = updatedCleaningRecords.data
-            .filter(record =>
-              record.magnet_id === mapping.magnet_id && 
-              record.transfer_session_id === session.id
-            )
-            .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+        if (session && session.status?.toLowerCase() === 'active' && !session.stop_timestamp) {
+          // Find all magnets on this route
+          const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
+            mapping.source_godown_id === session.source_godown_id &&
+            mapping.destination_bin_id === session.destination_bin_id
+          );
           
-          if (!recentCleaningRecord) return false;
+          const cleaningIntervalSeconds = session.cleaning_interval_hours || 300;
+          const now = new Date();
           
-          // Check if cleaning is recent (within the interval)
-          const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
-          const timeSinceCleaningSeconds = (now - cleaningTime) / 1000;
+          // Check if ALL magnets on this route are now cleaned WITHIN THE INTERVAL
+          const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
+            const recentCleaningRecord = updatedCleaningRecordsResponse.data
+              .filter(record =>
+                record.magnet_id === mapping.magnet_id && 
+                record.transfer_session_id === session.id
+              )
+              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+            
+            if (!recentCleaningRecord) return false;
+            
+            const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
+            const timeSinceCleaningSeconds = (now - cleaningTime) / 1000;
+            
+            return timeSinceCleaningSeconds < cleaningIntervalSeconds;
+          });
           
-          return timeSinceCleaningSeconds < cleaningIntervalSeconds;
-        });
-        
-        console.log(`Session ${session.id}: All magnets cleaned within interval?`, allMagnetsCleaned);
-        
-        // If all magnets are cleaned within the interval, remove the notification
-        if (allMagnetsCleaned && Platform.OS === 'web') {
-          const notification = document.getElementById(`cleaning-notification-${session.id}`);
-          if (notification) {
-            console.log(`Removing notification for session ${session.id} - all magnets cleaned within interval!`);
-            notification.remove();
+          console.log(`✅ Cleaning submitted - Session ${session.id}: All magnets cleaned?`, allMagnetsCleaned);
+          
+          // If all magnets are cleaned, remove the notification immediately
+          if (allMagnetsCleaned) {
+            const notification = document.getElementById(`cleaning-notification-${session.id}`);
+            if (notification) {
+              console.log(`🗑️ Removing notification for session ${session.id} - all magnets cleaned!`);
+              notification.remove();
+            }
           }
         }
-      });
+      }
     } catch (error) {
       console.error('Error saving cleaning record:', error);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
