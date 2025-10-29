@@ -570,7 +570,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setCleaningRecordFormData({
       magnet_id: activeSession?.magnet_id ? String(activeSession.magnet_id) : '',
       transfer_session_id: activeSession ? String(activeSession.id) : '',
-      cleaning_timestamp: new Date().toISOString(),
+      cleaning_timestamp: null, // Will be set to current time on submit
       notes: '',
       before_cleaning_photo: null,
       after_cleaning_photo: null,
@@ -1747,8 +1747,10 @@ export default function PrecleaningBinScreen({ navigation }) {
 
                 <InputField
                   label="Cleaning Timestamp (IST)"
-                  placeholder="Cleaning timestamp"
-                  value={cleaningRecordFormData.cleaning_timestamp ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp) : ''}
+                  placeholder="Will be set to current time when you submit"
+                  value={editingCleaningRecord 
+                    ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp) 
+                    : '⏱️ Current time will be used automatically'}
                   editable={false}
                 />
 
