@@ -1,0 +1,189 @@
+Looking at your conversation history, I can see the core problem:
+The notification continues to appear every 5 seconds even after you've created a cleaning record for the magnet.
+Root Cause Analysis
+The issue is in the cleaning record validation logic. The code is checking if cleaning happened "after the current interval started", but there are several problems:
+
+Time comparison precision issues - JavaScript date comparisons can have millisecond differences
+State refresh timing - The cleaning records might not be immediately available after creation
+Interval calculation logic - The "current interval start time" calculation may not align with when the cleaning was actually done
+
+Corrected Solution
+Here's the fix with simplified, more reliable logic:Fixed Magnet Cleaning Notification LogicCode // Fixed notification check logic for PrecleaningBinScreen.js
+// Place this inside the useEffect that runs every 5 seconds
+
+useEffect(() => {
+  const intervalId = setInterval(() => {
+    const activeTransferSessions = transferSessions.filter(
+      sRetryHgive correcte problem statement and expected out comeProblem Statement
+Current Issue
+The magnet cleaning notification system continues to show alerts every 5 seconds even after a cleaning record has been created for the magnet in the active transfer session.
+Specific Problems:
+
+Persistent Notifications: After submitting a cleaning record through the "Add Cleaning Record" form, the notification alert continues to appear every 5 seconds without stopping
+Incorrect Interval Detection: The system is not properly detecting that a magnet has been cleaned within the current cleaning interval period
+State Synchronization: The cleaning records state may not be immediately updated after a new cleaning record is created
+Time Comparison Logic: The logic checking whether a cleaning happened "after the current interval started" is not working reliably
+
+Current Behavior (Wrong):
+1. Transfer session starts: 5:32 PM
+2. Cleaning interval: 10 minutes (600 seconds)
+3. First alert appears: 5:42 PM (after first interval)
+4. Alert continues every 5 seconds: 🔔 "Clean magnet m1"
+5. User creates cleaning record: 5:45 PM ✅
+6. Alert STILL continues: 🔔 "Clean magnet m1" (WRONG!)
+7. Alert never stops despite cleaning record existing
+```
+
+---
+
+# Expected Outcome
+
+## Correct Notification Workflow
+
+### Phase 1: Transfer Session Active - Before First Interval
+```
+Time: 5:32 PM - 5:42 PM (0-10 minutes)
+Status: ✅ NO notifications
+Reason: First cleaning interval hasn't completed yet
+```
+
+### Phase 2: First Cleaning Interval Passed - Magnet Uncleaned
+```
+Time: After 5:42 PM
+Status: 🔔 Notification appears EVERY 5 SECONDS
+Message: "⚠️ MAGNET CLEANING REQUIRED
+         Transfer: G1 → Bin 1
+         Uncleaned: 1 of 1 magnets
+         Magnets: m1
+         Running time: 10m 30s
+         Cleaning Interval: 10m 0s"
+Sound: Notification beep plays
+Action: Alert continues until magnet is cleaned
+```
+
+### Phase 3: Magnet Cleaned - Immediate Stop
+```
+Time: 5:45 PM (User creates cleaning record)
+Action: User submits cleaning record for magnet m1
+Expected Result: 
+  ✅ Notification IMMEDIATELY disappears (within 5 seconds max)
+  ✅ No more alerts until next interval
+  ✅ System confirms magnet is clean for current interval
+```
+
+### Phase 4: Next Cleaning Interval - Cycle Repeats
+```
+Time: 5:52 PM (Next 10-minute interval starts)
+Status: 🔔 Notification appears again every 5 seconds
+Reason: Magnet needs to be re-cleaned for new interval
+Action: User must clean magnet again
+Result: Notification stops immediately after cleaning
+
+Detailed Expected Behavior
+✅ Notification Should START When:
+
+At least ONE cleaning interval has passed since transfer session started
+ANY magnet on the route is uncleaned for the current interval period
+Transfer session status is "ACTIVE"
+
+✅ Notification Should CONTINUE (Every 5 seconds) When:
+
+One or more magnets remain uncleaned in the current interval
+Transfer session is still active
+
+✅ Notification Should STOP Immediately When:
+
+ALL magnets on the route have been cleaned within the current interval
+A cleaning record exists with:
+
+Correct magnet_id
+Correct transfer_session_id
+cleaning_timestamp is AFTER the current interval started
+
+
+Stop should happen within the next 5-second check cycle
+
+✅ Notification Should RE-START When:
+
+The next cleaning interval begins
+Magnets have NOT been re-cleaned for the new interval
+
+
+Success Criteria
+1. Immediate Notification Removal
+javascript// When cleaning record is created at 5:45 PM:
+- Cleaning record saved: ✅ 5:45:00 PM
+- State refreshed: ✅ Within 1 second
+- Next 5-second check: ✅ 5:45:05 PM
+- Notification removed: ✅ At 5:45:05 PM check
+- Max delay: 5 seconds
+2. Correct Interval Tracking
+javascript// For 10-minute intervals starting at 5:32 PM:
+Interval 0: 5:32 PM - 5:42 PM → No alerts
+Interval 1: 5:42 PM - 5:52 PM → Alert if uncleaned
+Interval 2: 5:52 PM - 6:02 PM → Alert if uncleaned
+...and so on
+3. Multiple Magnet Support
+javascript// If route has 3 magnets (m1, m2, m3):
+- All uncleaned: "Uncleaned: 3 of 3 magnets (m1, m2, m3)"
+- m1 cleaned: "Uncleaned: 2 of 3 magnets (m2, m3)"
+- m1, m2 cleaned: "Uncleaned: 1 of 3 magnets (m3)"
+- All cleaned: Notification disappears ✅
+4. Session-Specific Tracking
+javascript// Only count cleaning records for current session:
+- Transfer Session ID: 123
+- Cleaning record with session_id=123: ✅ Counts
+- Cleaning record with session_id=456: ❌ Ignored
+
+Key Logic Requirements
+Cleaning Record Validation
+javascriptA magnet is considered "CLEAN" when:
+1. A cleaning record exists WHERE:
+   - magnet_id = target_magnet_id
+   - transfer_session_id = current_session_id
+   - cleaning_timestamp >= current_interval_start_time
+   
+2. Current interval start calculation:
+   currentIntervalNumber = floor(elapsedSeconds / intervalSeconds)
+   currentIntervalStartTime = sessionStartTime + (currentIntervalNumber * intervalSeconds)
+Notification Display Logic
+javascriptSHOW notification IF:
+  (currentIntervalNumber > 0) 
+  AND 
+  (uncleanedMagnets.length > 0)
+
+HIDE notification IF:
+  (uncleanedMagnets.length === 0)
+  OR
+  (session.status !== 'ACTIVE')
+```
+
+---
+
+## Example Timeline (Complete Flow)
+```
+5:32:00 PM → Transfer starts (G1 → Bin 1, magnet m1, 10-min interval)
+5:32:00-5:42:00 → ✅ No notifications (interval 0)
+
+5:42:00 PM → ⏰ Interval 1 starts
+5:42:05 PM → 🔔 "Clean magnet m1" (first alert)
+5:42:10 PM → 🔔 "Clean magnet m1" (alert repeats)
+5:42:15 PM → 🔔 "Clean magnet m1" (alert repeats)
+...every 5 seconds...
+
+5:45:30 PM → 🧹 User cleans m1 (creates cleaning record)
+5:45:35 PM → ✅ Notification STOPS (detected at next check)
+
+5:45:35-5:52:00 → ✅ No notifications (m1 is clean for interval 1)
+
+5:52:00 PM → ⏰ Interval 2 starts
+5:52:05 PM → 🔔 "Clean magnet m1" (alert starts again)
+5:52:10 PM → 🔔 "Clean magnet m1" (alert repeats)
+...every 5 seconds until cleaned...
+
+5:55:00 PM → 🧹 User cleans m1 again
+5:55:05 PM → ✅ Notification STOPS
+
+...cycle continues until transfer session is stopped...
+
+This is the complete pr
