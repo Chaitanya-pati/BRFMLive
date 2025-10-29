@@ -1,0 +1,46 @@
+I need to fix the magnet cleaning notification logic in the precleaning process. Currently, there are issues with how cleaning notifications are triggered and displayed. Here are the exact requirements:
+
+Core Requirements:
+
+Notification Trigger Logic:
+
+Notifications should appear ONLY when magnets are NOT cleaned within their fixed cleaning interval
+If ALL magnets on a route are cleaned, the notification should disappear immediately
+The system should check cleaning status every 5 seconds
+Notifications should remind users every interval period if magnets remain uncleaned
+Multiple Magnet Scenario:
+
+If there are 3 magnets between a godown and bin, and only 1 is cleaned while 2 remain uncleaned:
+Show notification: "Uncleaned Magnets: 2 of 3"
+List the specific magnet names that need cleaning
+Keep the notification visible until all magnets are cleaned
+Once all magnets are cleaned, remove the notification immediately
+Cleaning Record Tracking:
+
+A magnet is considered 'cleaned' if there is a cleaning record for that specific transfer session
+The cleaning record must be created AFTER the last notification interval
+Each transfer session should track its own cleaning records separately
+Current Issues:
+
+The notification logic in frontend/src/screens/PrecleaningBinScreen.js is incorrectly checking if magnets were cleaned after the last alert time
+It should instead check if magnets have been cleaned AT ALL during the current interval period
+The notification should persist and re-appear every 5 seconds until ALL magnets are cleaned
+When a cleaning record is added, it should immediately hide the notification if all magnets are now clean
+Technical Details:
+
+Fix the logic in the useEffect hook that checks transferSessions every 5 seconds
+Update the handleSubmitCleaningRecord function to properly reset notifications when magnets are cleaned
+Ensure the transfer_session_id is properly linked when creating cleaning records
+The notification should check: for each magnet on a route, does it have a cleaning record for THIS transfer session?
+Expected Behavior:
+
+Start a transfer session from Godown A → Bin 1 (uses 3 magnets: M1, M2, M3)
+After 5 minutes (or configured interval), notification appears: 'Uncleaned Magnets: 3 of 3'
+User cleans M1 → notification updates: 'Uncleaned Magnets: 2 of 3 (Magnets: M2, M3)'
+Notification continues to appear every 5 seconds
+User cleans M2 → notification updates: 'Uncleaned Magnets: 1 of 3 (Magnets: M3)'
+User cleans M3 → notification disappears immediately
+Timer resets, and after next interval, if magnets aren't cleaned again, notification re-appears
+Please fix the code in frontend/src/screens/PrecleaningBinScreen.js to implement this logic correctly."
+
+This prompt clearly explains the issue and expected behavior, making it easier for the agent to understand and implement the fix correctly.
