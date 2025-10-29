@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
@@ -13,18 +12,18 @@ def seed_godowns_and_bins():
         print(f"Existing godowns: {existing_godowns}")
         print(f"Existing bins: {existing_bins}")
         
-        # Add 10 Godowns (Hodavas)
+        # Add 10 Godowns with different types from godown_types.json
         godowns_data = [
-            {"name": "Hodava A1", "capacity": 10000, "type": "Covered Godown", "current_storage": 0.0},
-            {"name": "Hodava A2", "capacity": 15000, "type": "Covered Godown", "current_storage": 0.0},
-            {"name": "Hodava B1", "capacity": 12000, "type": "Open Storage", "current_storage": 0.0},
-            {"name": "Hodava B2", "capacity": 8000, "type": "Covered Godown", "current_storage": 0.0},
-            {"name": "Hodava C1", "capacity": 20000, "type": "Warehouse", "current_storage": 0.0},
-            {"name": "Hodava C2", "capacity": 18000, "type": "Warehouse", "current_storage": 0.0},
-            {"name": "Hodava D1", "capacity": 10000, "type": "Open Storage", "current_storage": 0.0},
-            {"name": "Hodava D2", "capacity": 14000, "type": "Covered Godown", "current_storage": 0.0},
-            {"name": "Hodava E1", "capacity": 16000, "type": "Warehouse", "current_storage": 0.0},
-            {"name": "Hodava E2", "capacity": 22000, "type": "Warehouse", "current_storage": 0.0},
+            {"name": "Godown Mill-1", "capacity": 10000, "type": "Mill", "current_storage": 0.0},
+            {"name": "Godown Mill-2", "capacity": 15000, "type": "Mill", "current_storage": 0.0},
+            {"name": "Godown Low Mill-1", "capacity": 12000, "type": "Low Mill", "current_storage": 0.0},
+            {"name": "Godown Low Mill-2", "capacity": 8000, "type": "Low Mill", "current_storage": 0.0},
+            {"name": "Godown HD-1", "capacity": 20000, "type": "HD", "current_storage": 0.0},
+            {"name": "Godown HD-2", "capacity": 18000, "type": "HD", "current_storage": 0.0},
+            {"name": "Godown Mill-3", "capacity": 10000, "type": "Mill", "current_storage": 0.0},
+            {"name": "Godown Low Mill-3", "capacity": 14000, "type": "Low Mill", "current_storage": 0.0},
+            {"name": "Godown HD-3", "capacity": 16000, "type": "HD", "current_storage": 0.0},
+            {"name": "Godown Mill-4", "capacity": 22000, "type": "Mill", "current_storage": 0.0},
         ]
         
         godowns_added = 0
@@ -51,8 +50,8 @@ def seed_godowns_and_bins():
             {"bin_number": "BIN-006", "capacity": 700.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
             {"bin_number": "BIN-007", "capacity": 650.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
             {"bin_number": "BIN-008", "capacity": 900.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
-            {"bin_number": "BIN-009", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
-            {"bin_number": "BIN-010", "capacity": 850.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-009", "capacity": 850.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-010", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
         ]
         
         bins_added = 0
@@ -69,38 +68,7 @@ def seed_godowns_and_bins():
         db.commit()
         print(f"Added {bins_added} new bins")
         
-        # Add 10 Magnets
-        magnets_data = [
-            {"name": "Magnet-M1", "description": "High-strength permanent magnet for main conveyor", "status": "Active"},
-            {"name": "Magnet-M2", "description": "Standard magnetic separator unit", "status": "Active"},
-            {"name": "Magnet-M3", "description": "Heavy-duty electromagnetic cleaner", "status": "Active"},
-            {"name": "Magnet-M4", "description": "Drum-type magnetic separator", "status": "Active"},
-            {"name": "Magnet-M5", "description": "Overhead suspended magnetic separator", "status": "Active"},
-            {"name": "Magnet-M6", "description": "Inline magnetic trap", "status": "Active"},
-            {"name": "Magnet-M7", "description": "Rotating drum magnet cleaner", "status": "Active"},
-            {"name": "Magnet-M8", "description": "Belt-type magnetic separator", "status": "Active"},
-            {"name": "Magnet-M9", "description": "Grate magnet for bin entry", "status": "Active"},
-            {"name": "Magnet-M10", "description": "Drawer magnet for transfer points", "status": "Active"},
-        ]
-        
-        magnets_added = 0
-        for magnet_data in magnets_data:
-            # Check if magnet already exists
-            existing = db.query(models.Magnet).filter(
-                models.Magnet.name == magnet_data["name"]
-            ).first()
-            if not existing:
-                magnet = models.Magnet(**magnet_data)
-                db.add(magnet)
-                magnets_added += 1
-        
-        db.commit()
-        print(f"Added {magnets_added} new magnets")
-        
-        print("\nSeeding completed successfully!")
-        print(f"Total godowns in database: {db.query(models.GodownMaster).count()}")
-        print(f"Total bins in database: {db.query(models.Bin).count()}")
-        print(f"Total magnets in database: {db.query(models.Magnet).count()}")
+        print("Seeding completed successfully!")
         
     except Exception as e:
         print(f"Error seeding data: {e}")
