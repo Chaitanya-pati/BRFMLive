@@ -62,10 +62,9 @@ def create_test_data(db: Session):
     # Create a godown
     godown = models.GodownMaster(
         name="Test Godown G1",
-        location="Test Location",
-        capacity=10000.0,
-        current_storage=5000.0,
-        status=models.GodownStatus.ACTIVE
+        capacity=10000,
+        type="Warehouse",
+        current_storage=5000.0
     )
     db.add(godown)
     db.flush()
