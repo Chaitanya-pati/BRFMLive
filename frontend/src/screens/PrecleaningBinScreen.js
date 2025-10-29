@@ -136,36 +136,39 @@ export default function PrecleaningBinScreen({ navigation }) {
             const magnet = magnets.find(m => m.id === mapping.magnet_id);
             if (!magnet) return;
 
-            // Find the most recent cleaning record for this magnet in THIS SESSION
-            const recentCleaningRecord = cleaningRecords
+            // Find ALL cleaning records for this magnet in THIS SESSION
+            const sessionCleaningRecords = cleaningRecords
               .filter(record => 
                 record.magnet_id === mapping.magnet_id && 
                 record.transfer_session_id === session.id
               )
-              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
+
+            console.log(`  🔍 Magnet ${magnet.name}: Found ${sessionCleaningRecords.length} cleaning records in session ${session.id}`);
 
             // Calculate the start of the current interval period
             const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
             const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
 
-            console.log(`  🔍 Magnet ${magnet.name}: Interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
+            console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
 
-            // A magnet is considered "cleaned" if it has a cleaning record AFTER the current interval started
-            if (recentCleaningRecord) {
-              const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
+            // Check if ANY cleaning record exists AFTER the current interval started
+            const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
+              const cleaningTime = new Date(record.cleaning_timestamp);
+              return cleaningTime >= currentIntervalStartTime;
+            });
 
-              console.log(`  📝 Last cleaning: ${cleaningTime.toLocaleTimeString()} (interval start: ${currentIntervalStartTime.toLocaleTimeString()})`);
-
-              // Check if cleaning happened AFTER the current interval started
-              if (cleaningTime >= currentIntervalStartTime) {
-                console.log(`  ✅ Magnet ${magnet.name} is CLEAN (cleaned after interval ${currentIntervalNumber} started)`);
-                cleanedMagnets.push(magnet);
-              } else {
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (cleaned BEFORE interval ${currentIntervalNumber} started)`);
-                uncleanedMagnets.push(magnet);
-              }
+            if (cleanedInCurrentInterval) {
+              const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
+              console.log(`  ✅ Magnet ${magnet.name} is CLEAN (last cleaned at ${mostRecentCleaning.toLocaleTimeString()})`);
+              cleanedMagnets.push(magnet);
             } else {
-              console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning record in this session)`);
+              if (sessionCleaningRecords.length > 0) {
+                const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
+                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${mostRecentCleaning.toLocaleTimeString()}, before current interval)`);
+              } else {
+                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning records in this session)`);
+              }
               uncleanedMagnets.push(magnet);
             }
           });
@@ -637,25 +640,27 @@ export default function PrecleaningBinScreen({ navigation }) {
 
           // Check if ALL magnets on this route are now cleaned WITHIN THE CURRENT INTERVAL
           const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
-            const recentCleaningRecord = updatedCleaningRecordsResponse.data
+            const sessionRecords = updatedCleaningRecordsResponse.data
               .filter(record =>
                 record.magnet_id === mapping.magnet_id && 
                 record.transfer_session_id === session.id
               )
-              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp))[0];
+              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
 
-            if (!recentCleaningRecord) {
-              console.log(`  ❌ Magnet ${mapping.magnet_id}: No cleaning record`);
+            if (sessionRecords.length === 0) {
+              console.log(`  ❌ Magnet ${mapping.magnet_id}: No cleaning records in this session`);
               return false;
             }
 
-            const cleaningTime = new Date(recentCleaningRecord.cleaning_timestamp);
+            // Check if ANY cleaning record exists after the current interval started
+            const cleanedInInterval = sessionRecords.some(record => {
+              const cleaningTime = new Date(record.cleaning_timestamp);
+              return cleaningTime >= currentIntervalStartTime;
+            });
             
-            // Check if cleaning happened AFTER the current interval started
-            const isCleaned = cleaningTime >= currentIntervalStartTime;
-            console.log(`  ${isCleaned ? '✅' : '❌'} Magnet ${mapping.magnet_id}: last cleaned at ${cleaningTime.toLocaleTimeString()}, interval started at ${currentIntervalStartTime.toLocaleTimeString()}`);
+            console.log(`  ${cleanedInInterval ? '✅' : '❌'} Magnet ${mapping.magnet_id}: ${cleanedInInterval ? 'cleaned' : 'NOT cleaned'} in current interval`);
 
-            return isCleaned;
+            return cleanedInInterval;
           });
 
           console.log(`✅ Cleaning record submitted for session ${session.id}: All magnets cleaned? ${allMagnetsCleaned}`);
