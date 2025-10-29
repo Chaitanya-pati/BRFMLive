@@ -17,6 +17,7 @@ import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import { vehicleApi, labTestApi, claimApi } from "../api/client";
 import colors from "../theme/colors";
+import { formatISTDate } from "../utils/dateUtils";
 
 export default function LabTestScreen({ navigation }) {
   const { width } = useWindowDimensions();

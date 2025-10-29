@@ -8,6 +8,7 @@ import SelectDropdown from '../components/SelectDropdown';
 import Button from '../components/Button';
 import colors from '../theme/colors';
 import { binApi, magnetApi, routeMagnetMappingApi, godownApi, magnetCleaningRecordApi, transferSessionApi } from '../api/client';
+import { formatISTDateTime } from '../utils/dateUtils';
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -1231,9 +1232,9 @@ export default function PrecleaningBinScreen({ navigation }) {
     },
     { 
       field: 'cleaning_timestamp', 
-      label: 'Cleaning Time', 
+      label: 'Cleaning Time (IST)', 
       flex: 2,
-      render: (val) => val ? new Date(val).toLocaleString() : '-'
+      render: (val) => formatISTDateTime(val)
     },
     { 
       field: 'before_cleaning_photo', 
@@ -1271,15 +1272,15 @@ export default function PrecleaningBinScreen({ navigation }) {
     },
     { 
       field: 'start_timestamp', 
-      label: 'Start Time', 
+      label: 'Start Time (IST)', 
       flex: 1.5,
-      render: (val) => val ? new Date(val).toLocaleString() : '-'
+      render: (val) => formatISTDateTime(val)
     },
     { 
       field: 'stop_timestamp', 
-      label: 'Stop Time', 
+      label: 'Stop Time (IST)', 
       flex: 1.5,
-      render: (val) => val ? new Date(val).toLocaleString() : '-'
+      render: (val) => formatISTDateTime(val)
     },
     { 
       field: 'transferred_quantity', 
@@ -1699,9 +1700,9 @@ export default function PrecleaningBinScreen({ navigation }) {
                 )}
 
                 <InputField
-                  label="Cleaning Timestamp"
+                  label="Cleaning Timestamp (IST)"
                   placeholder="Cleaning timestamp"
-                  value={cleaningRecordFormData.cleaning_timestamp ? new Date(cleaningRecordFormData.cleaning_timestamp).toLocaleString() : ''}
+                  value={cleaningRecordFormData.cleaning_timestamp ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp) : ''}
                   editable={false}
                 />
 

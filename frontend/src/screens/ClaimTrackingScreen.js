@@ -16,6 +16,7 @@ import Modal from '../components/Modal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { claimApi, labTestApi } from '../api/client';
 import colors from '../theme/colors';
+import { formatISTDate } from '../utils/dateUtils';
 
 export default function ClaimTrackingScreen({ navigation }) {
   const [claims, setClaims] = useState([]);
@@ -217,10 +218,10 @@ export default function ClaimTrackingScreen({ navigation }) {
       )
     },
     {
-      label: 'Claim Date',
+      label: 'Claim Date (IST)',
       field: 'claim_date',
-      width: 120,
-      render: (value) => new Date(value).toLocaleDateString()
+      width: 150,
+      render: (value) => formatISTDate(value)
     },
     { label: 'Remarks', field: 'remarks', width: 200 },
     {
