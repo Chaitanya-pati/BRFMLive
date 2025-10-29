@@ -642,13 +642,11 @@ export default function PrecleaningBinScreen({ navigation }) {
     try {
       setLoading(true);
       
-      // Get current time in multiple formats for logging
+      // Get current IST time for display
       const now = new Date();
-      const utcTimestamp = now.toISOString();
       const istTime = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
       
       console.log('📝 CREATING CLEANING RECORD:');
-      console.log('  ⏰ Current UTC timestamp:', utcTimestamp);
       console.log('  🇮🇳 Current IST time:', istTime);
       console.log('  🧲 Magnet ID:', cleaningRecordFormData.magnet_id);
       console.log('  🔄 Transfer Session ID:', cleaningRecordFormData.transfer_session_id);
@@ -659,8 +657,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
       
-      // CRITICAL: Use absolute current timestamp
-      formData.append('cleaning_timestamp', utcTimestamp);
+      // Backend will use current UTC time automatically (no timestamp sent)
       
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
@@ -678,44 +675,26 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (editingCleaningRecord) {
         const response = await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
         createdRecord = response.data;
-        console.log('✅ UPDATED cleaning record:', {
-          id: createdRecord.id,
-          cleaning_timestamp_utc: createdRecord.cleaning_timestamp,
-          cleaning_timestamp_ist: new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
-        });
+        const recordIstTime = new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+        console.log('✅ UPDATED cleaning record ID', createdRecord.id, 'at', recordIstTime, 'IST');
         Alert.alert('Success', 'Cleaning record updated successfully');
       } else {
         const response = await magnetCleaningRecordApi.create(formData);
         createdRecord = response.data;
-        console.log('✅ CREATED cleaning record:', {
-          id: createdRecord.id,
-          magnet_id: createdRecord.magnet_id,
-          transfer_session_id: createdRecord.transfer_session_id,
-          cleaning_timestamp_utc: createdRecord.cleaning_timestamp,
-          cleaning_timestamp_ist: new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
-        });
+        const recordIstTime = new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+        console.log('✅ CREATED cleaning record ID', createdRecord.id, 'at', recordIstTime, 'IST');
         Alert.alert('Success', 'Cleaning record added successfully');
       }
 
       setModalVisible(false);
 
-      // FORCE IMMEDIATE REFRESH with multiple attempts
-      console.log('🔄 Force refreshing cleaning records (attempt 1)...');
+      // FORCE IMMEDIATE REFRESH
+      console.log('🔄 Refreshing cleaning records...');
       await fetchCleaningRecords();
       
-      // Wait a tiny bit and refresh again to ensure backend propagation
+      // Wait and refresh again to ensure data is loaded
       setTimeout(async () => {
-        console.log('🔄 Force refreshing cleaning records (attempt 2)...');
         await fetchCleaningRecords();
-        
-        // Log all cleaning records after refresh
-        const allRecords = cleaningRecordsRef.current;
-        console.log('📊 ALL CLEANING RECORDS AFTER REFRESH:', allRecords.map(r => ({
-          id: r.id,
-          magnet_id: r.magnet_id,
-          transfer_session_id: r.transfer_session_id,
-          cleaning_timestamp_ist: new Date(r.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
-        })));
       }, 500);
       
       // VERIFY notification removal after cleaning

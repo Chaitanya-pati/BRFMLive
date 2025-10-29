@@ -856,10 +856,7 @@ async def create_magnet_cleaning_record(
     after_cleaning_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    print(f"\n📝 BACKEND: Creating cleaning record")
-    print(f"   Magnet ID: {magnet_id}")
-    print(f"   Transfer Session ID: {transfer_session_id}")
-    print(f"   Received cleaning_timestamp: {cleaning_timestamp}")
+    from datetime import timedelta
     
     # Validate magnet exists
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
@@ -872,18 +869,18 @@ async def create_magnet_cleaning_record(
         if not transfer_session:
             raise HTTPException(status_code=404, detail="Transfer session not found")
 
-    # Parse cleaning timestamp
-    timestamp = None
-    if cleaning_timestamp:
-        try:
-            timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
-            print(f"   ✅ Parsed timestamp (UTC): {timestamp}")
-        except Exception as e:
-            print(f"   ⚠️ Failed to parse timestamp: {e}, using current time")
-            timestamp = datetime.utcnow()
-    else:
-        timestamp = datetime.utcnow()
-        print(f"   ⚠️ No timestamp provided, using current time: {timestamp}")
+    # ALWAYS use current UTC time (which will be converted to IST on frontend)
+    timestamp = datetime.utcnow()
+    
+    # Convert to IST for logging (UTC + 5:30)
+    ist_timestamp = timestamp + timedelta(hours=5, minutes=30)
+    ist_str = ist_timestamp.strftime('%Y-%m-%d %I:%M:%S %p IST')
+    
+    print(f"\n📝 BACKEND: Creating cleaning record")
+    print(f"   Magnet ID: {magnet_id}")
+    print(f"   Transfer Session ID: {transfer_session_id}")
+    print(f"   UTC timestamp: {timestamp}")
+    print(f"   IST timestamp: {ist_str}")
 
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
@@ -902,7 +899,11 @@ async def create_magnet_cleaning_record(
     db.commit()
     db.refresh(db_record)
     
-    print(f"   ✅ Created record ID {db_record.id} with timestamp: {db_record.cleaning_timestamp}")
+    # Convert saved timestamp to IST for logging
+    saved_ist = db_record.cleaning_timestamp + timedelta(hours=5, minutes=30)
+    saved_ist_str = saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')
+    print(f"   ✅ Created record ID {db_record.id}")
+    print(f"   ✅ Saved timestamp (IST): {saved_ist_str}")
     
     return db_record
 
