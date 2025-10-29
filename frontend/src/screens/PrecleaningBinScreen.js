@@ -546,9 +546,15 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingMagnet(null);
     setEditingRouteMapping(null);
     setEditingCleaningRecord(null);
+    
+    // Find any active transfer session to pre-select
+    const activeSession = transferSessions.find(
+      s => s.status?.toLowerCase() === 'active' && !s.stop_timestamp
+    );
+    
     setCleaningRecordFormData({
-      magnet_id: '',
-      transfer_session_id: '',
+      magnet_id: activeSession?.magnet_id ? String(activeSession.magnet_id) : '',
+      transfer_session_id: activeSession ? String(activeSession.id) : '',
       cleaning_timestamp: new Date().toISOString(),
       notes: '',
       before_cleaning_photo: null,
@@ -625,7 +631,8 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (cleaningRecordFormData.transfer_session_id) {
         formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
-      formData.append('cleaning_timestamp', cleaningRecordFormData.cleaning_timestamp);
+      // CRITICAL: Always use fresh current timestamp to ensure it's in the current interval
+      formData.append('cleaning_timestamp', new Date().toISOString());
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
       }
