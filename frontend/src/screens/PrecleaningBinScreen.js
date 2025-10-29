@@ -195,7 +195,9 @@ export default function PrecleaningBinScreen({ navigation }) {
             // Check if ANY cleaning record exists AFTER the current interval started
             const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
               const cleaningTime = new Date(record.cleaning_timestamp);
-              return cleaningTime >= currentIntervalStartTime;
+              const isAfterIntervalStart = cleaningTime >= currentIntervalStartTime;
+              console.log(`    🔎 Checking record ID ${record.id}: cleaning_time=${cleaningTime.toLocaleTimeString()}, interval_start=${currentIntervalStartTime.toLocaleTimeString()}, is_after=${isAfterIntervalStart}`);
+              return isAfterIntervalStart;
             });
 
             if (cleanedInCurrentInterval) {
@@ -205,7 +207,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             } else {
               if (sessionCleaningRecords.length > 0) {
                 const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${mostRecentCleaning.toLocaleTimeString()}, before current interval)`);
+                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${mostRecentCleaning.toLocaleTimeString()}, before current interval which started at ${currentIntervalStartTime.toLocaleTimeString()})`);
               } else {
                 console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning records in this session)`);
               }
@@ -631,8 +633,12 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (cleaningRecordFormData.transfer_session_id) {
         formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
-      // CRITICAL: Always use fresh current timestamp to ensure it's in the current interval
-      formData.append('cleaning_timestamp', new Date().toISOString());
+      
+      // CRITICAL FIX: Use absolute current timestamp (server will use this exact time)
+      const currentTimestamp = new Date().toISOString();
+      formData.append('cleaning_timestamp', currentTimestamp);
+      console.log('🕐 Submitting cleaning record with timestamp:', currentTimestamp);
+      
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
       }
@@ -645,82 +651,45 @@ export default function PrecleaningBinScreen({ navigation }) {
         formData.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
       }
 
+      let createdRecord;
       if (editingCleaningRecord) {
-        await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
+        const response = await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
+        createdRecord = response.data;
         Alert.alert('Success', 'Cleaning record updated successfully');
       } else {
-        await magnetCleaningRecordApi.create(formData);
+        const response = await magnetCleaningRecordApi.create(formData);
+        createdRecord = response.data;
+        console.log('✅ Created cleaning record:', createdRecord);
         Alert.alert('Success', 'Cleaning record added successfully');
       }
 
       setModalVisible(false);
 
-      // Refresh cleaning records immediately to get the latest data
-      console.log('🔄 Refreshing cleaning records after submission...');
-      const updatedCleaningRecordsResponse = await magnetCleaningRecordApi.getAll();
-      setCleaningRecords(updatedCleaningRecordsResponse.data);
+      // FORCE IMMEDIATE REFRESH with multiple attempts
+      console.log('🔄 Force refreshing cleaning records (attempt 1)...');
+      await fetchCleaningRecords();
+      
+      // Wait a tiny bit and refresh again to ensure backend propagation
+      setTimeout(async () => {
+        console.log('🔄 Force refreshing cleaning records (attempt 2)...');
+        await fetchCleaningRecords();
 
-      // Check the session for this cleaning record
+      }, 500);
+      
+      // VERIFY notification removal after cleaning
       const sessionId = cleaningRecordFormData.transfer_session_id ? parseInt(cleaningRecordFormData.transfer_session_id) : null;
-
+      
       if (sessionId && Platform.OS === 'web') {
-        const session = transferSessions.find(s => s.id === sessionId);
-
-        if (session && session.status?.toLowerCase() === 'active' && !session.stop_timestamp) {
-          // Find all magnets on this route
-          const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
-            mapping.source_godown_id === session.source_godown_id &&
-            mapping.destination_bin_id === session.destination_bin_id
-          );
-
-          const cleaningIntervalSeconds = session.cleaning_interval_hours || 300;
-          const now = new Date();
-          const startTime = new Date(session.start_timestamp);
-          const elapsedSeconds = (now - startTime) / 1000;
-          
-          // Calculate current interval number
-          const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
-          const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
-
-          console.log(`🔍 Checking cleaning status after submission for session ${session.id}`);
-          console.log(`   Current interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
-
-          // Check if ALL magnets on this route are now cleaned WITHIN THE CURRENT INTERVAL
-          const allMagnetsCleaned = routeMagnetsOnThisRoute.every(mapping => {
-            const sessionRecords = updatedCleaningRecordsResponse.data
-              .filter(record =>
-                record.magnet_id === mapping.magnet_id && 
-                record.transfer_session_id === session.id
-              )
-              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
-
-            if (sessionRecords.length === 0) {
-              console.log(`  ❌ Magnet ${mapping.magnet_id}: No cleaning records in this session`);
-              return false;
-            }
-
-            // Check if ANY cleaning record exists after the current interval started
-            const cleanedInInterval = sessionRecords.some(record => {
-              const cleaningTime = new Date(record.cleaning_timestamp);
-              return cleaningTime >= currentIntervalStartTime;
-            });
-            
-            console.log(`  ${cleanedInInterval ? '✅' : '❌'} Magnet ${mapping.magnet_id}: ${cleanedInInterval ? 'cleaned' : 'NOT cleaned'} in current interval`);
-
-            return cleanedInInterval;
-          });
-
-          console.log(`✅ Cleaning record submitted for session ${session.id}: All magnets cleaned? ${allMagnetsCleaned}`);
-
-          // IMMEDIATELY remove the notification if all magnets are cleaned
-          const notification = document.getElementById(`cleaning-notification-${session.id}`);
-          if (allMagnetsCleaned && notification) {
-            console.log(`🗑️ IMMEDIATELY removing notification for session ${session.id} - all magnets cleaned!`);
+        console.log(`🔍 Verifying notification removal for session ${sessionId}`);
+        
+        // Force remove notification immediately
+        setTimeout(() => {
+          const notification = document.getElementById(`cleaning-notification-${sessionId}`);
+          if (notification) {
+            console.log(`🗑️ FORCE REMOVING notification for session ${sessionId} after cleaning submission`);
             notification.remove();
-          } else if (!allMagnetsCleaned) {
-            console.log(`⚠️ Session ${session.id} still has uncleaned magnets - notification will continue`);
           }
-        }
+        }, 1000);
       }
     } catch (error) {
       console.error('Error saving cleaning record:', error);
