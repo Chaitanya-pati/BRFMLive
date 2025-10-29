@@ -31,6 +31,37 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [lastAlertTimes, setLastAlertTimes] = useState({});
 
+  const cleaningRecordsRef = React.useRef(cleaningRecords);
+  const transferSessionsRef = React.useRef(transferSessions);
+  const routeMappingsRef = React.useRef(routeMappings);
+  const magnetsRef = React.useRef(magnets);
+  const godownsRef = React.useRef(godowns);
+  const binsRef = React.useRef(bins);
+
+  React.useEffect(() => {
+    cleaningRecordsRef.current = cleaningRecords;
+  }, [cleaningRecords]);
+
+  React.useEffect(() => {
+    transferSessionsRef.current = transferSessions;
+  }, [transferSessions]);
+
+  React.useEffect(() => {
+    routeMappingsRef.current = routeMappings;
+  }, [routeMappings]);
+
+  React.useEffect(() => {
+    magnetsRef.current = magnets;
+  }, [magnets]);
+
+  React.useEffect(() => {
+    godownsRef.current = godowns;
+  }, [godowns]);
+
+  React.useEffect(() => {
+    binsRef.current = bins;
+  }, [bins]);
+
   const [binFormData, setBinFormData] = useState({
     bin_number: '',
     capacity: '',
@@ -97,6 +128,14 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
+      // Use refs to access the latest state values
+      const transferSessions = transferSessionsRef.current;
+      const godowns = godownsRef.current;
+      const bins = binsRef.current;
+      const magnets = magnetsRef.current;
+      const routeMappings = routeMappingsRef.current;
+      const cleaningRecords = cleaningRecordsRef.current;
+
       // Filter for ACTIVE sessions (status-based, not just stop_timestamp)
       const activeTransferSessions = transferSessions.filter(session => 
         session.status?.toLowerCase() === 'active' && !session.stop_timestamp
@@ -227,7 +266,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(intervalId);
-  }, [transferSessions, godowns, bins, magnets, routeMappings, cleaningRecords]);
+  }, []);
 
   const showCleaningNotification = (message, sessionId, intervalString, uncleanedCount, totalCount) => {
     // Remove any existing notifications for this session
