@@ -190,24 +190,37 @@ export default function PrecleaningBinScreen({ navigation }) {
             const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
             const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
 
-            console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${currentIntervalStartTime.toLocaleTimeString()}`);
+            const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+            console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
 
             // Check if ANY cleaning record exists AFTER the current interval started
             const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
               const cleaningTime = new Date(record.cleaning_timestamp);
               const isAfterIntervalStart = cleaningTime >= currentIntervalStartTime;
-              console.log(`    🔎 Checking record ID ${record.id}: cleaning_time=${cleaningTime.toLocaleTimeString()}, interval_start=${currentIntervalStartTime.toLocaleTimeString()}, is_after=${isAfterIntervalStart}`);
+              
+              // Log in IST for better readability
+              const cleaningTimeIST = cleaningTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+              const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+              
+              console.log(`    🔎 Checking record ID ${record.id}:`);
+              console.log(`       cleaning_time (IST): ${cleaningTimeIST}`);
+              console.log(`       interval_start (IST): ${intervalStartIST}`);
+              console.log(`       is_after: ${isAfterIntervalStart}`);
+              
               return isAfterIntervalStart;
             });
 
             if (cleanedInCurrentInterval) {
               const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-              console.log(`  ✅ Magnet ${magnet.name} is CLEAN (last cleaned at ${mostRecentCleaning.toLocaleTimeString()})`);
+              const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+              console.log(`  ✅ Magnet ${magnet.name} is CLEAN (last cleaned at ${cleaningTimeIST} IST)`);
               cleanedMagnets.push(magnet);
             } else {
               if (sessionCleaningRecords.length > 0) {
                 const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${mostRecentCleaning.toLocaleTimeString()}, before current interval which started at ${currentIntervalStartTime.toLocaleTimeString()})`);
+                const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+                const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${cleaningTimeIST} IST, before current interval which started at ${intervalStartIST} IST)`);
               } else {
                 console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning records in this session)`);
               }
@@ -628,16 +641,26 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
+      
+      // Get current time in multiple formats for logging
+      const now = new Date();
+      const utcTimestamp = now.toISOString();
+      const istTime = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+      
+      console.log('📝 CREATING CLEANING RECORD:');
+      console.log('  ⏰ Current UTC timestamp:', utcTimestamp);
+      console.log('  🇮🇳 Current IST time:', istTime);
+      console.log('  🧲 Magnet ID:', cleaningRecordFormData.magnet_id);
+      console.log('  🔄 Transfer Session ID:', cleaningRecordFormData.transfer_session_id);
+      
       const formData = new FormData();
       formData.append('magnet_id', cleaningRecordFormData.magnet_id);
       if (cleaningRecordFormData.transfer_session_id) {
         formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
       
-      // CRITICAL FIX: Use absolute current timestamp (server will use this exact time)
-      const currentTimestamp = new Date().toISOString();
-      formData.append('cleaning_timestamp', currentTimestamp);
-      console.log('🕐 Submitting cleaning record with timestamp:', currentTimestamp);
+      // CRITICAL: Use absolute current timestamp
+      formData.append('cleaning_timestamp', utcTimestamp);
       
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
@@ -655,11 +678,22 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (editingCleaningRecord) {
         const response = await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
         createdRecord = response.data;
+        console.log('✅ UPDATED cleaning record:', {
+          id: createdRecord.id,
+          cleaning_timestamp_utc: createdRecord.cleaning_timestamp,
+          cleaning_timestamp_ist: new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+        });
         Alert.alert('Success', 'Cleaning record updated successfully');
       } else {
         const response = await magnetCleaningRecordApi.create(formData);
         createdRecord = response.data;
-        console.log('✅ Created cleaning record:', createdRecord);
+        console.log('✅ CREATED cleaning record:', {
+          id: createdRecord.id,
+          magnet_id: createdRecord.magnet_id,
+          transfer_session_id: createdRecord.transfer_session_id,
+          cleaning_timestamp_utc: createdRecord.cleaning_timestamp,
+          cleaning_timestamp_ist: new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+        });
         Alert.alert('Success', 'Cleaning record added successfully');
       }
 
@@ -673,7 +707,15 @@ export default function PrecleaningBinScreen({ navigation }) {
       setTimeout(async () => {
         console.log('🔄 Force refreshing cleaning records (attempt 2)...');
         await fetchCleaningRecords();
-
+        
+        // Log all cleaning records after refresh
+        const allRecords = cleaningRecordsRef.current;
+        console.log('📊 ALL CLEANING RECORDS AFTER REFRESH:', allRecords.map(r => ({
+          id: r.id,
+          magnet_id: r.magnet_id,
+          transfer_session_id: r.transfer_session_id,
+          cleaning_timestamp_ist: new Date(r.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+        })));
       }, 500);
       
       // VERIFY notification removal after cleaning
@@ -692,7 +734,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         }, 1000);
       }
     } catch (error) {
-      console.error('Error saving cleaning record:', error);
+      console.error('❌ Error saving cleaning record:', error);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
     } finally {
       setLoading(false);

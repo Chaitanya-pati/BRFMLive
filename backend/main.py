@@ -856,6 +856,11 @@ async def create_magnet_cleaning_record(
     after_cleaning_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
+    print(f"\n📝 BACKEND: Creating cleaning record")
+    print(f"   Magnet ID: {magnet_id}")
+    print(f"   Transfer Session ID: {transfer_session_id}")
+    print(f"   Received cleaning_timestamp: {cleaning_timestamp}")
+    
     # Validate magnet exists
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not magnet:
@@ -872,13 +877,18 @@ async def create_magnet_cleaning_record(
     if cleaning_timestamp:
         try:
             timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
-        except:
+            print(f"   ✅ Parsed timestamp (UTC): {timestamp}")
+        except Exception as e:
+            print(f"   ⚠️ Failed to parse timestamp: {e}, using current time")
             timestamp = datetime.utcnow()
+    else:
+        timestamp = datetime.utcnow()
+        print(f"   ⚠️ No timestamp provided, using current time: {timestamp}")
 
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
         transfer_session_id=transfer_session_id,
-        cleaning_timestamp=timestamp or datetime.utcnow(),
+        cleaning_timestamp=timestamp,
         notes=notes
     )
 
@@ -891,6 +901,9 @@ async def create_magnet_cleaning_record(
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
+    
+    print(f"   ✅ Created record ID {db_record.id} with timestamp: {db_record.cleaning_timestamp}")
+    
     return db_record
 
 @app.get("/api/magnet-cleaning-records", response_model=List[schemas.MagnetCleaningRecordWithDetails])
