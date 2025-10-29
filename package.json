@@ -1,6 +1,10 @@
 {
   "dependencies": {
     "@expo/webpack-config": "^19.0.1",
-    "babel-preset-expo": "^54.0.6"
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
+    "babel-preset-expo": "^54.0.6",
+    "jest": "^30.2.0"
   }
 }

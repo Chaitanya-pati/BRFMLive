@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import colors from '../theme/colors';
 import { binApi, magnetApi, routeMagnetMappingApi, godownApi, magnetCleaningRecordApi, transferSessionApi } from '../api/client';
 import { formatISTDateTime } from '../utils/dateUtils';
+import { calculateMagnetNotifications } from '../utils/notificationChecker';
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
