@@ -857,6 +857,7 @@ async def create_magnet_cleaning_record(
     db: Session = Depends(get_db)
 ):
     from datetime import timedelta
+    import pytz
     
     # Validate magnet exists
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
@@ -869,23 +870,23 @@ async def create_magnet_cleaning_record(
         if not transfer_session:
             raise HTTPException(status_code=404, detail="Transfer session not found")
 
-    # ALWAYS use current UTC time (which will be converted to IST on frontend)
-    timestamp = datetime.utcnow()
+    # Get current time in IST timezone
+    ist_tz = pytz.timezone('Asia/Kolkata')
+    ist_now = datetime.now(ist_tz)
     
-    # Convert to IST for logging (UTC + 5:30)
-    ist_timestamp = timestamp + timedelta(hours=5, minutes=30)
-    ist_str = ist_timestamp.strftime('%Y-%m-%d %I:%M:%S %p IST')
+    # Convert IST to UTC for database storage (PostgreSQL stores as UTC)
+    utc_now = ist_now.astimezone(pytz.UTC).replace(tzinfo=None)
     
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
     print(f"   Transfer Session ID: {transfer_session_id}")
-    print(f"   UTC timestamp: {timestamp}")
-    print(f"   IST timestamp: {ist_str}")
+    print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   UTC time (saving): {utc_now}")
 
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
         transfer_session_id=transfer_session_id,
-        cleaning_timestamp=timestamp,
+        cleaning_timestamp=utc_now,
         notes=notes
     )
 
@@ -899,11 +900,11 @@ async def create_magnet_cleaning_record(
     db.commit()
     db.refresh(db_record)
     
-    # Convert saved timestamp to IST for logging
-    saved_ist = db_record.cleaning_timestamp + timedelta(hours=5, minutes=30)
-    saved_ist_str = saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')
+    # Convert saved UTC timestamp back to IST for logging
+    ist_tz = pytz.timezone('Asia/Kolkata')
+    saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(ist_tz)
     print(f"   ✅ Created record ID {db_record.id}")
-    print(f"   ✅ Saved timestamp (IST): {saved_ist_str}")
+    print(f"   ✅ Saved timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
     
     return db_record
 
