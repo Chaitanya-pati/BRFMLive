@@ -177,7 +177,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
           const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
           const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-          
+
           console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
 
           // Check which magnets have been cleaned recently (within the current interval)
@@ -198,16 +198,16 @@ export default function PrecleaningBinScreen({ navigation }) {
             const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
               const cleaningTime = new Date(record.cleaning_timestamp);
               const isAfterIntervalStart = cleaningTime >= currentIntervalStartTime;
-              
+
               // Log in IST for better readability
               const cleaningTimeIST = cleaningTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
               const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-              
+
               console.log(`    🔎 Checking record ID ${record.id}:`);
               console.log(`       cleaning_time (IST): ${cleaningTimeIST}`);
               console.log(`       interval_start (IST): ${intervalStartIST}`);
               console.log(`       is_after: ${isAfterIntervalStart}`);
-              
+
               return isAfterIntervalStart;
             });
 
@@ -249,7 +249,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             const currentTimeIST = formatISTDateTime(new Date());
             const nextCleaningDue = new Date(currentIntervalStartTime.getTime() + cleaningIntervalSeconds * 1000);
             const nextCleaningDueIST = formatISTDateTime(nextCleaningDue);
-            
+
             // Get last cleaned time for this session (any magnet)
             let lastCleanedTimeIST = 'Never';
             if (allSessionCleaningRecords.length > 0) {
@@ -257,7 +257,7 @@ export default function PrecleaningBinScreen({ navigation }) {
               lastCleanedTimeIST = formatISTDateTime(mostRecentCleaning);
             }
 
-            const alertMessage = `🔔 MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\nCurrent Time (IST): ${currentTimeIST}\nNext Cleaning Due (IST): ${nextCleaningDueIST}\nLast Cleaned (IST): ${lastCleanedTimeIST}\n\n⚠️ Please create cleaning record NOW!`;
+            const alertMessage = `🔔MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\nCurrent Time (IST): ${currentTimeIST}\nNext Cleaning Due (IST): ${nextCleaningDueIST}\nLast Cleaned (IST): ${lastCleanedTimeIST}\n\n⚠️ Please create cleaning record NOW!`;
 
             console.log(`🔔 ALERT EVERY 5 SECONDS for session ${session.id}: ${uncleanedMagnets.length} magnet(s) need cleaning`);
 
@@ -589,12 +589,12 @@ export default function PrecleaningBinScreen({ navigation }) {
     setEditingMagnet(null);
     setEditingRouteMapping(null);
     setEditingCleaningRecord(null);
-    
+
     // Find any active transfer session to pre-select
     const activeSession = transferSessions.find(
       s => s.status?.toLowerCase() === 'active' && !s.stop_timestamp
     );
-    
+
     setCleaningRecordFormData({
       magnet_id: activeSession?.magnet_id ? String(activeSession.magnet_id) : '',
       transfer_session_id: activeSession ? String(activeSession.id) : '',
@@ -669,24 +669,24 @@ export default function PrecleaningBinScreen({ navigation }) {
 
     try {
       setLoading(true);
-      
+
       // Get current IST time for display
       const now = new Date();
       const istTime = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-      
+
       console.log('📝 CREATING CLEANING RECORD:');
       console.log('  🇮🇳 Current IST time:', istTime);
       console.log('  🧲 Magnet ID:', cleaningRecordFormData.magnet_id);
       console.log('  🔄 Transfer Session ID:', cleaningRecordFormData.transfer_session_id);
-      
+
       const formData = new FormData();
       formData.append('magnet_id', cleaningRecordFormData.magnet_id);
       if (cleaningRecordFormData.transfer_session_id) {
         formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
-      
+
       // Backend will use current UTC time automatically (no timestamp sent)
-      
+
       if (cleaningRecordFormData.notes) {
         formData.append('notes', cleaningRecordFormData.notes);
       }
@@ -719,18 +719,18 @@ export default function PrecleaningBinScreen({ navigation }) {
       // FORCE IMMEDIATE REFRESH
       console.log('🔄 Refreshing cleaning records...');
       await fetchCleaningRecords();
-      
+
       // Wait and refresh again to ensure data is loaded
       setTimeout(async () => {
         await fetchCleaningRecords();
       }, 500);
-      
+
       // VERIFY notification removal after cleaning
       const sessionId = cleaningRecordFormData.transfer_session_id ? parseInt(cleaningRecordFormData.transfer_session_id) : null;
-      
+
       if (sessionId && Platform.OS === 'web') {
         console.log(`🔍 Verifying notification removal for session ${sessionId}`);
-        
+
         // Force remove notification immediately
         setTimeout(() => {
           const notification = document.getElementById(`cleaning-notification-${sessionId}`);
