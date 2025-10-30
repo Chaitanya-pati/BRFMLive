@@ -906,7 +906,9 @@ async def create_magnet_cleaning_record(
     # Convert saved UTC timestamp back to IST for logging
     saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(IST)
     print(f"   ✅ Created record ID {db_record.id}")
+    print(f"   ✅ Saved timestamp (UTC): {db_record.cleaning_timestamp}")
     print(f"   ✅ Saved timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   ✅ Returning to frontend: {db_record.cleaning_timestamp.isoformat() if db_record.cleaning_timestamp else 'None'}")
     
     return db_record
 
