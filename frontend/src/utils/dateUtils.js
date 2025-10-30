@@ -5,52 +5,71 @@
 export const toIST = (date) => {
   if (!date) return null;
   const utcDate = new Date(date);
-  // Convert to IST (UTC + 5:30)
-  const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
-  const istDate = new Date(utcDate.getTime() + istOffset);
-  return istDate;
+  return utcDate;
 };
 
+// Format: DD/MM/YYYY hh:mm:ss AM/PM IST
 export const formatISTDateTime = (date) => {
   if (!date) return '-';
-  const istDate = toIST(date);
-  return istDate.toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
+  try {
+    const d = new Date(date);
+    return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }) + ' IST';
+  } catch (error) {
+    return '-';
+  }
 };
 
+// Format: DD/MM/YYYY
 export const formatISTDate = (date) => {
   if (!date) return '-';
-  const istDate = toIST(date);
-  return istDate.toLocaleDateString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
+  try {
+    const d = new Date(date);
+    return d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    return '-';
+  }
 };
 
+// Format: hh:mm:ss AM/PM IST
 export const formatISTTime = (date) => {
   if (!date) return '-';
-  const istDate = toIST(date);
-  return istDate.toLocaleTimeString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
+  try {
+    const d = new Date(date);
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }) + ' IST';
+  } catch (error) {
+    return '-';
+  }
 };
 
 export const getCurrentISTTimestamp = () => {
   return new Date().toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata'
-  });
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }) + ' IST';
 };

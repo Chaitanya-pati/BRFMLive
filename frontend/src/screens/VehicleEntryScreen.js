@@ -2,32 +2,31 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Image,
+  useWindowDimensions,
   Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import * as Camera from 'expo-camera';
 import Layout from '../components/Layout';
+import InputField from '../components/InputField';
+import SelectDropdown from '../components/SelectDropdown';
+import DatePicker from '../components/DatePicker';
+import Button from '../components/Button';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { vehicleApi, supplierApi } from '../api/client';
 import colors from '../theme/colors';
 import notify from '../utils/notifications';
+import { formatISTDateTime } from '../utils/dateUtils';
 
-export default function VehicleEntryScreen({ navigation }) {
+export default function VehicleEntryScreen() {
   const [vehicles, setVehicles] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [billPhoto, setBillPhoto] = useState(null);
-  const [vehiclePhoto, setVehiclePhoto] = useState(null);
-  const [cameraPermission, setCameraPermission] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
   const [formData, setFormData] = useState({
     vehicle_number: '',
     supplier_id: '',
@@ -36,82 +35,102 @@ export default function VehicleEntryScreen({ navigation }) {
     driver_phone: '',
     arrival_time: new Date(),
     notes: '',
+    supplier_bill_photo: null,
+    vehicle_photo: null,
   });
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   useEffect(() => {
-    loadVehicles();
-    loadSuppliers();
-    requestCameraPermission();
+    fetchVehicles();
+    fetchSuppliers();
   }, []);
 
-  const requestCameraPermission = async () => {
-    if (Platform.OS === 'web') {
-      // Camera permissions are handled by the browser on web
-      setCameraPermission(true);
-      return;
-    }
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    setCameraPermission(status === 'granted');
-  };
-
-  const loadSuppliers = async () => {
+  const fetchVehicles = async () => {
     try {
-      const response = await supplierApi.getAll();
-      setSuppliers(response.data);
+      const data = await vehicleApi.getAll();
+      setVehicles(data);
     } catch (error) {
-      console.error('Error loading suppliers:', error);
+      notify.error('Failed to fetch vehicles');
     }
   };
 
-  const loadVehicles = async () => {
+  const fetchSuppliers = async () => {
     try {
-      const response = await vehicleApi.getAll();
-      setVehicles(response.data);
+      const data = await supplierApi.getAll();
+      setSuppliers(data);
     } catch (error) {
-      console.error('Error loading vehicles:', error);
+      notify.error('Failed to fetch suppliers');
     }
   };
 
-  const pickImage = async (type) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
+  const handleSubmit = async () => {
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('vehicle_number', formData.vehicle_number);
+      formDataToSend.append('supplier_id', formData.supplier_id);
+      formDataToSend.append('bill_no', formData.bill_no);
+      formDataToSend.append('driver_name', formData.driver_name || '');
+      formDataToSend.append('driver_phone', formData.driver_phone || '');
+      formDataToSend.append('arrival_time', formData.arrival_time.toISOString());
+      formDataToSend.append('notes', formData.notes || '');
 
-    if (!result.canceled && result.assets[0]) {
-      if (type === 'bill') {
-        setBillPhoto(result.assets[0]);
+      if (formData.supplier_bill_photo) {
+        const billPhotoUri = formData.supplier_bill_photo.uri || formData.supplier_bill_photo;
+        const billPhotoBlob = await fetch(billPhotoUri).then(r => r.blob());
+        formDataToSend.append('supplier_bill_photo', billPhotoBlob, 'supplier_bill.jpg');
+      }
+
+      if (formData.vehicle_photo) {
+        const vehiclePhotoUri = formData.vehicle_photo.uri || formData.vehicle_photo;
+        const vehiclePhotoBlob = await fetch(vehiclePhotoUri).then(r => r.blob());
+        formDataToSend.append('vehicle_photo', vehiclePhotoBlob, 'vehicle.jpg');
+      }
+
+      if (editingVehicle) {
+        await vehicleApi.update(editingVehicle.id, formDataToSend);
+        notify.success('Vehicle entry updated successfully');
       } else {
-        setVehiclePhoto(result.assets[0]);
+        await vehicleApi.create(formDataToSend);
+        notify.success('Vehicle entry created successfully');
+      }
+
+      fetchVehicles();
+      resetForm();
+    } catch (error) {
+      notify.error(error.message || 'Failed to save vehicle entry');
+    }
+  };
+
+  const handleEdit = (vehicle) => {
+    setEditingVehicle(vehicle);
+    setFormData({
+      vehicle_number: vehicle.vehicle_number,
+      supplier_id: vehicle.supplier_id,
+      bill_no: vehicle.bill_no,
+      driver_name: vehicle.driver_name || '',
+      driver_phone: vehicle.driver_phone || '',
+      arrival_time: vehicle.arrival_time ? new Date(vehicle.arrival_time) : new Date(),
+      notes: vehicle.notes || '',
+      supplier_bill_photo: null,
+      vehicle_photo: null,
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleDelete = async (vehicle) => {
+    if (confirm('Are you sure you want to delete this vehicle entry?')) {
+      try {
+        await vehicleApi.delete(vehicle.id);
+        notify.success('Vehicle entry deleted successfully');
+        fetchVehicles();
+      } catch (error) {
+        notify.error('Failed to delete vehicle entry');
       }
     }
   };
 
-  const takePhoto = async (type) => {
-    if (cameraPermission === null || cameraPermission === false) {
-      notify.showWarning('Camera access is required to take photos.', 'Permission Denied');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      if (type === 'bill') {
-        setBillPhoto(result.assets[0]);
-      } else {
-        setVehiclePhoto(result.assets[0]);
-      }
-    }
-  };
-
-  const openAddModal = () => {
+  const resetForm = () => {
     setFormData({
       vehicle_number: '',
       supplier_id: '',
@@ -120,339 +139,147 @@ export default function VehicleEntryScreen({ navigation }) {
       driver_phone: '',
       arrival_time: new Date(),
       notes: '',
+      supplier_bill_photo: null,
+      vehicle_photo: null,
     });
-    setBillPhoto(null);
-    setVehiclePhoto(null);
-    setModalVisible(true);
+    setEditingVehicle(null);
+    setIsModalVisible(false);
   };
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setFormData({ ...formData, arrival_time: selectedDate });
-    }
-  };
-
-  const openEditModal = (vehicle) => {
-    setFormData({
-      id: vehicle.id,
-      vehicle_number: vehicle.vehicle_number,
-      supplier_id: vehicle.supplier?.id || '',
-      bill_no: vehicle.bill_no,
-      driver_name: vehicle.driver_name || '',
-      driver_phone: vehicle.driver_phone || '',
-      arrival_time: new Date(vehicle.arrival_time),
-      notes: vehicle.notes || '',
+  const pickImage = async (field) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
     });
-    
-    // Load existing images if available
-    if (vehicle.supplier_bill_photo) {
-      let billPhotoUrl = vehicle.supplier_bill_photo;
-      if (!billPhotoUrl.startsWith('http')) {
-        // If it's a relative path, construct the full URL
-        billPhotoUrl = billPhotoUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${billPhotoUrl}`
-          : `https://brfmlive.onrender.com/${billPhotoUrl}`;
-      }
-      console.log('Loading bill photo from:', billPhotoUrl);
-      setBillPhoto({ uri: billPhotoUrl });
-    } else {
-      setBillPhoto(null);
-    }
-    
-    if (vehicle.vehicle_photo) {
-      let vehiclePhotoUrl = vehicle.vehicle_photo;
-      if (!vehiclePhotoUrl.startsWith('http')) {
-        // If it's a relative path, construct the full URL
-        vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${vehiclePhotoUrl}`
-          : `https://brfmlive.onrender.com/${vehiclePhotoUrl}`;
-      }
-      console.log('Loading vehicle photo from:', vehiclePhotoUrl);
-      setVehiclePhoto({ uri: vehiclePhotoUrl });
-    } else {
-      setVehiclePhoto(null);
-    }
-    
-    setModalVisible(true);
-  };
 
-  const handleDelete = async (vehicle) => {
-    notify.showConfirm(
-      'Confirm Delete',
-      `Are you sure you want to delete vehicle entry ${vehicle.vehicle_number}?`,
-      async () => {
-        try {
-          await vehicleApi.delete(vehicle.id);
-          notify.showSuccess('Vehicle entry deleted successfully');
-          loadVehicles();
-        } catch (error) {
-          notify.showError('Failed to delete vehicle entry');
-          console.error(error);
-        }
-      }
-    );
-  };
-
-  const handleSubmit = async () => {
-    if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
-      notify.showWarning('Please fill all required fields');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const submitFormData = new FormData();
-      submitFormData.append('vehicle_number', formData.vehicle_number);
-      submitFormData.append('supplier_id', formData.supplier_id);
-      submitFormData.append('bill_no', formData.bill_no);
-      if (formData.driver_name) {
-        submitFormData.append('driver_name', formData.driver_name);
-      }
-      if (formData.driver_phone) {
-        submitFormData.append('driver_phone', formData.driver_phone);
-      }
-      submitFormData.append('arrival_time', formData.arrival_time.toISOString());
-      if (formData.notes) {
-        submitFormData.append('notes', formData.notes);
-      }
-
-      if (billPhoto) {
-        if (Platform.OS === 'web') {
-          const billBlob = await fetch(billPhoto.uri).then(r => r.blob());
-          submitFormData.append('supplier_bill_photo', billBlob, 'bill.jpg');
-        } else {
-          submitFormData.append('supplier_bill_photo', {
-            uri: billPhoto.uri,
-            type: 'image/jpeg',
-            name: 'bill.jpg',
-          });
-        }
-      }
-
-      if (vehiclePhoto) {
-        if (Platform.OS === 'web') {
-          const vehicleBlob = await fetch(vehiclePhoto.uri).then(r => r.blob());
-          submitFormData.append('vehicle_photo', vehicleBlob, 'vehicle.jpg');
-        } else {
-          submitFormData.append('vehicle_photo', {
-            uri: vehiclePhoto.uri,
-            type: 'image/jpeg',
-            name: 'vehicle.jpg',
-          });
-        }
-      }
-
-      if (formData.id) {
-        await vehicleApi.update(formData.id, submitFormData);
-        notify.showSuccess('Vehicle entry updated successfully');
-      } else {
-        await vehicleApi.create(submitFormData);
-        notify.showSuccess('Vehicle entry added successfully');
-      }
-      
-      setModalVisible(false);
-      loadVehicles();
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      notify.showError('Failed to save vehicle entry. Please try again.');
-    } finally {
-      setLoading(false);
+    if (!result.canceled) {
+      setFormData({ ...formData, [field]: result.assets[0] });
     }
   };
 
   const columns = [
-    { label: 'ID', field: 'id', width: 80 },
-    { label: 'Vehicle Number', field: 'vehicle_number', width: 150 },
+    { label: 'ID', field: 'id', flex: 0.5 },
+    { label: 'Vehicle Number', field: 'vehicle_number', flex: 1 },
     { 
       label: 'Supplier', 
-      field: 'supplier', 
-      width: 200,
+      field: 'supplier',
+      flex: 1.5,
       render: (supplier) => supplier?.supplier_name || '-'
     },
-    { label: 'Bill No', field: 'bill_no', width: 150 },
-    { label: 'Driver Name', field: 'driver_name', width: 150 },
-    { label: 'Driver Phone', field: 'driver_phone', width: 150 },
+    { label: 'Bill No', field: 'bill_no', flex: 1 },
     { 
       label: 'Arrival Time', 
-      field: 'arrival_time', 
-      width: 180,
-      render: (value) => new Date(value).toLocaleString()
+      field: 'arrival_time',
+      flex: 1.5,
+      type: 'datetime'
     },
   ];
 
   return (
-    <Layout title="Vehicle Entries" navigation={navigation} currentRoute="VehicleEntry">
+    <Layout title="Vehicle Entry">
       <DataTable
         columns={columns}
         data={vehicles}
-        onAdd={openAddModal}
-        onEdit={openEditModal}
+        onAdd={() => setIsModalVisible(true)}
+        onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
       <Modal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        title={formData.id ? "Edit Vehicle Entry" : "New Vehicle Entry"}
-        width="70%"
+        visible={isModalVisible}
+        onClose={resetForm}
+        title={editingVehicle ? 'Edit Vehicle Entry' : 'New Vehicle Entry'}
       >
-        <View style={styles.form}>
-          <Text style={styles.label}>Vehicle Number *</Text>
-          <TextInput
-            style={styles.input}
+        <ScrollView style={styles.form}>
+          <InputField
+            label="Vehicle Number *"
             value={formData.vehicle_number}
-            onChangeText={(text) => setFormData({ ...formData, vehicle_number: text.toUpperCase() })}
-            placeholder="e.g., UP16AB1234"
-            autoCapitalize="characters"
+            onChangeText={(text) => setFormData({ ...formData, vehicle_number: text })}
+            placeholder="e.g., KA-01-AB-1234"
           />
 
-          <Text style={styles.label}>Supplier *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.supplier_id}
-              onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select Supplier" value="" />
-              {suppliers.map((supplier) => (
-                <Picker.Item
-                  key={supplier.id}
-                  label={`${supplier.supplier_name} - ${supplier.contact_person || 'N/A'}`}
-                  value={supplier.id}
-                />
-              ))}
-            </Picker>
-          </View>
+          <SelectDropdown
+            label="Supplier *"
+            value={formData.supplier_id}
+            onChange={(value) => setFormData({ ...formData, supplier_id: value })}
+            options={suppliers.map(s => ({ label: s.supplier_name, value: s.id }))}
+            placeholder="Select Supplier"
+          />
 
-          <Text style={styles.label}>Bill No *</Text>
-          <TextInput
-            style={styles.input}
+          <InputField
+            label="Bill Number *"
             value={formData.bill_no}
             onChangeText={(text) => setFormData({ ...formData, bill_no: text })}
             placeholder="Enter bill number"
           />
 
-          <Text style={styles.label}>Driver Name</Text>
-          <TextInput
-            style={styles.input}
+          <InputField
+            label="Driver Name"
             value={formData.driver_name}
             onChangeText={(text) => setFormData({ ...formData, driver_name: text })}
             placeholder="Enter driver name"
           />
 
-          <Text style={styles.label}>Driver Phone</Text>
-          <TextInput
-            style={styles.input}
+          <InputField
+            label="Driver Phone"
             value={formData.driver_phone}
             onChangeText={(text) => setFormData({ ...formData, driver_phone: text })}
-            placeholder="Enter driver phone"
-            keyboardType="phone-pad"
+            placeholder="Enter phone number"
           />
 
-          <Text style={styles.label}>Arrival Time</Text>
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text>{formData.arrival_time.toLocaleString()}</Text>
-          </TouchableOpacity>
+          <DatePicker
+            label="Arrival Time"
+            value={formData.arrival_time}
+            onChange={(date) => setFormData({ ...formData, arrival_time: date })}
+            mode="datetime"
+          />
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={formData.arrival_time}
-              mode="datetime"
-              display="default"
-              onChange={handleDateChange}
-            />
-          )}
-
-          <Text style={styles.label}>Supplier Bill Photo</Text>
-          <View style={styles.imageSection}>
-            {billPhoto ? (
-              <Image 
-                source={{ uri: billPhoto.uri || billPhoto }} 
-                style={styles.imagePreview}
-                onError={(e) => console.log('Error loading bill photo:', e.nativeEvent.error)}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>No image</Text>
-              </View>
-            )}
-            <View style={styles.imageButtons}>
-              <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => takePhoto('bill')}
-              >
-                <Text style={styles.imageButtonText}>📷 Camera</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => pickImage('bill')}
-              >
-                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={styles.label}>Vehicle Photo</Text>
-          <View style={styles.imageSection}>
-            {vehiclePhoto ? (
-              <Image 
-                source={{ uri: vehiclePhoto.uri || vehiclePhoto }} 
-                style={styles.imagePreview}
-                onError={(e) => console.log('Error loading vehicle photo:', e.nativeEvent.error)}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>No image</Text>
-              </View>
-            )}
-            <View style={styles.imageButtons}>
-              <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => takePhoto('vehicle')}
-              >
-                <Text style={styles.imageButtonText}>📷 Camera</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => pickImage('vehicle')}
-              >
-                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={styles.label}>Notes</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
+          <InputField
+            label="Notes"
             value={formData.notes}
             onChangeText={(text) => setFormData({ ...formData, notes: text })}
-            placeholder="Enter any additional notes"
+            placeholder="Additional notes"
             multiline
-            numberOfLines={3}
           />
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : 'Save Entry'}
-              </Text>
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Supplier Bill Photo</Text>
+            <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('supplier_bill_photo')}>
+              {formData.supplier_bill_photo ? (
+                <Image source={{ uri: formData.supplier_bill_photo.uri }} style={styles.imagePreview} />
+              ) : (
+                <Text style={styles.imagePickerText}>+ Upload Bill Photo</Text>
+              )}
             </TouchableOpacity>
           </View>
-        </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Vehicle Photo</Text>
+            <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('vehicle_photo')}>
+              {formData.vehicle_photo ? (
+                <Image source={{ uri: formData.vehicle_photo.uri }} style={styles.imagePreview} />
+              ) : (
+                <Text style={styles.imagePickerText}>+ Upload Vehicle Photo</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.buttonContainer, isMobile && styles.buttonContainerMobile]}>
+            <Button
+              title="Cancel"
+              onPress={resetForm}
+              variant="secondary"
+              style={[styles.button, isMobile && styles.buttonMobile]}
+            />
+            <Button
+              title={editingVehicle ? 'Update' : 'Save'}
+              onPress={handleSubmit}
+              style={[styles.button, isMobile && styles.buttonMobile]}
+            />
+          </View>
+        </ScrollView>
       </Modal>
     </Layout>
   );
@@ -460,100 +287,48 @@ export default function VehicleEntryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   form: {
-    gap: 12,
+    gap: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.outline,
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 14,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
+    marginBottom: 8,
   },
   imageSection: {
     marginBottom: 16,
   },
+  imagePicker: {
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
+  },
+  imagePickerText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
   imagePreview: {
     width: '100%',
-    height: 200,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: 200,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    backgroundColor: '#f9fafb',
-  },
-  placeholderText: {
-    color: '#9ca3af',
-    fontSize: 14,
-  },
-  imageButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  imageButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    height: 150,
+    borderRadius: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 24,
     gap: 12,
+    marginTop: 8,
+  },
+  buttonContainerMobile: {
+    flexDirection: 'column',
   },
   button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-    minWidth: 100,
-    alignItems: 'center',
+    flex: 1,
   },
-  cancelButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.outline,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  cancelButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  saveButtonText: {
-    color: colors.onPrimary,
-    fontWeight: '600',
-    fontSize: 14,
+  buttonMobile: {
+    width: '100%',
   },
 });

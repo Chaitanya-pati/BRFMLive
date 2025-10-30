@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
+import { formatISTDateTime } from '../utils/dateUtils';
 
 export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +69,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
           <View key={colIndex} style={styles.mobileCardRow}>
             <Text style={styles.mobileCardLabel}>{col.label}</Text>
             <Text style={styles.mobileCardValue} numberOfLines={2}>
-              {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+              {col.render 
+                ? col.render(row[col.field], row) 
+                : col.type === 'datetime' && row[col.field]
+                ? formatISTDateTime(row[col.field])
+                : row[col.field] || '-'}
             </Text>
           </View>
         ))}
@@ -135,7 +140,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               {columns.map((col, colIndex) => (
                 <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
                   <Text style={styles.cellText} numberOfLines={2}>
-                    {col.render ? col.render(row[col.field], row) : row[col.field] || '-'}
+                    {col.render 
+                      ? col.render(row[col.field], row) 
+                      : col.type === 'datetime' && row[col.field]
+                      ? formatISTDateTime(row[col.field])
+                      : row[col.field] || '-'}
                   </Text>
                 </View>
               ))}
