@@ -168,6 +168,18 @@ export default function PrecleaningBinScreen({ navigation }) {
             mapping.destination_bin_id === session.destination_bin_id
           );
 
+          // Get ALL cleaning records for this session (across all magnets)
+          const allSessionCleaningRecords = cleaningRecords
+            .filter(record => record.transfer_session_id === session.id)
+            .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
+
+          // Calculate the start of the current interval period (session-level)
+          const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+          const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
+          const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+          
+          console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
+
           // Check which magnets have been cleaned recently (within the current interval)
           const uncleanedMagnets = [];
           const cleanedMagnets = [];
@@ -176,22 +188,11 @@ export default function PrecleaningBinScreen({ navigation }) {
             const magnet = magnets.find(m => m.id === mapping.magnet_id);
             if (!magnet) return;
 
-            // Find ALL cleaning records for this magnet in THIS SESSION
-            const sessionCleaningRecords = cleaningRecords
-              .filter(record => 
-                record.magnet_id === mapping.magnet_id && 
-                record.transfer_session_id === session.id
-              )
-              .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
+            // Find ALL cleaning records for this specific magnet in THIS SESSION
+            const sessionCleaningRecords = allSessionCleaningRecords
+              .filter(record => record.magnet_id === mapping.magnet_id);
 
             console.log(`  🔍 Magnet ${magnet.name}: Found ${sessionCleaningRecords.length} cleaning records in session ${session.id}`);
-
-            // Calculate the start of the current interval period
-            const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
-            const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
-
-            const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-            console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
 
             // Check if ANY cleaning record exists AFTER the current interval started
             const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
@@ -244,7 +245,19 @@ export default function PrecleaningBinScreen({ navigation }) {
             const totalMagnetsOnRoute = routeMagnetsOnThisRoute.length;
             const magnetNames = uncleanedMagnets.map(m => m.name).join(', ');
 
-            const alertMessage = `🔔 MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\n\n⚠️ Please create cleaning record NOW!`;
+            // Calculate IST timestamps for alert
+            const currentTimeIST = formatISTDateTime(new Date());
+            const nextCleaningDue = new Date(currentIntervalStartTime.getTime() + cleaningIntervalSeconds * 1000);
+            const nextCleaningDueIST = formatISTDateTime(nextCleaningDue);
+            
+            // Get last cleaned time for this session (any magnet)
+            let lastCleanedTimeIST = 'Never';
+            if (allSessionCleaningRecords.length > 0) {
+              const mostRecentCleaning = new Date(allSessionCleaningRecords[0].cleaning_timestamp);
+              lastCleanedTimeIST = formatISTDateTime(mostRecentCleaning);
+            }
+
+            const alertMessage = `🔔 MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\nCurrent Time (IST): ${currentTimeIST}\nNext Cleaning Due (IST): ${nextCleaningDueIST}\nLast Cleaned (IST): ${lastCleanedTimeIST}\n\n⚠️ Please create cleaning record NOW!`;
 
             console.log(`🔔 ALERT EVERY 5 SECONDS for session ${session.id}: ${uncleanedMagnets.length} magnet(s) need cleaning`);
 
@@ -258,7 +271,7 @@ export default function PrecleaningBinScreen({ navigation }) {
               }
 
               // Show/update custom notification with bell icon (refreshes every 5 seconds)
-              showCleaningNotification(alertMessage, session.id, intervalString, uncleanedMagnets.length, totalMagnetsOnRoute);
+              showCleaningNotification(alertMessage, session.id, intervalString, uncleanedMagnets.length, totalMagnetsOnRoute, currentTimeIST, nextCleaningDueIST, lastCleanedTimeIST);
             } else {
               Alert.alert('🔔 Cleaning Reminder', alertMessage, [
                 { text: 'OK', style: 'default' }
@@ -284,7 +297,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     return () => clearInterval(intervalId);
   }, []);
 
-  const showCleaningNotification = (message, sessionId, intervalString, uncleanedCount, totalCount) => {
+  const showCleaningNotification = (message, sessionId, intervalString, uncleanedCount, totalCount, currentTimeIST, nextCleaningDueIST, lastCleanedTimeIST) => {
     // Remove any existing notifications for this session
     const existingNotification = document.getElementById(`cleaning-notification-${sessionId}`);
     if (existingNotification) {
@@ -301,6 +314,9 @@ export default function PrecleaningBinScreen({ navigation }) {
     const magnetsLine = messageLines.find(line => line.startsWith('Magnets:')) || '';
     const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
     const intervalLine = messageLines.find(line => line.startsWith('Cleaning Interval:')) || '';
+    const currentTimeLine = `Current Time (IST): ${currentTimeIST}`;
+    const nextDueLine = `Next Cleaning Due (IST): ${nextCleaningDueIST}`;
+    const lastCleanedLine = `Last Cleaned (IST): ${lastCleanedTimeIST}`;
 
     notification.innerHTML = `
       <div style="
@@ -351,6 +367,18 @@ export default function PrecleaningBinScreen({ navigation }) {
             <div style="font-size: 13px; margin-bottom: 4px; opacity: 0.9;">${magnetsLine}</div>
             <div style="font-weight: 600; color: #fef3c7; margin-top: 8px; margin-bottom: 2px;">${timeLine}</div>
             <div style="font-size: 12px; opacity: 0.85;">${intervalLine}</div>
+            <div style="
+              background: rgba(255,255,255,0.15);
+              padding: 8px 12px;
+              border-radius: 8px;
+              margin: 8px 0;
+              font-size: 12px;
+              border-left: 2px solid #fef3c7;
+            ">
+              <div style="margin-bottom: 3px;">🕐 ${currentTimeLine}</div>
+              <div style="margin-bottom: 3px;">⏰ ${nextDueLine}</div>
+              <div>🧲 ${lastCleanedLine}</div>
+            </div>
           </div>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" style="
