@@ -10,14 +10,15 @@ export const toIST = (date) => {
 export const formatISTDateTime = (date) => {
   if (!date) return '-';
   try {
-    // Parse the date string (already in IST from backend)
+    // Parse the UTC date string from backend
     const d = new Date(date);
     
     // Ensure it's a valid date
     if (isNaN(d.getTime())) return '-';
     
-    // Format as-is (already IST)
+    // Convert UTC to IST for display
     const formatted = d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -40,6 +41,7 @@ export const formatISTDate = (date) => {
   try {
     const d = new Date(date);
     return d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -55,6 +57,7 @@ export const formatISTTime = (date) => {
   try {
     const d = new Date(date);
     return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',

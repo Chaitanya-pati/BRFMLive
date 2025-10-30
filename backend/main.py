@@ -24,6 +24,10 @@ def get_ist_now():
     """Get current time in IST as naive datetime"""
     return datetime.now(IST).replace(tzinfo=None)
 
+def get_utc_now():
+    """Get current time in UTC as naive datetime"""
+    return datetime.utcnow().replace(tzinfo=None)
+
 def parse_ist_datetime(datetime_str):
     """Parse datetime string in IST"""
     if not datetime_str:
@@ -861,7 +865,7 @@ async def create_magnet_cleaning_record(
 ):
     from datetime import timedelta
     import pytz
-    
+
     # Validate magnet exists
     magnet = db.query(models.Magnet).filter(models.Magnet.id == magnet_id).first()
     if not magnet:
@@ -873,10 +877,10 @@ async def create_magnet_cleaning_record(
         if not transfer_session:
             raise HTTPException(status_code=404, detail="Transfer session not found")
 
-    # Get current time in IST
+    # Get current IST time for logging
     ist_now = datetime.now(IST)
     utc_now = get_ist_now()
-    
+
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
     print(f"   Transfer Session ID: {transfer_session_id}")
@@ -899,14 +903,14 @@ async def create_magnet_cleaning_record(
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
-    
+
     # Convert saved UTC timestamp back to IST for logging
     saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(IST)
     print(f"   ✅ Created record ID {db_record.id}")
     print(f"   ✅ Saved timestamp (UTC): {db_record.cleaning_timestamp}")
     print(f"   ✅ Saved timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
     print(f"   ✅ Returning to frontend: {db_record.cleaning_timestamp.isoformat() if db_record.cleaning_timestamp else 'None'}")
-    
+
     return db_record
 
 @app.get("/api/magnet-cleaning-records", response_model=List[schemas.MagnetCleaningRecordWithDetails])
@@ -1003,7 +1007,7 @@ def start_transfer_session(
 
     if not route_mapping:
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail=f"No route mapping found for godown {session_data.source_godown_id} to bin {session_data.destination_bin_id}. Please create a route mapping first."
         )
 
@@ -1014,7 +1018,7 @@ def start_transfer_session(
     # Get current IST time for logging
     ist_now = datetime.now(IST)
     utc_now = get_ist_now()
-    
+
     print(f"\n🚀 BACKEND: Starting transfer session")
     print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
     print(f"   UTC time (saving): {utc_now}")
@@ -1070,13 +1074,13 @@ def stop_transfer_session(
     if db_session.status != models.TransferSessionStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Transfer session is not active")
 
-    # Get current IST time for logging
-    ist_now = datetime.now(IST)
-    utc_now = get_ist_now()
-    
+    # Get current UTC time for database storage
+    utc_now = get_utc_now()
+    ist_now = get_ist_now()
+
     print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
-    print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
-    print(f"   UTC time (saving): {utc_now}")
+    print(f"   Current IST time: {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   Storing as UTC: {utc_now}")
     print(f"   Transferred Quantity: {transferred_quantity} tons")
 
     # Update session
@@ -1100,15 +1104,12 @@ def stop_transfer_session(
 
     db.commit()
     db.refresh(db_session)
-    
-    # Convert saved UTC timestamp back to IST for logging
-    saved_ist = pytz.UTC.localize(db_session.stop_timestamp).astimezone(IST)
+
     print(f"   ✅ Stopped transfer session ID {db_session.id}")
     print(f"   ✅ Saved stop_timestamp (UTC): {db_session.stop_timestamp}")
-    print(f"   ✅ Saved stop_timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
     print(f"   ✅ Status: {db_session.status}")
     print(f"   ✅ Transferred Quantity: {db_session.transferred_quantity} tons")
-    
+
     # Sanitize float values before returning
     db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
     if db_session.source_godown:
@@ -1116,7 +1117,7 @@ def stop_transfer_session(
     if db_session.destination_bin:
         db_session.destination_bin.capacity = sanitize_float(db_session.destination_bin.capacity)
         db_session.destination_bin.current_quantity = sanitize_float(db_session.destination_bin.current_quantity)
-    
+
     return db_session
 
 @app.get("/api/transfer-sessions", response_model=List[schemas.TransferSessionWithDetails])
