@@ -176,7 +176,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           // Calculate the start of the current interval period (session-level)
           const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
           const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
-          const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+          const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
 
           console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
 
@@ -200,8 +200,8 @@ export default function PrecleaningBinScreen({ navigation }) {
               const isAfterIntervalStart = cleaningTime >= currentIntervalStartTime;
 
               // Log in IST for better readability
-              const cleaningTimeIST = cleaningTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-              const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+              const cleaningTimeIST = cleaningTime.toLocaleString('en-IN', { hour12: true });
+              const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
 
               console.log(`    🔎 Checking record ID ${record.id}:`);
               console.log(`       cleaning_time (IST): ${cleaningTimeIST}`);
@@ -213,14 +213,14 @@ export default function PrecleaningBinScreen({ navigation }) {
 
             if (cleanedInCurrentInterval) {
               const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-              const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+              const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { hour12: true });
               console.log(`  ✅ Magnet ${magnet.name} is CLEAN (last cleaned at ${cleaningTimeIST} IST)`);
               cleanedMagnets.push(magnet);
             } else {
               if (sessionCleaningRecords.length > 0) {
                 const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-                const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-                const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+                const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { hour12: true });
+                const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
                 console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${cleaningTimeIST} IST, before current interval which started at ${intervalStartIST} IST)`);
               } else {
                 console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning records in this session)`);

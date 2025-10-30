@@ -21,25 +21,22 @@ import schemas
 IST = pytz.timezone('Asia/Kolkata')
 
 def get_ist_now():
-    """Get current time in IST, but return as naive datetime for DB storage"""
-    ist_now = datetime.now(IST)
-    # Convert to UTC for database storage (remove timezone info)
-    return ist_now.astimezone(pytz.UTC).replace(tzinfo=None)
+    """Get current time in IST as naive datetime"""
+    return datetime.now(IST).replace(tzinfo=None)
 
 def parse_ist_datetime(datetime_str):
-    """Parse datetime string and convert to UTC for database storage"""
+    """Parse datetime string in IST"""
     if not datetime_str:
         return None
     try:
-        # Try parsing ISO format with timezone
+        # Try parsing ISO format
         dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
         if dt.tzinfo:
-            # Convert to UTC and make naive
-            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+            # Convert to IST and make naive
+            return dt.astimezone(IST).replace(tzinfo=None)
         else:
-            # Assume it's IST if no timezone info
-            ist_dt = IST.localize(dt)
-            return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+            # Already in IST format
+            return dt
     except:
         # Fallback to current IST time
         return get_ist_now()

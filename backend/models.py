@@ -9,9 +9,8 @@ import pytz
 IST = pytz.timezone('Asia/Kolkata')
 
 def get_ist_now():
-    """Get current IST time as naive UTC datetime for database storage"""
-    ist_now = datetime.now(IST)
-    return ist_now.astimezone(pytz.UTC).replace(tzinfo=None)
+    """Get current IST time as naive datetime"""
+    return datetime.now(IST).replace(tzinfo=None)
 
 class ClaimStatus(str, enum.Enum):
     OPEN = "Open"

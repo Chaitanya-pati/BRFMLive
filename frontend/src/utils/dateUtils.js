@@ -1,31 +1,23 @@
 
 // IST (Indian Standard Time) utility functions
-// IST is UTC+5:30
 
 export const toIST = (date) => {
   if (!date) return null;
-  const utcDate = new Date(date);
-  
-  // Add 5 hours 30 minutes to convert UTC to IST
-  const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
-  const istDate = new Date(utcDate.getTime() + istOffset);
-  
-  return istDate;
+  return new Date(date);
 };
 
 // Format: DD/MM/YYYY hh:mm:ss AM/PM IST
 export const formatISTDateTime = (date) => {
   if (!date) return '-';
   try {
-    // Parse the date string (assuming it's in UTC or ISO format from backend)
+    // Parse the date string (already in IST from backend)
     const d = new Date(date);
     
     // Ensure it's a valid date
     if (isNaN(d.getTime())) return '-';
     
-    // Format in IST timezone
+    // Format as-is (already IST)
     const formatted = d.toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -48,7 +40,6 @@ export const formatISTDate = (date) => {
   try {
     const d = new Date(date);
     return d.toLocaleDateString('en-IN', {
-      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -64,7 +55,6 @@ export const formatISTTime = (date) => {
   try {
     const d = new Date(date);
     return d.toLocaleTimeString('en-IN', {
-      timeZone: 'Asia/Kolkata',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -77,7 +67,6 @@ export const formatISTTime = (date) => {
 
 export const getCurrentISTTimestamp = () => {
   return new Date().toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
