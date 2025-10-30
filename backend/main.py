@@ -11,10 +11,38 @@ import os
 import uuid
 from pathlib import Path
 import math
+import pytz
 
 from database import engine, get_db, Base
 import models
 import schemas
+
+# IST timezone
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST, but return as naive datetime for DB storage"""
+    ist_now = datetime.now(IST)
+    # Convert to UTC for database storage (remove timezone info)
+    return ist_now.astimezone(pytz.UTC).replace(tzinfo=None)
+
+def parse_ist_datetime(datetime_str):
+    """Parse datetime string and convert to UTC for database storage"""
+    if not datetime_str:
+        return None
+    try:
+        # Try parsing ISO format with timezone
+        dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+        if dt.tzinfo:
+            # Convert to UTC and make naive
+            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        else:
+            # Assume it's IST if no timezone info
+            ist_dt = IST.localize(dt)
+            return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+    except:
+        # Fallback to current IST time
+        return get_ist_now()
 
 def sanitize_float(value):
     """Convert NaN/Infinity to None for JSON serialization"""
@@ -103,12 +131,7 @@ async def create_vehicle_entry(
     vehicle_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    arrival_dt = None
-    if arrival_time:
-        try:
-            arrival_dt = datetime.fromisoformat(arrival_time.replace('Z', '+00:00'))
-        except:
-            arrival_dt = datetime.utcnow()
+    arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_ist_now()
 
     db_vehicle = models.VehicleEntry(
         vehicle_number=vehicle_number,
@@ -116,7 +139,7 @@ async def create_vehicle_entry(
         bill_no=bill_no,
         driver_name=driver_name,
         driver_phone=driver_phone,
-        arrival_time=arrival_dt or datetime.utcnow(),
+        arrival_time=arrival_dt,
         notes=notes
     )
 
@@ -223,11 +246,7 @@ async def update_vehicle_entry(
 
     # Update arrival time if provided
     if arrival_time:
-        try:
-            arrival_dt = datetime.fromisoformat(arrival_time.replace('Z', '+00:00'))
-            db_vehicle.arrival_time = arrival_dt
-        except:
-            pass
+        db_vehicle.arrival_time = parse_ist_datetime(arrival_time)
 
     # Update photos if new ones are provided
     if supplier_bill_photo and supplier_bill_photo.filename:
@@ -302,10 +321,14 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
 
-    # Auto-generate document number based on today's date
-    today = datetime.now().date()
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end = datetime.combine(today, datetime.max.time())
+    # Auto-generate document number based on today's date in IST
+    ist_now = datetime.now(IST)
+    today = ist_now.date()
+    # Convert to UTC for database query
+    today_start_ist = IST.localize(datetime.combine(today, datetime.min.time()))
+    today_end_ist = IST.localize(datetime.combine(today, datetime.max.time()))
+    today_start = today_start_ist.astimezone(pytz.UTC).replace(tzinfo=None)
+    today_end = today_end_ist.astimezone(pytz.UTC).replace(tzinfo=None)
 
     # Count today's lab tests to determine next document number
     today_tests_count = db.query(models.LabTest).filter(
@@ -320,7 +343,7 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     lab_test_data = lab_test.dict()
     lab_test_data['document_no'] = doc_number
     lab_test_data['issue_no'] = "01"  # 2-digit issue number
-    lab_test_data['issue_date'] = datetime.now()
+    lab_test_data['issue_date'] = get_ist_now()
     lab_test_data['department'] = "QA"
 
     # Auto-fetch bill number from vehicle entry
@@ -483,19 +506,8 @@ async def create_unloading_entry(
     after_unloading_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    start_time = None
-    if unloading_start_time:
-        try:
-            start_time = datetime.fromisoformat(unloading_start_time.replace('Z', '+00:00'))
-        except:
-            start_time = datetime.utcnow()
-
-    end_time = None
-    if unloading_end_time:
-        try:
-            end_time = datetime.fromisoformat(unloading_end_time.replace('Z', '+00:00'))
-        except:
-            end_time = datetime.utcnow()
+    start_time = parse_ist_datetime(unloading_start_time) if unloading_start_time else get_ist_now()
+    end_time = parse_ist_datetime(unloading_end_time) if unloading_end_time else get_ist_now()
 
     db_entry = models.UnloadingEntry(
         vehicle_entry_id=vehicle_entry_id,
@@ -503,8 +515,8 @@ async def create_unloading_entry(
         gross_weight=gross_weight,
         empty_vehicle_weight=empty_vehicle_weight,
         net_weight=net_weight,
-        unloading_start_time=start_time or datetime.utcnow(),
-        unloading_end_time=end_time or datetime.utcnow(),
+        unloading_start_time=start_time,
+        unloading_end_time=end_time,
         notes=notes
     )
 
@@ -572,16 +584,10 @@ async def update_unloading_entry(
     db_entry.net_weight = net_weight
 
     if unloading_start_time:
-        try:
-            db_entry.unloading_start_time = datetime.fromisoformat(unloading_start_time.replace('Z', '+00:00'))
-        except:
-            pass
+        db_entry.unloading_start_time = parse_ist_datetime(unloading_start_time)
 
     if unloading_end_time:
-        try:
-            db_entry.unloading_end_time = datetime.fromisoformat(unloading_end_time.replace('Z', '+00:00'))
-        except:
-            pass
+        db_entry.unloading_end_time = parse_ist_datetime(unloading_end_time)
 
     db_entry.notes = notes
 
@@ -870,12 +876,9 @@ async def create_magnet_cleaning_record(
         if not transfer_session:
             raise HTTPException(status_code=404, detail="Transfer session not found")
 
-    # Get current time in IST timezone
-    ist_tz = pytz.timezone('Asia/Kolkata')
-    ist_now = datetime.now(ist_tz)
-    
-    # Convert IST to UTC for database storage (PostgreSQL stores as UTC)
-    utc_now = ist_now.astimezone(pytz.UTC).replace(tzinfo=None)
+    # Get current time in IST
+    ist_now = datetime.now(IST)
+    utc_now = get_ist_now()
     
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
@@ -901,8 +904,7 @@ async def create_magnet_cleaning_record(
     db.refresh(db_record)
     
     # Convert saved UTC timestamp back to IST for logging
-    ist_tz = pytz.timezone('Asia/Kolkata')
-    saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(ist_tz)
+    saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(IST)
     print(f"   ✅ Created record ID {db_record.id}")
     print(f"   ✅ Saved timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
     
@@ -952,10 +954,7 @@ async def update_magnet_cleaning_record(
     db_record.notes = notes
 
     if cleaning_timestamp:
-        try:
-            db_record.cleaning_timestamp = datetime.fromisoformat(cleaning_timestamp.replace('Z', '+00:00'))
-        except:
-            pass
+        db_record.cleaning_timestamp = parse_ist_datetime(cleaning_timestamp)
 
     if before_cleaning_photo and before_cleaning_photo.filename:
         db_record.before_cleaning_photo = await save_upload_file(before_cleaning_photo)
@@ -1018,7 +1017,7 @@ def start_transfer_session(
         source_godown_id=session_data.source_godown_id,
         destination_bin_id=session_data.destination_bin_id,
         magnet_id=magnet_id,
-        start_timestamp=datetime.utcnow(),
+        start_timestamp=get_ist_now(),
         status=models.TransferSessionStatus.ACTIVE,
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
@@ -1055,7 +1054,7 @@ def stop_transfer_session(
         raise HTTPException(status_code=400, detail="Transfer session is not active")
 
     # Update session
-    db_session.stop_timestamp = datetime.utcnow()
+    db_session.stop_timestamp = get_ist_now()
     db_session.transferred_quantity = transferred_quantity
     db_session.status = models.TransferSessionStatus.COMPLETED
 
@@ -1174,18 +1173,14 @@ def get_cleaning_history_report(
         query = query.filter(models.MagnetCleaningRecord.transfer_session_id == transfer_session_id)
 
     if start_date:
-        try:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        start_dt = parse_ist_datetime(start_date)
+        if start_dt:
             query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp >= start_dt)
-        except:
-            pass
 
     if end_date:
-        try:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        end_dt = parse_ist_datetime(end_date)
+        if end_dt:
             query = query.filter(models.MagnetCleaningRecord.cleaning_timestamp <= end_dt)
-        except:
-            pass
 
     records = query.order_by(models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(skip).limit(limit).all()
     return records
@@ -1205,18 +1200,14 @@ def get_transfer_details_report(
         query = query.filter(models.TransferSession.status == status)
 
     if start_date:
-        try:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        start_dt = parse_ist_datetime(start_date)
+        if start_dt:
             query = query.filter(models.TransferSession.start_timestamp >= start_dt)
-        except:
-            pass
 
     if end_date:
-        try:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        end_dt = parse_ist_datetime(end_date)
+        if end_dt:
             query = query.filter(models.TransferSession.start_timestamp <= end_dt)
-        except:
-            pass
 
     sessions = query.order_by(models.TransferSession.start_timestamp.desc()).offset(skip).limit(limit).all()
 
