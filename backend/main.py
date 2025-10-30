@@ -1014,12 +1014,24 @@ def start_transfer_session(
     cleaning_interval = route_mapping.cleaning_interval_hours
     magnet_id = route_mapping.magnet_id
 
+    # Get current IST time for logging
+    ist_now = datetime.now(IST)
+    utc_now = get_ist_now()
+    
+    print(f"\n🚀 BACKEND: Starting transfer session")
+    print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   UTC time (saving): {utc_now}")
+    print(f"   Source Godown ID: {session_data.source_godown_id}")
+    print(f"   Destination Bin ID: {session_data.destination_bin_id}")
+    print(f"   Magnet ID: {magnet_id}")
+    print(f"   Cleaning Interval: {cleaning_interval}s")
+
     # Create new transfer session
     db_session = models.TransferSession(
         source_godown_id=session_data.source_godown_id,
         destination_bin_id=session_data.destination_bin_id,
         magnet_id=magnet_id,
-        start_timestamp=get_ist_now(),
+        start_timestamp=utc_now,
         status=models.TransferSessionStatus.ACTIVE,
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
@@ -1029,7 +1041,13 @@ def start_transfer_session(
     db.commit()
     db.refresh(db_session)
 
-    print(f"✅ Created transfer session: ID={db_session.id}, status={db_session.status}, interval={db_session.cleaning_interval_hours}s, magnet_id={db_session.magnet_id}")
+    # Convert saved UTC timestamp back to IST for logging
+    saved_ist = pytz.UTC.localize(db_session.start_timestamp).astimezone(IST)
+    print(f"   ✅ Created transfer session ID {db_session.id}")
+    print(f"   ✅ Saved start_timestamp (UTC): {db_session.start_timestamp}")
+    print(f"   ✅ Saved start_timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   ✅ Status: {db_session.status}")
+    print(f"   ✅ Returning to frontend: {db_session.start_timestamp.isoformat() if db_session.start_timestamp else 'None'}")
 
     # Sanitize float values before returning
     db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
@@ -1055,8 +1073,17 @@ def stop_transfer_session(
     if db_session.status != models.TransferSessionStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Transfer session is not active")
 
+    # Get current IST time for logging
+    ist_now = datetime.now(IST)
+    utc_now = get_ist_now()
+    
+    print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
+    print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   UTC time (saving): {utc_now}")
+    print(f"   Transferred Quantity: {transferred_quantity} tons")
+
     # Update session
-    db_session.stop_timestamp = get_ist_now()
+    db_session.stop_timestamp = utc_now
     db_session.transferred_quantity = transferred_quantity
     db_session.status = models.TransferSessionStatus.COMPLETED
 
@@ -1076,6 +1103,14 @@ def stop_transfer_session(
 
     db.commit()
     db.refresh(db_session)
+    
+    # Convert saved UTC timestamp back to IST for logging
+    saved_ist = pytz.UTC.localize(db_session.stop_timestamp).astimezone(IST)
+    print(f"   ✅ Stopped transfer session ID {db_session.id}")
+    print(f"   ✅ Saved stop_timestamp (UTC): {db_session.stop_timestamp}")
+    print(f"   ✅ Saved stop_timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   ✅ Status: {db_session.status}")
+    print(f"   ✅ Transferred Quantity: {db_session.transferred_quantity} tons")
     
     # Sanitize float values before returning
     db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
