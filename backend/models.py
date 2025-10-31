@@ -174,7 +174,7 @@ class Bin(Base):
     capacity = Column(Float, nullable=False)
     current_quantity = Column(Float, default=0.0)
     material_type = Column(String(100))
-    status = Column(Enum(BinStatus), default=BinStatus.ACTIVE, nullable=False)
+    status = Column(String(20), default="Active", nullable=False)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
@@ -184,7 +184,7 @@ class Magnet(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text)
-    status = Column(Enum(BinStatus), default=BinStatus.ACTIVE, nullable=False)
+    status = Column(String(20), default="Active", nullable=False)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
