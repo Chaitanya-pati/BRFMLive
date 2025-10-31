@@ -62,4 +62,28 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ### Environment Configuration
 - `DATABASE_URL`: PostgreSQL connection string.
+- `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
 - Connection pooling for database reliability.
+
+## Recent Changes (October 2025)
+
+### Database Fixes
+- Fixed Alembic migration conflicts by resolving multiple heads
+- Added missing columns to `lab_tests` table (document_no, issue_no, issue_date, department, wheat_variety, bill_number, category)
+- Changed Bin and Magnet status columns from Enum to String(20) to resolve enum type mismatches
+
+### Model Changes
+- `Bin.status` and `Magnet.status` changed from `Enum(BinStatus)` to `String(20)` to fix SQLAlchemy enum mapping issues
+- Status values remain mixed-case ("Active", "Inactive", "Maintenance", "Full")
+
+### Configuration
+- Created `frontend/.env` with `EXPO_PUBLIC_API_URL` to ensure frontend connects to backend on Replit domain
+- Frontend now correctly connects to backend API at port 8000
+
+### Master Data
+The system includes default master data (created during setup):
+- **10 Godowns**: Godown-G1 to Godown-G10 (capacities: 8,000-20,000 kg, Warehouse and Silo types)
+- **10 Bins**: Bin-001 to Bin-010 (capacities: 1,000-2,500 kg, various grain types)
+- **10 Magnets**: Magnet-M1 to Magnet-M10 (different magnetic separator types)
+
+All master data persists across clones and restarts.
