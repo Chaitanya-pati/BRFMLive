@@ -29,9 +29,9 @@ class BinStatus(str, enum.Enum):
     FULL = "Full"
 
 class TransferSessionStatus(str, enum.Enum):
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    ACTIVE = "Active"
+    COMPLETED = "Completed"
+    CANCELLED = "Cancelled"
 
 class Supplier(Base):
     __tablename__ = "suppliers"
