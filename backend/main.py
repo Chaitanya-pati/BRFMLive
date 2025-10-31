@@ -1033,7 +1033,7 @@ def start_transfer_session(
         destination_bin_id=session_data.destination_bin_id,
         magnet_id=magnet_id,
         start_timestamp=utc_now,
-        status=models.TransferSessionStatus.ACTIVE,
+        status=models.TransferSessionStatus.ACTIVE.value,
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
     )
@@ -1086,7 +1086,7 @@ def stop_transfer_session(
     # Update session
     db_session.stop_timestamp = utc_now
     db_session.transferred_quantity = transferred_quantity
-    db_session.status = models.TransferSessionStatus.COMPLETED
+    db_session.status = models.TransferSessionStatus.COMPLETED.value
 
     # Update source godown quantity (subtract)
     source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
