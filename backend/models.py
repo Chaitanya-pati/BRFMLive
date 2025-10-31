@@ -32,6 +32,9 @@ class TransferSessionStatus(str, enum.Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    
+    def __str__(self):
+        return self.value
 
 class Supplier(Base):
     __tablename__ = "suppliers"
@@ -215,7 +218,7 @@ class TransferSession(Base):
     start_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
-    status = Column(Enum(TransferSessionStatus), default=TransferSessionStatus.ACTIVE, nullable=False)
+    status = Column(String(20), default="active", nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     notes = Column(Text)
     created_at = Column(DateTime, default=get_utc_now)

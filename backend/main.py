@@ -1033,7 +1033,7 @@ def start_transfer_session(
         destination_bin_id=session_data.destination_bin_id,
         magnet_id=magnet_id,
         start_timestamp=utc_now,
-        status=models.TransferSessionStatus.ACTIVE.value,
+        status="active",
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
     )
@@ -1071,7 +1071,7 @@ def stop_transfer_session(
     if not db_session:
         raise HTTPException(status_code=404, detail="Transfer session not found")
 
-    if db_session.status != models.TransferSessionStatus.ACTIVE:
+    if db_session.status != "active":
         raise HTTPException(status_code=400, detail="Transfer session is not active")
 
     # Get current UTC time for database storage
@@ -1086,7 +1086,7 @@ def stop_transfer_session(
     # Update session
     db_session.stop_timestamp = utc_now
     db_session.transferred_quantity = transferred_quantity
-    db_session.status = models.TransferSessionStatus.COMPLETED.value
+    db_session.status = "completed"
 
     # Update source godown quantity (subtract)
     source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
