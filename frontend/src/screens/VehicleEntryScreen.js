@@ -82,9 +82,14 @@ export default function VehicleEntryScreen() {
 
   const handleSubmit = async () => {
     try {
+      if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+      }
+
       const formDataToSend = new FormData();
       formDataToSend.append('vehicle_number', formData.vehicle_number);
-      formDataToSend.append('supplier_id', formData.supplier_id);
+      formDataToSend.append('supplier_id', String(formData.supplier_id));
       formDataToSend.append('bill_no', formData.bill_no);
       formDataToSend.append('driver_name', formData.driver_name || '');
       formDataToSend.append('driver_phone', formData.driver_phone || '');
@@ -92,15 +97,33 @@ export default function VehicleEntryScreen() {
       formDataToSend.append('notes', formData.notes || '');
 
       if (formData.supplier_bill_photo) {
-        const billPhotoUri = formData.supplier_bill_photo.uri || formData.supplier_bill_photo;
-        const billPhotoBlob = await fetch(billPhotoUri).then(r => r.blob());
-        formDataToSend.append('supplier_bill_photo', billPhotoBlob, 'supplier_bill.jpg');
+        const photoUri = formData.supplier_bill_photo.uri || formData.supplier_bill_photo;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('supplier_bill_photo', blob, 'supplier_bill.jpg');
+        } else {
+          formDataToSend.append('supplier_bill_photo', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'supplier_bill.jpg',
+          });
+        }
       }
 
       if (formData.vehicle_photo) {
-        const vehiclePhotoUri = formData.vehicle_photo.uri || formData.vehicle_photo;
-        const vehiclePhotoBlob = await fetch(vehiclePhotoUri).then(r => r.blob());
-        formDataToSend.append('vehicle_photo', vehiclePhotoBlob, 'vehicle.jpg');
+        const photoUri = formData.vehicle_photo.uri || formData.vehicle_photo;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('vehicle_photo', blob, 'vehicle.jpg');
+        } else {
+          formDataToSend.append('vehicle_photo', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'vehicle.jpg',
+          });
+        }
       }
 
       if (editingVehicle) {
@@ -114,7 +137,8 @@ export default function VehicleEntryScreen() {
       fetchVehicles();
       resetForm();
     } catch (error) {
-      showNotification(error.message || 'Failed to save vehicle entry', 'error');
+      console.error('Submit error:', error);
+      showNotification(error.response?.data?.detail || error.message || 'Failed to save vehicle entry', 'error');
     }
   };
 
