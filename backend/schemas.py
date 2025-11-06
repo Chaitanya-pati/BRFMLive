@@ -329,6 +329,37 @@ class MagnetCleaningRecordWithDetails(MagnetCleaningRecord):
     magnet: Magnet
     transfer_session: Optional[TransferSession] = None
 
+class WasteEntryBase(BaseModel):
+    transfer_session_id: int
+    godown_id: int
+    waste_weight: float
+    waste_type: Optional[str] = None
+    recorded_timestamp: Optional[datetime] = None
+    recorded_by: Optional[str] = None
+    notes: Optional[str] = None
+
+class WasteEntryCreate(WasteEntryBase):
+    pass
+
+class WasteEntryUpdate(BaseModel):
+    waste_weight: Optional[float] = None
+    waste_type: Optional[str] = None
+    recorded_by: Optional[str] = None
+    notes: Optional[str] = None
+
+class WasteEntry(WasteEntryBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class WasteEntryWithDetails(WasteEntry):
+    transfer_session: TransferSession
+    godown: GodownMaster
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
 TransferSessionWithDetails.model_rebuild()
+WasteEntryWithDetails.model_rebuild()

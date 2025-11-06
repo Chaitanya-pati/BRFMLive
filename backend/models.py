@@ -244,3 +244,20 @@ class MagnetCleaningRecord(Base):
 
     magnet = relationship("Magnet")
     transfer_session = relationship("TransferSession", back_populates="cleaning_records")
+
+class WasteEntry(Base):
+    __tablename__ = "waste_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id"), nullable=False, index=True)
+    godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
+    waste_weight = Column(Float, nullable=False)
+    waste_type = Column(String(100))
+    recorded_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
+    recorded_by = Column(String(255))
+    notes = Column(Text)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    transfer_session = relationship("TransferSession")
+    godown = relationship("GodownMaster")
