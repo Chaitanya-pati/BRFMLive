@@ -243,7 +243,7 @@ export default function VehicleEntryScreen() {
           <SelectDropdown
             label="Supplier *"
             value={formData.supplier_id}
-            onChange={(value) => setFormData({ ...formData, supplier_id: value })}
+            onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
             options={suppliers.map(s => ({ label: s.supplier_name, value: s.id }))}
             placeholder="Select Supplier"
           />
