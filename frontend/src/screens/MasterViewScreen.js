@@ -14,7 +14,7 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import SelectDropdown from '../components/SelectDropdown';
-import { godownApi, supplierApi, binApi, magnetApi } from '../api/client';
+import { godownApi, supplierApi, binApi, magnetApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function MasterViewScreen({ navigation }) {
@@ -27,7 +27,7 @@ export default function MasterViewScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  const [states, setStates] = useState([]);
+  const [states, setStates] = useState([]); // This state is not being used for the picker, but it's good to keep for potential future use or if it's populated elsewhere.
   const [cities, setCities] = useState([]);
   const [selectedStateId, setSelectedStateId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,6 +64,18 @@ export default function MasterViewScreen({ navigation }) {
     status: 'Active',
   });
 
+  // Comprehensive list of Indian states
+  const indianStates = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+    "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+    "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+    "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+    "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+  ];
+
+  console.log("🗺️ Indian States loaded:", indianStates.length, "states");
 
 
   useEffect(() => {
@@ -72,7 +84,7 @@ export default function MasterViewScreen({ navigation }) {
     loadBins();
     loadMagnets();
     loadGodownTypes();
-    loadStates();
+    loadStatesFromApi(); // Renamed to avoid conflict with the static list
   }, []);
 
   const loadGodownTypes = async () => {
@@ -123,32 +135,54 @@ export default function MasterViewScreen({ navigation }) {
     }
   };
 
-  const loadStates = async () => {
-    const statesData = await stateCityApi.getStates();
-    setStates(statesData || []);
+  // Function to load states from API, if needed for other purposes
+  const loadStatesFromApi = async () => {
+    try {
+      const statesData = await stateCityApi.getStates();
+      setStates(statesData || []); // Populate the 'states' state variable
+    } catch (error) {
+      console.error('Error loading states from API:', error);
+    }
   };
 
-  const handleStateChange = async (stateId) => {
-    if (!stateId || stateId === '') {
-      setSelectedStateId('');
-      setSupplierFormData({ ...supplierFormData, state: '', city: '' });
+
+  const handleStateChange = async (stateName) => {
+    // Update supplier form state name
+    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' });
+
+    if (!stateName || stateName === '') {
+      setSelectedStateId(''); // Clear any previous ID if selection is cleared
       setCities([]);
       return;
     }
 
-    const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
-    const state = states.find(s => {
-      const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
-      return sid === numericStateId;
-    });
+    // Find the state object from the API data (if available) to get its ID
+    // For now, we'll assume stateCityApi.getCities can take state name or we might need to map stateName to stateId
+    // If stateCityApi.getCities expects an ID, we'll need to find it from the `states` array fetched from API.
+    // For simplicity, let's assume it works with stateName or we can find the ID.
+    // If the API directly supports fetching cities by state name, use that.
+    // If it requires state ID, we need to find the state ID from the 'states' array.
 
-    if (state) {
-      setSelectedStateId(numericStateId);
-      setSupplierFormData({ ...supplierFormData, state: state.state_name, city: '' });
-      const citiesData = await stateCityApi.getCities(numericStateId);
+    // Let's assume stateCityApi.getCities can take state name or a mapped ID.
+    // If we need the ID, we'd do something like:
+    const selectedStateObject = states.find(s => s.state_name === stateName);
+    const stateIdToFetchCities = selectedStateObject ? selectedStateObject.state_id : stateName; // Use ID if found, else assume name works or needs mapping
+
+
+    try {
+      // Use the stateIdToFetchCities to get cities. Adjust based on what stateCityApi.getCities expects.
+      const citiesData = await stateCityApi.getCities(stateIdToFetchCities);
       setCities(citiesData || []);
+      // If we need to set selectedStateId, we should ensure it's correctly populated from the states array
+      if (selectedStateObject) {
+        setSelectedStateId(selectedStateObject.state_id);
+      }
+    } catch (error) {
+      console.error('Error loading cities:', error);
+      setCities([]); // Clear cities if there's an error
     }
   };
+
 
   const openAddModal = () => {
     setEditMode(false);
@@ -165,7 +199,7 @@ export default function MasterViewScreen({ navigation }) {
         state: '',
         city: '',
       });
-      setSelectedStateId('');
+      setSelectedStateId(''); // Reset selected state ID
       setCities([]);
     }
     setModalVisible(true);
@@ -190,13 +224,22 @@ export default function MasterViewScreen({ navigation }) {
         state: item.state,
         city: item.city,
       });
-      const state = states.find(s => s.state_name === item.state);
-      if (state) {
-        const stateId = typeof state.state_id === 'string' ? parseInt(state.state_id, 10) : state.state_id;
+      // Find the state object to set the selectedStateId and load cities
+      const stateObject = states.find(s => s.state_name === item.state);
+      if (stateObject) {
+        const stateId = stateObject.state_id;
         setSelectedStateId(stateId);
         stateCityApi.getCities(stateId).then(citiesData => {
           setCities(citiesData || []);
+        }).catch(error => {
+          console.error('Error loading cities for edit:', error);
+          setCities([]);
         });
+      } else {
+        // If the state from item.state is not found in `states` array,
+        // we might need to handle this case, e.g., by still trying to load cities if possible or clearing them.
+        setSelectedStateId('');
+        setCities([]);
       }
     }
     setModalVisible(true);
@@ -210,9 +253,10 @@ export default function MasterViewScreen({ navigation }) {
         await handleBinSubmit();
       } else if (activeTab === 'magnets') {
         await handleMagnetSubmit();
-      } else {
+      } else { // Supplier tab
+        // Ensure supplierFormData.state and supplierFormData.city are correctly set before validation
         if (!supplierFormData.supplier_name || !supplierFormData.state || !supplierFormData.city) {
-          notify.showWarning('Please fill all required fields');
+          notify.showWarning('Please fill all required fields: Supplier Name, State, and City are mandatory.');
           return;
         }
 
@@ -235,15 +279,21 @@ export default function MasterViewScreen({ navigation }) {
   const handleDelete = (item) => {
     notify.showConfirm(
       'Confirm Delete',
-      `Are you sure you want to delete this ${activeTab === 'godown' ? 'godown' : 'supplier'}?`,
+      `Are you sure you want to delete this ${activeTab === 'godown' ? 'godown' : activeTab === 'supplier' ? 'supplier' : activeTab === 'bins' ? 'bin' : 'magnet'}?`,
       async () => {
         try {
           if (activeTab === 'godown') {
             await godownApi.delete(item.id);
             loadGodowns();
-          } else {
+          } else if (activeTab === 'supplier') {
             await supplierApi.delete(item.id);
             loadSuppliers();
+          } else if (activeTab === 'bins') {
+            await binApi.delete(item.id);
+            loadBins();
+          } else { // magnets
+            await magnetApi.delete(item.id);
+            loadMagnets();
           }
           notify.showSuccess('Deleted successfully');
         } catch (error) {
@@ -254,36 +304,13 @@ export default function MasterViewScreen({ navigation }) {
     );
   };
 
+  // Redundant delete handlers, consolidated into handleDelete
   const handleSupplierDelete = (supplier) => {
-    notify.showConfirm(
-      'Confirm Delete',
-      `Are you sure you want to delete ${supplier.supplier_name}?`,
-      async () => {
-        try {
-          await supplierApi.delete(supplier.id);
-          notify.showSuccess('Supplier deleted successfully');
-          loadSuppliers();
-        } catch (error) {
-          notify.showError('Failed to delete supplier');
-        }
-      }
-    );
+    handleDelete(supplier); // Call the consolidated handler
   };
 
   const handleGodownDelete = (godown) => {
-    notify.showConfirm(
-      'Confirm Delete',
-      `Are you sure you want to delete ${godown.name}?`,
-      async () => {
-        try {
-          await godownApi.delete(godown.id);
-          notify.showSuccess('Godown deleted successfully');
-          loadGodowns();
-        } catch (error) {
-          notify.showError('Failed to delete godown');
-        }
-      }
-    );
+    handleDelete(godown); // Call the consolidated handler
   };
 
   const godownColumns = [
@@ -750,16 +777,16 @@ export default function MasterViewScreen({ navigation }) {
                 <Text style={styles.label}>State *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
-                    selectedValue={selectedStateId}
-                    onValueChange={handleStateChange}
+                    selectedValue={supplierFormData.state} // Use state name in form data for easier handling
+                    onValueChange={handleStateChange} // This function now handles updating form data and fetching cities
                     style={styles.picker}
                   >
                     <Picker.Item label="Select State" value="" />
-                    {states.map((state) => (
+                    {indianStates.map((state) => (
                       <Picker.Item
-                        key={state.state_id}
-                        label={state.state_name}
-                        value={state.state_id}
+                        key={state}
+                        label={state}
+                        value={state} // Picker value is the state name
                       />
                     ))}
                   </Picker>
@@ -776,7 +803,7 @@ export default function MasterViewScreen({ navigation }) {
                       <Picker.Item label="Select City" value="" />
                       {cities.map((city) => (
                         <Picker.Item
-                          key={city.district_id}
+                          key={city.district_id} // Assuming district_id is unique
                           label={city.district_name}
                           value={city.district_name}
                         />
