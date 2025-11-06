@@ -48,19 +48,21 @@ export default function VehicleEntryScreen() {
 
   const fetchVehicles = async () => {
     try {
-      const data = await vehicleApi.getAll();
-      setVehicles(data);
+      const response = await vehicleApi.getAll();
+      setVehicles(response.data || []);
     } catch (error) {
       notify.error('Failed to fetch vehicles');
+      setVehicles([]);
     }
   };
 
   const fetchSuppliers = async () => {
     try {
-      const data = await supplierApi.getAll();
-      setSuppliers(data);
+      const response = await supplierApi.getAll();
+      setSuppliers(response.data || []);
     } catch (error) {
       notify.error('Failed to fetch suppliers');
+      setSuppliers([]);
     }
   };
 
