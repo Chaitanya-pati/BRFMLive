@@ -21,7 +21,6 @@ export default function SupplierMasterScreen({ navigation }) {
   const [editMode, setEditMode] = useState(false);
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
-  const [cities, setCities] = useState([]);
   const [selectedStateId, setSelectedStateId] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -74,28 +73,21 @@ export default function SupplierMasterScreen({ navigation }) {
     }
   };
 
-  const handleStateChange = async (stateId) => {
-    console.log('handleStateChange called with stateId:', stateId, 'type:', typeof stateId);
-    console.log('Available states:', states);
-    
+  const handleStateChange = (stateId) => {
     if (!stateId || stateId === '') {
       setSelectedStateId('');
       setFormData({ 
         ...formData, 
         state: ''
       });
-      setCities([]);
       return;
     }
     
     const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
-    console.log('Looking for state with ID:', numericStateId);
     const state = states.find(s => {
       const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
-      console.log('Comparing:', sid, '===', numericStateId, '?', sid === numericStateId);
       return sid === numericStateId;
     });
-    console.log('Found state:', state);
     
     if (state) {
       setSelectedStateId(numericStateId);
@@ -103,17 +95,12 @@ export default function SupplierMasterScreen({ navigation }) {
         ...formData, 
         state: state.state_name
       });
-      
-      const citiesData = await stateCityApi.getCities(numericStateId);
-      setCities(citiesData || []);
-      console.log('Updated formData with state:', state.state_name);
     } else {
       setSelectedStateId('');
       setFormData({ 
         ...formData, 
         state: ''
       });
-      setCities([]);
     }
   };
 
@@ -129,11 +116,10 @@ export default function SupplierMasterScreen({ navigation }) {
       city: '',
     });
     setSelectedStateId('');
-    setCities([]);
     setModalVisible(true);
   };
 
-  const openEditModal = async (supplier) => {
+  const openEditModal = (supplier) => {
     setEditMode(true);
     setCurrentSupplier(supplier);
     setFormData({
@@ -148,22 +134,14 @@ export default function SupplierMasterScreen({ navigation }) {
     const state = states.find(s => s.state_name === supplier.state);
     if (state) {
       setSelectedStateId(state.state_id);
-      const citiesData = await stateCityApi.getCities(state.state_id);
-      setCities(citiesData || []);
     } else {
       setSelectedStateId('');
-      setCities([]);
     }
     
     setModalVisible(true);
   };
 
   const handleSubmit = async () => {
-    console.log('Save button clicked');
-    console.log('Form data:', formData);
-    console.log('Selected State ID:', selectedStateId);
-    
-    // Trim and validate required fields
     const trimmedName = formData.supplier_name?.trim();
     const trimmedState = formData.state?.trim();
     const trimmedCity = formData.city?.trim();
@@ -184,29 +162,17 @@ export default function SupplierMasterScreen({ navigation }) {
         city: trimmedCity,
       };
       
-      console.log('Sending payload to API:', payload);
-      console.log('API Base URL:', await import('../api/client').then(m => m.api.defaults.baseURL));
-      
       if (editMode && currentSupplier) {
-        console.log('Updating supplier:', currentSupplier.id);
-        const response = await supplierApi.update(currentSupplier.id, payload);
-        console.log('Update response status:', response.status);
-        console.log('Update response data:', response.data);
+        await supplierApi.update(currentSupplier.id, payload);
         showAlert('Success', 'Supplier updated successfully');
       } else {
-        console.log('Creating new supplier with payload:', payload);
-        const response = await supplierApi.create(payload);
-        console.log('Create response status:', response.status);
-        console.log('Create response data:', response.data);
+        await supplierApi.create(payload);
         showAlert('Success', 'Supplier created successfully');
       }
       
       setModalVisible(false);
       await loadSuppliers();
     } catch (error) {
-      console.error('Full error object:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
       const errorMessage = error.response?.data?.detail 
         || error.response?.data?.message 
         || error.message 
@@ -304,10 +270,7 @@ export default function SupplierMasterScreen({ navigation }) {
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={selectedStateId || ''}
-              onValueChange={(itemValue) => {
-                console.log('State picker value changed:', itemValue);
-                handleStateChange(itemValue);
-              }}
+              onValueChange={handleStateChange}
               style={styles.picker}
             >
               <Picker.Item label="Select State" value="" />
@@ -326,7 +289,7 @@ export default function SupplierMasterScreen({ navigation }) {
             style={styles.input}
             value={formData.city || ''}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
-            placeholder="Type city name"
+            placeholder="Enter city name"
           />
 
           <View style={styles.buttonContainer}>
