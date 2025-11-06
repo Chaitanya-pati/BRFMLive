@@ -7,18 +7,18 @@ def seed_godowns_and_bins():
     try:
         print("Starting to seed godowns, bins, and magnets...")
 
-        # Seed 10 Godowns
+        # Seed 10 Godowns (expanded from 5)
         godowns_data = [
-            {"name": "Godown-G1", "capacity": 10000, "type": "Warehouse"},
-            {"name": "Godown-G2", "capacity": 15000, "type": "Silo"},
-            {"name": "Godown-G3", "capacity": 8000, "type": "Warehouse"},
-            {"name": "Godown-G4", "capacity": 12000, "type": "Silo"},
-            {"name": "Godown-G5", "capacity": 20000, "type": "Warehouse"},
-            {"name": "Godown-G6", "capacity": 18000, "type": "Silo"},
-            {"name": "Godown-G7", "capacity": 9000, "type": "Warehouse"},
-            {"name": "Godown-G8", "capacity": 14000, "type": "Silo"},
-            {"name": "Godown-G9", "capacity": 11000, "type": "Warehouse"},
-            {"name": "Godown-G10", "capacity": 16000, "type": "Silo"},
+            {"name": "Godown-A", "capacity": 5000, "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-B", "capacity": 3000, "type": "Silo", "current_storage": 0},
+            {"name": "Godown-C", "capacity": 4000, "type": "Storage", "current_storage": 0},
+            {"name": "Godown-D", "capacity": 6000, "type": "Cold Storage", "current_storage": 0},
+            {"name": "Godown-E", "capacity": 2500, "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-F", "capacity": 5500, "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G", "capacity": 4500, "type": "Silo", "current_storage": 0},
+            {"name": "Godown-H", "capacity": 3500, "type": "Storage", "current_storage": 0},
+            {"name": "Godown-I", "capacity": 7000, "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-J", "capacity": 3000, "type": "Cold Storage", "current_storage": 0},
         ]
 
         godowns_added = 0
@@ -35,18 +35,38 @@ def seed_godowns_and_bins():
         db.commit()
         print(f"Added {godowns_added} new godowns")
 
-        # Seed 10 Bins
+        # Seed 30 Bins (expanded from 20)
         bins_data = [
-            {"bin_number": "Bin-001", "capacity": 1000.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-002", "capacity": 1500.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-003", "capacity": 2000.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-004", "capacity": 1200.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-005", "capacity": 1800.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-006", "capacity": 2200.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-007", "capacity": 1300.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-008", "capacity": 1700.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-009", "capacity": 2500.0, "current_quantity": 0.0, "status": "Active"},
-            {"bin_number": "Bin-010", "capacity": 1900.0, "current_quantity": 0.0, "status": "Active"},
+            {"bin_number": "BIN-001", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-002", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-003", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-004", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-005", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-006", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-007", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-008", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-009", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-010", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-011", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-012", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-013", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-014", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-015", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-016", "capacity": 750.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-017", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-018", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-019", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-020", "capacity": 500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-021", "capacity": 600.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-022", "capacity": 600.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-023", "capacity": 800.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-024", "capacity": 800.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-025", "capacity": 1200.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-026", "capacity": 1200.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-027", "capacity": 600.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-028", "capacity": 800.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-029", "capacity": 1000.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
+            {"bin_number": "BIN-030", "capacity": 1500.0, "current_quantity": 0.0, "material_type": "Wheat", "status": "Active"},
         ]
 
         bins_added = 0
@@ -63,7 +83,7 @@ def seed_godowns_and_bins():
         db.commit()
         print(f"Added {bins_added} new bins")
 
-        # Seed 10 Magnets (already has 10 magnets)
+        # Seed 10 Magnets (expanded from 10)
         magnets_data = [
             {"name": "Magnet-M1", "description": "High-intensity magnetic separator", "status": "Active"},
             {"name": "Magnet-M2", "description": "Permanent drum magnet", "status": "Active"},
@@ -75,6 +95,11 @@ def seed_godowns_and_bins():
             {"name": "Magnet-M8", "description": "Belt-type magnetic separator", "status": "Active"},
             {"name": "Magnet-M9", "description": "Grate magnet for bin entry", "status": "Active"},
             {"name": "Magnet-M10", "description": "Drawer magnet for transfer points", "status": "Active"},
+            {"name": "Magnet-M11", "description": "Eddy current separator", "status": "Active"},
+            {"name": "Magnet-M12", "description": "Magnetic pulley for conveyor belts", "status": "Active"},
+            {"name": "Magnet-M13", "description": "Self-cleaning magnetic separator", "status": "Active"},
+            {"name": "Magnet-M14", "description": "Rare earth magnet", "status": "Active"},
+            {"name": "Magnet-M15", "description": "Electromagnetic separator", "status": "Active"},
         ]
 
         magnets_added = 0
