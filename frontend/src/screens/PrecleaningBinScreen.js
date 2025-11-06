@@ -15,7 +15,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  const [activeTab, setActiveTab] = useState('bins');
+  const [activeTab, setActiveTab] = useState('routeMappings');
   const [bins, setBins] = useState([]);
   const [magnets, setMagnets] = useState([]);
   const [routeMappings, setRouteMappings] = useState([]);
@@ -1381,22 +1381,6 @@ export default function PrecleaningBinScreen({ navigation }) {
         >
           <View style={[styles.tabContainer, isMobile && styles.tabContainerMobile]}>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'bins' && styles.activeTab, isMobile && styles.tabMobile]}
-              onPress={() => setActiveTab('bins')}
-            >
-              <Text style={[styles.tabText, activeTab === 'bins' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
-                Bins
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'magnets' && styles.activeTab, isMobile && styles.tabMobile]}
-              onPress={() => setActiveTab('magnets')}
-            >
-              <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText, isMobile && styles.tabTextMobile]}>
-                Magnets
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.tab, activeTab === 'routeMappings' && styles.activeTab, isMobile && styles.tabMobile]}
               onPress={() => setActiveTab('routeMappings')}
             >
@@ -1423,45 +1407,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {activeTab === 'bins' ? (
-          <>
-            <View style={styles.headerActions}>
-              <Button
-                title="Add Bin"
-                onPress={handleAddBin}
-                variant="primary"
-              />
-            </View>
-
-            <DataTable
-              columns={binColumns}
-              data={bins}
-              onEdit={handleEditBin}
-              onDelete={handleDeleteBin}
-              loading={loading}
-              emptyMessage="No bins found"
-            />
-          </>
-        ) : activeTab === 'magnets' ? (
-          <>
-            <View style={styles.headerActions}>
-              <Button
-                title="Add Magnet"
-                onPress={handleAddMagnet}
-                variant="primary"
-              />
-            </View>
-
-            <DataTable
-              columns={magnetColumns}
-              data={magnets}
-              onEdit={handleEditMagnet}
-              onDelete={handleDeleteMagnet}
-              loading={loading}
-              emptyMessage="No magnets found"
-            />
-          </>
-        ) : activeTab === 'routeMappings' ? (
+        {activeTab === 'routeMappings' ? (
           <>
             <View style={styles.headerActions}>
               <Button
