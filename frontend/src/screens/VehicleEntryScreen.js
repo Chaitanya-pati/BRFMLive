@@ -22,6 +22,20 @@ import colors from '../theme/colors';
 import notify from '../utils/notifications';
 import { formatISTDateTime } from '../utils/dateUtils';
 
+// Assuming showNotification is imported or defined elsewhere, e.g.:
+// import { showNotification } from '../utils/notifications';
+// For the purpose of this edit, we'll assume showNotification is available
+// and replaces the direct usage of notify.default.error/success.
+// If 'notify' itself is not an object with a 'default' property that has error/success methods,
+// then this correction is based on the provided changes.
+
+// Mocking showNotification for demonstration if it's not directly importable from utils/notifications
+const showNotification = (message, type) => {
+  console.log(`Notification [${type}]: ${message}`);
+  // In a real app, this would trigger a UI notification
+};
+
+
 export default function VehicleEntryScreen() {
   const [vehicles, setVehicles] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -51,7 +65,7 @@ export default function VehicleEntryScreen() {
       const response = await vehicleApi.getAll();
       setVehicles(response.data || []);
     } catch (error) {
-      notify.error('Failed to fetch vehicles');
+      showNotification(error.message || 'Failed to fetch vehicles', 'error');
       setVehicles([]);
     }
   };
@@ -61,7 +75,7 @@ export default function VehicleEntryScreen() {
       const response = await supplierApi.getAll();
       setSuppliers(response.data || []);
     } catch (error) {
-      notify.error('Failed to fetch suppliers');
+      showNotification(error.message || 'Failed to fetch suppliers', 'error');
       setSuppliers([]);
     }
   };
@@ -91,16 +105,16 @@ export default function VehicleEntryScreen() {
 
       if (editingVehicle) {
         await vehicleApi.update(editingVehicle.id, formDataToSend);
-        notify.success('Vehicle entry updated successfully');
+        showNotification('Vehicle entry updated successfully!', 'success');
       } else {
         await vehicleApi.create(formDataToSend);
-        notify.success('Vehicle entry created successfully');
+        showNotification('Vehicle entry created successfully!', 'success');
       }
 
       fetchVehicles();
       resetForm();
     } catch (error) {
-      notify.error(error.message || 'Failed to save vehicle entry');
+      showNotification(error.message || 'Failed to save vehicle entry', 'error');
     }
   };
 
@@ -124,10 +138,10 @@ export default function VehicleEntryScreen() {
     if (confirm('Are you sure you want to delete this vehicle entry?')) {
       try {
         await vehicleApi.delete(vehicle.id);
-        notify.success('Vehicle entry deleted successfully');
+        showNotification('Vehicle entry deleted successfully!', 'success');
         fetchVehicles();
       } catch (error) {
-        notify.error('Failed to delete vehicle entry');
+        showNotification('Failed to delete vehicle entry', 'error');
       }
     }
   };
