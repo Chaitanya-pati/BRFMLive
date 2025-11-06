@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   Image,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 const colors = {
   background: "#f5f6fa",
@@ -181,7 +182,8 @@ const BinIcon = ({ active }) => (
   </svg>
 );
 
-export default function Layout({ children, title, navigation, currentRoute }) {
+export default function Layout({ children, title, currentRoute }) {
+  const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isMobile);
