@@ -13,7 +13,8 @@ import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { godownApi, supplierApi, stateCityApi, binApi, magnetApi } from '../api/client';
+import SelectDropdown from '../components/SelectDropdown';
+import { godownApi, supplierApi, binApi, magnetApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function MasterViewScreen({ navigation }) {
@@ -63,7 +64,7 @@ export default function MasterViewScreen({ navigation }) {
     status: 'Active',
   });
 
-  
+
 
   useEffect(() => {
     loadGodowns();
