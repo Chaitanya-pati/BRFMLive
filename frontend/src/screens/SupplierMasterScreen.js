@@ -82,8 +82,7 @@ export default function SupplierMasterScreen({ navigation }) {
       setSelectedStateId('');
       setFormData({ 
         ...formData, 
-        state: '', 
-        city: '' 
+        state: ''
       });
       setCities([]);
       return;
@@ -102,8 +101,7 @@ export default function SupplierMasterScreen({ navigation }) {
       setSelectedStateId(numericStateId);
       setFormData({ 
         ...formData, 
-        state: state.state_name, 
-        city: '' 
+        state: state.state_name
       });
       
       const citiesData = await stateCityApi.getCities(numericStateId);
@@ -113,8 +111,7 @@ export default function SupplierMasterScreen({ navigation }) {
       setSelectedStateId('');
       setFormData({ 
         ...formData, 
-        state: '', 
-        city: '' 
+        state: ''
       });
       setCities([]);
     }
@@ -329,7 +326,7 @@ export default function SupplierMasterScreen({ navigation }) {
             style={styles.input}
             value={formData.city || ''}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
-            placeholder="Enter city name"
+            placeholder="Type city name"
           />
 
           <View style={styles.buttonContainer}>
