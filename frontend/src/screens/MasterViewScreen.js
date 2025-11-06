@@ -13,13 +13,15 @@ import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { godownApi, supplierApi, stateCityApi } from '../api/client';
+import { godownApi, supplierApi, stateCityApi, binApi, magnetApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
   const [godowns, setGodowns] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [bins, setBins] = useState([]);
+  const [magnets, setMagnets] = useState([]);
   const [godownTypes, setGodownTypes] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -29,6 +31,8 @@ export default function MasterViewScreen({ navigation }) {
   const [selectedStateId, setSelectedStateId] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentGodown, setCurrentGodown] = useState(null);
+  const [currentBin, setCurrentBin] = useState(null);
+  const [currentMagnet, setCurrentMagnet] = useState(null);
 
 
   const [godownFormData, setGodownFormData] = useState({
@@ -46,11 +50,26 @@ export default function MasterViewScreen({ navigation }) {
     city: '',
   });
 
+  const [binFormData, setBinFormData] = useState({
+    bin_number: '',
+    capacity: '',
+    current_quantity: '',
+    status: 'Active',
+  });
+
+  const [magnetFormData, setMagnetFormData] = useState({
+    name: '',
+    description: '',
+    status: 'Active',
+  });
+
   
 
   useEffect(() => {
     loadGodowns();
     loadSuppliers();
+    loadBins();
+    loadMagnets();
     loadGodownTypes();
     loadStates();
   }, []);
@@ -79,6 +98,24 @@ export default function MasterViewScreen({ navigation }) {
       setSuppliers(response.data);
     } catch (error) {
       console.error('Error loading suppliers:', error);
+    }
+  };
+
+  const loadBins = async () => {
+    try {
+      const response = await binApi.getAll();
+      setBins(response.data);
+    } catch (error) {
+      console.error('Error loading bins:', error);
+    }
+  };
+
+  const loadMagnets = async () => {
+    try {
+      const response = await magnetApi.getAll();
+      setMagnets(response.data);
+    } catch (error) {
+      console.error('Error loading magnets:', error);
     }
   };
 
@@ -165,6 +202,10 @@ export default function MasterViewScreen({ navigation }) {
     try {
       if (activeTab === 'godown') {
         await handleGodownSubmit();
+      } else if (activeTab === 'bins') {
+        await handleBinSubmit();
+      } else if (activeTab === 'magnets') {
+        await handleMagnetSubmit();
       } else {
         if (!supplierFormData.supplier_name || !supplierFormData.state || !supplierFormData.city) {
           notify.showWarning('Please fill all required fields');
@@ -179,8 +220,8 @@ export default function MasterViewScreen({ navigation }) {
           notify.showSuccess('Supplier added successfully');
         }
         loadSuppliers();
+        setModalVisible(false);
       }
-      setModalVisible(false);
     } catch (error) {
       console.error('Error saving data:', error);
       notify.showError('Failed to save data. Please try again.');
@@ -258,6 +299,28 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'city', label: 'City', flex: 1 },
   ];
 
+  const binColumns = [
+    { field: 'id', label: 'ID', flex: 0.5 },
+    { field: 'bin_number', label: 'Bin Number', flex: 1 },
+    { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
+    { field: 'current_quantity', label: 'Current Quantity (tons)', flex: 1.2 },
+    { field: 'status', label: 'Status', flex: 1 },
+  ];
+
+  const magnetColumns = [
+    { field: 'id', label: 'ID', flex: 0.5 },
+    { field: 'name', label: 'Magnet Name', flex: 1.5 },
+    { field: 'description', label: 'Description', flex: 2 },
+    { field: 'status', label: 'Status', flex: 1 },
+  ];
+
+  const statusOptions = [
+    { label: 'Active', value: 'Active' },
+    { label: 'Inactive', value: 'Inactive' },
+    { label: 'Full', value: 'Full' },
+    { label: 'Maintenance', value: 'Maintenance' },
+  ];
+
   const openGodownModal = () => {
     setEditMode(false);
     setCurrentGodown(null);
@@ -313,6 +376,151 @@ export default function MasterViewScreen({ navigation }) {
     }
   };
 
+  const openBinModal = () => {
+    setEditMode(false);
+    setCurrentBin(null);
+    setBinFormData({
+      bin_number: '',
+      capacity: '',
+      current_quantity: '',
+      status: 'Active',
+    });
+    setActiveTab('bins');
+    setModalVisible(true);
+  };
+
+  const openEditBinModal = (bin) => {
+    setEditMode(true);
+    setCurrentBin(bin);
+    setBinFormData({
+      bin_number: bin.bin_number,
+      capacity: bin.capacity.toString(),
+      current_quantity: bin.current_quantity?.toString() || '0',
+      status: bin.status || 'Active',
+    });
+    setActiveTab('bins');
+    setModalVisible(true);
+  };
+
+  const handleBinSubmit = async () => {
+    if (!binFormData.bin_number || !binFormData.capacity) {
+      notify.showWarning('Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        bin_number: binFormData.bin_number,
+        capacity: parseFloat(binFormData.capacity),
+        current_quantity: parseFloat(binFormData.current_quantity) || 0,
+        status: binFormData.status,
+      };
+
+      if (editMode && currentBin) {
+        await binApi.update(currentBin.id, payload);
+        notify.showSuccess('Bin updated successfully');
+      } else {
+        await binApi.create(payload);
+        notify.showSuccess('Bin created successfully');
+      }
+
+      setModalVisible(false);
+      loadBins();
+    } catch (error) {
+      notify.showError(editMode ? 'Failed to update bin' : 'Failed to create bin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBinDelete = (bin) => {
+    notify.showConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete bin ${bin.bin_number}?`,
+      async () => {
+        try {
+          await binApi.delete(bin.id);
+          notify.showSuccess('Bin deleted successfully');
+          loadBins();
+        } catch (error) {
+          notify.showError('Failed to delete bin');
+        }
+      }
+    );
+  };
+
+  const openMagnetModal = () => {
+    setEditMode(false);
+    setCurrentMagnet(null);
+    setMagnetFormData({
+      name: '',
+      description: '',
+      status: 'Active',
+    });
+    setActiveTab('magnets');
+    setModalVisible(true);
+  };
+
+  const openEditMagnetModal = (magnet) => {
+    setEditMode(true);
+    setCurrentMagnet(magnet);
+    setMagnetFormData({
+      name: magnet.name,
+      description: magnet.description || '',
+      status: magnet.status || 'Active',
+    });
+    setActiveTab('magnets');
+    setModalVisible(true);
+  };
+
+  const handleMagnetSubmit = async () => {
+    if (!magnetFormData.name) {
+      notify.showWarning('Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        name: magnetFormData.name,
+        description: magnetFormData.description,
+        status: magnetFormData.status,
+      };
+
+      if (editMode && currentMagnet) {
+        await magnetApi.update(currentMagnet.id, payload);
+        notify.showSuccess('Magnet updated successfully');
+      } else {
+        await magnetApi.create(payload);
+        notify.showSuccess('Magnet created successfully');
+      }
+
+      setModalVisible(false);
+      loadMagnets();
+    } catch (error) {
+      notify.showError(editMode ? 'Failed to update magnet' : 'Failed to create magnet');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagnetDelete = (magnet) => {
+    notify.showConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete magnet ${magnet.name}?`,
+      async () => {
+        try {
+          await magnetApi.delete(magnet.id);
+          notify.showSuccess('Magnet deleted successfully');
+          loadMagnets();
+        } catch (error) {
+          notify.showError('Failed to delete magnet');
+        }
+      }
+    );
+  };
+
 
   return (
     <Layout navigation={navigation} title="Master Data">
@@ -334,9 +542,25 @@ export default function MasterViewScreen({ navigation }) {
               Supplier Master
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'bins' && styles.activeTab]}
+            onPress={() => setActiveTab('bins')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bins' && styles.activeTabText]}>
+              Bins
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'magnets' && styles.activeTab]}
+            onPress={() => setActiveTab('magnets')}
+          >
+            <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText]}>
+              Magnets
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {activeTab === 'godown' ? (
+        {activeTab === 'godown' && (
           <DataTable
             columns={godownColumns}
             data={godowns}
@@ -344,7 +568,8 @@ export default function MasterViewScreen({ navigation }) {
             onEdit={openEditGodownModal}
             onDelete={handleGodownDelete}
           />
-        ) : (
+        )}
+        {activeTab === 'supplier' && (
           <DataTable
             columns={supplierColumns}
             data={suppliers}
@@ -353,14 +578,32 @@ export default function MasterViewScreen({ navigation }) {
             onDelete={handleSupplierDelete}
           />
         )}
+        {activeTab === 'bins' && (
+          <DataTable
+            columns={binColumns}
+            data={bins}
+            onAdd={openBinModal}
+            onEdit={openEditBinModal}
+            onDelete={handleBinDelete}
+          />
+        )}
+        {activeTab === 'magnets' && (
+          <DataTable
+            columns={magnetColumns}
+            data={magnets}
+            onAdd={openMagnetModal}
+            onEdit={openEditMagnetModal}
+            onDelete={handleMagnetDelete}
+          />
+        )}
 
         <Modal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          title={editMode ? `Edit ${activeTab === 'godown' ? 'Godown' : 'Supplier'}` : `Add New ${activeTab === 'godown' ? 'Godown' : 'Supplier'}`}
+          title={editMode ? `Edit ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}` : `Add New ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}`}
         >
           <ScrollView style={styles.modalContent}>
-            {activeTab === 'godown' ? (
+            {activeTab === 'godown' && (
               <>
                 <Text style={styles.label}>Name *</Text>
                 <TextInput
@@ -393,7 +636,83 @@ export default function MasterViewScreen({ navigation }) {
                   </Picker>
                 </View>
               </>
-            ) : (
+            )}
+            {activeTab === 'bins' && (
+              <>
+                <Text style={styles.label}>Bin Number *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={binFormData.bin_number}
+                  onChangeText={(text) => setBinFormData({ ...binFormData, bin_number: text })}
+                  placeholder="Enter bin number"
+                />
+
+                <Text style={styles.label}>Capacity (in tons) *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={binFormData.capacity}
+                  onChangeText={(text) => setBinFormData({ ...binFormData, capacity: text })}
+                  placeholder="Enter capacity"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>Current Quantity (in tons)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={binFormData.current_quantity}
+                  onChangeText={(text) => setBinFormData({ ...binFormData, current_quantity: text })}
+                  placeholder="Enter current quantity"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>Status *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={binFormData.status}
+                    onValueChange={(value) => setBinFormData({ ...binFormData, status: value })}
+                    style={styles.picker}
+                  >
+                    {statusOptions.map((option, index) => (
+                      <Picker.Item key={index} label={option.label} value={option.value} />
+                    ))}
+                  </Picker>
+                </View>
+              </>
+            )}
+            {activeTab === 'magnets' && (
+              <>
+                <Text style={styles.label}>Magnet Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={magnetFormData.name}
+                  onChangeText={(text) => setMagnetFormData({ ...magnetFormData, name: text })}
+                  placeholder="Enter magnet name"
+                />
+
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={styles.input}
+                  value={magnetFormData.description}
+                  onChangeText={(text) => setMagnetFormData({ ...magnetFormData, description: text })}
+                  placeholder="Enter description"
+                  multiline
+                />
+
+                <Text style={styles.label}>Status *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={magnetFormData.status}
+                    onValueChange={(value) => setMagnetFormData({ ...magnetFormData, status: value })}
+                    style={styles.picker}
+                  >
+                    {statusOptions.map((option, index) => (
+                      <Picker.Item key={index} label={option.label} value={option.value} />
+                    ))}
+                  </Picker>
+                </View>
+              </>
+            )}
+            {activeTab === 'supplier' && (
               <>
                 <Text style={styles.label}>Supplier Name *</Text>
                 <TextInput
