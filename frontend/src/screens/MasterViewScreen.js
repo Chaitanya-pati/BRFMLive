@@ -27,9 +27,9 @@ export default function MasterViewScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  const [states, setStates] = useState([]); // This state is not being used for the picker, but it's good to keep for potential future use or if it's populated elsewhere.
+  const [states, setStates] = useState([]); // This state is used to store states fetched from API
   const [cities, setCities] = useState([]);
-  const [selectedStateId, setSelectedStateId] = useState('');
+  const [selectedStateId, setSelectedStateId] = useState(''); // This state is not directly used in the Picker, but might be useful for other logic.
   const [loading, setLoading] = useState(false);
   const [currentGodown, setCurrentGodown] = useState(null);
   const [currentBin, setCurrentBin] = useState(null);
@@ -47,8 +47,8 @@ export default function MasterViewScreen({ navigation }) {
     contact_person: '',
     phone: '',
     address: '',
-    state: '',
-    city: '',
+    state: '', // This will store the state name
+    city: '',  // This will store the city name
   });
 
   const [binFormData, setBinFormData] = useState({
@@ -64,7 +64,8 @@ export default function MasterViewScreen({ navigation }) {
     status: 'Active',
   });
 
-  // Comprehensive list of Indian states
+  // Comprehensive list of Indian states - this static list is no longer used for the picker,
+  // it's replaced by states fetched from the API.
   const indianStates = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
     "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
@@ -135,51 +136,44 @@ export default function MasterViewScreen({ navigation }) {
     }
   };
 
-  // Function to load states from API, if needed for other purposes
+  // Function to load states from API
   const loadStatesFromApi = async () => {
     try {
+      console.log('📍 Loading states...');
       const statesData = await stateCityApi.getStates();
-      setStates(statesData || []); // Populate the 'states' state variable
+      console.log('📍 States loaded:', statesData);
+      setStates(statesData); // Populate the 'states' state variable with API data
     } catch (error) {
-      console.error('Error loading states from API:', error);
+      console.error('❌ Error loading states from API:', error);
     }
   };
 
 
-  const handleStateChange = async (stateName) => {
-    // Update supplier form state name
-    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' });
+  const handleStateChange = async (value) => {
+    console.log('🔄 State changed to:', value);
 
-    if (!stateName || stateName === '') {
-      setSelectedStateId(''); // Clear any previous ID if selection is cleared
-      setCities([]);
-      return;
-    }
+    // Find the state name from the state_id
+    const selectedState = states.find(s => s.state_id === parseInt(value));
+    const stateName = selectedState ? selectedState.state_name : '';
 
-    // Find the state object from the API data (if available) to get its ID
-    // For now, we'll assume stateCityApi.getCities can take state name or we might need to map stateName to stateId
-    // If stateCityApi.getCities expects an ID, we'll need to find it from the `states` array fetched from API.
-    // For simplicity, let's assume it works with stateName or we can find the ID.
-    // If the API directly supports fetching cities by state name, use that.
-    // If it requires state ID, we need to find the state ID from the 'states' array.
+    console.log('📍 Selected state:', stateName, 'ID:', value);
 
-    // Let's assume stateCityApi.getCities can take state name or a mapped ID.
-    // If we need the ID, we'd do something like:
-    const selectedStateObject = states.find(s => s.state_name === stateName);
-    const stateIdToFetchCities = selectedStateObject ? selectedStateObject.state_id : stateName; // Use ID if found, else assume name works or needs mapping
+    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' }); // Update form data with state name
 
-
-    try {
-      // Use the stateIdToFetchCities to get cities. Adjust based on what stateCityApi.getCities expects.
-      const citiesData = await stateCityApi.getCities(stateIdToFetchCities);
-      setCities(citiesData || []);
-      // If we need to set selectedStateId, we should ensure it's correctly populated from the states array
-      if (selectedStateObject) {
-        setSelectedStateId(selectedStateObject.state_id);
+    if (value) {
+      try {
+        console.log('🏙️ Loading cities for state ID:', value);
+        const citiesData = await stateCityApi.getCities(parseInt(value));
+        console.log('🏙️ Cities loaded:', citiesData);
+        setCities(citiesData);
+        setSelectedStateId(value); // Update selectedStateId if needed for other logic
+      } catch (error) {
+        console.error('❌ Error loading cities:', error);
+        setCities([]); // Clear cities if there's an error
       }
-    } catch (error) {
-      console.error('Error loading cities:', error);
-      setCities([]); // Clear cities if there's an error
+    } else {
+      setCities([]); // Clear cities if no state is selected
+      setSelectedStateId('');
     }
   };
 
@@ -191,6 +185,7 @@ export default function MasterViewScreen({ navigation }) {
       setGodownFormData({ name: '', capacity: '', type: '' });
       setCurrentGodown(null);
     } else {
+      // Reset supplier form data and related states
       setSupplierFormData({
         supplier_name: '',
         contact_person: '',
@@ -200,7 +195,9 @@ export default function MasterViewScreen({ navigation }) {
         city: '',
       });
       setSelectedStateId(''); // Reset selected state ID
-      setCities([]);
+      setCities([]); // Clear cities
+      setStates([]); // Clear states to refetch from API if needed on modal open
+      loadStatesFromApi(); // Ensure states are loaded when opening the modal
     }
     setModalVisible(true);
   };
@@ -215,20 +212,22 @@ export default function MasterViewScreen({ navigation }) {
         type: item.type
       });
       setCurrentGodown(item);
-    } else {
+    } else { // Supplier tab
       setSupplierFormData({
         supplier_name: item.supplier_name,
         contact_person: item.contact_person || '',
         phone: item.phone || '',
         address: item.address || '',
-        state: item.state,
-        city: item.city,
+        state: item.state, // This is the state name
+        city: item.city,   // This is the city name
       });
-      // Find the state object to set the selectedStateId and load cities
+
+      // Find the state object from the API data to get its ID
       const stateObject = states.find(s => s.state_name === item.state);
       if (stateObject) {
         const stateId = stateObject.state_id;
-        setSelectedStateId(stateId);
+        setSelectedStateId(stateId.toString()); // Set selectedStateId for Picker
+        // Load cities for the pre-selected state
         stateCityApi.getCities(stateId).then(citiesData => {
           setCities(citiesData || []);
         }).catch(error => {
@@ -238,8 +237,12 @@ export default function MasterViewScreen({ navigation }) {
       } else {
         // If the state from item.state is not found in `states` array,
         // we might need to handle this case, e.g., by still trying to load cities if possible or clearing them.
+        // If the state name is present but not in our fetched list, we might need to fetch cities using state name if API supports it
+        // or clear the city selection.
         setSelectedStateId('');
         setCities([]);
+        // Consider a fallback: if stateName exists but not in `states`, maybe try fetching cities by name if API allows
+        // Or inform the user that the state is not recognized in our system.
       }
     }
     setModalVisible(true);
@@ -777,47 +780,42 @@ export default function MasterViewScreen({ navigation }) {
                 <Text style={styles.label}>State *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
-                    selectedValue={supplierFormData.state} // Use state name in form data for easier handling
-                    onValueChange={handleStateChange} // This function now handles updating form data and fetching cities
+                    selectedValue={states.find(s => s.state_name === supplierFormData.state)?.state_id?.toString() || ''}
+                    onValueChange={handleStateChange}
                     style={styles.picker}
                   >
                     <Picker.Item label="Select State" value="" />
-                    {indianStates.map((state) => (
+                    {states.map((state) => (
                       <Picker.Item
-                        key={state}
-                        label={state}
-                        value={state} // Picker value is the state name
+                        key={state.state_id}
+                        label={state.state_name}
+                        value={state.state_id}
                       />
                     ))}
                   </Picker>
                 </View>
 
                 <Text style={styles.label}>City *</Text>
-                {cities.length > 0 ? (
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={supplierFormData.city}
-                      onValueChange={(value) => setSupplierFormData({ ...supplierFormData, city: value })}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select City" value="" />
-                      {cities.map((city) => (
-                        <Picker.Item
-                          key={city.district_id} // Assuming district_id is unique
-                          label={city.district_name}
-                          value={city.district_name}
-                        />
-                      ))}
-                    </Picker>
-                  </View>
-                ) : (
-                  <TextInput
-                    style={styles.input}
-                    value={supplierFormData.city}
-                    onChangeText={(text) => setSupplierFormData({ ...supplierFormData, city: text })}
-                    placeholder="Enter city name"
-                  />
-                )}
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={supplierFormData.city}
+                    onValueChange={(value) => {
+                      console.log('🏙️ City selected:', value);
+                      setSupplierFormData({ ...supplierFormData, city: value });
+                    }}
+                    style={styles.picker}
+                    enabled={cities.length > 0}
+                  >
+                    <Picker.Item label={cities.length > 0 ? "Select City" : "Select State First"} value="" />
+                    {cities.map((city) => (
+                      <Picker.Item
+                        key={city.district_id}
+                        label={city.district_name}
+                        value={city.district_name}
+                      />
+                    ))}
+                  </Picker>
+                </View>
               </>
             )}
 
