@@ -446,9 +446,15 @@ async def save_upload_file(file: UploadFile) -> str:
 
 @app.get("/api/godown-types")
 def get_godown_types():
-    with open("godown_types.json", "r") as f:
-        data = json.load(f)
-    return data["godown_types"]
+    try:
+        with open("godown_types.json", "r") as f:
+            data = json.load(f)
+        print(f"📋 Godown types loaded: {data['godown_types']}")
+        return data["godown_types"]
+    except Exception as e:
+        print(f"❌ Error loading godown types: {e}")
+        # Return fallback types if file is missing
+        return ["Warehouse", "Silo", "Storage", "Cold Storage"]
 
 @app.post("/api/godowns", response_model=schemas.GodownMaster)
 def create_godown(godown: schemas.GodownMasterCreate, db: Session = Depends(get_db)):

@@ -78,9 +78,12 @@ export default function MasterViewScreen({ navigation }) {
   const loadGodownTypes = async () => {
     try {
       const response = await godownApi.getTypes();
-      setGodownTypes(response.data);
+      console.log('Godown types response:', response.data);
+      setGodownTypes(response.data || []);
     } catch (error) {
       console.error('Error loading godown types:', error);
+      // Fallback to default types if API fails
+      setGodownTypes(['Warehouse', 'Silo', 'Storage', 'Cold Storage']);
     }
   };
 
@@ -624,18 +627,13 @@ export default function MasterViewScreen({ navigation }) {
                 />
 
                 <Text style={styles.label}>Type *</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={godownFormData.type}
-                    onValueChange={(value) => setGodownFormData({ ...godownFormData, type: value })}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Select Type" value="" />
-                    {godownTypes.map((type, index) => (
-                      <Picker.Item key={index} label={type} value={type} />
-                    ))}
-                  </Picker>
-                </View>
+                <SelectDropdown
+                  data={godownTypes.map(type => ({ label: type, value: type }))}
+                  value={godownFormData.type}
+                  onSelect={(item) => setGodownFormData({ ...godownFormData, type: item.value })}
+                  placeholder="Select Type"
+                  searchPlaceholder="Search type..."
+                />
               </>
             )}
             {activeTab === 'bins' && (
