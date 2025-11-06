@@ -158,23 +158,8 @@ export default function MasterViewScreen({ navigation }) {
 
     console.log('📍 Selected state:', stateName, 'ID:', value);
 
-    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' }); // Update form data with state name
-
-    if (value) {
-      try {
-        console.log('🏙️ Loading cities for state ID:', value);
-        const citiesData = await stateCityApi.getCities(parseInt(value));
-        console.log('🏙️ Cities loaded:', citiesData);
-        setCities(citiesData);
-        setSelectedStateId(value); // Update selectedStateId if needed for other logic
-      } catch (error) {
-        console.error('❌ Error loading cities:', error);
-        setCities([]); // Clear cities if there's an error
-      }
-    } else {
-      setCities([]); // Clear cities if no state is selected
-      setSelectedStateId('');
-    }
+    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' }); // Update form data with state name and clear city
+    setSelectedStateId(value || ''); // Update selectedStateId if needed for other logic
   };
 
 
@@ -195,8 +180,6 @@ export default function MasterViewScreen({ navigation }) {
         city: '',
       });
       setSelectedStateId(''); // Reset selected state ID
-      setCities([]); // Clear cities
-      setStates([]); // Clear states to refetch from API if needed on modal open
       loadStatesFromApi(); // Ensure states are loaded when opening the modal
     }
     setModalVisible(true);
@@ -225,24 +208,9 @@ export default function MasterViewScreen({ navigation }) {
       // Find the state object from the API data to get its ID
       const stateObject = states.find(s => s.state_name === item.state);
       if (stateObject) {
-        const stateId = stateObject.state_id;
-        setSelectedStateId(stateId.toString()); // Set selectedStateId for Picker
-        // Load cities for the pre-selected state
-        stateCityApi.getCities(stateId).then(citiesData => {
-          setCities(citiesData || []);
-        }).catch(error => {
-          console.error('Error loading cities for edit:', error);
-          setCities([]);
-        });
+        setSelectedStateId(stateObject.state_id.toString()); // Set selectedStateId for Picker
       } else {
-        // If the state from item.state is not found in `states` array,
-        // we might need to handle this case, e.g., by still trying to load cities if possible or clearing them.
-        // If the state name is present but not in our fetched list, we might need to fetch cities using state name if API supports it
-        // or clear the city selection.
         setSelectedStateId('');
-        setCities([]);
-        // Consider a fallback: if stateName exists but not in `states`, maybe try fetching cities by name if API allows
-        // Or inform the user that the state is not recognized in our system.
       }
     }
     setModalVisible(true);
@@ -796,26 +764,12 @@ export default function MasterViewScreen({ navigation }) {
                 </View>
 
                 <Text style={styles.label}>City *</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={supplierFormData.city}
-                    onValueChange={(value) => {
-                      console.log('🏙️ City selected:', value);
-                      setSupplierFormData({ ...supplierFormData, city: value });
-                    }}
-                    style={styles.picker}
-                    enabled={cities.length > 0}
-                  >
-                    <Picker.Item label={cities.length > 0 ? "Select City" : "Select State First"} value="" />
-                    {cities.map((city) => (
-                      <Picker.Item
-                        key={city.district_id}
-                        label={city.district_name}
-                        value={city.district_name}
-                      />
-                    ))}
-                  </Picker>
-                </View>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.city || ''}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, city: text })}
+                  placeholder="Enter city name"
+                />
               </>
             )}
 
