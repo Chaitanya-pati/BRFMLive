@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
     "build": "npx expo export --platform web",
     "serve": "npx serve dist"
   },
@@ -30,6 +30,7 @@
   },
   "private": true,
   "devDependencies": {
+    "@expo/cli": "^0.24.22",
     "babel-preset-expo": "^54.0.6"
   }
 }

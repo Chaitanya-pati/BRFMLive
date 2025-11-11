@@ -8,16 +8,9 @@ const getApiUrl = () => {
     return envApiUrl;
   }
 
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-
-    if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
-      // In Replit, backend is on the same domain but port 8000
-      // Use the backend URL directly
-      return `https://${hostname.replace(/:\d+$/, '')}:8000/api`;
-    }
-  }
-
+  // In Replit environment, both frontend and backend run in the same container
+  // Backend is on port 8000, frontend on port 5000
+  // Use localhost/127.0.0.1 to communicate internally
   return "http://localhost:8000/api";
 };
 
