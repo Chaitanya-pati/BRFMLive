@@ -235,25 +235,46 @@ export default function MasterViewScreen({ navigation }) {
       } else if (activeTab === 'magnets') {
         await handleMagnetSubmit();
       } else { // Supplier tab
-        // Ensure supplierFormData.state and supplierFormData.city are correctly set before validation
-        if (!supplierFormData.supplier_name || !supplierFormData.state || !supplierFormData.city) {
+        // Trim and validate required fields
+        const trimmedSupplierName = supplierFormData.supplier_name?.trim();
+        const trimmedState = supplierFormData.state?.trim();
+        const trimmedCity = supplierFormData.city?.trim();
+
+        if (!trimmedSupplierName || !trimmedState || !trimmedCity) {
           notify.showWarning('Please fill all required fields: Supplier Name, State, and City are mandatory.');
           return;
         }
 
+        setLoading(true);
+        const payload = {
+          supplier_name: trimmedSupplierName,
+          contact_person: supplierFormData.contact_person?.trim() || '',
+          phone: supplierFormData.phone?.trim() || '',
+          email: supplierFormData.email?.trim() || '',
+          address: supplierFormData.address?.trim() || '',
+          street: supplierFormData.street?.trim() || '',
+          city: trimmedCity,
+          district: supplierFormData.district?.trim() || '',
+          state: trimmedState,
+          zip_code: supplierFormData.zip_code?.trim() || '',
+          gstin: supplierFormData.gstin?.trim() || '',
+        };
+
         if (editMode) {
-          await supplierApi.update(currentItem.id, supplierFormData);
+          await supplierApi.update(currentItem.id, payload);
           notify.showSuccess('Supplier updated successfully');
         } else {
-          await supplierApi.create(supplierFormData);
+          await supplierApi.create(payload);
           notify.showSuccess('Supplier added successfully');
         }
+        setLoading(false);
         loadSuppliers();
         setModalVisible(false);
       }
     } catch (error) {
       console.error('Error saving data:', error);
-      notify.showError('Failed to save data. Please try again.');
+      setLoading(false);
+      notify.showError(error.response?.data?.detail || 'Failed to save data. Please try again.');
     }
   };
 
@@ -840,15 +861,17 @@ export default function MasterViewScreen({ navigation }) {
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
                 onPress={() => setModalVisible(false)}
+                disabled={loading}
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.submitButton]}
+                style={[styles.button, styles.submitButton, loading && { opacity: 0.5 }]}
                 onPress={handleSubmit}
+                disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {editMode ? 'Update' : 'Save'}
+                  {loading ? 'Saving...' : editMode ? 'Update' : 'Save'}
                 </Text>
               </TouchableOpacity>
             </View>
