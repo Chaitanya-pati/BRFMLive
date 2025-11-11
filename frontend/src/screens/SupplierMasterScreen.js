@@ -87,13 +87,13 @@ export default function SupplierMasterScreen({ navigation }) {
       });
       return;
     }
-    
+
     const numericStateId = typeof stateId === 'string' ? parseInt(stateId, 10) : stateId;
     const state = states.find(s => {
       const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
       return sid === numericStateId;
     });
-    
+
     if (state) {
       setSelectedStateId(numericStateId);
       setFormData({ 
@@ -152,7 +152,7 @@ export default function SupplierMasterScreen({ navigation }) {
     } else {
       setSelectedStateId('');
     }
-    
+
     setModalVisible(true);
   };
 
@@ -160,7 +160,7 @@ export default function SupplierMasterScreen({ navigation }) {
     const trimmedName = formData.supplier_name?.trim();
     const trimmedState = formData.state?.trim();
     const trimmedCity = formData.city?.trim();
-    
+
     if (!trimmedName || !trimmedState || !trimmedCity) {
       showAlert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
       return;
@@ -181,7 +181,7 @@ export default function SupplierMasterScreen({ navigation }) {
         zip_code: formData.zip_code?.trim() || '',
         gstin: formData.gstin?.trim() || '',
       };
-      
+
       if (editMode && currentSupplier) {
         await supplierApi.update(currentSupplier.id, payload);
         showAlert('Success', 'Supplier updated successfully');
@@ -189,7 +189,7 @@ export default function SupplierMasterScreen({ navigation }) {
         await supplierApi.create(payload);
         showAlert('Success', 'Supplier created successfully');
       }
-      
+
       setModalVisible(false);
       await loadSuppliers();
     } catch (error) {
