@@ -61,11 +61,11 @@ app = FastAPI(title="Gate Entry & Lab Testing API")
 # CORS configuration - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers
 )
 
 UPLOAD_DIR = Path("uploads")
