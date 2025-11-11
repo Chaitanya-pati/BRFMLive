@@ -31,13 +31,24 @@ export const api = axios.create({
   timeout: 10000,
 });
 
-// Add request interceptor for logging
+// Add request interceptor for authentication
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     console.log('📤 API Request:', config.method?.toUpperCase(), config.baseURL + config.url);
     if (config.data) {
       console.log('📦 Request Data:', config.data);
     }
+    
+    // Add authentication token if available
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error retrieving auth token:', error);
+    }
+    
     return config;
   },
   (error) => {
