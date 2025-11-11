@@ -164,13 +164,17 @@ export default function MasterViewScreen({ navigation }) {
     }
 
     // Find the state name from the state_id
-    const selectedState = states.find(s => s.state_id === parseInt(value));
+    const numericStateId = typeof value === 'string' ? parseInt(value, 10) : value;
+    const selectedState = states.find(s => {
+      const sid = typeof s.state_id === 'string' ? parseInt(s.state_id, 10) : s.state_id;
+      return sid === numericStateId;
+    });
     const stateName = selectedState ? selectedState.state_name : '';
 
     console.log('📍 Selected state:', stateName, 'ID:', value);
 
     setSupplierFormData({ ...supplierFormData, state: stateName, city: '' });
-    setSelectedStateId(value);
+    setSelectedStateId(value.toString());
   };
 
 
@@ -211,7 +215,7 @@ export default function MasterViewScreen({ navigation }) {
         type: item.type
       });
       setCurrentGodown(item);
-    } else { // Supplier tab
+    } else if (activeTab === 'supplier') { // Supplier tab
       setSupplierFormData({
         supplier_name: item.supplier_name,
         contact_person: item.contact_person || '',
@@ -229,10 +233,25 @@ export default function MasterViewScreen({ navigation }) {
       // Find the state object from the API data to get its ID
       const stateObject = states.find(s => s.state_name === item.state);
       if (stateObject) {
-        setSelectedStateId(stateObject.state_id.toString()); // Set selectedStateId for Picker
+        setSelectedStateId(stateObject.state_id.toString());
       } else {
         setSelectedStateId('');
       }
+    } else if (activeTab === 'bins') {
+      setBinFormData({
+        bin_number: item.bin_number,
+        capacity: item.capacity.toString(),
+        current_quantity: item.current_quantity?.toString() || '0',
+        status: item.status || 'Active',
+      });
+      setCurrentBin(item);
+    } else if (activeTab === 'magnets') {
+      setMagnetFormData({
+        name: item.name,
+        description: item.description || '',
+        status: item.status || 'Active',
+      });
+      setCurrentMagnet(item);
     }
     setModalVisible(true);
   };
@@ -857,7 +876,7 @@ export default function MasterViewScreen({ navigation }) {
                 <Text style={styles.label}>State *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
-                    selectedValue={states.find(s => s.state_name === supplierFormData.state)?.state_id?.toString() || ''}
+                    selectedValue={selectedStateId || ''}
                     onValueChange={handleStateChange}
                     style={styles.picker}
                   >
@@ -866,7 +885,7 @@ export default function MasterViewScreen({ navigation }) {
                       <Picker.Item
                         key={state.state_id}
                         label={state.state_name}
-                        value={state.state_id}
+                        value={state.state_id.toString()}
                       />
                     ))}
                   </Picker>
