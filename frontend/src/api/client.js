@@ -1,20 +1,25 @@
 import axios from "axios";
 
-// In Replit, we need to use the public URL, not localhost
-const getApiUrl = () => {
-  const envApiUrl =
-    process.env.REACT_APP_API_URL || process.env.EXPO_PUBLIC_API_URL;
-  if (envApiUrl) {
-    return envApiUrl;
-  }
+// Get the current hostname and construct the API URL
+const getCurrentAPIUrl = () => {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
 
-  // In Replit environment, both frontend and backend run in the same container
-  // Backend is on port 8000, frontend on port 5000
-  // Use localhost/127.0.0.1 to communicate internally
-  return "http://localhost:8000/api";
+    // For Replit deployments, use the specific port-based URL
+    if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
+      // Replace the port in the hostname from 5000 to 8000
+      const apiHostname = hostname.replace('-5000.', '-8000.');
+      return `${protocol}//${apiHostname}/api`;
+    }
+
+    // For local development
+    return `http://localhost:8000/api`;
+  }
+  return 'http://0.0.0.0:8000/api';
 };
 
-const API_URL = getApiUrl();
+const API_URL = process.env.REACT_APP_API_URL || getCurrentAPIUrl();
 
 console.log("API Base URL:", API_URL);
 
@@ -25,6 +30,35 @@ export const api = axios.create({
   },
   timeout: 10000,
 });
+
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log('📤 API Request:', config.method?.toUpperCase(), config.url, config.data);
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for logging
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ API Response:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('❌ API Error:', {
+      message: error.message,
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
 
 export const supplierApi = {
   getAll: () => api.get("/suppliers"),
