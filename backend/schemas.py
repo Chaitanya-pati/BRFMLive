@@ -23,9 +23,14 @@ class SupplierBase(BaseModel):
     supplier_name: str
     contact_person: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
     address: Optional[str] = None
-    state: str
+    street: Optional[str] = None
     city: str
+    district: Optional[str] = None
+    state: str
+    zip_code: Optional[str] = None
+    gstin: Optional[str] = None
 
 class SupplierCreate(SupplierBase):
     pass

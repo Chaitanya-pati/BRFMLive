@@ -28,9 +28,14 @@ export default function SupplierMasterScreen({ navigation }) {
     supplier_name: '',
     contact_person: '',
     phone: '',
+    email: '',
     address: '',
-    state: '',
+    street: '',
     city: '',
+    district: '',
+    state: '',
+    zip_code: '',
+    gstin: '',
   });
 
   const showAlert = (title, message) => {
@@ -111,9 +116,14 @@ export default function SupplierMasterScreen({ navigation }) {
       supplier_name: '',
       contact_person: '',
       phone: '',
+      email: '',
       address: '',
-      state: '',
+      street: '',
       city: '',
+      district: '',
+      state: '',
+      zip_code: '',
+      gstin: '',
     });
     setSelectedStateId('');
     setModalVisible(true);
@@ -126,9 +136,14 @@ export default function SupplierMasterScreen({ navigation }) {
       supplier_name: supplier.supplier_name,
       contact_person: supplier.contact_person || '',
       phone: supplier.phone || '',
+      email: supplier.email || '',
       address: supplier.address || '',
-      state: supplier.state,
+      street: supplier.street || '',
       city: supplier.city,
+      district: supplier.district || '',
+      state: supplier.state,
+      zip_code: supplier.zip_code || '',
+      gstin: supplier.gstin || '',
     });
 
     const state = states.find(s => s.state_name === supplier.state);
@@ -157,9 +172,14 @@ export default function SupplierMasterScreen({ navigation }) {
         supplier_name: trimmedName,
         contact_person: formData.contact_person?.trim() || '',
         phone: formData.phone?.trim() || '',
+        email: formData.email?.trim() || '',
         address: formData.address?.trim() || '',
-        state: trimmedState,
+        street: formData.street?.trim() || '',
         city: trimmedCity,
+        district: formData.district?.trim() || '',
+        state: trimmedState,
+        zip_code: formData.zip_code?.trim() || '',
+        gstin: formData.gstin?.trim() || '',
       };
       
       if (editMode && currentSupplier) {
@@ -203,13 +223,16 @@ export default function SupplierMasterScreen({ navigation }) {
     { label: 'ID', field: 'id', width: 80 },
     { label: 'Supplier Name', field: 'supplier_name', width: 200 },
     { label: 'Contact Person', field: 'contact_person', width: 180 },
-    { label: 'Phone', field: 'phone', width: 150 },
-    { label: 'State', field: 'state', width: 150 },
-    { label: 'City', field: 'city', width: 150 },
+    { label: 'Phone', field: 'phone', width: 130 },
+    { label: 'Email', field: 'email', width: 200 },
+    { label: 'GSTIN', field: 'gstin', width: 150 },
+    { label: 'State', field: 'state', width: 130 },
+    { label: 'City', field: 'city', width: 130 },
+    { label: 'District', field: 'district', width: 130 },
     { 
       label: 'Created', 
       field: 'created_at', 
-      width: 180,
+      width: 150,
       render: (value) => new Date(value).toLocaleDateString()
     },
   ];
@@ -256,6 +279,26 @@ export default function SupplierMasterScreen({ navigation }) {
             keyboardType="phone-pad"
           />
 
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.email}
+            onChangeText={(text) => setFormData({ ...formData, email: text })}
+            placeholder="Enter email address"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <Text style={styles.label}>GSTIN</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.gstin}
+            onChangeText={(text) => setFormData({ ...formData, gstin: text })}
+            placeholder="Enter GSTIN (15 characters)"
+            maxLength={15}
+            autoCapitalize="characters"
+          />
+
           <Text style={styles.label}>Address</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -264,6 +307,14 @@ export default function SupplierMasterScreen({ navigation }) {
             placeholder="Enter address"
             multiline
             numberOfLines={3}
+          />
+
+          <Text style={styles.label}>Street</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.street}
+            onChangeText={(text) => setFormData({ ...formData, street: text })}
+            placeholder="Enter street"
           />
 
           <Text style={styles.label}>State *</Text>
@@ -290,6 +341,23 @@ export default function SupplierMasterScreen({ navigation }) {
             value={formData.city || ''}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
             placeholder="Enter city name"
+          />
+
+          <Text style={styles.label}>District</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.district || ''}
+            onChangeText={(text) => setFormData({ ...formData, district: text })}
+            placeholder="Enter district name"
+          />
+
+          <Text style={styles.label}>Zip Code</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.zip_code || ''}
+            onChangeText={(text) => setFormData({ ...formData, zip_code: text })}
+            placeholder="Enter zip code"
+            keyboardType="numeric"
           />
 
           <View style={styles.buttonContainer}>
