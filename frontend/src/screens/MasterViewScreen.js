@@ -152,14 +152,20 @@ export default function MasterViewScreen({ navigation }) {
   const handleStateChange = async (value) => {
     console.log('🔄 State changed to:', value);
 
+    if (!value || value === '') {
+      setSupplierFormData({ ...supplierFormData, state: '', city: '' });
+      setSelectedStateId('');
+      return;
+    }
+
     // Find the state name from the state_id
     const selectedState = states.find(s => s.state_id === parseInt(value));
     const stateName = selectedState ? selectedState.state_name : '';
 
     console.log('📍 Selected state:', stateName, 'ID:', value);
 
-    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' }); // Update form data with state name and clear city
-    setSelectedStateId(value || ''); // Update selectedStateId if needed for other logic
+    setSupplierFormData({ ...supplierFormData, state: stateName, city: '' });
+    setSelectedStateId(value);
   };
 
 
@@ -234,11 +240,19 @@ export default function MasterViewScreen({ navigation }) {
         await handleBinSubmit();
       } else if (activeTab === 'magnets') {
         await handleMagnetSubmit();
-      } else { // Supplier tab
+      } else if (activeTab === 'supplier') {
         // Trim and validate required fields
         const trimmedSupplierName = supplierFormData.supplier_name?.trim();
         const trimmedState = supplierFormData.state?.trim();
         const trimmedCity = supplierFormData.city?.trim();
+
+        console.log('📝 Saving supplier data:', {
+          trimmedSupplierName,
+          trimmedState,
+          trimmedCity,
+          editMode,
+          currentItemId: currentItem?.id
+        });
 
         if (!trimmedSupplierName || !trimmedState || !trimmedCity) {
           notify.showWarning('Please fill all required fields: Supplier Name, State, and City are mandatory.');
@@ -260,21 +274,27 @@ export default function MasterViewScreen({ navigation }) {
           gstin: supplierFormData.gstin?.trim() || '',
         };
 
-        if (editMode) {
-          await supplierApi.update(currentItem.id, payload);
+        console.log('📤 Sending payload:', payload);
+
+        if (editMode && currentItem?.id) {
+          const response = await supplierApi.update(currentItem.id, payload);
+          console.log('✅ Update response:', response);
           notify.showSuccess('Supplier updated successfully');
         } else {
-          await supplierApi.create(payload);
+          const response = await supplierApi.create(payload);
+          console.log('✅ Create response:', response);
           notify.showSuccess('Supplier added successfully');
         }
-        setLoading(false);
-        loadSuppliers();
+        
+        await loadSuppliers();
         setModalVisible(false);
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Error saving data:', error);
+      console.error('❌ Error saving data:', error);
+      console.error('Error details:', error.response?.data);
       setLoading(false);
-      notify.showError(error.response?.data?.detail || 'Failed to save data. Please try again.');
+      notify.showError(error.response?.data?.detail || error.message || 'Failed to save data. Please try again.');
     }
   };
 
