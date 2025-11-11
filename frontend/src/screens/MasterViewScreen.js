@@ -175,9 +175,14 @@ export default function MasterViewScreen({ navigation }) {
         supplier_name: '',
         contact_person: '',
         phone: '',
+        email: '',
         address: '',
-        state: '',
+        street: '',
         city: '',
+        district: '',
+        state: '',
+        zip_code: '',
+        gstin: '',
       });
       setSelectedStateId(''); // Reset selected state ID
       loadStatesFromApi(); // Ensure states are loaded when opening the modal
@@ -200,9 +205,14 @@ export default function MasterViewScreen({ navigation }) {
         supplier_name: item.supplier_name,
         contact_person: item.contact_person || '',
         phone: item.phone || '',
+        email: item.email || '',
         address: item.address || '',
-        state: item.state, // This is the state name
-        city: item.city,   // This is the city name
+        street: item.street || '',
+        city: item.city,
+        district: item.district || '',
+        state: item.state,
+        zip_code: item.zip_code || '',
+        gstin: item.gstin || '',
       });
 
       // Find the state object from the API data to get its ID
@@ -297,8 +307,13 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'supplier_name', label: 'Supplier Name', flex: 1.5 },
     { field: 'contact_person', label: 'Contact Person', flex: 1.2 },
     { field: 'phone', label: 'Phone', flex: 1 },
+    { field: 'email', label: 'Email', flex: 1.5 },
+    { field: 'gstin', label: 'GSTIN', flex: 1.5 },
     { field: 'state', label: 'State', flex: 1 },
     { field: 'city', label: 'City', flex: 1 },
+    { field: 'district', label: 'District', flex: 1.2 },
+    { field: 'street', label: 'Street', flex: 1.5 },
+    { field: 'zip_code', label: 'Zip Code', flex: 1 },
   ];
 
   const binColumns = [
@@ -736,6 +751,15 @@ export default function MasterViewScreen({ navigation }) {
                   keyboardType="phone-pad"
                 />
 
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.email}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, email: text })}
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                />
+
                 <Text style={styles.label}>Address</Text>
                 <TextInput
                   style={styles.input}
@@ -743,6 +767,39 @@ export default function MasterViewScreen({ navigation }) {
                   onChangeText={(text) => setSupplierFormData({ ...supplierFormData, address: text })}
                   placeholder="Enter address"
                   multiline
+                />
+
+                <Text style={styles.label}>Street</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.street}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, street: text })}
+                  placeholder="Enter street"
+                />
+
+                <Text style={styles.label}>District</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.district}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, district: text })}
+                  placeholder="Enter district"
+                />
+
+                <Text style={styles.label}>Zip Code</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.zip_code}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, zip_code: text })}
+                  placeholder="Enter zip code"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>GSTIN</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.gstin}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, gstin: text })}
+                  placeholder="Enter GSTIN"
                 />
 
                 <Text style={styles.label}>State *</Text>
