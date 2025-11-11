@@ -80,12 +80,17 @@ export default function MasterViewScreen({ navigation }) {
 
 
   useEffect(() => {
-    loadGodowns();
-    loadSuppliers();
-    loadBins();
-    loadMagnets();
-    loadGodownTypes();
-    loadStatesFromApi(); // Renamed to avoid conflict with the static list
+    const loadInitialData = async () => {
+      await Promise.all([
+        loadGodowns(),
+        loadSuppliers(),
+        loadBins(),
+        loadMagnets(),
+        loadGodownTypes(),
+        loadStatesFromApi()
+      ]);
+    };
+    loadInitialData();
   }, []);
 
   const loadGodownTypes = async () => {
