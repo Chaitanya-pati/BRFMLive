@@ -743,13 +743,19 @@ export default function MasterViewScreen({ navigation }) {
                 />
 
                 <Text style={styles.label}>Phone</Text>
-                <TextInput
-                  style={styles.input}
-                  value={supplierFormData.phone}
-                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, phone: text })}
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                />
+                <View style={styles.phoneInputContainer}>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.phoneInput]}
+                    value={supplierFormData.phone}
+                    onChangeText={(text) => setSupplierFormData({ ...supplierFormData, phone: text.replace(/[^0-9]/g, '') })}
+                    placeholder="Enter 10-digit number"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                  />
+                </View>
 
                 <Text style={styles.label}>Email</Text>
                 <TextInput
@@ -933,5 +939,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countryCodeBox: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  phoneInput: {
+    flex: 1,
   },
 });

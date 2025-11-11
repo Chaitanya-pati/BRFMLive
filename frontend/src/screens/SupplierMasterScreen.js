@@ -271,13 +271,19 @@ export default function SupplierMasterScreen({ navigation }) {
           />
 
           <Text style={styles.label}>Phone</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.phone}
-            onChangeText={(text) => setFormData({ ...formData, phone: text })}
-            placeholder="Enter phone number"
-            keyboardType="phone-pad"
-          />
+          <View style={styles.phoneInputContainer}>
+            <View style={styles.countryCodeBox}>
+              <Text style={styles.countryCodeText}>+91</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.phoneInput]}
+              value={formData.phone}
+              onChangeText={(text) => setFormData({ ...formData, phone: text.replace(/[^0-9]/g, '') })}
+              placeholder="Enter 10-digit number"
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+          </View>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -449,5 +455,28 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
     fontWeight: '600',
     fontSize: 14,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countryCodeBox: {
+    borderWidth: 1,
+    borderColor: colors.outline,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  phoneInput: {
+    flex: 1,
   },
 });

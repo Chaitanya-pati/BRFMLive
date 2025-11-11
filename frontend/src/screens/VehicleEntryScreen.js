@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -262,12 +263,22 @@ export default function VehicleEntryScreen() {
             placeholder="Enter driver name"
           />
 
-          <InputField
-            label="Driver Phone"
-            value={formData.driver_phone}
-            onChangeText={(text) => setFormData({ ...formData, driver_phone: text })}
-            placeholder="Enter phone number"
-          />
+          <View>
+            <Text style={styles.label}>Driver Phone</Text>
+            <View style={styles.phoneInputContainer}>
+              <View style={styles.countryCodeBox}>
+                <Text style={styles.countryCodeText}>+91</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.phoneInput]}
+                value={formData.driver_phone}
+                onChangeText={(text) => setFormData({ ...formData, driver_phone: text.replace(/[^0-9]/g, '') })}
+                placeholder="Enter 10-digit number"
+                keyboardType="phone-pad"
+                maxLength={10}
+              />
+            </View>
+          </View>
 
           <DatePicker
             label="Arrival Time"
@@ -370,5 +381,42 @@ const styles = StyleSheet.create({
   },
   buttonMobile: {
     width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 14,
+    backgroundColor: colors.surface,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countryCodeBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  phoneInput: {
+    flex: 1,
   },
 });
