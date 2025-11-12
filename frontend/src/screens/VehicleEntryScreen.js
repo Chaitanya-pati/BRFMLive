@@ -147,6 +147,9 @@ export default function VehicleEntryScreen() {
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
     
+    // Get the base URL from the API client or use local backend
+    const baseUrl = 'http://0.0.0.0:8000';
+    
     // Load existing images if available
     let supplierBillPhoto = null;
     if (vehicle.supplier_bill_photo) {
@@ -159,8 +162,8 @@ export default function VehicleEntryScreen() {
       
       if (!billPhotoUrl.startsWith('http')) {
         billPhotoUrl = billPhotoUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${billPhotoUrl}`
-          : `https://brfmlive.onrender.com/${billPhotoUrl}`;
+          ? `${baseUrl}${billPhotoUrl}`
+          : `${baseUrl}/${billPhotoUrl}`;
       }
       console.log('Supplier bill photo URL:', billPhotoUrl);
       supplierBillPhoto = { uri: billPhotoUrl };
@@ -177,8 +180,8 @@ export default function VehicleEntryScreen() {
       
       if (!vehiclePhotoUrl.startsWith('http')) {
         vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${vehiclePhotoUrl}`
-          : `https://brfmlive.onrender.com/${vehiclePhotoUrl}`;
+          ? `${baseUrl}${vehiclePhotoUrl}`
+          : `${baseUrl}/${vehiclePhotoUrl}`;
       }
       console.log('Vehicle photo URL:', vehiclePhotoUrl);
       vehiclePhoto = { uri: vehiclePhotoUrl };
