@@ -322,46 +322,40 @@ export default function VehicleEntryScreen() {
 
           <View style={styles.imageSection}>
             <Text style={styles.label}>Supplier Bill Photo</Text>
-            {formData.supplier_bill_photo?.uri ? (
+            {formData.supplier_bill_photo ? (
               <View>
                 <Image 
                   source={{ uri: formData.supplier_bill_photo.uri }} 
                   style={styles.imagePreview}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={styles.changeImageButton}>
                   <Text style={styles.changeImageText}>Change Image</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')}>
-                <ImagePreview 
-                  uri={formData.supplier_bill_photo?.uri} 
-                  placeholder="+ Tap to Upload Bill Photo"
-                />
+              <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Bill Photo</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.imageSection}>
             <Text style={styles.label}>Vehicle Photo</Text>
-            {formData.vehicle_photo?.uri ? (
+            {formData.vehicle_photo ? (
               <View>
                 <Image 
                   source={{ uri: formData.vehicle_photo.uri }} 
                   style={styles.imagePreview}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
                 <TouchableOpacity onPress={() => pickImage('vehicle_photo')} style={styles.changeImageButton}>
                   <Text style={styles.changeImageText}>Change Image</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('vehicle_photo')}>
-                <ImagePreview 
-                  uri={formData.vehicle_photo?.uri} 
-                  placeholder="+ Tap to Upload Vehicle Photo"
-                />
+              <TouchableOpacity onPress={() => pickImage('vehicle_photo')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Vehicle Photo</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -468,5 +462,20 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  uploadPlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadPlaceholderText: {
+    color: colors.textSecondary,
+    fontSize: 14,
   },
 });
