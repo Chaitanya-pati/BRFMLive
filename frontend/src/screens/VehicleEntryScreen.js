@@ -20,22 +20,9 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { vehicleApi, supplierApi } from '../api/client';
 import colors from '../theme/colors';
-import notify from '../utils/notifications';
+import { showNotification } from '../utils/notifications';
 import { formatISTDate, toISTISOString } from '../utils/timeUtils';
 import ImagePreview from '../components/ImagePreview';
-
-// Assuming showNotification is imported or defined elsewhere, e.g.:
-// import { showNotification } from '../utils/notifications';
-// For the purpose of this edit, we'll assume showNotification is available
-// and replaces the direct usage of notify.default.error/success.
-// If 'notify' itself is not an object with a 'default' property that has error/success methods,
-// then this correction is based on the provided changes.
-
-// Mocking showNotification for demonstration if it's not directly importable from utils/notifications
-const showNotification = (message, type) => {
-  console.log(`Notification [${type}]: ${message}`);
-  // In a real app, this would trigger a UI notification
-};
 
 
 export default function VehicleEntryScreen() {
