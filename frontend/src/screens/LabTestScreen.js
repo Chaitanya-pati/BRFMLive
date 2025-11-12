@@ -84,6 +84,7 @@ export default function LabTestScreen({ navigation }) {
     comments_action: "",
     approved: false,
     tested_by: "",
+    raise_claim: false, // New flag for "Raise Claim"
   });
 
   const qualityCategories = [
@@ -248,6 +249,7 @@ export default function LabTestScreen({ navigation }) {
       comments_action: "",
       approved: false,
       tested_by: "",
+      raise_claim: false, // Reset raise_claim to false
     });
     setSelectedVehicle(null);
     setModalVisible(true);
@@ -292,6 +294,7 @@ export default function LabTestScreen({ navigation }) {
         other_grain_damage: parseFloat(formData.soft_wheat) || null,
         total_dockage: parseFloat(formData.total_dockage) || null,
         test_date: formData.test_date.toISOString(),
+        raise_claim: formData.raise_claim, // Include raise_claim flag
       };
 
       if (editMode && currentLabTest) {
@@ -309,7 +312,7 @@ export default function LabTestScreen({ navigation }) {
       // Show download/print options after modal closes
       setTimeout(() => {
         const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.');
-        
+
         if (shouldPrint) {
           generatePDF();
         }
@@ -354,6 +357,7 @@ export default function LabTestScreen({ navigation }) {
         other_grain_damage: parseFloat(formData.soft_wheat) || null,
         total_dockage: parseFloat(formData.total_dockage) || null,
         test_date: formData.test_date.toISOString(),
+        raise_claim: true, // Ensure raise_claim is true when using this button
       };
 
       let savedLabTest;
@@ -377,19 +381,19 @@ export default function LabTestScreen({ navigation }) {
       // Ask if user wants to print before opening claim modal
       setTimeout(() => {
         const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.');
-        
+
         if (shouldPrint) {
           generatePDF();
         }
-        
+
         // Open raise claim modal with the saved lab test after print dialog
         setTimeout(() => {
           setSelectedLabTestForClaim(savedLabTest);
           setClaimFormData({
-            issue_found: "",
-            category_detected: "",
+            description: "", // Ensure description is empty for new claim
+            claim_type: "",
+            claim_amount: "",
             claim_date: new Date(),
-            remarks: "",
           });
           setRaiseClaimModalVisible(true);
         }, shouldPrint ? 500 : 0);
@@ -938,6 +942,7 @@ export default function LabTestScreen({ navigation }) {
       comments_action: labTest.remarks || "",
       approved: false,
       tested_by: labTest.tested_by || "",
+      raise_claim: labTest.raise_claim || false, // Load existing raise_claim state
     });
 
     setModalVisible(true);
@@ -963,10 +968,10 @@ export default function LabTestScreen({ navigation }) {
   const openRaiseClaimModal = (labTest) => {
     setSelectedLabTestForClaim(labTest);
     setClaimFormData({
-      issue_found: "",
-      category_detected: "",
+      description: "", // Clear previous description if any
+      claim_type: "",
+      claim_amount: "",
       claim_date: new Date(),
-      remarks: "",
     });
     setRaiseClaimModalVisible(true);
   };
@@ -990,10 +995,10 @@ export default function LabTestScreen({ navigation }) {
       notify.showSuccess("Claim raised successfully");
       setRaiseClaimModalVisible(false);
       setClaimFormData({
-        issue_found: "",
-        category_detected: "",
+        description: "",
+        claim_type: "",
+        claim_amount: "",
         claim_date: new Date(),
-        remarks: "",
       });
       loadLabTests(); // Reload to update claim status
     } catch (error) {
@@ -1064,9 +1069,9 @@ export default function LabTestScreen({ navigation }) {
 
   return (
     <Layout title="Lab Tests" navigation={navigation} currentRoute="LabTest">
-      <DataTable 
-        columns={columns} 
-        data={labTests} 
+      <DataTable
+        columns={columns}
+        data={labTests}
         onAdd={openAddModal}
         onEdit={handleEdit}
         onDelete={handleDelete}
@@ -1234,6 +1239,25 @@ export default function LabTestScreen({ navigation }) {
                 />
               </View>
             </View>
+
+            {/* Raise Claim Toggle */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Raise Claim</Text>
+              <View style={styles.checkboxContainer}>
+                <TouchableOpacity
+                  style={styles.checkbox}
+                  onPress={() =>
+                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
+                  }
+                >
+                  {formData.raise_claim && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+                <Text style={styles.checkboxText}>Yes/No</Text>
+              </View>
+            </View>
+
 
             {/* Test Parameters */}
             <View style={styles.section}>

@@ -116,7 +116,7 @@ class LabTestBase(ISTModel):
     category: Optional[str] = None
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
-    raise_claim: Optional[int] = 0
+    raise_claim: Optional[int] = 0  # 0 = No, 1 = Yes
     
     @validator('test_date', pre=True)
     def _parse_dates(cls, v):
