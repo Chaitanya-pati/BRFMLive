@@ -302,19 +302,18 @@ export default function LabTestScreen({ navigation }) {
         notify.showSuccess("Lab test created successfully");
       }
 
-      // Show download/print options before closing modal
-      const shouldDownload = window.confirm('Lab Test saved successfully!\n\nWould you like to download/print the PDF report now?');
-      
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
 
-      if (shouldDownload) {
-        // Small delay to allow modal to close
-        setTimeout(() => {
+      // Show download/print options after modal closes
+      setTimeout(() => {
+        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.');
+        
+        if (shouldPrint) {
           generatePDF();
-        }, 100);
-      }
+        }
+      }, 100);
     } catch (error) {
       notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
       console.error(error);
@@ -375,15 +374,26 @@ export default function LabTestScreen({ navigation }) {
       await loadLabTests();
       await loadVehicles();
 
-      // Open raise claim modal with the saved lab test
-      setSelectedLabTestForClaim(savedLabTest);
-      setClaimFormData({
-        issue_found: "",
-        category_detected: "",
-        claim_date: new Date(),
-        remarks: "",
-      });
-      setRaiseClaimModalVisible(true);
+      // Ask if user wants to print before opening claim modal
+      setTimeout(() => {
+        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.');
+        
+        if (shouldPrint) {
+          generatePDF();
+        }
+        
+        // Open raise claim modal with the saved lab test after print dialog
+        setTimeout(() => {
+          setSelectedLabTestForClaim(savedLabTest);
+          setClaimFormData({
+            issue_found: "",
+            category_detected: "",
+            claim_date: new Date(),
+            remarks: "",
+          });
+          setRaiseClaimModalVisible(true);
+        }, shouldPrint ? 500 : 0);
+      }, 100);
 
     } catch (error) {
       notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
