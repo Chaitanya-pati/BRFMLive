@@ -71,7 +71,9 @@ class VehicleEntry(VehicleEntryBase):
     created_at: datetime
     updated_at: datetime
     supplier_bill_photo: Optional[str] = None
-    vehicle_photo: Optional[str] = None
+    vehicle_photo_front: Optional[str] = None
+    vehicle_photo_back: Optional[str] = None
+    vehicle_photo_side: Optional[str] = None
 
 class VehicleEntryWithSupplier(VehicleEntry):
     supplier: Supplier

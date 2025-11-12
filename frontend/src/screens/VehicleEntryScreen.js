@@ -44,7 +44,9 @@ export default function VehicleEntryScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [formData, setFormData] = useState({
-    vehicle_number: '',
+    vehicle_state_code: '',
+    vehicle_second_part: '',
+    vehicle_third_part: '',
     supplier_id: '',
     bill_no: '',
     driver_name: '',
@@ -52,7 +54,9 @@ export default function VehicleEntryScreen() {
     arrival_time: new Date(),
     notes: '',
     supplier_bill_photo: null,
-    vehicle_photo: null,
+    vehicle_photo_front: null,
+    vehicle_photo_back: null,
+    vehicle_photo_side: null,
   });
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -84,13 +88,14 @@ export default function VehicleEntryScreen() {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.vehicle_number || !formData.supplier_id || !formData.bill_no) {
+      if (!formData.vehicle_state_code || !formData.vehicle_second_part || !formData.vehicle_third_part || !formData.supplier_id || !formData.bill_no) {
         showNotification('Please fill in all required fields', 'error');
         return;
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append('vehicle_number', formData.vehicle_number);
+      const vehicleNumber = `${formData.vehicle_state_code}-${formData.vehicle_second_part}-${formData.vehicle_third_part}`;
+      formDataToSend.append('vehicle_number', vehicleNumber);
       formDataToSend.append('supplier_id', String(formData.supplier_id));
       formDataToSend.append('bill_no', formData.bill_no);
       formDataToSend.append('driver_name', formData.driver_name || '');
@@ -113,17 +118,47 @@ export default function VehicleEntryScreen() {
         }
       }
 
-      if (formData.vehicle_photo) {
-        const photoUri = formData.vehicle_photo.uri || formData.vehicle_photo;
+      if (formData.vehicle_photo_front) {
+        const photoUri = formData.vehicle_photo_front.uri || formData.vehicle_photo_front;
         if (Platform.OS === 'web') {
           const response = await fetch(photoUri);
           const blob = await response.blob();
-          formDataToSend.append('vehicle_photo', blob, 'vehicle.jpg');
+          formDataToSend.append('vehicle_photo_front', blob, 'vehicle_front.jpg');
         } else {
-          formDataToSend.append('vehicle_photo', {
+          formDataToSend.append('vehicle_photo_front', {
             uri: photoUri,
             type: 'image/jpeg',
-            name: 'vehicle.jpg',
+            name: 'vehicle_front.jpg',
+          });
+        }
+      }
+
+      if (formData.vehicle_photo_back) {
+        const photoUri = formData.vehicle_photo_back.uri || formData.vehicle_photo_back;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('vehicle_photo_back', blob, 'vehicle_back.jpg');
+        } else {
+          formDataToSend.append('vehicle_photo_back', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'vehicle_back.jpg',
+          });
+        }
+      }
+
+      if (formData.vehicle_photo_side) {
+        const photoUri = formData.vehicle_photo_side.uri || formData.vehicle_photo_side;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('vehicle_photo_side', blob, 'vehicle_side.jpg');
+        } else {
+          formDataToSend.append('vehicle_photo_side', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'vehicle_side.jpg',
           });
         }
       }
@@ -152,16 +187,19 @@ export default function VehicleEntryScreen() {
       ? `${window.location.protocol}//${window.location.hostname}:8000`
       : 'http://localhost:8000';
     
+    // Split vehicle number into parts (e.g., "KA-01-AB-1234" -> ["KA", "01", "AB-1234"])
+    const vehicleNumberParts = vehicle.vehicle_number ? vehicle.vehicle_number.split('-') : ['', '', ''];
+    const stateCode = vehicleNumberParts[0] || '';
+    const secondPart = vehicleNumberParts[1] || '';
+    const thirdPart = vehicleNumberParts.slice(2).join('-') || '';
+    
     // Load existing images if available
     let supplierBillPhoto = null;
     if (vehicle.supplier_bill_photo) {
       let billPhotoUrl = vehicle.supplier_bill_photo;
-      // Handle both byte string paths and regular paths
       if (billPhotoUrl.startsWith("b'") || billPhotoUrl.startsWith('b"')) {
-        // Remove b' prefix and ' suffix
         billPhotoUrl = billPhotoUrl.slice(2, -1);
       }
-      
       if (!billPhotoUrl.startsWith('http')) {
         billPhotoUrl = billPhotoUrl.startsWith('/') 
           ? `${baseUrl}${billPhotoUrl}`
@@ -171,26 +209,46 @@ export default function VehicleEntryScreen() {
       supplierBillPhoto = { uri: billPhotoUrl };
     }
 
-    let vehiclePhoto = null;
-    if (vehicle.vehicle_photo) {
-      let vehiclePhotoUrl = vehicle.vehicle_photo;
-      // Handle both byte string paths and regular paths
-      if (vehiclePhotoUrl.startsWith("b'") || vehiclePhotoUrl.startsWith('b"')) {
-        // Remove b' prefix and ' suffix
-        vehiclePhotoUrl = vehiclePhotoUrl.slice(2, -1);
+    let vehiclePhotoFront = null;
+    if (vehicle.vehicle_photo_front) {
+      let photoUrl = vehicle.vehicle_photo_front;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
       }
-      
-      if (!vehiclePhotoUrl.startsWith('http')) {
-        vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
-          ? `${baseUrl}${vehiclePhotoUrl}`
-          : `${baseUrl}/${vehiclePhotoUrl}`;
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
       }
-      console.log('Vehicle photo URL:', vehiclePhotoUrl);
-      vehiclePhoto = { uri: vehiclePhotoUrl };
+      vehiclePhotoFront = { uri: photoUrl };
+    }
+
+    let vehiclePhotoBack = null;
+    if (vehicle.vehicle_photo_back) {
+      let photoUrl = vehicle.vehicle_photo_back;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
+      }
+      vehiclePhotoBack = { uri: photoUrl };
+    }
+
+    let vehiclePhotoSide = null;
+    if (vehicle.vehicle_photo_side) {
+      let photoUrl = vehicle.vehicle_photo_side;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
+      }
+      vehiclePhotoSide = { uri: photoUrl };
     }
     
     setFormData({
-      vehicle_number: vehicle.vehicle_number,
+      vehicle_state_code: stateCode,
+      vehicle_second_part: secondPart,
+      vehicle_third_part: thirdPart,
       supplier_id: vehicle.supplier_id,
       bill_no: vehicle.bill_no,
       driver_name: vehicle.driver_name || '',
@@ -198,7 +256,9 @@ export default function VehicleEntryScreen() {
       arrival_time: vehicle.arrival_time ? new Date(vehicle.arrival_time) : new Date(),
       notes: vehicle.notes || '',
       supplier_bill_photo: supplierBillPhoto,
-      vehicle_photo: vehiclePhoto,
+      vehicle_photo_front: vehiclePhotoFront,
+      vehicle_photo_back: vehiclePhotoBack,
+      vehicle_photo_side: vehiclePhotoSide,
     });
     setIsModalVisible(true);
   };
@@ -217,7 +277,9 @@ export default function VehicleEntryScreen() {
 
   const resetForm = () => {
     setFormData({
-      vehicle_number: '',
+      vehicle_state_code: '',
+      vehicle_second_part: '',
+      vehicle_third_part: '',
       supplier_id: '',
       bill_no: '',
       driver_name: '',
@@ -225,7 +287,9 @@ export default function VehicleEntryScreen() {
       arrival_time: new Date(),
       notes: '',
       supplier_bill_photo: null,
-      vehicle_photo: null,
+      vehicle_photo_front: null,
+      vehicle_photo_back: null,
+      vehicle_photo_side: null,
     });
     setEditingVehicle(null);
     setIsModalVisible(false);
@@ -278,12 +342,30 @@ export default function VehicleEntryScreen() {
         title={editingVehicle ? 'Edit Vehicle Entry' : 'New Vehicle Entry'}
       >
         <ScrollView style={styles.form}>
-          <InputField
-            label="Vehicle Number *"
-            value={formData.vehicle_number}
-            onChangeText={(text) => setFormData({ ...formData, vehicle_number: text })}
-            placeholder="e.g., KA-01-AB-1234"
-          />
+          <Text style={styles.label}>Vehicle Number *</Text>
+          <View style={styles.vehicleNumberContainer}>
+            <InputField
+              label="State Code"
+              value={formData.vehicle_state_code}
+              onChangeText={(text) => setFormData({ ...formData, vehicle_state_code: text.toUpperCase() })}
+              placeholder="KA"
+              style={styles.vehicleNumberPart}
+            />
+            <InputField
+              label="Second Part"
+              value={formData.vehicle_second_part}
+              onChangeText={(text) => setFormData({ ...formData, vehicle_second_part: text })}
+              placeholder="01"
+              style={styles.vehicleNumberPart}
+            />
+            <InputField
+              label="Third Part"
+              value={formData.vehicle_third_part}
+              onChangeText={(text) => setFormData({ ...formData, vehicle_third_part: text.toUpperCase() })}
+              placeholder="AB-1234"
+              style={styles.vehicleNumberPartLarge}
+            />
+          </View>
 
           <SelectDropdown
             label="Supplier *"
@@ -366,27 +448,79 @@ export default function VehicleEntryScreen() {
           </View>
 
           <View style={styles.imageSection}>
-            <Text style={styles.label}>Vehicle Photo</Text>
-            {formData.vehicle_photo ? (
+            <Text style={styles.label}>Vehicle Photo - Front *</Text>
+            {formData.vehicle_photo_front ? (
               <View>
                 <Image 
-                  source={{ uri: formData.vehicle_photo.uri }} 
+                  source={{ uri: formData.vehicle_photo_front.uri }} 
                   style={styles.imagePreview}
                   resizeMode="contain"
                   onError={(error) => {
-                    console.error('Failed to load vehicle photo:', error);
+                    console.error('Failed to load vehicle photo front:', error);
                     showNotification('Failed to load image', 'error');
                   }}
-                  onLoad={() => console.log('Vehicle photo loaded successfully')}
+                  onLoad={() => console.log('Vehicle photo front loaded successfully')}
                 />
-                <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('vehicle_photo')} style={styles.changeImageButton}>
+                <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_front.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={styles.changeImageButton}>
                   <Text style={styles.changeImageText}>Change Image</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('vehicle_photo')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Vehicle Photo</Text>
+              <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Front Photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Vehicle Photo - Back *</Text>
+            {formData.vehicle_photo_back ? (
+              <View>
+                <Image 
+                  source={{ uri: formData.vehicle_photo_back.uri }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load vehicle photo back:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Vehicle photo back loaded successfully')}
+                />
+                <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_back.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={styles.changeImageButton}>
+                  <Text style={styles.changeImageText}>Change Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Back Photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Vehicle Photo - Side *</Text>
+            {formData.vehicle_photo_side ? (
+              <View>
+                <Image 
+                  source={{ uri: formData.vehicle_photo_side.uri }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load vehicle photo side:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Vehicle photo side loaded successfully')}
+                />
+                <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_side.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={styles.changeImageButton}>
+                  <Text style={styles.changeImageText}>Change Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Side Photo</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -419,6 +553,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 8,
+  },
+  vehicleNumberContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  vehicleNumberPart: {
+    flex: 1,
+  },
+  vehicleNumberPartLarge: {
+    flex: 2,
   },
   imageSection: {
     marginBottom: 12,

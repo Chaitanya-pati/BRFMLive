@@ -150,7 +150,9 @@ async def create_vehicle_entry(
     arrival_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     supplier_bill_photo: Optional[UploadFile] = File(None),
-    vehicle_photo: Optional[UploadFile] = File(None),
+    vehicle_photo_front: Optional[UploadFile] = File(None),
+    vehicle_photo_back: Optional[UploadFile] = File(None),
+    vehicle_photo_side: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_utc_now()
@@ -169,9 +171,17 @@ async def create_vehicle_entry(
         bill_path = await save_upload_file(supplier_bill_photo)
         db_vehicle.supplier_bill_photo = bill_path.encode('utf-8')
 
-    if vehicle_photo:
-        vehicle_path = await save_upload_file(vehicle_photo)
-        db_vehicle.vehicle_photo = vehicle_path.encode('utf-8')
+    if vehicle_photo_front:
+        front_path = await save_upload_file(vehicle_photo_front)
+        db_vehicle.vehicle_photo_front = front_path.encode('utf-8')
+
+    if vehicle_photo_back:
+        back_path = await save_upload_file(vehicle_photo_back)
+        db_vehicle.vehicle_photo_back = back_path.encode('utf-8')
+
+    if vehicle_photo_side:
+        side_path = await save_upload_file(vehicle_photo_side)
+        db_vehicle.vehicle_photo_side = side_path.encode('utf-8')
 
     db.add(db_vehicle)
     db.commit()
@@ -221,8 +231,12 @@ def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(g
     for vehicle in vehicles:
         if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
             vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
-        if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
-            vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
+        if vehicle.vehicle_photo_front and isinstance(vehicle.vehicle_photo_front, bytes):
+            vehicle.vehicle_photo_front = vehicle.vehicle_photo_front.decode('utf-8')
+        if vehicle.vehicle_photo_back and isinstance(vehicle.vehicle_photo_back, bytes):
+            vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode('utf-8')
+        if vehicle.vehicle_photo_side and isinstance(vehicle.vehicle_photo_side, bytes):
+            vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode('utf-8')
 
     return vehicles
 
@@ -235,8 +249,12 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
     # Convert binary image paths to strings
     if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo, bytes):
         vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode('utf-8')
-    if vehicle.vehicle_photo and isinstance(vehicle.vehicle_photo, bytes):
-        vehicle.vehicle_photo = vehicle.vehicle_photo.decode('utf-8')
+    if vehicle.vehicle_photo_front and isinstance(vehicle.vehicle_photo_front, bytes):
+        vehicle.vehicle_photo_front = vehicle.vehicle_photo_front.decode('utf-8')
+    if vehicle.vehicle_photo_back and isinstance(vehicle.vehicle_photo_back, bytes):
+        vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode('utf-8')
+    if vehicle.vehicle_photo_side and isinstance(vehicle.vehicle_photo_side, bytes):
+        vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode('utf-8')
 
     return vehicle
 
@@ -251,7 +269,9 @@ async def update_vehicle_entry(
     arrival_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     supplier_bill_photo: Optional[UploadFile] = File(None),
-    vehicle_photo: Optional[UploadFile] = File(None),
+    vehicle_photo_front: Optional[UploadFile] = File(None),
+    vehicle_photo_back: Optional[UploadFile] = File(None),
+    vehicle_photo_side: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     db_vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
@@ -275,9 +295,17 @@ async def update_vehicle_entry(
         bill_path = await save_upload_file(supplier_bill_photo)
         db_vehicle.supplier_bill_photo = bill_path.encode('utf-8')
 
-    if vehicle_photo and vehicle_photo.filename:
-        vehicle_path = await save_upload_file(vehicle_photo)
-        db_vehicle.vehicle_photo = vehicle_path.encode('utf-8')
+    if vehicle_photo_front and vehicle_photo_front.filename:
+        front_path = await save_upload_file(vehicle_photo_front)
+        db_vehicle.vehicle_photo_front = front_path.encode('utf-8')
+
+    if vehicle_photo_back and vehicle_photo_back.filename:
+        back_path = await save_upload_file(vehicle_photo_back)
+        db_vehicle.vehicle_photo_back = back_path.encode('utf-8')
+
+    if vehicle_photo_side and vehicle_photo_side.filename:
+        side_path = await save_upload_file(vehicle_photo_side)
+        db_vehicle.vehicle_photo_side = side_path.encode('utf-8')
 
     db.commit()
     db.refresh(db_vehicle)
