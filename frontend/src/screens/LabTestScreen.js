@@ -1000,8 +1000,8 @@ export default function LabTestScreen({ navigation }) {
   const columns = [
     { label: "ID", field: "id", width: 80 },
     {
-      label: "Document No",
-      field: "document_no",
+      label: "Bill Number",
+      field: "bill_number",
       width: 120,
       render: (value) => value || "-",
     },
