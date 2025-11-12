@@ -20,30 +20,42 @@ import schemas
 # IST timezone
 IST = pytz.timezone('Asia/Kolkata')
 
-def get_ist_now():
-    """Get current time in IST as naive datetime"""
-    return datetime.now(IST).replace(tzinfo=None)
-
 def get_utc_now():
-    """Get current time in UTC as naive datetime"""
-    return datetime.utcnow().replace(tzinfo=None)
+    """Get current time in UTC as naive datetime for database storage"""
+    return datetime.utcnow()
+
+def get_ist_display_now():
+    """Get current time in IST timezone"""
+    return datetime.now(IST)
+
+def get_ist_now():
+    """Deprecated: use get_utc_now(). Get current time in UTC for database storage"""
+    return datetime.utcnow()
+
+def format_ist_iso(dt):
+    """Format datetime to ISO string with IST offset (+05:30)"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        utc_dt = dt.replace(tzinfo=pytz.UTC)
+    else:
+        utc_dt = dt.astimezone(pytz.UTC)
+    ist_dt = utc_dt.astimezone(IST)
+    return ist_dt.isoformat()
 
 def parse_ist_datetime(datetime_str):
-    """Parse datetime string in IST"""
+    """Parse IST datetime string and return UTC datetime for storage"""
     if not datetime_str:
         return None
     try:
-        # Try parsing ISO format
         dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
         if dt.tzinfo:
-            # Convert to IST and make naive
-            return dt.astimezone(IST).replace(tzinfo=None)
+            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
         else:
-            # Already in IST format
-            return dt
+            ist_dt = IST.localize(dt)
+            return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
     except:
-        # Fallback to current IST time
-        return get_ist_now()
+        return datetime.utcnow()
 
 def sanitize_float(value):
     """Convert NaN/Infinity to None for JSON serialization"""

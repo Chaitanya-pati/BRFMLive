@@ -1,7 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import Optional
 from enum import Enum
+from utils.datetime_utils import format_ist_iso, parse_datetime
+
+class ISTModel(BaseModel):
+    """Base model with IST datetime serialization"""
+    class Config:
+        json_encoders = {datetime: format_ist_iso}
+        from_attributes = True
 
 class ClaimStatusEnum(str, Enum):
     OPEN = "Open"
