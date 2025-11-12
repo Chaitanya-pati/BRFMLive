@@ -33,7 +33,6 @@ export default function UnloadingEntryScreen({ navigation }) {
   const [formData, setFormData] = useState({
     vehicle_entry_id: '',
     godown_id: '',
-    net_weight: '0',
     unloading_start_time: new Date().toISOString(),
     unloading_end_time: new Date().toISOString(),
     notes: '',
@@ -91,15 +90,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     // Find the selected vehicle and get its lab test category
     const selectedVehicle = vehicles.find(v => v.id === vehicleId);
     
-    let netWeight = '0';
-    if (selectedVehicle) {
-      // Calculate net weight from vehicle entry's gross and empty weights
-      const grossWeight = parseFloat(selectedVehicle.gross_weight) || 0;
-      const emptyWeight = parseFloat(selectedVehicle.empty_weight) || 0;
-      netWeight = (grossWeight - emptyWeight).toFixed(2);
-    }
-    
-    setFormData({ ...formData, vehicle_entry_id: vehicleId, net_weight: netWeight });
+    setFormData({ ...formData, vehicle_entry_id: vehicleId });
 
     if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
       const category = selectedVehicle.lab_tests[0].category;
@@ -160,7 +151,6 @@ export default function UnloadingEntryScreen({ navigation }) {
     setFormData({
       vehicle_entry_id: '',
       godown_id: '',
-      net_weight: '0',
       unloading_start_time: new Date().toISOString(),
       unloading_end_time: new Date().toISOString(),
       notes: '',
@@ -177,7 +167,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       id: entry.id,
       vehicle_entry_id: entry.vehicle_entry_id,
       godown_id: entry.godown_id,
-      net_weight: entry.net_weight.toString(),
       unloading_start_time: new Date(entry.unloading_start_time),
       unloading_end_time: new Date(entry.unloading_end_time),
       notes: entry.notes || '',
@@ -239,7 +228,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       const submitFormData = new FormData();
       submitFormData.append('vehicle_entry_id', formData.vehicle_entry_id);
       submitFormData.append('godown_id', formData.godown_id);
-      submitFormData.append('net_weight', formData.net_weight);
       submitFormData.append('unloading_start_time', formData.unloading_start_time);
       submitFormData.append('unloading_end_time', formData.unloading_end_time);
       if (formData.notes) {
@@ -397,13 +385,6 @@ export default function UnloadingEntryScreen({ navigation }) {
               ))}
             </Picker>
           </View>
-
-          <Text style={styles.label}>Net Weight (kg) - From Gate Entry</Text>
-          <TextInput
-            style={[styles.input, styles.disabledInput]}
-            value={formData.net_weight}
-            editable={false}
-          />
 
           <Text style={styles.label}>Before Unloading Image (Optional)</Text>
           <View style={styles.imageSection}>

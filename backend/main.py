@@ -572,9 +572,6 @@ def delete_godown(godown_id: int, db: Session = Depends(get_db)):
 async def create_unloading_entry(
     vehicle_entry_id: int = Form(...),
     godown_id: int = Form(...),
-    gross_weight: float = Form(...),
-    empty_vehicle_weight: float = Form(...),
-    net_weight: float = Form(...),
     unloading_start_time: Optional[str] = Form(None),
     unloading_end_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
@@ -582,6 +579,15 @@ async def create_unloading_entry(
     after_unloading_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
+    # Get weights from vehicle entry
+    vehicle_entry = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_entry_id).first()
+    if not vehicle_entry:
+        raise HTTPException(status_code=404, detail="Vehicle entry not found")
+    
+    gross_weight = vehicle_entry.gross_weight or 0
+    empty_vehicle_weight = vehicle_entry.empty_weight or 0
+    net_weight = gross_weight - empty_vehicle_weight
+    
     start_time = parse_ist_datetime(unloading_start_time) if unloading_start_time else get_utc_now()
     end_time = parse_ist_datetime(unloading_end_time) if unloading_end_time else get_utc_now()
 
@@ -632,9 +638,6 @@ async def update_unloading_entry(
     entry_id: int,
     vehicle_entry_id: int = Form(...),
     godown_id: int = Form(...),
-    gross_weight: float = Form(...),
-    empty_vehicle_weight: float = Form(...),
-    net_weight: float = Form(...),
     unloading_start_time: Optional[str] = Form(None),
     unloading_end_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
@@ -645,6 +648,15 @@ async def update_unloading_entry(
     db_entry = db.query(models.UnloadingEntry).filter(models.UnloadingEntry.id == entry_id).first()
     if not db_entry:
         raise HTTPException(status_code=404, detail="Unloading entry not found")
+
+    # Get weights from vehicle entry
+    vehicle_entry = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_entry_id).first()
+    if not vehicle_entry:
+        raise HTTPException(status_code=404, detail="Vehicle entry not found")
+    
+    gross_weight = vehicle_entry.gross_weight or 0
+    empty_vehicle_weight = vehicle_entry.empty_weight or 0
+    net_weight = gross_weight - empty_vehicle_weight
 
     # Update godown storage (subtract old, add new)
     old_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_entry.godown_id).first()
