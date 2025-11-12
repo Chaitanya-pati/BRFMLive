@@ -32,20 +32,32 @@ export const showWarning = (message) => {
   showNotification(message, 'warning');
 };
 
-export const showConfirm = (title, message, onConfirm, onCancel) => {
-  if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n\n${message}`)) {
-      if (onConfirm) onConfirm();
+export const showConfirm = (title, message, onConfirm, onCancel, confirmText = 'OK', cancelText = 'Cancel') => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm?.();
+      } else {
+        onCancel?.();
+      }
     } else {
-      if (onCancel) onCancel();
+      Alert.alert(
+        title,
+        message,
+        [
+          {
+            text: cancelText,
+            onPress: onCancel,
+            style: 'cancel',
+          },
+          {
+            text: confirmText,
+            onPress: onConfirm,
+          },
+        ],
+        { cancelable: false }
+      );
     }
-  } else {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel', onPress: onCancel },
-      { text: 'OK', onPress: onConfirm }
-    ]);
-  }
-};
+  };
 
 export default {
   showNotification,

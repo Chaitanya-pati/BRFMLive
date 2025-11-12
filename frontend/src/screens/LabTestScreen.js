@@ -305,6 +305,20 @@ export default function LabTestScreen({ navigation }) {
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
+
+      // Show download/print options
+      notify.showConfirm(
+        'Lab Test Saved',
+        'Would you like to download or print the report?',
+        () => {
+          generatePDF();
+        },
+        () => {
+          // User chose not to download/print
+        },
+        'Download/Print',
+        'Close'
+      );
     } catch (error) {
       notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
       console.error(error);
@@ -1537,12 +1551,6 @@ export default function LabTestScreen({ navigation }) {
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.pdfButton]}
-                onPress={generatePDF}
-              >
-                <Text style={styles.pdfButtonText}>Generate PDF</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[
                   styles.button,
                   styles.saveButton,
@@ -1821,9 +1829,6 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: colors.primary,
   },
-  pdfButton: {
-    backgroundColor: "#6c757d",
-  },
   buttonDisabled: {
     opacity: 0.5,
   },
@@ -1834,11 +1839,6 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: colors.onPrimary,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  pdfButtonText: {
-    color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 14,
   },
