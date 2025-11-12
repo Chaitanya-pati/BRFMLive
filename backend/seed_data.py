@@ -9,16 +9,16 @@ def seed_godowns_and_bins():
 
         # Seed 10 Godowns (expanded from 5)
         godowns_data = [
-            {"name": "Godown-A", "capacity": 5000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-B", "capacity": 3000, "type": "Silo", "current_storage": 0},
-            {"name": "Godown-C", "capacity": 4000, "type": "Storage", "current_storage": 0},
-            {"name": "Godown-D", "capacity": 6000, "type": "Cold Storage", "current_storage": 0},
-            {"name": "Godown-E", "capacity": 2500, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-F", "capacity": 5500, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-G", "capacity": 4500, "type": "Silo", "current_storage": 0},
-            {"name": "Godown-H", "capacity": 3500, "type": "Storage", "current_storage": 0},
-            {"name": "Godown-I", "capacity": 7000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-J", "capacity": 3000, "type": "Cold Storage", "current_storage": 0},
+            {"name": "Godown-A", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-B", "type": "Silo", "current_storage": 0},
+            {"name": "Godown-C", "type": "Storage", "current_storage": 0},
+            {"name": "Godown-D", "type": "Cold Storage", "current_storage": 0},
+            {"name": "Godown-E", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-F", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G", "type": "Silo", "current_storage": 0},
+            {"name": "Godown-H", "type": "Storage", "current_storage": 0},
+            {"name": "Godown-I", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-J", "type": "Cold Storage", "current_storage": 0},
         ]
 
         godowns_added = 0

@@ -379,7 +379,7 @@ export default function UnloadingEntryScreen({ navigation }) {
               {filteredGodowns.map((godown) => (
                 <Picker.Item
                   key={godown.id}
-                  label={`${godown.name} (${godown.type}) - ${godown.current_storage}/${godown.capacity} tons`}
+                  label={`${godown.name} (${godown.type}) - ${godown.current_storage} tons`}
                   value={godown.id}
                 />
               ))}

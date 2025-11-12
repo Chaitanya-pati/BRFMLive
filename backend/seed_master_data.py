@@ -115,9 +115,9 @@ def seed_master_data():
             {"name": "Godown-G5", "capacity": 20000, "type": "Warehouse", "current_storage": 0},
             {"name": "Godown-G6", "capacity": 18000, "type": "Silo", "current_storage": 0},
             {"name": "Godown-G7", "capacity": 16000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-G8", "capacity": 14000, "type": "Cold Storage", "current_storage": 0},
-            {"name": "Godown-G9", "capacity": 11000, "type": "Storage", "current_storage": 0},
-            {"name": "Godown-G10", "capacity": 13000, "type": "Warehouse", "current_storage": 0}
+            {"name": "Godown-G8", "type": "Cold Storage", "current_storage": 0},
+            {"name": "Godown-G9", "type": "Storage", "current_storage": 0},
+            {"name": "Godown-G10", "type": "Warehouse", "current_storage": 0}
         ]
         
         godowns_added = 0
