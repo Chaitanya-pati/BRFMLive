@@ -12,8 +12,8 @@ const getCurrentAPIUrl = () => {
       return `${protocol}//${hostname}:8000/api`;
     }
 
-    // For local development
-    return `http://localhost:8000/api`;
+    // For local development - use port 8000 on same host
+    return `${protocol}//${hostname}:8000/api`;
   }
   return 'http://0.0.0.0:8000/api';
 };
