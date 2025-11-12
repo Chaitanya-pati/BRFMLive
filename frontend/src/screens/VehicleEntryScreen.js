@@ -21,7 +21,8 @@ import Modal from '../components/Modal';
 import { vehicleApi, supplierApi } from '../api/client';
 import colors from '../theme/colors';
 import notify from '../utils/notifications';
-import { formatISTDateTime } from '../utils/dateUtils';
+import { formatISTDate, toISTISOString } from '../utils/timeUtils';
+import ImagePreview from '../components/ImagePreview';
 
 // Assuming showNotification is imported or defined elsewhere, e.g.:
 // import { showNotification } from '../utils/notifications';
@@ -94,7 +95,7 @@ export default function VehicleEntryScreen() {
       formDataToSend.append('bill_no', formData.bill_no);
       formDataToSend.append('driver_name', formData.driver_name || '');
       formDataToSend.append('driver_phone', formData.driver_phone || '');
-      formDataToSend.append('arrival_time', formData.arrival_time.toISOString());
+      formDataToSend.append('arrival_time', toISTISOString(formData.arrival_time));
       formDataToSend.append('notes', formData.notes || '');
 
       if (formData.supplier_bill_photo) {
@@ -297,23 +298,21 @@ export default function VehicleEntryScreen() {
 
           <View style={styles.imageSection}>
             <Text style={styles.label}>Supplier Bill Photo</Text>
-            <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('supplier_bill_photo')}>
-              {formData.supplier_bill_photo ? (
-                <Image source={{ uri: formData.supplier_bill_photo.uri }} style={styles.imagePreview} />
-              ) : (
-                <Text style={styles.imagePickerText}>+ Upload Bill Photo</Text>
-              )}
+            <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')}>
+              <ImagePreview 
+                uri={formData.supplier_bill_photo?.uri} 
+                placeholder="+ Tap to Upload Bill Photo"
+              />
             </TouchableOpacity>
           </View>
 
           <View style={styles.imageSection}>
             <Text style={styles.label}>Vehicle Photo</Text>
-            <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage('vehicle_photo')}>
-              {formData.vehicle_photo ? (
-                <Image source={{ uri: formData.vehicle_photo.uri }} style={styles.imagePreview} />
-              ) : (
-                <Text style={styles.imagePickerText}>+ Upload Vehicle Photo</Text>
-              )}
+            <TouchableOpacity onPress={() => pickImage('vehicle_photo')}>
+              <ImagePreview 
+                uri={formData.vehicle_photo?.uri} 
+                placeholder="+ Tap to Upload Vehicle Photo"
+              />
             </TouchableOpacity>
           </View>
 
@@ -347,26 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   imageSection: {
-    marginBottom: 16,
-  },
-  imagePicker: {
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 150,
-  },
-  imagePickerText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  imagePreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
+    marginBottom: 12,
   },
   buttonContainer: {
     flexDirection: 'row',
