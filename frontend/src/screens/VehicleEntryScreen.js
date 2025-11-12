@@ -151,22 +151,36 @@ export default function VehicleEntryScreen() {
     let supplierBillPhoto = null;
     if (vehicle.supplier_bill_photo) {
       let billPhotoUrl = vehicle.supplier_bill_photo;
+      // Handle both byte string paths and regular paths
+      if (billPhotoUrl.startsWith("b'") || billPhotoUrl.startsWith('b"')) {
+        // Remove b' prefix and ' suffix
+        billPhotoUrl = billPhotoUrl.slice(2, -1);
+      }
+      
       if (!billPhotoUrl.startsWith('http')) {
         billPhotoUrl = billPhotoUrl.startsWith('/') 
           ? `https://brfmlive.onrender.com${billPhotoUrl}`
           : `https://brfmlive.onrender.com/${billPhotoUrl}`;
       }
+      console.log('Supplier bill photo URL:', billPhotoUrl);
       supplierBillPhoto = { uri: billPhotoUrl };
     }
 
     let vehiclePhoto = null;
     if (vehicle.vehicle_photo) {
       let vehiclePhotoUrl = vehicle.vehicle_photo;
+      // Handle both byte string paths and regular paths
+      if (vehiclePhotoUrl.startsWith("b'") || vehiclePhotoUrl.startsWith('b"')) {
+        // Remove b' prefix and ' suffix
+        vehiclePhotoUrl = vehiclePhotoUrl.slice(2, -1);
+      }
+      
       if (!vehiclePhotoUrl.startsWith('http')) {
         vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
           ? `https://brfmlive.onrender.com${vehiclePhotoUrl}`
           : `https://brfmlive.onrender.com/${vehiclePhotoUrl}`;
       }
+      console.log('Vehicle photo URL:', vehiclePhotoUrl);
       vehiclePhoto = { uri: vehiclePhotoUrl };
     }
     
@@ -328,7 +342,13 @@ export default function VehicleEntryScreen() {
                   source={{ uri: formData.supplier_bill_photo.uri }} 
                   style={styles.imagePreview}
                   resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load supplier bill photo:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Supplier bill photo loaded successfully')}
                 />
+                <Text style={styles.imageUrlDebug}>URL: {formData.supplier_bill_photo.uri}</Text>
                 <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={styles.changeImageButton}>
                   <Text style={styles.changeImageText}>Change Image</Text>
                 </TouchableOpacity>
@@ -348,7 +368,13 @@ export default function VehicleEntryScreen() {
                   source={{ uri: formData.vehicle_photo.uri }} 
                   style={styles.imagePreview}
                   resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load vehicle photo:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Vehicle photo loaded successfully')}
                 />
+                <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo.uri}</Text>
                 <TouchableOpacity onPress={() => pickImage('vehicle_photo')} style={styles.changeImageButton}>
                   <Text style={styles.changeImageText}>Change Image</Text>
                 </TouchableOpacity>
@@ -477,5 +503,11 @@ const styles = StyleSheet.create({
   uploadPlaceholderText: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  imageUrlDebug: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 4,
   },
 });
