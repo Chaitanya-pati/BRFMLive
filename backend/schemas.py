@@ -26,7 +26,7 @@ class TransferSessionStatusEnum(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
-class SupplierBase(BaseModel):
+class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None
     phone: Optional[str] = None
@@ -49,11 +49,8 @@ class Supplier(SupplierBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-class VehicleEntryBase(BaseModel):
+class VehicleEntryBase(ISTModel):
     vehicle_number: str
     supplier_id: int
     bill_no: str
@@ -61,6 +58,10 @@ class VehicleEntryBase(BaseModel):
     driver_phone: Optional[str] = None
     arrival_time: Optional[datetime] = None
     notes: Optional[str] = None
+    
+    @validator('arrival_time', pre=True)
+    def _parse_arrival_time(cls, v):
+        return parse_datetime(v)
 
 class VehicleEntryCreate(VehicleEntryBase):
     pass
@@ -71,9 +72,6 @@ class VehicleEntry(VehicleEntryBase):
     updated_at: datetime
     supplier_bill_photo: Optional[str] = None
     vehicle_photo: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
 class VehicleEntryWithSupplier(VehicleEntry):
     supplier: Supplier
@@ -82,7 +80,7 @@ class VehicleEntryWithLabTests(VehicleEntry):
     supplier: Supplier
     lab_tests: list['LabTest'] = []
 
-class LabTestBase(BaseModel):
+class LabTestBase(ISTModel):
     vehicle_entry_id: int
     test_date: Optional[datetime] = None
     document_no: Optional[str] = None
@@ -113,6 +111,10 @@ class LabTestBase(BaseModel):
     category: Optional[str] = None
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
+    
+    @validator('test_date', 'issue_date', pre=True)
+    def _parse_dates(cls, v):
+        return parse_datetime(v)
 
 class LabTestCreate(LabTestBase):
     pass
@@ -121,25 +123,26 @@ class LabTest(LabTestBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class LabTestWithVehicle(LabTest):
     vehicle_entry: VehicleEntryWithSupplier
     has_claim: bool = False
 
-class ClaimBase(BaseModel):
+class ClaimBase(ISTModel):
     lab_test_id: int
     issue_found: str
     category_detected: Optional[str] = None
     claim_date: Optional[datetime] = None
     remarks: Optional[str] = None
+    
+    @validator('claim_date', pre=True)
+    def _parse_claim_date(cls, v):
+        return parse_datetime(v)
 
 class ClaimCreate(ClaimBase):
     pass
 
-class ClaimUpdate(BaseModel):
+class ClaimUpdate(ISTModel):
     claim_status: Optional[ClaimStatusEnum] = None
     remarks: Optional[str] = None
 
@@ -148,14 +151,11 @@ class Claim(ClaimBase):
     claim_status: ClaimStatusEnum
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class ClaimWithLabTest(Claim):
     lab_test: LabTestWithVehicle
 
-class GodownMasterBase(BaseModel):
+class GodownMasterBase(ISTModel):
     name: str
     capacity: int
     type: str
@@ -171,11 +171,8 @@ class GodownMaster(GodownMasterBase):
     current_storage: float
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-class UnloadingEntryBase(BaseModel):
+class UnloadingEntryBase(ISTModel):
     vehicle_entry_id: int
     godown_id: int
     gross_weight: float
@@ -184,6 +181,10 @@ class UnloadingEntryBase(BaseModel):
     unloading_start_time: Optional[datetime] = None
     unloading_end_time: Optional[datetime] = None
     notes: Optional[str] = None
+    
+    @validator('unloading_start_time', 'unloading_end_time', pre=True)
+    def _parse_unloading_times(cls, v):
+        return parse_datetime(v)
 
 class UnloadingEntryCreate(UnloadingEntryBase):
     pass
@@ -194,15 +195,12 @@ class UnloadingEntry(UnloadingEntryBase):
     after_unloading_image: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class UnloadingEntryWithDetails(UnloadingEntry):
     vehicle_entry: VehicleEntryWithSupplier
     godown: GodownMaster
 
-class BinBase(BaseModel):
+class BinBase(ISTModel):
     bin_number: str
     capacity: float
     current_quantity: Optional[float] = 0.0
@@ -212,7 +210,7 @@ class BinBase(BaseModel):
 class BinCreate(BinBase):
     pass
 
-class BinUpdate(BaseModel):
+class BinUpdate(ISTModel):
     bin_number: Optional[str] = None
     capacity: Optional[float] = None
     current_quantity: Optional[float] = None
@@ -223,11 +221,8 @@ class Bin(BinBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-class MagnetBase(BaseModel):
+class MagnetBase(ISTModel):
     name: str
     description: Optional[str] = None
     status: BinStatusEnum = BinStatusEnum.ACTIVE
@@ -235,7 +230,7 @@ class MagnetBase(BaseModel):
 class MagnetCreate(MagnetBase):
     pass
 
-class MagnetUpdate(BaseModel):
+class MagnetUpdate(ISTModel):
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[BinStatusEnum] = None
@@ -244,11 +239,8 @@ class Magnet(MagnetBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-class RouteMagnetMappingBase(BaseModel):
+class RouteMagnetMappingBase(ISTModel):
     magnet_id: int
     source_godown_id: Optional[int] = None
     source_bin_id: Optional[int] = None
@@ -258,7 +250,7 @@ class RouteMagnetMappingBase(BaseModel):
 class RouteMagnetMappingCreate(RouteMagnetMappingBase):
     pass
 
-class RouteMagnetMappingUpdate(BaseModel):
+class RouteMagnetMappingUpdate(ISTModel):
     magnet_id: Optional[int] = None
     source_godown_id: Optional[int] = None
     source_bin_id: Optional[int] = None
@@ -269,9 +261,6 @@ class RouteMagnetMapping(RouteMagnetMappingBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     magnet: Magnet
@@ -279,7 +268,7 @@ class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     source_bin: Optional[Bin] = None
     destination_bin: Bin
 
-class TransferSessionBase(BaseModel):
+class TransferSessionBase(ISTModel):
     source_godown_id: int
     destination_bin_id: int
     magnet_id: Optional[int] = None
@@ -288,7 +277,7 @@ class TransferSessionBase(BaseModel):
 class TransferSessionCreate(TransferSessionBase):
     pass
 
-class TransferSessionUpdate(BaseModel):
+class TransferSessionUpdate(ISTModel):
     transferred_quantity: Optional[float] = None
     status: Optional[TransferSessionStatusEnum] = None
     notes: Optional[str] = None
@@ -302,9 +291,6 @@ class TransferSession(TransferSessionBase):
     cleaning_interval_hours: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class TransferSessionWithDetails(TransferSession):
     source_godown: GodownMaster
@@ -312,20 +298,28 @@ class TransferSessionWithDetails(TransferSession):
     magnet: Optional[Magnet] = None
     cleaning_records: list['MagnetCleaningRecord'] = []
 
-class MagnetCleaningRecordBase(BaseModel):
+class MagnetCleaningRecordBase(ISTModel):
     magnet_id: int
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
+    
+    @validator('cleaning_timestamp', pre=True)
+    def _parse_cleaning_timestamp(cls, v):
+        return parse_datetime(v)
 
 class MagnetCleaningRecordCreate(MagnetCleaningRecordBase):
     pass
 
-class MagnetCleaningRecordUpdate(BaseModel):
+class MagnetCleaningRecordUpdate(ISTModel):
     magnet_id: Optional[int] = None
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
+    
+    @validator('cleaning_timestamp', pre=True)
+    def _parse_cleaning_timestamp(cls, v):
+        return parse_datetime(v)
 
 class MagnetCleaningRecord(MagnetCleaningRecordBase):
     id: int
@@ -333,15 +327,12 @@ class MagnetCleaningRecord(MagnetCleaningRecordBase):
     after_cleaning_photo: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class MagnetCleaningRecordWithDetails(MagnetCleaningRecord):
     magnet: Magnet
     transfer_session: Optional[TransferSession] = None
 
-class WasteEntryBase(BaseModel):
+class WasteEntryBase(ISTModel):
     transfer_session_id: int
     godown_id: int
     waste_weight: float
@@ -349,11 +340,15 @@ class WasteEntryBase(BaseModel):
     recorded_timestamp: Optional[datetime] = None
     recorded_by: Optional[str] = None
     notes: Optional[str] = None
+    
+    @validator('recorded_timestamp', pre=True)
+    def _parse_recorded_timestamp(cls, v):
+        return parse_datetime(v)
 
 class WasteEntryCreate(WasteEntryBase):
     pass
 
-class WasteEntryUpdate(BaseModel):
+class WasteEntryUpdate(ISTModel):
     waste_weight: Optional[float] = None
     waste_type: Optional[str] = None
     recorded_by: Optional[str] = None
@@ -363,9 +358,6 @@ class WasteEntry(WasteEntryBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class WasteEntryWithDetails(WasteEntry):
     transfer_session: TransferSession

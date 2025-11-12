@@ -153,7 +153,7 @@ async def create_vehicle_entry(
     vehicle_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_ist_now()
+    arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_utc_now()
 
     db_vehicle = models.VehicleEntry(
         vehicle_number=vehicle_number,
@@ -365,7 +365,7 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     lab_test_data = lab_test.dict()
     lab_test_data['document_no'] = doc_number
     lab_test_data['issue_no'] = "01"  # 2-digit issue number
-    lab_test_data['issue_date'] = get_ist_now()
+    lab_test_data['issue_date'] = get_utc_now()
     lab_test_data['department'] = "QA"
 
     # Auto-fetch bill number from vehicle entry
@@ -534,8 +534,8 @@ async def create_unloading_entry(
     after_unloading_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    start_time = parse_ist_datetime(unloading_start_time) if unloading_start_time else get_ist_now()
-    end_time = parse_ist_datetime(unloading_end_time) if unloading_end_time else get_ist_now()
+    start_time = parse_ist_datetime(unloading_start_time) if unloading_start_time else get_utc_now()
+    end_time = parse_ist_datetime(unloading_end_time) if unloading_end_time else get_utc_now()
 
     db_entry = models.UnloadingEntry(
         vehicle_entry_id=vehicle_entry_id,
@@ -906,7 +906,7 @@ async def create_magnet_cleaning_record(
 
     # Get current IST time for logging
     ist_now = datetime.now(IST)
-    utc_now = get_ist_now()
+    utc_now = get_utc_now()
 
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
@@ -1044,7 +1044,7 @@ def start_transfer_session(
 
     # Get current IST time for logging
     ist_now = datetime.now(IST)
-    utc_now = get_ist_now()
+    utc_now = get_utc_now()
 
     print(f"\n🚀 BACKEND: Starting transfer session")
     print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
@@ -1103,7 +1103,7 @@ def stop_transfer_session(
 
     # Get current UTC time for database storage
     utc_now = get_utc_now()
-    ist_now = get_ist_now()
+    ist_now = datetime.now(IST)
 
     print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
     print(f"   Current IST time: {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
