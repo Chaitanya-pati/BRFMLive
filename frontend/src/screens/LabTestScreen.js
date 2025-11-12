@@ -23,7 +23,7 @@ export default function LabTestScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
-  
+
   const [labTests, setLabTests] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -34,7 +34,7 @@ export default function LabTestScreen({ navigation }) {
   const [currentLabTest, setCurrentLabTest] = useState(null);
   const [vehicleSearchText, setVehicleSearchText] = useState("");
   const [vehicleFilterType, setVehicleFilterType] = useState("vehicle"); // 'vehicle' or 'supplier'
-  
+
   // Raise Claim Modal states
   const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
   const [selectedLabTestForClaim, setSelectedLabTestForClaim] = useState(null);
@@ -50,9 +50,9 @@ export default function LabTestScreen({ navigation }) {
     test_date: new Date(),
     wheat_variety: "",
     bill_number: "",
-    document_no: "",
-    issue_no: "01",
-    issue_date: new Date(),
+    // document_no: "", // Removed
+    // issue_no: "01", // Removed
+    // issue_date: new Date(), // Removed
     department: "QA",
     // Basic Parameters
     moisture: "",
@@ -125,9 +125,9 @@ export default function LabTestScreen({ navigation }) {
   // Filter vehicles based on search text and filter type
   const filteredVehicles = vehicles.filter((vehicle) => {
     if (!vehicleSearchText) return true;
-    
+
     const searchLower = vehicleSearchText.toLowerCase();
-    
+
     if (vehicleFilterType === "vehicle") {
       // Search by vehicle number
       return vehicle.vehicle_number?.toLowerCase().includes(searchLower);
@@ -197,46 +197,18 @@ export default function LabTestScreen({ navigation }) {
     const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
     setSelectedVehicle(vehicle);
 
-    // Generate document number based on today's date and count
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-
-    try {
-      // Get today's lab tests to determine the next document number
-      const response = await labTestApi.getAll();
-      const todayTests = response.data.filter((test) => {
-        const createdDate = new Date(test.created_at)
-          .toISOString()
-          .split("T")[0];
-        return createdDate === todayStr;
-      });
-
-      // Generate 3-digit document number
-      const docNumber = String(todayTests.length + 1).padStart(3, "0");
-
-      setFormData((prev) => ({
-        ...prev,
-        vehicle_entry_id: vehicleId,
-        bill_number: vehicle?.bill_no || "",
-        document_no: docNumber,
-        issue_no: "01",
-      }));
-    } catch (error) {
-      console.error("Error generating document number:", error);
-      setFormData((prev) => ({
-        ...prev,
-        vehicle_entry_id: vehicleId,
-        bill_number: vehicle?.bill_no || "",
-        document_no: "001",
-        issue_no: "01",
-      }));
-    }
+    // Removed document number and issue number generation
+    setFormData((prev) => ({
+      ...prev,
+      vehicle_entry_id: vehicleId,
+      bill_number: vehicle?.bill_no || "",
+    }));
   };
 
   const openAddModal = async () => {
     // Load only AVAILABLE vehicles for add mode
     await loadVehicles();
-    
+
     setEditMode(false);
     setCurrentLabTest(null);
     setVehicleSearchText("");
@@ -246,9 +218,9 @@ export default function LabTestScreen({ navigation }) {
       test_date: new Date(),
       wheat_variety: "",
       bill_number: "",
-      document_no: "",
-      issue_no: "01",
-      issue_date: new Date(),
+      // document_no: "", // Removed
+      // issue_no: "01", // Removed
+      // issue_date: new Date(), // Removed
       department: "QA",
       moisture: "",
       hectoliter_weight: "",
@@ -388,7 +360,7 @@ export default function LabTestScreen({ navigation }) {
 
       // Close the lab test modal
       setModalVisible(false);
-      
+
       // Reload lab tests
       await loadLabTests();
       await loadVehicles();
@@ -664,12 +636,6 @@ export default function LabTestScreen({ navigation }) {
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>
       </div>
-      <div class="doc-info">
-        <div><strong>Document No:</strong> ${formData.document_no || "001"}</div>
-        <div><strong>Issue No:</strong> ${formData.issue_no}</div>
-        <div><strong>Issue Date:</strong> ${formData.issue_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
-        <div><strong>Dept.:</strong> ${formData.department}</div>
-      </div>
     </div>
   </div>
 
@@ -905,14 +871,14 @@ export default function LabTestScreen({ navigation }) {
     try {
       const response = await vehicleApi.getAll();
       setVehicles(response.data);
-      
+
       // Find the vehicle for this lab test
       const vehicle = response.data.find(v => v.id === labTest.vehicle_entry_id);
       setSelectedVehicle(vehicle);
     } catch (error) {
       console.error("Error loading vehicles:", error);
     }
-    
+
     setEditMode(true);
     setCurrentLabTest(labTest);
     setVehicleSearchText("");
@@ -922,9 +888,9 @@ export default function LabTestScreen({ navigation }) {
       test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
       wheat_variety: labTest.wheat_variety || "",
       bill_number: labTest.bill_number || "",
-      document_no: labTest.document_no || "",
-      issue_no: labTest.issue_no || "01",
-      issue_date: labTest.issue_date ? new Date(labTest.issue_date) : new Date(),
+      // document_no: labTest.document_no || "", // Removed
+      // issue_no: labTest.issue_no || "01", // Removed
+      // issue_date: labTest.issue_date ? new Date(labTest.issue_date) : new Date(), // Removed
       department: labTest.department || "QA",
       moisture: labTest.moisture?.toString() || "",
       hectoliter_weight: labTest.test_weight?.toString() || "",
@@ -953,7 +919,7 @@ export default function LabTestScreen({ navigation }) {
       approved: false,
       tested_by: labTest.tested_by || "",
     });
-    
+
     setModalVisible(true);
   };
 
@@ -1000,7 +966,7 @@ export default function LabTestScreen({ navigation }) {
         claim_date: claimFormData.claim_date.toISOString(),
         remarks: claimFormData.remarks || null,
       });
-      
+
       notify.showSuccess("Claim raised successfully");
       setRaiseClaimModalVisible(false);
       setClaimFormData({
@@ -1131,7 +1097,7 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Select Vehicle *</Text>
-                  
+
                   {/* Filter Type Selection */}
                   <View style={styles.filterTypeContainer}>
                     <TouchableOpacity
@@ -1203,7 +1169,7 @@ export default function LabTestScreen({ navigation }) {
                       ))}
                     </Picker>
                   </View>
-                  
+
                   {vehicleSearchText && filteredVehicles.length === 0 && (
                     <Text style={styles.noResultsText}>
                       No vehicles found matching "{vehicleSearchText}"

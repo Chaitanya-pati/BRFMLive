@@ -413,30 +413,8 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
 
-    # Auto-generate document number based on today's date in IST
-    ist_now = datetime.now(IST)
-    today = ist_now.date()
-    # Convert to UTC for database query
-    today_start_ist = IST.localize(datetime.combine(today, datetime.min.time()))
-    today_end_ist = IST.localize(datetime.combine(today, datetime.max.time()))
-    today_start = today_start_ist.astimezone(pytz.UTC).replace(tzinfo=None)
-    today_end = today_end_ist.astimezone(pytz.UTC).replace(tzinfo=None)
-
-    # Count today's lab tests to determine next document number
-    today_tests_count = db.query(models.LabTest).filter(
-        models.LabTest.created_at >= today_start,
-        models.LabTest.created_at <= today_end
-    ).count()
-
-    # Generate 3-digit document number (001, 002, etc.)
-    doc_number = str(today_tests_count + 1).zfill(3)
-
-    # Create lab test with auto-generated fields
+    # Create lab test
     lab_test_data = lab_test.dict()
-    lab_test_data['document_no'] = doc_number
-    lab_test_data['issue_no'] = "01"  # 2-digit issue number
-    lab_test_data['issue_date'] = get_utc_now()
-    lab_test_data['department'] = "QA"
 
     # Auto-fetch bill number from vehicle entry
     if not lab_test_data.get('bill_number'):
