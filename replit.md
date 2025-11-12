@@ -65,9 +65,14 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 - `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
 - Connection pooling for database reliability.
 
-## Recent Changes (October 2025)
+## Recent Changes (November 2025)
 
-### Database Fixes
+### Bug Fixes (November 12, 2025)
+- **Fixed Gate Entry Form Notifications**: Removed mock `showNotification` function in VehicleEntryScreen.js that was preventing user feedback. The form now properly displays error and success messages using the actual notification utility, making it clear when gate entries are saved successfully or when validation errors occur.
+- **Added Sample Suppliers**: Manually added 3 supplier records to the database for testing (Rajasthan Grains Ltd, Punjab Wheat Suppliers, Maharashtra Agro Products).
+- **Fixed Missing Database Columns**: Manually added missing columns to vehicle_entries, lab_tests, and suppliers tables that weren't created by migrations.
+
+### Database Fixes (October 2025)
 - Fixed Alembic migration conflicts by resolving multiple heads
 - Added missing columns to `lab_tests` table (document_no, issue_no, issue_date, department, wheat_variety, bill_number, category)
 - Changed Bin and Magnet status columns from Enum to String(20) to resolve enum type mismatches
