@@ -349,21 +349,18 @@ export default function VehicleEntryScreen() {
               value={formData.vehicle_state_code}
               onChangeText={(text) => setFormData({ ...formData, vehicle_state_code: text.toUpperCase() })}
               placeholder="KA"
-              style={styles.vehicleNumberPart}
             />
             <InputField
               label="Second Part"
               value={formData.vehicle_second_part}
               onChangeText={(text) => setFormData({ ...formData, vehicle_second_part: text })}
               placeholder="01"
-              style={styles.vehicleNumberPart}
             />
             <InputField
               label="Third Part"
               value={formData.vehicle_third_part}
               onChangeText={(text) => setFormData({ ...formData, vehicle_third_part: text.toUpperCase() })}
               placeholder="AB-1234"
-              style={styles.vehicleNumberPartLarge}
             />
           </View>
 
@@ -555,15 +552,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   vehicleNumberContainer: {
-    flexDirection: 'row',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 12,
     marginBottom: 12,
-  },
-  vehicleNumberPart: {
-    flex: 1,
-  },
-  vehicleNumberPartLarge: {
-    flex: 2,
   },
   imageSection: {
     marginBottom: 12,
