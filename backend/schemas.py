@@ -61,6 +61,8 @@ class VehicleEntryBase(ISTModel):
     driver_name: Optional[str] = None
     driver_phone: Optional[str] = None
     arrival_time: Optional[datetime] = None
+    empty_weight: Optional[float] = None
+    gross_weight: Optional[float] = None
     notes: Optional[str] = None
     
     @validator('arrival_time', pre=True)
@@ -166,6 +168,7 @@ class ClaimWithLabTest(Claim):
 class GodownMasterBase(ISTModel):
     name: str
     type: str
+    current_storage: Optional[float] = 0.0
 
 class GodownMasterCreate(GodownMasterBase):
     pass

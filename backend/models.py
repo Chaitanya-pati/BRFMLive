@@ -70,6 +70,8 @@ class VehicleEntry(Base):
     driver_name = Column(String(255))
     driver_phone = Column(String(20))
     arrival_time = Column(DateTime, default=get_utc_now)
+    empty_weight = Column(Float)
+    gross_weight = Column(Float)
     supplier_bill_photo = Column(LargeBinary)
     vehicle_photo_front = Column(LargeBinary)
     vehicle_photo_back = Column(LargeBinary)

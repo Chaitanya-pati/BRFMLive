@@ -38,7 +38,6 @@ export default function MasterViewScreen({ navigation }) {
 
   const [godownFormData, setGodownFormData] = useState({
     name: '',
-    capacity: '',
     type: ''
   });
 
@@ -182,7 +181,7 @@ export default function MasterViewScreen({ navigation }) {
     setEditMode(false);
     setCurrentItem(null);
     if (activeTab === 'godown') {
-      setGodownFormData({ name: '', capacity: '', type: '' });
+      setGodownFormData({ name: '', type: '' });
       setCurrentGodown(null);
     } else {
       // Reset supplier form data and related states
@@ -211,7 +210,6 @@ export default function MasterViewScreen({ navigation }) {
     if (activeTab === 'godown') {
       setGodownFormData({
         name: item.name,
-        capacity: item.capacity.toString(),
         type: item.type
       });
       setCurrentGodown(item);
@@ -362,7 +360,6 @@ export default function MasterViewScreen({ navigation }) {
   const godownColumns = [
     { field: 'id', label: 'ID', flex: 0.5 },
     { field: 'name', label: 'Name', flex: 1.5 },
-    { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
     { field: 'type', label: 'Type', flex: 1 },
     { field: 'current_storage', label: 'Current Storage (tons)', flex: 1.2 },
   ];
@@ -408,7 +405,6 @@ export default function MasterViewScreen({ navigation }) {
     setCurrentGodown(null);
     setGodownFormData({
       name: '',
-      capacity: '',
       type: ''
     });
     setModalVisible(true);
@@ -419,7 +415,6 @@ export default function MasterViewScreen({ navigation }) {
     setCurrentGodown(godown);
     setGodownFormData({
       name: godown.name,
-      capacity: godown.capacity.toString(),
       type: godown.type
     });
     setActiveTab('godown');
@@ -427,7 +422,7 @@ export default function MasterViewScreen({ navigation }) {
   };
 
   const handleGodownSubmit = async () => {
-    if (!godownFormData.name || !godownFormData.capacity || !godownFormData.type) {
+    if (!godownFormData.name || !godownFormData.type) {
       notify.showWarning('Please fill all required fields');
       return;
     }
@@ -436,7 +431,6 @@ export default function MasterViewScreen({ navigation }) {
     try {
       const payload = {
         name: godownFormData.name,
-        capacity: parseFloat(godownFormData.capacity),
         type: godownFormData.type,
         current_storage: editMode ? currentGodown?.current_storage || 0 : 0,
       };
@@ -693,15 +687,6 @@ export default function MasterViewScreen({ navigation }) {
                   value={godownFormData.name}
                   onChangeText={(text) => setGodownFormData({ ...godownFormData, name: text })}
                   placeholder="Enter godown name"
-                />
-
-                <Text style={styles.label}>Capacity (in tons) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={godownFormData.capacity}
-                  onChangeText={(text) => setGodownFormData({ ...godownFormData, capacity: text })}
-                  placeholder="Enter capacity"
-                  keyboardType="numeric"
                 />
 
                 <Text style={styles.label}>Type *</Text>

@@ -39,6 +39,8 @@ export default function VehicleEntryScreen() {
     driver_name: '',
     driver_phone: '',
     arrival_time: new Date(),
+    empty_weight: '',
+    gross_weight: '',
     notes: '',
     supplier_bill_photo: null,
     vehicle_photo_front: null,
@@ -91,6 +93,8 @@ export default function VehicleEntryScreen() {
       formDataToSend.append('driver_name', formData.driver_name || '');
       formDataToSend.append('driver_phone', formData.driver_phone || '');
       formDataToSend.append('arrival_time', toISTISOString(formData.arrival_time));
+      formDataToSend.append('empty_weight', formData.empty_weight || '0');
+      formDataToSend.append('gross_weight', formData.gross_weight || '0');
       formDataToSend.append('notes', formData.notes || '');
 
       if (formData.supplier_bill_photo) {
@@ -325,6 +329,8 @@ export default function VehicleEntryScreen() {
       driver_name: vehicle.driver_name || '',
       driver_phone: vehicle.driver_phone || '',
       arrival_time: vehicle.arrival_time ? new Date(vehicle.arrival_time) : new Date(),
+      empty_weight: vehicle.empty_weight?.toString() || '',
+      gross_weight: vehicle.gross_weight?.toString() || '',
       notes: vehicle.notes || '',
       supplier_bill_photo: supplierBillPhoto,
       vehicle_photo_front: vehiclePhotoFront,
@@ -359,6 +365,8 @@ export default function VehicleEntryScreen() {
       driver_name: '',
       driver_phone: '',
       arrival_time: new Date(),
+      empty_weight: '',
+      gross_weight: '',
       notes: '',
       supplier_bill_photo: null,
       vehicle_photo_front: null,
@@ -485,6 +493,22 @@ export default function VehicleEntryScreen() {
             value={formData.arrival_time}
             onChange={(date) => setFormData({ ...formData, arrival_time: date })}
             mode="datetime"
+          />
+
+          <InputField
+            label="Empty Weight (kg)"
+            value={formData.empty_weight}
+            onChangeText={(text) => setFormData({ ...formData, empty_weight: text })}
+            placeholder="Enter empty vehicle weight"
+            keyboardType="numeric"
+          />
+
+          <InputField
+            label="Gross Weight (kg)"
+            value={formData.gross_weight}
+            onChangeText={(text) => setFormData({ ...formData, gross_weight: text })}
+            placeholder="Enter gross weight"
+            keyboardType="numeric"
           />
 
           <InputField

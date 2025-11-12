@@ -33,8 +33,6 @@ export default function UnloadingEntryScreen({ navigation }) {
   const [formData, setFormData] = useState({
     vehicle_entry_id: '',
     godown_id: '',
-    gross_weight: '',
-    empty_vehicle_weight: '',
     net_weight: '0',
     unloading_start_time: new Date().toISOString(),
     unloading_end_time: new Date().toISOString(),
@@ -89,17 +87,20 @@ export default function UnloadingEntryScreen({ navigation }) {
     }
   };
 
-  const calculateNetWeight = (gross, empty) => {
-    const grossNum = parseFloat(gross) || 0;
-    const emptyNum = parseFloat(empty) || 0;
-    return (grossNum - emptyNum).toFixed(2);
-  };
-
   const handleVehicleChange = (vehicleId) => {
-    setFormData({ ...formData, vehicle_entry_id: vehicleId });
-
     // Find the selected vehicle and get its lab test category
     const selectedVehicle = vehicles.find(v => v.id === vehicleId);
+    
+    let netWeight = '0';
+    if (selectedVehicle) {
+      // Calculate net weight from vehicle entry's gross and empty weights
+      const grossWeight = parseFloat(selectedVehicle.gross_weight) || 0;
+      const emptyWeight = parseFloat(selectedVehicle.empty_weight) || 0;
+      netWeight = (grossWeight - emptyWeight).toFixed(2);
+    }
+    
+    setFormData({ ...formData, vehicle_entry_id: vehicleId, net_weight: netWeight });
+
     if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
       const category = selectedVehicle.lab_tests[0].category;
       setSelectedVehicleCategory(category);
@@ -115,17 +116,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       setSelectedVehicleCategory(null);
       setFilteredGodowns(godowns);
     }
-  };
-
-  const handleWeightChange = (field, value) => {
-    const newFormData = { ...formData, [field]: value };
-    if (field === 'gross_weight' || field === 'empty_vehicle_weight') {
-      newFormData.net_weight = calculateNetWeight(
-        newFormData.gross_weight,
-        newFormData.empty_vehicle_weight
-      );
-    }
-    setFormData(newFormData);
   };
 
   const pickImage = async (type) => {
@@ -170,8 +160,6 @@ export default function UnloadingEntryScreen({ navigation }) {
     setFormData({
       vehicle_entry_id: '',
       godown_id: '',
-      gross_weight: '',
-      empty_vehicle_weight: '',
       net_weight: '0',
       unloading_start_time: new Date().toISOString(),
       unloading_end_time: new Date().toISOString(),
@@ -189,8 +177,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       id: entry.id,
       vehicle_entry_id: entry.vehicle_entry_id,
       godown_id: entry.godown_id,
-      gross_weight: entry.gross_weight.toString(),
-      empty_vehicle_weight: entry.empty_vehicle_weight.toString(),
       net_weight: entry.net_weight.toString(),
       unloading_start_time: new Date(entry.unloading_start_time),
       unloading_end_time: new Date(entry.unloading_end_time),
@@ -245,8 +231,7 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.vehicle_entry_id || !formData.godown_id || 
-          !formData.gross_weight || !formData.empty_vehicle_weight) {
+      if (!formData.vehicle_entry_id || !formData.godown_id) {
         notify.showWarning('Please fill all required fields');
         return;
       }
@@ -254,8 +239,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       const submitFormData = new FormData();
       submitFormData.append('vehicle_entry_id', formData.vehicle_entry_id);
       submitFormData.append('godown_id', formData.godown_id);
-      submitFormData.append('gross_weight', formData.gross_weight);
-      submitFormData.append('empty_vehicle_weight', formData.empty_vehicle_weight);
       submitFormData.append('net_weight', formData.net_weight);
       submitFormData.append('unloading_start_time', formData.unloading_start_time);
       submitFormData.append('unloading_end_time', formData.unloading_end_time);
@@ -340,7 +323,6 @@ export default function UnloadingEntryScreen({ navigation }) {
       width: 200,
       render: (value) => value?.name || 'N/A'
     },
-    { key: 'gross_weight', label: 'Gross Weight (kg)', field: 'gross_weight', width: 150 },
     { key: 'net_weight', label: 'Net Weight (kg)', field: 'net_weight', width: 150 },
     { 
       key: 'images', 
@@ -416,25 +398,7 @@ export default function UnloadingEntryScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Gross Weight (kg) *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.gross_weight}
-            onChangeText={(text) => handleWeightChange('gross_weight', text)}
-            placeholder="Enter gross weight"
-            keyboardType="numeric"
-          />
-
-          <Text style={styles.label}>Empty Vehicle Weight (kg) *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.empty_vehicle_weight}
-            onChangeText={(text) => handleWeightChange('empty_vehicle_weight', text)}
-            placeholder="Enter empty vehicle weight"
-            keyboardType="numeric"
-          />
-
-          <Text style={styles.label}>Net Weight (kg) - Auto-calculated</Text>
+          <Text style={styles.label}>Net Weight (kg) - From Gate Entry</Text>
           <TextInput
             style={[styles.input, styles.disabledInput]}
             value={formData.net_weight}
