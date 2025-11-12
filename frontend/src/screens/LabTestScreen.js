@@ -1060,36 +1060,6 @@ export default function LabTestScreen({ navigation }) {
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
-            {/* Document Header Info */}
-            <View style={styles.docHeaderInfo}>
-              <View style={styles.docHeaderRow}>
-                <View style={styles.docHeaderItem}>
-                  <Text style={styles.docHeaderLabel}>Document No:</Text>
-                  <Text style={styles.docHeaderValue}>
-                    {formData.document_no || "---"}
-                  </Text>
-                </View>
-                <View style={styles.docHeaderItem}>
-                  <Text style={styles.docHeaderLabel}>Issue No:</Text>
-                  <Text style={styles.docHeaderValue}>{formData.issue_no}</Text>
-                </View>
-              </View>
-              <View style={styles.docHeaderRow}>
-                <View style={styles.docHeaderItem}>
-                  <Text style={styles.docHeaderLabel}>Issue Date:</Text>
-                  <Text style={styles.docHeaderValue}>
-                    {formData.issue_date.toLocaleDateString()}
-                  </Text>
-                </View>
-                <View style={styles.docHeaderItem}>
-                  <Text style={styles.docHeaderLabel}>Department:</Text>
-                  <Text style={styles.docHeaderValue}>
-                    {formData.department}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
             {/* Basic Information */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
@@ -1701,34 +1671,6 @@ const styles = StyleSheet.create({
   },
   form: {
     paddingBottom: 20,
-  },
-  docHeaderInfo: {
-    backgroundColor: "#f0f0f0",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  docHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  docHeaderItem: {
-    flex: 1,
-    minWidth: 150,
-  },
-  docHeaderLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: "600",
-  },
-  docHeaderValue: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    fontWeight: "500",
-    marginTop: 2,
   },
   section: {
     marginBottom: 24,
