@@ -57,6 +57,9 @@ export default function VehicleEntryScreen() {
     vehicle_photo_front: null,
     vehicle_photo_back: null,
     vehicle_photo_side: null,
+    internal_weighment_slip: null,
+    client_weighment_slip: null,
+    transportation_copy: null,
   });
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -163,6 +166,51 @@ export default function VehicleEntryScreen() {
         }
       }
 
+      if (formData.internal_weighment_slip) {
+        const photoUri = formData.internal_weighment_slip.uri || formData.internal_weighment_slip;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('internal_weighment_slip', blob, 'internal_weighment.jpg');
+        } else {
+          formDataToSend.append('internal_weighment_slip', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'internal_weighment.jpg',
+          });
+        }
+      }
+
+      if (formData.client_weighment_slip) {
+        const photoUri = formData.client_weighment_slip.uri || formData.client_weighment_slip;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('client_weighment_slip', blob, 'client_weighment.jpg');
+        } else {
+          formDataToSend.append('client_weighment_slip', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'client_weighment.jpg',
+          });
+        }
+      }
+
+      if (formData.transportation_copy) {
+        const photoUri = formData.transportation_copy.uri || formData.transportation_copy;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('transportation_copy', blob, 'transportation.jpg');
+        } else {
+          formDataToSend.append('transportation_copy', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'transportation.jpg',
+          });
+        }
+      }
+
       if (editingVehicle) {
         await vehicleApi.update(editingVehicle.id, formDataToSend);
         showNotification('Vehicle entry updated successfully!', 'success');
@@ -244,6 +292,42 @@ export default function VehicleEntryScreen() {
       }
       vehiclePhotoSide = { uri: photoUrl };
     }
+
+    let internalWeighmentSlip = null;
+    if (vehicle.internal_weighment_slip) {
+      let photoUrl = vehicle.internal_weighment_slip;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
+      }
+      internalWeighmentSlip = { uri: photoUrl };
+    }
+
+    let clientWeighmentSlip = null;
+    if (vehicle.client_weighment_slip) {
+      let photoUrl = vehicle.client_weighment_slip;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
+      }
+      clientWeighmentSlip = { uri: photoUrl };
+    }
+
+    let transportationCopy = null;
+    if (vehicle.transportation_copy) {
+      let photoUrl = vehicle.transportation_copy;
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
+      }
+      transportationCopy = { uri: photoUrl };
+    }
     
     setFormData({
       vehicle_state_code: stateCode,
@@ -259,6 +343,9 @@ export default function VehicleEntryScreen() {
       vehicle_photo_front: vehiclePhotoFront,
       vehicle_photo_back: vehiclePhotoBack,
       vehicle_photo_side: vehiclePhotoSide,
+      internal_weighment_slip: internalWeighmentSlip,
+      client_weighment_slip: clientWeighmentSlip,
+      transportation_copy: transportationCopy,
     });
     setIsModalVisible(true);
   };
@@ -290,6 +377,9 @@ export default function VehicleEntryScreen() {
       vehicle_photo_front: null,
       vehicle_photo_back: null,
       vehicle_photo_side: null,
+      internal_weighment_slip: null,
+      client_weighment_slip: null,
+      transportation_copy: null,
     });
     setEditingVehicle(null);
     setIsModalVisible(false);
@@ -518,6 +608,84 @@ export default function VehicleEntryScreen() {
             ) : (
               <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={styles.uploadPlaceholder}>
                 <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Side Photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Internal Weighment Slip</Text>
+            {formData.internal_weighment_slip ? (
+              <View>
+                <Image 
+                  source={{ uri: formData.internal_weighment_slip.uri }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load internal weighment slip:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Internal weighment slip loaded successfully')}
+                />
+                <Text style={styles.imageUrlDebug}>URL: {formData.internal_weighment_slip.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={styles.changeImageButton}>
+                  <Text style={styles.changeImageText}>Change Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Internal Weighment Slip</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Client Side Weighment Slip</Text>
+            {formData.client_weighment_slip ? (
+              <View>
+                <Image 
+                  source={{ uri: formData.client_weighment_slip.uri }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load client weighment slip:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Client weighment slip loaded successfully')}
+                />
+                <Text style={styles.imageUrlDebug}>URL: {formData.client_weighment_slip.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={styles.changeImageButton}>
+                  <Text style={styles.changeImageText}>Change Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Client Weighment Slip</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Transportation Copy</Text>
+            {formData.transportation_copy ? (
+              <View>
+                <Image 
+                  source={{ uri: formData.transportation_copy.uri }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load transportation copy:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Transportation copy loaded successfully')}
+                />
+                <Text style={styles.imageUrlDebug}>URL: {formData.transportation_copy.uri}</Text>
+                <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={styles.changeImageButton}>
+                  <Text style={styles.changeImageText}>Change Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Transportation Copy</Text>
               </TouchableOpacity>
             )}
           </View>

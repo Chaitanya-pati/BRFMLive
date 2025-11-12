@@ -153,6 +153,9 @@ async def create_vehicle_entry(
     vehicle_photo_front: Optional[UploadFile] = File(None),
     vehicle_photo_back: Optional[UploadFile] = File(None),
     vehicle_photo_side: Optional[UploadFile] = File(None),
+    internal_weighment_slip: Optional[UploadFile] = File(None),
+    client_weighment_slip: Optional[UploadFile] = File(None),
+    transportation_copy: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_utc_now()
@@ -182,6 +185,18 @@ async def create_vehicle_entry(
     if vehicle_photo_side:
         side_path = await save_upload_file(vehicle_photo_side)
         db_vehicle.vehicle_photo_side = side_path.encode('utf-8')
+
+    if internal_weighment_slip:
+        internal_path = await save_upload_file(internal_weighment_slip)
+        db_vehicle.internal_weighment_slip = internal_path.encode('utf-8')
+
+    if client_weighment_slip:
+        client_path = await save_upload_file(client_weighment_slip)
+        db_vehicle.client_weighment_slip = client_path.encode('utf-8')
+
+    if transportation_copy:
+        transport_path = await save_upload_file(transportation_copy)
+        db_vehicle.transportation_copy = transport_path.encode('utf-8')
 
     db.add(db_vehicle)
     db.commit()
@@ -237,6 +252,12 @@ def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(g
             vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode('utf-8')
         if vehicle.vehicle_photo_side and isinstance(vehicle.vehicle_photo_side, bytes):
             vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode('utf-8')
+        if vehicle.internal_weighment_slip and isinstance(vehicle.internal_weighment_slip, bytes):
+            vehicle.internal_weighment_slip = vehicle.internal_weighment_slip.decode('utf-8')
+        if vehicle.client_weighment_slip and isinstance(vehicle.client_weighment_slip, bytes):
+            vehicle.client_weighment_slip = vehicle.client_weighment_slip.decode('utf-8')
+        if vehicle.transportation_copy and isinstance(vehicle.transportation_copy, bytes):
+            vehicle.transportation_copy = vehicle.transportation_copy.decode('utf-8')
 
     return vehicles
 
@@ -255,6 +276,12 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
         vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode('utf-8')
     if vehicle.vehicle_photo_side and isinstance(vehicle.vehicle_photo_side, bytes):
         vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode('utf-8')
+    if vehicle.internal_weighment_slip and isinstance(vehicle.internal_weighment_slip, bytes):
+        vehicle.internal_weighment_slip = vehicle.internal_weighment_slip.decode('utf-8')
+    if vehicle.client_weighment_slip and isinstance(vehicle.client_weighment_slip, bytes):
+        vehicle.client_weighment_slip = vehicle.client_weighment_slip.decode('utf-8')
+    if vehicle.transportation_copy and isinstance(vehicle.transportation_copy, bytes):
+        vehicle.transportation_copy = vehicle.transportation_copy.decode('utf-8')
 
     return vehicle
 
@@ -272,6 +299,9 @@ async def update_vehicle_entry(
     vehicle_photo_front: Optional[UploadFile] = File(None),
     vehicle_photo_back: Optional[UploadFile] = File(None),
     vehicle_photo_side: Optional[UploadFile] = File(None),
+    internal_weighment_slip: Optional[UploadFile] = File(None),
+    client_weighment_slip: Optional[UploadFile] = File(None),
+    transportation_copy: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     db_vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_id).first()
@@ -306,6 +336,18 @@ async def update_vehicle_entry(
     if vehicle_photo_side and vehicle_photo_side.filename:
         side_path = await save_upload_file(vehicle_photo_side)
         db_vehicle.vehicle_photo_side = side_path.encode('utf-8')
+
+    if internal_weighment_slip and internal_weighment_slip.filename:
+        internal_path = await save_upload_file(internal_weighment_slip)
+        db_vehicle.internal_weighment_slip = internal_path.encode('utf-8')
+
+    if client_weighment_slip and client_weighment_slip.filename:
+        client_path = await save_upload_file(client_weighment_slip)
+        db_vehicle.client_weighment_slip = client_path.encode('utf-8')
+
+    if transportation_copy and transportation_copy.filename:
+        transport_path = await save_upload_file(transportation_copy)
+        db_vehicle.transportation_copy = transport_path.encode('utf-8')
 
     db.commit()
     db.refresh(db_vehicle)

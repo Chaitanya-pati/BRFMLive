@@ -74,6 +74,9 @@ class VehicleEntry(VehicleEntryBase):
     vehicle_photo_front: Optional[str] = None
     vehicle_photo_back: Optional[str] = None
     vehicle_photo_side: Optional[str] = None
+    internal_weighment_slip: Optional[str] = None
+    client_weighment_slip: Optional[str] = None
+    transportation_copy: Optional[str] = None
 
 class VehicleEntryWithSupplier(VehicleEntry):
     supplier: Supplier
