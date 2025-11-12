@@ -6,11 +6,10 @@ const getCurrentAPIUrl = () => {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
 
-    // For Replit deployments, use the specific port-based URL
+    // For Replit deployments, use the same hostname with port 8000
     if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Replace the port in the hostname from 5000 to 8000
-      const apiHostname = hostname.replace('-5000.', '-8000.');
-      return `${protocol}//${apiHostname}/api`;
+      // Use the same domain but with port 8000 for the backend
+      return `${protocol}//${hostname}:8000/api`;
     }
 
     // For local development

@@ -68,6 +68,14 @@ app.add_middleware(
     expose_headers=["*"],  # Expose all headers
 )
 
+@app.middleware("http")
+async def add_cache_control_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
