@@ -32,6 +32,8 @@ export default function LabTestScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentLabTest, setCurrentLabTest] = useState(null);
+  const [vehicleSearchText, setVehicleSearchText] = useState("");
+  const [vehicleFilterType, setVehicleFilterType] = useState("vehicle"); // 'vehicle' or 'supplier'
   
   // Raise Claim Modal states
   const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
@@ -119,6 +121,21 @@ export default function LabTestScreen({ navigation }) {
     formData.immature_wheat,
     formData.broken_wheat,
   ]);
+
+  // Filter vehicles based on search text and filter type
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    if (!vehicleSearchText) return true;
+    
+    const searchLower = vehicleSearchText.toLowerCase();
+    
+    if (vehicleFilterType === "vehicle") {
+      // Search by vehicle number
+      return vehicle.vehicle_number?.toLowerCase().includes(searchLower);
+    } else {
+      // Search by supplier name
+      return vehicle.supplier?.supplier_name?.toLowerCase().includes(searchLower);
+    }
+  });
 
   const loadVehicles = async () => {
     try {
@@ -222,6 +239,8 @@ export default function LabTestScreen({ navigation }) {
     
     setEditMode(false);
     setCurrentLabTest(null);
+    setVehicleSearchText("");
+    setVehicleFilterType("vehicle");
     setFormData({
       vehicle_entry_id: "",
       test_date: new Date(),
@@ -896,6 +915,8 @@ export default function LabTestScreen({ navigation }) {
     
     setEditMode(true);
     setCurrentLabTest(labTest);
+    setVehicleSearchText("");
+    setVehicleFilterType("vehicle");
     setFormData({
       vehicle_entry_id: labTest.vehicle_entry_id?.toString() || "",
       test_date: labTest.test_date ? new Date(labTest.test_date) : new Date(),
@@ -1110,6 +1131,62 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.row}>
                 <View style={styles.field}>
                   <Text style={styles.label}>Select Vehicle *</Text>
+                  
+                  {/* Filter Type Selection */}
+                  <View style={styles.filterTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.filterTypeButton,
+                        vehicleFilterType === "vehicle" && styles.filterTypeButtonActive,
+                      ]}
+                      onPress={() => {
+                        setVehicleFilterType("vehicle");
+                        setVehicleSearchText("");
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.filterTypeText,
+                          vehicleFilterType === "vehicle" && styles.filterTypeTextActive,
+                        ]}
+                      >
+                        By Vehicle Number
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.filterTypeButton,
+                        vehicleFilterType === "supplier" && styles.filterTypeButtonActive,
+                      ]}
+                      onPress={() => {
+                        setVehicleFilterType("supplier");
+                        setVehicleSearchText("");
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.filterTypeText,
+                          vehicleFilterType === "supplier" && styles.filterTypeTextActive,
+                        ]}
+                      >
+                        By Supplier Name
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Search Input */}
+                  <TextInput
+                    style={styles.input}
+                    value={vehicleSearchText}
+                    onChangeText={setVehicleSearchText}
+                    placeholder={
+                      vehicleFilterType === "vehicle"
+                        ? "Search by vehicle number..."
+                        : "Search by supplier name..."
+                    }
+                  />
+
+                  {/* Vehicle Picker with Filtered Results */}
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.vehicle_entry_id?.toString() || ""}
@@ -1117,7 +1194,7 @@ export default function LabTestScreen({ navigation }) {
                       style={styles.picker}
                     >
                       <Picker.Item label="Select Vehicle" value="" />
-                      {vehicles.map((vehicle) => (
+                      {filteredVehicles.map((vehicle) => (
                         <Picker.Item
                           key={vehicle.id}
                           label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || "N/A"}`}
@@ -1126,6 +1203,12 @@ export default function LabTestScreen({ navigation }) {
                       ))}
                     </Picker>
                   </View>
+                  
+                  {vehicleSearchText && filteredVehicles.length === 0 && (
+                    <Text style={styles.noResultsText}>
+                      No vehicles found matching "{vehicleSearchText}"
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.field}>
@@ -1903,5 +1986,38 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: 16,
+  },
+  filterTypeContainer: {
+    flexDirection: "row",
+    marginBottom: 8,
+    gap: 8,
+  },
+  filterTypeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+  },
+  filterTypeButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterTypeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  filterTypeTextActive: {
+    color: colors.onPrimary,
+  },
+  noResultsText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+    marginTop: 4,
   },
 });
