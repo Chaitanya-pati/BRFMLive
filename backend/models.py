@@ -147,7 +147,6 @@ class GodownMaster(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    capacity = Column(Integer, nullable=False)
     type = Column(String(50), nullable=False)
     current_storage = Column(Float, default=0.0)
     created_at = Column(DateTime, default=get_utc_now)

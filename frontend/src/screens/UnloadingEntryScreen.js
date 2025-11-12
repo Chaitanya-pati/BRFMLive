@@ -380,7 +380,7 @@ export default function UnloadingEntryScreen({ navigation }) {
         title={formData.id ? "Edit Unloading Entry" : "Add Unloading Entry"}
       >
         <ScrollView style={styles.modalContent}>
-          <Text style={styles.label}>Vehicle (Lab Tested) *</Text>
+          <Text style={styles.label}>Vehicle (Ready for Unloading) *</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.vehicle_entry_id}

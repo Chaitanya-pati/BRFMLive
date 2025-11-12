@@ -165,7 +165,6 @@ class ClaimWithLabTest(Claim):
 
 class GodownMasterBase(ISTModel):
     name: str
-    capacity: int
     type: str
 
 class GodownMasterCreate(GodownMasterBase):
