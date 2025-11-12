@@ -146,6 +146,30 @@ export default function VehicleEntryScreen() {
 
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
+    
+    // Load existing images if available
+    let supplierBillPhoto = null;
+    if (vehicle.supplier_bill_photo) {
+      let billPhotoUrl = vehicle.supplier_bill_photo;
+      if (!billPhotoUrl.startsWith('http')) {
+        billPhotoUrl = billPhotoUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${billPhotoUrl}`
+          : `https://brfmlive.onrender.com/${billPhotoUrl}`;
+      }
+      supplierBillPhoto = { uri: billPhotoUrl };
+    }
+
+    let vehiclePhoto = null;
+    if (vehicle.vehicle_photo) {
+      let vehiclePhotoUrl = vehicle.vehicle_photo;
+      if (!vehiclePhotoUrl.startsWith('http')) {
+        vehiclePhotoUrl = vehiclePhotoUrl.startsWith('/') 
+          ? `https://brfmlive.onrender.com${vehiclePhotoUrl}`
+          : `https://brfmlive.onrender.com/${vehiclePhotoUrl}`;
+      }
+      vehiclePhoto = { uri: vehiclePhotoUrl };
+    }
+    
     setFormData({
       vehicle_number: vehicle.vehicle_number,
       supplier_id: vehicle.supplier_id,
@@ -154,8 +178,8 @@ export default function VehicleEntryScreen() {
       driver_phone: vehicle.driver_phone || '',
       arrival_time: vehicle.arrival_time ? new Date(vehicle.arrival_time) : new Date(),
       notes: vehicle.notes || '',
-      supplier_bill_photo: null,
-      vehicle_photo: null,
+      supplier_bill_photo: supplierBillPhoto,
+      vehicle_photo: vehiclePhoto,
     });
     setIsModalVisible(true);
   };
