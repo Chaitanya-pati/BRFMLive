@@ -147,8 +147,10 @@ export default function VehicleEntryScreen() {
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
     
-    // Get the base URL from the API client or use local backend
-    const baseUrl = 'http://0.0.0.0:8000';
+    // Get the base URL - use current hostname for browser compatibility
+    const baseUrl = Platform.OS === 'web' 
+      ? `${window.location.protocol}//${window.location.hostname}:8000`
+      : 'http://localhost:8000';
     
     // Load existing images if available
     let supplierBillPhoto = null;
