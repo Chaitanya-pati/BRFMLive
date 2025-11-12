@@ -302,23 +302,19 @@ export default function LabTestScreen({ navigation }) {
         notify.showSuccess("Lab test created successfully");
       }
 
+      // Show download/print options before closing modal
+      const shouldDownload = window.confirm('Lab Test saved successfully!\n\nWould you like to download/print the PDF report now?');
+      
       setModalVisible(false);
       loadLabTests();
       loadVehicles();
 
-      // Show download/print options
-      notify.showConfirm(
-        'Lab Test Saved',
-        'Would you like to download or print the report?',
-        () => {
+      if (shouldDownload) {
+        // Small delay to allow modal to close
+        setTimeout(() => {
           generatePDF();
-        },
-        () => {
-          // User chose not to download/print
-        },
-        'Download/Print',
-        'Close'
-      );
+        }, 100);
+      }
     } catch (error) {
       notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
       console.error(error);
@@ -1550,6 +1546,14 @@ export default function LabTestScreen({ navigation }) {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
+              {selectedVehicle && (
+                <TouchableOpacity
+                  style={[styles.button, styles.downloadButton]}
+                  onPress={generatePDF}
+                >
+                  <Text style={styles.downloadButtonText}>Download PDF</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -1857,6 +1861,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning,
   },
   raiseClaimFormButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  downloadButton: {
+    backgroundColor: "#6c757d",
+  },
+  downloadButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 14,
