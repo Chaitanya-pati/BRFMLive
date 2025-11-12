@@ -39,10 +39,10 @@ export default function LabTestScreen({ navigation }) {
   const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
   const [selectedLabTestForClaim, setSelectedLabTestForClaim] = useState(null);
   const [claimFormData, setClaimFormData] = useState({
-    issue_found: "",
-    category_detected: "",
+    description: "",
+    claim_type: "",
+    claim_amount: "",
     claim_date: new Date(),
-    remarks: "",
   });
 
   const [formData, setFormData] = useState({
@@ -962,8 +962,8 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleRaiseClaim = async () => {
-    if (!claimFormData.issue_found.trim()) {
-      notify.showError("Please enter the issue found");
+    if (!claimFormData.description.trim()) {
+      notify.showError("Please enter the description");
       return;
     }
 
@@ -971,10 +971,10 @@ export default function LabTestScreen({ navigation }) {
       setLoading(true);
       await claimApi.create({
         lab_test_id: selectedLabTestForClaim.id,
-        issue_found: claimFormData.issue_found,
-        category_detected: claimFormData.category_detected || null,
+        description: claimFormData.description,
+        claim_type: claimFormData.claim_type || null,
+        claim_amount: claimFormData.claim_amount ? parseFloat(claimFormData.claim_amount) : null,
         claim_date: claimFormData.claim_date.toISOString(),
-        remarks: claimFormData.remarks || null,
       });
 
       notify.showSuccess("Claim raised successfully");
@@ -1546,14 +1546,6 @@ export default function LabTestScreen({ navigation }) {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              {selectedVehicle && (
-                <TouchableOpacity
-                  style={[styles.button, styles.downloadButton]}
-                  onPress={generatePDF}
-                >
-                  <Text style={styles.downloadButtonText}>Download PDF</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -1601,54 +1593,53 @@ export default function LabTestScreen({ navigation }) {
           </Text>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Issue Found *</Text>
+            <Text style={styles.label}>Description *</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              value={claimFormData.issue_found}
+              value={claimFormData.description}
               onChangeText={(text) =>
-                setClaimFormData({ ...claimFormData, issue_found: text })
+                setClaimFormData({ ...claimFormData, description: text })
               }
-              placeholder="Describe the issue found..."
+              placeholder="Describe the issue..."
               multiline
-              numberOfLines={4}
+              numberOfLines={6}
               textAlignVertical="top"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Category Detected</Text>
+            <Text style={styles.label}>Claim Type</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={claimFormData.category_detected}
+                selectedValue={claimFormData.claim_type}
                 onValueChange={(value) =>
-                  setClaimFormData({ ...claimFormData, category_detected: value })
+                  setClaimFormData({ ...claimFormData, claim_type: value })
                 }
                 style={styles.picker}
               >
-                <Picker.Item label="Select Category" value="" />
-                <Picker.Item label="Quality Issue" value="Quality Issue" />
-                <Picker.Item label="Weight Discrepancy" value="Weight Discrepancy" />
-                <Picker.Item label="Damage" value="Damage" />
-                <Picker.Item label="Contamination" value="Contamination" />
-                <Picker.Item label="Other" value="Other" />
+                <Picker.Item label="Select Claim Type" value="" />
+                <Picker.Item label="Percentage (%)" value="percentage" />
+                <Picker.Item label="Rupees per Kilogram (₹/kg)" value="per_kg" />
               </Picker>
             </View>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Remarks</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={claimFormData.remarks}
-              onChangeText={(text) =>
-                setClaimFormData({ ...claimFormData, remarks: text })
-              }
-              placeholder="Additional remarks (optional)..."
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
+          {claimFormData.claim_type && (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Claim Amount {claimFormData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={claimFormData.claim_amount}
+                onChangeText={(text) =>
+                  setClaimFormData({ ...claimFormData, claim_amount: text })
+                }
+                placeholder={claimFormData.claim_type === "percentage" ? "Enter percentage" : "Enter amount per kg"}
+                keyboardType="numeric"
+              />
+            </View>
+          )}
 
           <View style={styles.claimButtonContainer}>
             <TouchableOpacity

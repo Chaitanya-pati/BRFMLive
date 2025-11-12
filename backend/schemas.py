@@ -15,6 +15,10 @@ class ClaimStatusEnum(str, Enum):
     IN_PROGRESS = "In Progress"
     CLOSED = "Closed"
 
+class ClaimTypeEnum(str, Enum):
+    PERCENTAGE = "percentage"
+    PER_KG = "per_kg"
+
 class BinStatusEnum(str, Enum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
@@ -112,6 +116,7 @@ class LabTestBase(ISTModel):
     category: Optional[str] = None
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
+    raise_claim: Optional[int] = 0
     
     @validator('test_date', pre=True)
     def _parse_dates(cls, v):
@@ -131,10 +136,10 @@ class LabTestWithVehicle(LabTest):
 
 class ClaimBase(ISTModel):
     lab_test_id: int
-    issue_found: str
-    category_detected: Optional[str] = None
+    description: str
+    claim_type: Optional[ClaimTypeEnum] = None
+    claim_amount: Optional[float] = None
     claim_date: Optional[datetime] = None
-    remarks: Optional[str] = None
     
     @validator('claim_date', pre=True)
     def _parse_claim_date(cls, v):
@@ -145,7 +150,9 @@ class ClaimCreate(ClaimBase):
 
 class ClaimUpdate(ISTModel):
     claim_status: Optional[ClaimStatusEnum] = None
-    remarks: Optional[str] = None
+    description: Optional[str] = None
+    claim_type: Optional[ClaimTypeEnum] = None
+    claim_amount: Optional[float] = None
 
 class Claim(ClaimBase):
     id: int

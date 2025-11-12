@@ -28,16 +28,18 @@ export default function ClaimTrackingScreen({ navigation }) {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [updateData, setUpdateData] = useState({
     claim_status: '',
-    remarks: '',
+    description: '',
+    claim_type: '',
+    claim_amount: '',
   });
   const [loading, setLoading] = useState(false);
   const [labTests, setLabTests] = useState([]);
   const [newClaimData, setNewClaimData] = useState({
     lab_test_id: '',
-    issue_found: '',
-    category_detected: '',
+    description: '',
+    claim_type: '',
+    claim_amount: '',
     claim_date: new Date(),
-    remarks: '',
   });
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -71,10 +73,9 @@ export default function ClaimTrackingScreen({ navigation }) {
     if (searchTerm) {
       filtered = filtered.filter(claim =>
         claim.id.toString().includes(searchTerm) ||
-        claim.issue_found?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        claim.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         claim.lab_test?.vehicle_entry?.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.lab_test?.vehicle_entry?.supplier?.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.remarks?.toLowerCase().includes(searchTerm.toLowerCase())
+        claim.lab_test?.vehicle_entry?.supplier?.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -111,7 +112,9 @@ export default function ClaimTrackingScreen({ navigation }) {
     setSelectedClaim(claim);
     setUpdateData({
       claim_status: claim.claim_status,
-      remarks: claim.remarks || '',
+      description: claim.description || '',
+      claim_type: claim.claim_type || '',
+      claim_amount: claim.claim_amount ? claim.claim_amount.toString() : '',
     });
     setUpdateModalVisible(true);
   };
@@ -123,7 +126,9 @@ export default function ClaimTrackingScreen({ navigation }) {
     try {
       await claimApi.update(selectedClaim.id, {
         claim_status: updateData.claim_status,
-        remarks: updateData.remarks || null,
+        description: updateData.description || null,
+        claim_type: updateData.claim_type || null,
+        claim_amount: updateData.claim_amount ? parseFloat(updateData.claim_amount) : null,
       });
       notify.showSuccess('Claim updated successfully');
       setUpdateModalVisible(false);
@@ -151,10 +156,10 @@ export default function ClaimTrackingScreen({ navigation }) {
     await loadLabTestsWithoutClaims();
     setNewClaimData({
       lab_test_id: '',
-      issue_found: '',
-      category_detected: '',
+      description: '',
+      claim_type: '',
+      claim_amount: '',
       claim_date: new Date(),
-      remarks: '',
     });
     setRaiseClaimModalVisible(true);
   };
@@ -164,8 +169,8 @@ export default function ClaimTrackingScreen({ navigation }) {
       notify.showWarning('Please select a lab test');
       return;
     }
-    if (!newClaimData.issue_found) {
-      notify.showWarning('Please enter the issue found');
+    if (!newClaimData.description) {
+      notify.showWarning('Please enter the description');
       return;
     }
 
@@ -173,10 +178,10 @@ export default function ClaimTrackingScreen({ navigation }) {
     try {
       await claimApi.create({
         lab_test_id: parseInt(newClaimData.lab_test_id),
-        issue_found: newClaimData.issue_found,
-        category_detected: newClaimData.category_detected || null,
+        description: newClaimData.description,
+        claim_type: newClaimData.claim_type || null,
+        claim_amount: newClaimData.claim_amount ? parseFloat(newClaimData.claim_amount) : null,
         claim_date: newClaimData.claim_date.toISOString(),
-        remarks: newClaimData.remarks || null,
       });
       notify.showSuccess('Claim raised successfully');
       setRaiseClaimModalVisible(false);
@@ -203,7 +208,14 @@ export default function ClaimTrackingScreen({ navigation }) {
       width: 200,
       render: (labTest) => labTest?.vehicle_entry?.supplier?.supplier_name || '-'
     },
-    { label: 'Issue Found', field: 'issue_found', width: 250 },
+    { label: 'Description', field: 'description', width: 250 },
+    {
+      label: 'Claim Type',
+      field: 'claim_type',
+      width: 120,
+      render: (type) => type ? (type === 'percentage' ? 'Percentage (%)' : 'Per KG (₹/kg)') : '-'
+    },
+    { label: 'Amount', field: 'claim_amount', width: 100 },
     {
       label: 'Claim Status',
       field: 'claim_status',
@@ -223,7 +235,6 @@ export default function ClaimTrackingScreen({ navigation }) {
       width: 150,
       render: (value) => formatISTDate(value)
     },
-    { label: 'Remarks', field: 'remarks', width: 200 },
     {
       label: 'Action',
       field: 'action',
@@ -316,15 +327,43 @@ export default function ClaimTrackingScreen({ navigation }) {
                 </Picker>
               </View>
 
-              <Text style={styles.label}>Remarks</Text>
+              <Text style={styles.label}>Description</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={updateData.remarks}
-                onChangeText={(text) => setUpdateData({ ...updateData, remarks: text })}
-                placeholder="Add or update remarks"
+                value={updateData.description}
+                onChangeText={(text) => setUpdateData({ ...updateData, description: text })}
+                placeholder="Update description"
                 multiline
-                numberOfLines={4}
+                numberOfLines={6}
               />
+
+              <Text style={styles.label}>Claim Type</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={updateData.claim_type}
+                  onValueChange={(value) => setUpdateData({ ...updateData, claim_type: value })}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Claim Type" value="" />
+                  <Picker.Item label="Percentage (%)" value="percentage" />
+                  <Picker.Item label="Rupees per Kilogram (₹/kg)" value="per_kg" />
+                </Picker>
+              </View>
+
+              {updateData.claim_type && (
+                <>
+                  <Text style={styles.label}>
+                    Claim Amount {updateData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={updateData.claim_amount}
+                    onChangeText={(text) => setUpdateData({ ...updateData, claim_amount: text })}
+                    placeholder={updateData.claim_type === "percentage" ? "Enter percentage" : "Enter amount per kg"}
+                    keyboardType="numeric"
+                  />
+                </>
+              )}
 
               <View style={[styles.buttonContainer, isMobile && styles.buttonContainerMobile]}>
                 <TouchableOpacity
@@ -373,33 +412,43 @@ export default function ClaimTrackingScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Issue Found *</Text>
+          <Text style={styles.label}>Description *</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            value={newClaimData.issue_found}
-            onChangeText={(text) => setNewClaimData({ ...newClaimData, issue_found: text })}
-            placeholder="Describe the issue found"
+            value={newClaimData.description}
+            onChangeText={(text) => setNewClaimData({ ...newClaimData, description: text })}
+            placeholder="Describe the issue..."
             multiline
-            numberOfLines={3}
+            numberOfLines={6}
           />
 
-          <Text style={styles.label}>Category Detected</Text>
-          <TextInput
-            style={styles.input}
-            value={newClaimData.category_detected}
-            onChangeText={(text) => setNewClaimData({ ...newClaimData, category_detected: text })}
-            placeholder="Enter category (optional)"
-          />
+          <Text style={styles.label}>Claim Type</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={newClaimData.claim_type}
+              onValueChange={(value) => setNewClaimData({ ...newClaimData, claim_type: value })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Claim Type" value="" />
+              <Picker.Item label="Percentage (%)" value="percentage" />
+              <Picker.Item label="Rupees per Kilogram (₹/kg)" value="per_kg" />
+            </Picker>
+          </View>
 
-          <Text style={styles.label}>Remarks</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={newClaimData.remarks}
-            onChangeText={(text) => setNewClaimData({ ...newClaimData, remarks: text })}
-            placeholder="Additional remarks (optional)"
-            multiline
-            numberOfLines={3}
-          />
+          {newClaimData.claim_type && (
+            <>
+              <Text style={styles.label}>
+                Claim Amount {newClaimData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={newClaimData.claim_amount}
+                onChangeText={(text) => setNewClaimData({ ...newClaimData, claim_amount: text })}
+                placeholder={newClaimData.claim_type === "percentage" ? "Enter percentage" : "Enter amount per kg"}
+                keyboardType="numeric"
+              />
+            </>
+          )}
 
           <View style={[styles.buttonContainer, isMobile && styles.buttonContainerMobile]}>
             <TouchableOpacity

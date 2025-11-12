@@ -22,6 +22,10 @@ class ClaimStatus(str, enum.Enum):
     IN_PROGRESS = "In Progress"
     CLOSED = "Closed"
 
+class ClaimType(str, enum.Enum):
+    PERCENTAGE = "percentage"
+    PER_KG = "per_kg"
+
 class BinStatus(str, enum.Enum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
@@ -115,6 +119,7 @@ class LabTest(Base):
     category = Column(String(50))
     remarks = Column(Text)
     tested_by = Column(String(255))
+    raise_claim = Column(Integer, default=0)
 
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
@@ -127,11 +132,11 @@ class Claim(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), nullable=False)
-    issue_found = Column(Text, nullable=False)
-    category_detected = Column(String(100))
+    description = Column(Text, nullable=False)
+    claim_type = Column(Enum(ClaimType), nullable=True)
+    claim_amount = Column(Float, nullable=True)
     claim_status = Column(Enum(ClaimStatus), default=ClaimStatus.OPEN, nullable=False)
     claim_date = Column(DateTime, default=get_utc_now)
-    remarks = Column(Text)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
