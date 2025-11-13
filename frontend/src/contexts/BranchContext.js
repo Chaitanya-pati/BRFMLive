@@ -1,4 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { branchApi } from '../api/client';
 
 const BranchContext = createContext();
@@ -27,18 +29,18 @@ export const BranchProvider = ({ children }) => {
       const branchData = Array.isArray(response.data) ? response.data : [];
       setBranches(branchData);
       
-      const savedBranchId = localStorage.getItem('selectedBranchId');
+      const savedBranchId = await AsyncStorage.getItem('selectedBranchId');
       if (savedBranchId && branchData.length > 0) {
         const savedBranch = branchData.find(b => b.id === parseInt(savedBranchId));
         if (savedBranch) {
           setSelectedBranch(savedBranch);
         } else {
           setSelectedBranch(branchData[0]);
-          localStorage.setItem('selectedBranchId', branchData[0].id);
+          await AsyncStorage.setItem('selectedBranchId', branchData[0].id.toString());
         }
       } else if (branchData.length > 0) {
         setSelectedBranch(branchData[0]);
-        localStorage.setItem('selectedBranchId', branchData[0].id);
+        await AsyncStorage.setItem('selectedBranchId', branchData[0].id.toString());
       }
     } catch (error) {
       console.error('Error loading branches:', error);
@@ -49,25 +51,15 @@ export const BranchProvider = ({ children }) => {
     }
   };
 
-  const selectBranch = (branch) => {
+  const selectBranch = async (branch) => {
     setSelectedBranch(branch);
     if (branch) {
-      localStorage.setItem('selectedBranchId', branch.id);
-    } else {
-      localStorage.removeItem('selectedBranchId');
+      await AsyncStorage.setItem('selectedBranchId', branch.id.toString());
     }
   };
 
   return (
-    <BranchContext.Provider
-      value={{
-        branches,
-        selectedBranch,
-        selectBranch,
-        loading,
-        refreshBranches: loadBranches
-      }}
-    >
+    <BranchContext.Provider value={{ branches, selectedBranch, selectBranch, loading }}>
       {children}
     </BranchContext.Provider>
   );
