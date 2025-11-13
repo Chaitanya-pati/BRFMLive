@@ -41,6 +41,16 @@ def seed_branches():
             "phone": "080-12345678",
             "email": "south@brfm.com",
             "is_active": 1
+        },
+        {
+            "branch_name": "East Branch",
+            "branch_code": "EAST",
+            "address": "321 East Boulevard",
+            "city": "Kolkata",
+            "state": "West Bengal",
+            "phone": "033-12345678",
+            "email": "east@brfm.com",
+            "is_active": 1
         }
     ]
     
