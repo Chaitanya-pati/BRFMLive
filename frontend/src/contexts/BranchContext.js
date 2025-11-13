@@ -23,18 +23,19 @@ const storage = {
     } catch (e) {
       console.error('Storage setItem error:', e);
     }
+  },
+  async removeItem(key) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.error('Storage removeItem error:', e);
+    }
   }
 };
 
 const BranchContext = createContext();
-
-export const useBranch = () => {
-  const context = useContext(BranchContext);
-  if (!context) {
-    throw new Error('useBranch must be used within a BranchProvider');
-  }
-  return context;
-};
 
 export const BranchProvider = ({ children }) => {
   const [branches, setBranches] = useState([]);
@@ -47,28 +48,27 @@ export const BranchProvider = ({ children }) => {
 
   const loadBranches = async () => {
     try {
-      setLoading(true);
       const response = await branchApi.getAll();
-      const branchData = Array.isArray(response.data) ? response.data : [];
-      setBranches(branchData);
-      
+      setBranches(response.data);
+
+      // Try to restore selected branch from storage
       const savedBranchId = await storage.getItem('selectedBranchId');
-      if (savedBranchId && branchData.length > 0) {
-        const savedBranch = branchData.find(b => b.id === parseInt(savedBranchId));
-        if (savedBranch) {
-          setSelectedBranch(savedBranch);
-        } else {
-          setSelectedBranch(branchData[0]);
-          await storage.setItem('selectedBranchId', branchData[0].id.toString());
+      if (savedBranchId) {
+        const branch = response.data.find(b => b.id === parseInt(savedBranchId));
+        if (branch) {
+          setSelectedBranch(branch);
+        } else if (response.data.length > 0) {
+          // If saved branch not found, select first branch
+          setSelectedBranch(response.data[0]);
+          await storage.setItem('selectedBranchId', response.data[0].id.toString());
         }
-      } else if (branchData.length > 0) {
-        setSelectedBranch(branchData[0]);
-        await storage.setItem('selectedBranchId', branchData[0].id.toString());
+      } else if (response.data.length > 0) {
+        // No saved branch, select first one
+        setSelectedBranch(response.data[0]);
+        await storage.setItem('selectedBranchId', response.data[0].id.toString());
       }
     } catch (error) {
       console.error('Error loading branches:', error);
-      setBranches([]);
-      setSelectedBranch(null);
     } finally {
       setLoading(false);
     }
@@ -78,6 +78,8 @@ export const BranchProvider = ({ children }) => {
     setSelectedBranch(branch);
     if (branch) {
       await storage.setItem('selectedBranchId', branch.id.toString());
+    } else {
+      await storage.removeItem('selectedBranchId');
     }
   };
 
@@ -86,4 +88,12 @@ export const BranchProvider = ({ children }) => {
       {children}
     </BranchContext.Provider>
   );
+};
+
+export const useBranch = () => {
+  const context = useContext(BranchContext);
+  if (!context) {
+    throw new Error('useBranch must be used within a BranchProvider');
+  }
+  return context;
 };
