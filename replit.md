@@ -68,12 +68,14 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 ## Recent Changes (November 2025)
 
 ### Database Schema Updates (November 13, 2025)
-- **Comprehensive Schema Migration**: Created Alembic migrations to add all missing database columns
+- **Comprehensive Schema Migration**: Created Alembic migrations (280ef23ee020, c8c942541efa) to add all missing database columns
 - **Suppliers Table**: Added columns: email, street, district, zip_code, gstin
 - **Vehicle Entries Table**: Added columns: empty_weight, gross_weight, vehicle_photo_front, vehicle_photo_back, vehicle_photo_side, internal_weighment_slip, client_weighment_slip, transportation_copy
 - **Lab Tests Table**: Added columns: wheat_variety, bill_number, category, raise_claim
+- **Migration Status**: Database currently at version c8c942541efa (latest), all migrations applied successfully
 - **Frontend Build Fix**: Resolved Metro bundler issues - frontend now builds successfully and serves on port 5000
 - **Application Status**: Both Backend API and Frontend workflows running without errors, all API endpoints responding correctly with 200 OK
+- **Note**: Migrations are designed for fresh database deployments; Alembic tracks applied migrations to prevent duplicate execution
 
 ### Bug Fixes (November 12, 2025)
 - **Fixed Gate Entry Form Notifications**: Removed mock `showNotification` function in VehicleEntryScreen.js that was preventing user feedback. The form now properly displays error and success messages using the actual notification utility, making it clear when gate entries are saved successfully or when validation errors occur.
