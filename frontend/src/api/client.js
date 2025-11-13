@@ -8,8 +8,9 @@ const getApiUrl = () => {
     const hostname = window.location.hostname;
     
     // If running on Replit (contains replit.dev) or production, use the current domain
+    // Note: Don't specify port for HTTPS on Replit - it's handled internally
     if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      return `https://${hostname}:8000/api`;
+      return `${window.location.origin.replace(':5000', ':8000')}/api`;
     }
   }
   
