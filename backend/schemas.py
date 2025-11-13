@@ -30,6 +30,34 @@ class TransferSessionStatusEnum(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+class MasterBranchBase(ISTModel):
+    branch_name: str
+    branch_code: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    is_active: Optional[int] = 1
+
+class MasterBranchCreate(MasterBranchBase):
+    pass
+
+class MasterBranchUpdate(ISTModel):
+    branch_name: Optional[str] = None
+    branch_code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    is_active: Optional[int] = None
+
+class MasterBranch(MasterBranchBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
 class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None

@@ -97,6 +97,49 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 def read_root():
     return {"message": "Gate Entry & Lab Testing API", "status": "running"}
 
+@app.post("/api/branches", response_model=schemas.MasterBranch)
+def create_branch(branch: schemas.MasterBranchCreate, db: Session = Depends(get_db)):
+    db_branch = models.MasterBranch(**branch.dict())
+    db.add(db_branch)
+    db.commit()
+    db.refresh(db_branch)
+    return db_branch
+
+@app.get("/api/branches", response_model=List[schemas.MasterBranch])
+def get_branches(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    branches = db.query(models.MasterBranch).filter(models.MasterBranch.is_active == 1).offset(skip).limit(limit).all()
+    return branches
+
+@app.get("/api/branches/{branch_id}", response_model=schemas.MasterBranch)
+def get_branch(branch_id: int, db: Session = Depends(get_db)):
+    branch = db.query(models.MasterBranch).filter(models.MasterBranch.id == branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return branch
+
+@app.put("/api/branches/{branch_id}", response_model=schemas.MasterBranch)
+def update_branch(branch_id: int, branch: schemas.MasterBranchUpdate, db: Session = Depends(get_db)):
+    db_branch = db.query(models.MasterBranch).filter(models.MasterBranch.id == branch_id).first()
+    if not db_branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+
+    for key, value in branch.dict(exclude_unset=True).items():
+        setattr(db_branch, key, value)
+
+    db.commit()
+    db.refresh(db_branch)
+    return db_branch
+
+@app.delete("/api/branches/{branch_id}")
+def delete_branch(branch_id: int, db: Session = Depends(get_db)):
+    db_branch = db.query(models.MasterBranch).filter(models.MasterBranch.id == branch_id).first()
+    if not db_branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+
+    db_branch.is_active = 0
+    db.commit()
+    return {"message": "Branch deactivated successfully"}
+
 @app.post("/api/suppliers", response_model=schemas.Supplier)
 def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_db)):
     db_supplier = models.Supplier(**supplier.dict())

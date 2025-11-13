@@ -10,6 +10,7 @@ import {
   Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import BranchSelector from './BranchSelector';
 
 const colors = {
   background: "#f5f6fa",
@@ -303,6 +304,7 @@ export default function Layout({ children, title, currentRoute }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
+          {!isMobile && <BranchSelector />}
           <View style={styles.adminProfile}>
             <View style={styles.adminAvatar}>
               <Text style={styles.adminAvatarText}>AD</Text>
@@ -422,6 +424,7 @@ const styles = StyleSheet.create({
   topBarRight: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 20,
   },
   adminProfile: {
     flexDirection: "row",
