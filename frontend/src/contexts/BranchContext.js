@@ -1,25 +1,13 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Platform } from 'react-native';
 import { branchApi } from '../api/client';
 
-// Cross-platform storage wrapper
-let AsyncStorage;
-if (Platform.OS !== 'web') {
-  try {
-    AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  } catch (e) {
-    console.warn('AsyncStorage not available, falling back to memory storage');
-  }
-}
-
+// Web-compatible storage wrapper
 const storage = {
   async getItem(key) {
     try {
-      if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         return localStorage.getItem(key);
-      } else if (AsyncStorage) {
-        return await AsyncStorage.getItem(key);
       }
       return null;
     } catch (e) {
@@ -29,10 +17,8 @@ const storage = {
   },
   async setItem(key, value) {
     try {
-      if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(key, value);
-      } else if (AsyncStorage) {
-        await AsyncStorage.setItem(key, value);
       }
     } catch (e) {
       console.error('Storage setItem error:', e);
