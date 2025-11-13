@@ -1,7 +1,30 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { branchApi } from '../api/client';
+
+// Web-compatible storage wrapper
+const storage = {
+  async getItem(key) {
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem(key);
+      }
+      return null;
+    } catch (e) {
+      console.error('Storage getItem error:', e);
+      return null;
+    }
+  },
+  async setItem(key, value) {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.error('Storage setItem error:', e);
+    }
+  }
+};
 
 const BranchContext = createContext();
 
@@ -29,18 +52,18 @@ export const BranchProvider = ({ children }) => {
       const branchData = Array.isArray(response.data) ? response.data : [];
       setBranches(branchData);
       
-      const savedBranchId = await AsyncStorage.getItem('selectedBranchId');
+      const savedBranchId = await storage.getItem('selectedBranchId');
       if (savedBranchId && branchData.length > 0) {
         const savedBranch = branchData.find(b => b.id === parseInt(savedBranchId));
         if (savedBranch) {
           setSelectedBranch(savedBranch);
         } else {
           setSelectedBranch(branchData[0]);
-          await AsyncStorage.setItem('selectedBranchId', branchData[0].id.toString());
+          await storage.setItem('selectedBranchId', branchData[0].id.toString());
         }
       } else if (branchData.length > 0) {
         setSelectedBranch(branchData[0]);
-        await AsyncStorage.setItem('selectedBranchId', branchData[0].id.toString());
+        await storage.setItem('selectedBranchId', branchData[0].id.toString());
       }
     } catch (error) {
       console.error('Error loading branches:', error);
@@ -54,7 +77,7 @@ export const BranchProvider = ({ children }) => {
   const selectBranch = async (branch) => {
     setSelectedBranch(branch);
     if (branch) {
-      await AsyncStorage.setItem('selectedBranchId', branch.id.toString());
+      await storage.setItem('selectedBranchId', branch.id.toString());
     }
   };
 
