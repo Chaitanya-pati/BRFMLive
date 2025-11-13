@@ -1,24 +1,6 @@
 import axios from "axios";
 
-// Get the current hostname and construct the API URL
-const getCurrentAPIUrl = () => {
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-
-    // For Replit deployments, use the same hostname with port 8000
-    if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Use the same domain but with port 8000 for the backend
-      return `${protocol}//${hostname}:8000/api`;
-    }
-
-    // For local development - use port 8000 on same host
-    return `${protocol}//${hostname}:8000/api`;
-  }
-  return 'http://0.0.0.0:8000/api';
-};
-
-const API_URL = process.env.REACT_APP_API_URL || getCurrentAPIUrl();
+const API_URL = "https://7be82ac8-7141-4c40-8228-a4201373562e-00-8s66n7uqddz7.worf.replit.dev:8000/api";
 
 console.log("API Base URL:", API_URL);
 
