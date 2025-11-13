@@ -56,7 +56,7 @@ api.interceptors.response.use(
 );
 
 export const supplierApi = {
-  getAll: () => api.get("/suppliers"),
+  getAll: (branchId = null) => api.get("/suppliers", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/suppliers/${id}`),
   create: (data) => api.post("/suppliers", data),
   update: (id, data) => api.put(`/suppliers/${id}`, data),
@@ -64,7 +64,7 @@ export const supplierApi = {
 };
 
 export const vehicleApi = {
-  getAll: () => api.get("/vehicles"),
+  getAll: (branchId = null) => api.get("/vehicles", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/vehicles/${id}`),
   create: (data) =>
     api.post("/vehicles", data, {
@@ -75,12 +75,12 @@ export const vehicleApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   delete: (id) => api.delete(`/vehicles/${id}`),
-  getAvailableForTesting: () => api.get("/vehicles/available-for-testing"),
-  getLabTested: () => api.get("/vehicles/lab-tested"),
+  getAvailableForTesting: (branchId = null) => api.get("/vehicles/available-for-testing", { params: branchId ? { branch_id: branchId } : {} }),
+  getLabTested: (branchId = null) => api.get("/vehicles/lab-tested", { params: branchId ? { branch_id: branchId } : {} }),
 };
 
 export const labTestApi = {
-  getAll: () => api.get("/lab-tests"),
+  getAll: (branchId = null) => api.get("/lab-tests", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/lab-tests/${id}`),
   create: (data) => api.post("/lab-tests", data),
   update: (id, data) => api.put(`/lab-tests/${id}`, data),
@@ -94,7 +94,7 @@ export const claimApi = {
 };
 
 export const godownApi = {
-  getAll: () => api.get("/godowns"),
+  getAll: (branchId = null) => api.get("/godowns", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/godowns/${id}`),
   create: (data) => api.post("/godowns", data),
   update: (id, data) => api.put(`/godowns/${id}`, data),
@@ -123,7 +123,7 @@ export const unloadingApi = {
 };
 
 export const binApi = {
-  getAll: () => api.get("/bins"),
+  getAll: (branchId = null) => api.get("/bins", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/bins/${id}`),
   create: (data) => api.post("/bins", data),
   update: (id, data) => api.put(`/bins/${id}`, data),
@@ -131,7 +131,7 @@ export const binApi = {
 };
 
 export const magnetApi = {
-  getAll: () => api.get("/magnets"),
+  getAll: (branchId = null) => api.get("/magnets", { params: branchId ? { branch_id: branchId } : {} }),
   getById: (id) => api.get(`/magnets/${id}`),
   create: (data) => api.post("/magnets", data),
   update: (id, data) => api.put(`/magnets/${id}`, data),

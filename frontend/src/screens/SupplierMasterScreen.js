@@ -14,8 +14,10 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { supplierApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
+import { useBranch } from '../contexts/BranchContext';
 
 export default function SupplierMasterScreen({ navigation }) {
+  const { selectedBranch } = useBranch();
   const [suppliers, setSuppliers] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -60,9 +62,14 @@ export default function SupplierMasterScreen({ navigation }) {
   };
 
   useEffect(() => {
-    loadSuppliers();
     loadStates();
   }, []);
+
+  useEffect(() => {
+    if (selectedBranch) {
+      loadSuppliers();
+    }
+  }, [selectedBranch]);
 
   const loadStates = async () => {
     const statesData = await stateCityApi.getStates();
@@ -71,7 +78,7 @@ export default function SupplierMasterScreen({ navigation }) {
 
   const loadSuppliers = async () => {
     try {
-      const response = await supplierApi.getAll();
+      const response = await supplierApi.getAll(selectedBranch?.id);
       setSuppliers(response.data);
     } catch (error) {
       console.error('Error loading suppliers:', error);

@@ -4,11 +4,13 @@ import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
 import MenuCard from '../components/MenuCard';
+import { useBranch } from '../contexts/BranchContext';
 
 export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
+  const { selectedBranch } = useBranch();
 
   const [stats, setStats] = useState([
     { title: 'Total Suppliers', value: '-', color: colors.info, icon: '🏢' },
@@ -19,17 +21,20 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStatistics();
-  }, []);
+    if (selectedBranch) {
+      fetchStatistics();
+    }
+  }, [selectedBranch]);
 
   const fetchStatistics = async () => {
     try {
       setLoading(true);
+      const branchId = selectedBranch?.id;
       const [suppliersRes, vehiclesRes, labTestsRes, availableVehiclesRes] = await Promise.all([
-        supplierApi.getAll(),
-        vehicleApi.getAll(),
-        labTestApi.getAll(),
-        vehicleApi.getAvailableForTesting(),
+        supplierApi.getAll(branchId),
+        vehicleApi.getAll(branchId),
+        labTestApi.getAll(branchId),
+        vehicleApi.getAvailableForTesting(branchId),
       ]);
 
       setStats([

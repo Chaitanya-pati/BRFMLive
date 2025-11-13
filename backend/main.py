@@ -149,8 +149,11 @@ def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_
     return db_supplier
 
 @app.get("/api/suppliers", response_model=List[schemas.Supplier])
-def get_suppliers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    suppliers = db.query(models.Supplier).offset(skip).limit(limit).all()
+def get_suppliers(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.Supplier)
+    if branch_id is not None:
+        query = query.filter(models.Supplier.branch_id == branch_id)
+    suppliers = query.offset(skip).limit(limit).all()
     return suppliers
 
 @app.get("/api/suppliers/{supplier_id}", response_model=schemas.Supplier)
@@ -249,43 +252,45 @@ async def create_vehicle_entry(
     return db_vehicle
 
 @app.get("/api/vehicles/available-for-testing", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicles_available_for_testing(db: Session = Depends(get_db)):
+def get_vehicles_available_for_testing(branch_id: Optional[int] = None, db: Session = Depends(get_db)):
     # Get all vehicle IDs that already have lab tests
     tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
     tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids] if tested_vehicle_ids else []
 
     # Get vehicles that don't have lab tests yet
+    query = db.query(models.VehicleEntry)
+    if branch_id is not None:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    
     if tested_vehicle_ids:
-        available_vehicles = db.query(models.VehicleEntry).filter(
+        available_vehicles = query.filter(
             ~models.VehicleEntry.id.in_(tested_vehicle_ids)
         ).all()
     else:
         # If no lab tests exist, all vehicles are available
-        available_vehicles = db.query(models.VehicleEntry).all()
+        available_vehicles = query.all()
 
     return available_vehicles
 
 @app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithLabTests])
-def get_lab_tested_vehicles(db: Session = Depends(get_db)):
-    # Get all lab test records with their vehicle entries
-    lab_tests = db.query(models.LabTest).all()
-
-    if not lab_tests:
-        return []
-
-    # Get unique vehicle IDs from lab tests
-    tested_vehicle_ids = list(set([test.vehicle_entry_id for test in lab_tests]))
-
-    # Fetch vehicles with those IDs
-    lab_tested_vehicles = db.query(models.VehicleEntry).filter(
-        models.VehicleEntry.id.in_(tested_vehicle_ids)
-    ).all()
-
+def get_lab_tested_vehicles(branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    # Get all vehicle entries that have lab tests, filtered by branch
+    query = db.query(models.VehicleEntry).join(
+        models.LabTest, models.VehicleEntry.id == models.LabTest.vehicle_entry_id
+    ).distinct()
+    
+    if branch_id is not None:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    
+    lab_tested_vehicles = query.all()
     return lab_tested_vehicles
 
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
+def get_vehicle_entries(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.VehicleEntry)
+    if branch_id is not None:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    vehicles = query.offset(skip).limit(limit).all()
 
     # Convert binary image paths to strings
     for vehicle in vehicles:
@@ -472,8 +477,11 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     return db_lab_test
 
 @app.get("/api/lab-tests", response_model=List[schemas.LabTestWithVehicle])
-def get_lab_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    lab_tests = db.query(models.LabTest).offset(skip).limit(limit).all()
+def get_lab_tests(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.LabTest).join(models.VehicleEntry, models.LabTest.vehicle_entry_id == models.VehicleEntry.id)
+    if branch_id is not None:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    lab_tests = query.offset(skip).limit(limit).all()
 
     # Add has_claim flag to each lab test
     result = []
@@ -579,8 +587,11 @@ def create_godown(godown: schemas.GodownMasterCreate, db: Session = Depends(get_
     return db_godown
 
 @app.get("/api/godowns", response_model=List[schemas.GodownMaster])
-def get_godowns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    godowns = db.query(models.GodownMaster).offset(skip).limit(limit).all()
+def get_godowns(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.GodownMaster)
+    if branch_id is not None:
+        query = query.filter(models.GodownMaster.branch_id == branch_id)
+    godowns = query.offset(skip).limit(limit).all()
     return godowns
 
 @app.get("/api/godowns/{godown_id}", response_model=schemas.GodownMaster)
@@ -765,8 +776,11 @@ def create_bin(bin_data: schemas.BinCreate, db: Session = Depends(get_db)):
     return db_bin
 
 @app.get("/api/bins", response_model=List[schemas.Bin])
-def get_bins(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    bins = db.query(models.Bin).offset(skip).limit(limit).all()
+def get_bins(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.Bin)
+    if branch_id is not None:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    bins = query.offset(skip).limit(limit).all()
     # Sanitize float values
     for bin_obj in bins:
         bin_obj.capacity = sanitize_float(bin_obj.capacity)
@@ -827,8 +841,11 @@ def create_magnet(magnet_data: schemas.MagnetCreate, db: Session = Depends(get_d
     return db_magnet
 
 @app.get("/api/magnets", response_model=List[schemas.Magnet])
-def get_magnets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    magnets = db.query(models.Magnet).offset(skip).limit(limit).all()
+def get_magnets(skip: int = 0, limit: int = 100, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(models.Magnet)
+    if branch_id is not None:
+        query = query.filter(models.Magnet.branch_id == branch_id)
+    magnets = query.offset(skip).limit(limit).all()
     return magnets
 
 @app.get("/api/magnets/{magnet_id}", response_model=schemas.Magnet)
