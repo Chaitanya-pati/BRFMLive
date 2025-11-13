@@ -70,15 +70,31 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gate Entry & Lab Testing API")
 
-# CORS configuration - Explicit allowlist for development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# CORS configuration - Dynamically allow Replit domains and localhost
+def get_allowed_origins():
+    """Get allowed CORS origins including Replit domains"""
+    origins = [
         "http://127.0.0.1:5000",
         "http://localhost:5000",
         "http://127.0.0.1:8000",
         "http://localhost:8000",
-    ],
+    ]
+    
+    # Add Replit domain if available
+    replit_domain = os.getenv('REPLIT_DEV_DOMAIN')
+    if replit_domain:
+        origins.extend([
+            f"https://{replit_domain}",
+            f"https://{replit_domain}:5000",
+            f"http://{replit_domain}",
+            f"http://{replit_domain}:5000",
+        ])
+    
+    return origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
