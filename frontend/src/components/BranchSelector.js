@@ -33,7 +33,10 @@ const BranchSelector = () => {
     );
   }
 
-  if (!branches || branches.length === 0) {
+  // Ensure branches is always an array
+  const branchList = Array.isArray(branches) ? branches : [];
+
+  if (!branchList || branchList.length === 0) {
     return null;
   }
 
@@ -61,7 +64,7 @@ const BranchSelector = () => {
       {isOpen && (
         <View style={styles.dropdown}>
           <ScrollView style={styles.dropdownScroll}>
-            {branches.map((branch) => (
+            {branchList.map((branch) => (
               <TouchableOpacity
                 key={branch.id}
                 style={[

@@ -24,23 +24,26 @@ export const BranchProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await branchApi.getAll();
-      setBranches(response.data || []);
+      const branchData = Array.isArray(response.data) ? response.data : [];
+      setBranches(branchData);
       
       const savedBranchId = localStorage.getItem('selectedBranchId');
-      if (savedBranchId && response.data) {
-        const savedBranch = response.data.find(b => b.id === parseInt(savedBranchId));
+      if (savedBranchId && branchData.length > 0) {
+        const savedBranch = branchData.find(b => b.id === parseInt(savedBranchId));
         if (savedBranch) {
           setSelectedBranch(savedBranch);
-        } else if (response.data.length > 0) {
-          setSelectedBranch(response.data[0]);
-          localStorage.setItem('selectedBranchId', response.data[0].id);
+        } else {
+          setSelectedBranch(branchData[0]);
+          localStorage.setItem('selectedBranchId', branchData[0].id);
         }
-      } else if (response.data && response.data.length > 0) {
-        setSelectedBranch(response.data[0]);
-        localStorage.setItem('selectedBranchId', response.data[0].id);
+      } else if (branchData.length > 0) {
+        setSelectedBranch(branchData[0]);
+        localStorage.setItem('selectedBranchId', branchData[0].id);
       }
     } catch (error) {
       console.error('Error loading branches:', error);
+      setBranches([]);
+      setSelectedBranch(null);
     } finally {
       setLoading(false);
     }
