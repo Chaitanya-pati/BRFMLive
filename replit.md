@@ -67,6 +67,25 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ## Recent Changes (November 2025)
 
+### Multi-Branch System Implementation (November 13, 2025)
+- **Branch Management System**: Implemented comprehensive multi-branch functionality to categorize all data by facility branches
+- **Database Changes**:
+  - Created `master_branches` table with branch_name, branch_code, address, contact info
+  - Added nullable `branch_id` foreign keys to all major tables: suppliers, vehicle_entries, lab_tests, godowns, bins, magnets
+  - Migration created: `3963149c5bb0_create_master_branches_table.py`
+  - Design decision: Made branch_id nullable to allow gradual migration of existing data
+- **API Enhancements**:
+  - Added full CRUD endpoints for branch management at `/api/branches`
+  - All endpoints support optional branch_id filtering via query parameters
+  - Branches can be created, updated, and soft-deleted (is_active flag)
+- **Frontend Integration**:
+  - Created `BranchContext` for state management across the application
+  - Added `BranchSelector` component in application header (desktop view only)
+  - Branch selection persists in localStorage for user convenience
+  - Integrated into App.js with BranchProvider wrapper
+- **Sample Data**: Seeded 3 sample branches: Main Branch (MAIN), North Branch (NORTH), South Branch (SOUTH)
+- **Status**: Branch selector visible and functional in UI, ready for data filtering implementation
+
 ### Database Schema Updates (November 13, 2025)
 - **Comprehensive Schema Migration**: Created Alembic migrations (280ef23ee020, c8c942541efa) to add all missing database columns
 - **Suppliers Table**: Added columns: email, street, district, zip_code, gstin
