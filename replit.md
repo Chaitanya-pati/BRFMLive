@@ -84,7 +84,13 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
   - Branch selection persists in localStorage for user convenience
   - Integrated into App.js with BranchProvider wrapper
 - **Sample Data**: Seeded 3 sample branches: Main Branch (MAIN), North Branch (NORTH), South Branch (SOUTH)
-- **Status**: Branch selector visible and functional in UI, ready for data filtering implementation
+- **Backend Updates**:
+  - Updated all Pydantic schemas to include optional `branch_id` fields for proper API serialization
+  - Updated vehicle creation endpoint to accept and persist `branch_id` via Form parameter
+  - Supplier and lab test creation endpoints automatically support `branch_id` through Pydantic models
+- **Testing**: All API endpoints responding correctly (200 OK), branch_id can be persisted and retrieved
+- **Status**: ✅ Multi-branch foundation complete and functional
+- **Next Phase**: Add branch_id filtering to GET endpoints and update frontend to pass selected branch when creating/fetching data
 
 ### Database Schema Updates (November 13, 2025)
 - **Comprehensive Schema Migration**: Created Alembic migrations (280ef23ee020, c8c942541efa) to add all missing database columns
