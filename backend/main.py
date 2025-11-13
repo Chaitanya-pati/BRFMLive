@@ -192,6 +192,7 @@ async def create_vehicle_entry(
     driver_phone: Optional[str] = Form(None),
     arrival_time: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
+    branch_id: Optional[int] = Form(None),
     supplier_bill_photo: Optional[UploadFile] = File(None),
     vehicle_photo_front: Optional[UploadFile] = File(None),
     vehicle_photo_back: Optional[UploadFile] = File(None),
@@ -210,7 +211,8 @@ async def create_vehicle_entry(
         driver_name=driver_name,
         driver_phone=driver_phone,
         arrival_time=arrival_dt,
-        notes=notes
+        notes=notes,
+        branch_id=branch_id
     )
 
     if supplier_bill_photo:
