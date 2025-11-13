@@ -70,6 +70,7 @@ class SupplierBase(ISTModel):
     state: str
     zip_code: Optional[str] = None
     gstin: Optional[str] = None
+    branch_id: Optional[int] = None
 
 class SupplierCreate(SupplierBase):
     pass
@@ -79,6 +80,7 @@ class SupplierUpdate(SupplierBase):
 
 class Supplier(SupplierBase):
     id: int
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -92,6 +94,7 @@ class VehicleEntryBase(ISTModel):
     empty_weight: Optional[float] = None
     gross_weight: Optional[float] = None
     notes: Optional[str] = None
+    branch_id: Optional[int] = None
     
     @validator('arrival_time', pre=True)
     def _parse_arrival_time(cls, v):
@@ -102,6 +105,7 @@ class VehicleEntryCreate(VehicleEntryBase):
 
 class VehicleEntry(VehicleEntryBase):
     id: int
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     supplier_bill_photo: Optional[str] = None
@@ -147,6 +151,7 @@ class LabTestBase(ISTModel):
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
     raise_claim: Optional[int] = 0  # 0 = No, 1 = Yes
+    branch_id: Optional[int] = None
     
     @validator('test_date', pre=True)
     def _parse_dates(cls, v):
@@ -157,6 +162,7 @@ class LabTestCreate(LabTestBase):
 
 class LabTest(LabTestBase):
     id: int
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -197,6 +203,7 @@ class GodownMasterBase(ISTModel):
     name: str
     type: str
     current_storage: Optional[float] = 0.0
+    branch_id: Optional[int] = None
 
 class GodownMasterCreate(GodownMasterBase):
     pass
@@ -206,6 +213,7 @@ class GodownMasterUpdate(GodownMasterBase):
 
 class GodownMaster(GodownMasterBase):
     id: int
+    branch_id: Optional[int] = None
     current_storage: float
     created_at: datetime
     updated_at: datetime
@@ -244,6 +252,7 @@ class BinBase(ISTModel):
     current_quantity: Optional[float] = 0.0
     material_type: Optional[str] = None
     status: BinStatusEnum = BinStatusEnum.ACTIVE
+    branch_id: Optional[int] = None
 
 class BinCreate(BinBase):
     pass
@@ -257,6 +266,7 @@ class BinUpdate(ISTModel):
 
 class Bin(BinBase):
     id: int
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -264,6 +274,7 @@ class MagnetBase(ISTModel):
     name: str
     description: Optional[str] = None
     status: BinStatusEnum = BinStatusEnum.ACTIVE
+    branch_id: Optional[int] = None
 
 class MagnetCreate(MagnetBase):
     pass
@@ -275,6 +286,7 @@ class MagnetUpdate(ISTModel):
 
 class Magnet(MagnetBase):
     id: int
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
