@@ -40,10 +40,33 @@ class TransferSessionStatus(str, enum.Enum):
     def __str__(self):
         return self.value
 
+class MasterBranch(Base):
+    __tablename__ = "master_branches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    branch_name = Column(String(255), nullable=False, unique=True)
+    branch_code = Column(String(50), nullable=False, unique=True)
+    address = Column(Text)
+    city = Column(String(100))
+    state = Column(String(100))
+    phone = Column(String(20))
+    email = Column(String(255))
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    suppliers = relationship("Supplier", back_populates="branch")
+    vehicle_entries = relationship("VehicleEntry", back_populates="branch")
+    lab_tests = relationship("LabTest", back_populates="branch")
+    godowns = relationship("GodownMaster", back_populates="branch")
+    bins = relationship("Bin", back_populates="branch")
+    magnets = relationship("Magnet", back_populates="branch")
+
 class Supplier(Base):
     __tablename__ = "suppliers"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     supplier_name = Column(String(255), nullable=False)
     contact_person = Column(String(255))
     phone = Column(String(20))
@@ -58,12 +81,14 @@ class Supplier(Base):
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("MasterBranch", back_populates="suppliers")
     vehicle_entries = relationship("VehicleEntry", back_populates="supplier")
 
 class VehicleEntry(Base):
     __tablename__ = "vehicle_entries"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     vehicle_number = Column(String(50), nullable=False)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
     bill_no = Column(String(100), nullable=False)
@@ -83,6 +108,7 @@ class VehicleEntry(Base):
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("MasterBranch", back_populates="vehicle_entries")
     supplier = relationship("Supplier", back_populates="vehicle_entries")
     lab_tests = relationship("LabTest", back_populates="vehicle_entry")
 
@@ -90,6 +116,7 @@ class LabTest(Base):
     __tablename__ = "lab_tests"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     vehicle_entry_id = Column(Integer, ForeignKey("vehicle_entries.id"), nullable=False)
     test_date = Column(DateTime, default=get_utc_now)
 
@@ -126,6 +153,7 @@ class LabTest(Base):
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("MasterBranch", back_populates="lab_tests")
     vehicle_entry = relationship("VehicleEntry", back_populates="lab_tests")
     claims = relationship("Claim", back_populates="lab_test")
 
@@ -148,12 +176,14 @@ class GodownMaster(Base):
     __tablename__ = "godown_master"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
     current_storage = Column(Float, default=0.0)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("MasterBranch", back_populates="godowns")
     unloading_entries = relationship("UnloadingEntry", back_populates="godown")
 
 class UnloadingEntry(Base):
@@ -184,6 +214,7 @@ class Bin(Base):
     __tablename__ = "bins"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     bin_number = Column(String(100), nullable=False, unique=True)
     capacity = Column(Float, nullable=False)
     current_quantity = Column(Float, default=0.0)
@@ -192,15 +223,20 @@ class Bin(Base):
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("MasterBranch", back_populates="bins")
+
 class Magnet(Base):
     __tablename__ = "magnets"
 
     id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("master_branches.id"), nullable=True)
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text)
     status = Column(String(20), default="Active", nullable=False)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("MasterBranch", back_populates="magnets")
 
 class RouteMagnetMapping(Base):
     __tablename__ = "route_magnet_mappings"
