@@ -221,10 +221,34 @@ export default function VehicleEntryScreen() {
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
     
-    // Get the base URL - use current hostname for browser compatibility
-    const baseUrl = Platform.OS === 'web' 
-      ? `${window.location.protocol}//${window.location.hostname}:8000`
-      : 'http://localhost:8000';
+    // Helper function to construct full image URL
+    const constructImageUrl = (imagePath) => {
+      if (!imagePath) return null;
+      
+      let photoUrl = imagePath;
+      
+      // Remove Python byte string markers if present
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+      
+      // If already a full URL, return as is
+      if (photoUrl.startsWith('http')) {
+        return { uri: photoUrl };
+      }
+      
+      // Construct full URL using window location for web compatibility
+      const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+      const baseUrl = `${protocol}//${hostname}:8000`;
+      
+      const fullUrl = photoUrl.startsWith('/') 
+        ? `${baseUrl}${photoUrl}`
+        : `${baseUrl}/${photoUrl}`;
+      
+      console.log('Constructed image URL:', fullUrl);
+      return { uri: fullUrl };
+    };
     
     // Split vehicle number into parts (e.g., "KA-01-AB-1234" -> ["KA", "01", "AB-1234"])
     const vehicleNumberParts = vehicle.vehicle_number ? vehicle.vehicle_number.split('-') : ['', '', ''];
@@ -233,92 +257,13 @@ export default function VehicleEntryScreen() {
     const thirdPart = vehicleNumberParts.slice(2).join('-') || '';
     
     // Load existing images if available
-    let supplierBillPhoto = null;
-    if (vehicle.supplier_bill_photo) {
-      let billPhotoUrl = vehicle.supplier_bill_photo;
-      if (billPhotoUrl.startsWith("b'") || billPhotoUrl.startsWith('b"')) {
-        billPhotoUrl = billPhotoUrl.slice(2, -1);
-      }
-      if (!billPhotoUrl.startsWith('http')) {
-        billPhotoUrl = billPhotoUrl.startsWith('/') 
-          ? `${baseUrl}${billPhotoUrl}`
-          : `${baseUrl}/${billPhotoUrl}`;
-      }
-      console.log('Supplier bill photo URL:', billPhotoUrl);
-      supplierBillPhoto = { uri: billPhotoUrl };
-    }
-
-    let vehiclePhotoFront = null;
-    if (vehicle.vehicle_photo_front) {
-      let photoUrl = vehicle.vehicle_photo_front;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      vehiclePhotoFront = { uri: photoUrl };
-    }
-
-    let vehiclePhotoBack = null;
-    if (vehicle.vehicle_photo_back) {
-      let photoUrl = vehicle.vehicle_photo_back;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      vehiclePhotoBack = { uri: photoUrl };
-    }
-
-    let vehiclePhotoSide = null;
-    if (vehicle.vehicle_photo_side) {
-      let photoUrl = vehicle.vehicle_photo_side;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      vehiclePhotoSide = { uri: photoUrl };
-    }
-
-    let internalWeighmentSlip = null;
-    if (vehicle.internal_weighment_slip) {
-      let photoUrl = vehicle.internal_weighment_slip;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      internalWeighmentSlip = { uri: photoUrl };
-    }
-
-    let clientWeighmentSlip = null;
-    if (vehicle.client_weighment_slip) {
-      let photoUrl = vehicle.client_weighment_slip;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      clientWeighmentSlip = { uri: photoUrl };
-    }
-
-    let transportationCopy = null;
-    if (vehicle.transportation_copy) {
-      let photoUrl = vehicle.transportation_copy;
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = photoUrl.startsWith('/') ? `${baseUrl}${photoUrl}` : `${baseUrl}/${photoUrl}`;
-      }
-      transportationCopy = { uri: photoUrl };
-    }
+    const supplierBillPhoto = constructImageUrl(vehicle.supplier_bill_photo);
+    const vehiclePhotoFront = constructImageUrl(vehicle.vehicle_photo_front);
+    const vehiclePhotoBack = constructImageUrl(vehicle.vehicle_photo_back);
+    const vehiclePhotoSide = constructImageUrl(vehicle.vehicle_photo_side);
+    const internalWeighmentSlip = constructImageUrl(vehicle.internal_weighment_slip);
+    const clientWeighmentSlip = constructImageUrl(vehicle.client_weighment_slip);
+    const transportationCopy = constructImageUrl(vehicle.transportation_copy);
     
     setFormData({
       vehicle_state_code: stateCode,
