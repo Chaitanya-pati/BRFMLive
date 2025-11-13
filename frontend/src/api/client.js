@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "https://7be82ac8-7141-4c40-8228-a4201373562e-00-8s66n7uqddz7.worf.replit.dev:8000/api";
+// Use environment variable, fallback to localhost for development
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
 console.log("API Base URL:", API_URL);
 

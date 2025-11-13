@@ -70,10 +70,15 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gate Entry & Lab Testing API")
 
-# CORS configuration - Allow all origins for development
+# CORS configuration - Explicit allowlist for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
+    allow_origins=[
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
