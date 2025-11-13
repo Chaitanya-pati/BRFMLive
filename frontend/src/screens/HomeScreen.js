@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
+import MenuCard from '../components/MenuCard';
 
 export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -97,6 +98,59 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>Menu</Text>
+        <View style={[styles.grid, isMobile && styles.gridMobile]}>
+        <MenuCard
+          title="Gate Entry"
+          description="Record vehicle entries and capture documentation"
+          icon="📋"
+          onPress={() => navigation.navigate('VehicleEntry')}
+          color="#3b82f6"
+        />
+        <MenuCard
+          title="Lab Testing"
+          description="Conduct quality tests and record results"
+          icon="🔬"
+          onPress={() => navigation.navigate('LabTest')}
+          color="#10b981"
+        />
+        <MenuCard
+          title="Unloading Entry"
+          description="Track unloading process and godown storage"
+          icon="📦"
+          onPress={() => navigation.navigate('UnloadingEntry')}
+          color="#f59e0b"
+        />
+        <MenuCard
+          title="Precleaning Process"
+          description="Manage precleaning bins and transfer sessions"
+          icon="🔄"
+          onPress={() => navigation.navigate('PrecleaningBin')}
+          color="#8b5cf6"
+        />
+        <MenuCard
+          title="Master Data"
+          description="Manage suppliers, godowns, bins, and magnets"
+          icon="⚙️"
+          onPress={() => navigation.navigate('MasterView')}
+          color="#ef4444"
+        />
+        <MenuCard
+          title="Branch Management"
+          description="Manage facility branches and locations"
+          icon="🏢"
+          onPress={() => navigation.navigate('BranchManagement')}
+          color="#06b6d4"
+        />
+        <MenuCard
+          title="Claim Tracking"
+          description="Track and manage quality claims"
+          icon="📊"
+          onPress={() => navigation.navigate('ClaimTracking')}
+          color="#ec4899"
+        />
+      </View>
 
         <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>Recent Activity</Text>
         <View style={styles.activityCard}>
@@ -231,5 +285,14 @@ const styles = StyleSheet.create({
   activityText: {
     color: colors.textTertiary,
     textAlign: 'center',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 24,
+  },
+  gridMobile: {
+    gap: 12,
   },
 });
