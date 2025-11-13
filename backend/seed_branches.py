@@ -1,15 +1,10 @@
+
 from database import get_db
 from models import MasterBranch
 from datetime import datetime
 
 def seed_branches():
     db = next(get_db())
-    
-    # Check if branches already exist
-    existing = db.query(MasterBranch).first()
-    if existing:
-        print("Branches already exist. Skipping seed.")
-        return
     
     branches = [
         {
@@ -54,12 +49,25 @@ def seed_branches():
         }
     ]
     
-    for branch_data in branches:
-        branch = MasterBranch(**branch_data)
-        db.add(branch)
+    # Check which branches already exist
+    existing_codes = [b.branch_code for b in db.query(MasterBranch).all()]
     
-    db.commit()
-    print(f"✅ Seeded {len(branches)} branches successfully!")
+    added_count = 0
+    for branch_data in branches:
+        if branch_data['branch_code'] not in existing_codes:
+            branch = MasterBranch(**branch_data)
+            db.add(branch)
+            added_count += 1
+            print(f"➕ Adding: {branch_data['branch_name']} ({branch_data['branch_code']})")
+        else:
+            print(f"⏭️  Skipping: {branch_data['branch_name']} (already exists)")
+    
+    if added_count > 0:
+        db.commit()
+        print(f"\n✅ Successfully added {added_count} new branch(es)!")
+    else:
+        print(f"\n✅ All branches already exist in the database.")
+    
     db.close()
 
 if __name__ == "__main__":
