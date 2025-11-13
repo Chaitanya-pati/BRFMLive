@@ -697,13 +697,18 @@ export default function MasterViewScreen({ navigation }) {
                 />
 
                 <Text style={styles.label}>Type *</Text>
-                <SelectDropdown
-                  data={godownTypes.map(type => ({ label: type, value: type }))} // Use fetched godown types
-                  value={godownFormData.type}
-                  onSelect={(item) => setGodownFormData({ ...godownFormData, type: item.value })}
-                  placeholder="Select Type"
-                  searchPlaceholder="Search type..."
-                />
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={godownFormData.type}
+                    onValueChange={(value) => setGodownFormData({ ...godownFormData, type: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Type" value="" />
+                    {godownTypes.map((type, index) => (
+                      <Picker.Item key={index} label={type} value={type} />
+                    ))}
+                  </Picker>
+                </View>
               </>
             )}
             {activeTab === 'bins' && (
