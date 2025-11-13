@@ -16,10 +16,20 @@ import Modal from '../components/Modal';
 import SelectDropdown from '../components/SelectDropdown';
 import { godownApi, supplierApi, binApi, magnetApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
-import axios from 'axios'; // Import axios
+import axios from 'axios';
 
-// Assuming API_URL is defined elsewhere or you can define it here
-const API_URL = 'http://localhost:3000'; // Replace with your actual API URL
+// Get API URL dynamically based on environment
+const getApiUrl = () => {
+  if (typeof window !== 'undefined' && window.location) {
+    const hostname = window.location.hostname;
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      return `${window.location.origin.replace(':5000', ':8000')}`;
+    }
+  }
+  return process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+};
+
+const API_URL = getApiUrl();
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
