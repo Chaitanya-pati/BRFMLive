@@ -1,7 +1,23 @@
 import axios from "axios";
 
-// Use environment variable, fallback to localhost for development
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+// Dynamically determine API URL based on environment
+const getApiUrl = () => {
+  // Check if we're running in a browser (web)
+  if (typeof window !== 'undefined' && window.location) {
+    // Get the current hostname (Replit domain)
+    const hostname = window.location.hostname;
+    
+    // If running on Replit (contains replit.dev) or production, use the current domain
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      return `https://${hostname}:8000/api`;
+    }
+  }
+  
+  // Fallback to environment variable or localhost for local development
+  return process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+};
+
+const API_URL = getApiUrl();
 
 console.log("API Base URL:", API_URL);
 
