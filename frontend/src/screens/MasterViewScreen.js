@@ -16,14 +16,18 @@ import Modal from '../components/Modal';
 import SelectDropdown from '../components/SelectDropdown';
 import { godownApi, supplierApi, binApi, magnetApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
+import axios from 'axios'; // Import axios
+
+// Assuming API_URL is defined elsewhere or you can define it here
+const API_URL = 'http://localhost:3000'; // Replace with your actual API URL
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
   const [godowns, setGodowns] = useState([]);
+  const [godownTypes, setGodownTypes] = useState([]); // State to store godown types
   const [suppliers, setSuppliers] = useState([]);
   const [bins, setBins] = useState([]);
   const [magnets, setMagnets] = useState([]);
-  const [godownTypes, setGodownTypes] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
@@ -85,22 +89,25 @@ export default function MasterViewScreen({ navigation }) {
         loadSuppliers(),
         loadBins(),
         loadMagnets(),
-        loadGodownTypes(),
+        loadGodownTypes(), // Load godown types here
         loadStatesFromApi()
       ]);
     };
     loadInitialData();
   }, []);
 
+  // Function to load godown types from API
   const loadGodownTypes = async () => {
     try {
-      const response = await godownApi.getTypes();
+      // Use axios to fetch data from the backend API
+      const response = await axios.get(`${API_URL}/api/godown-types`);
       console.log('Godown types response:', response.data);
       setGodownTypes(response.data || []);
     } catch (error) {
       console.error('Error loading godown types:', error);
-      // Fallback to default types if API fails
-      setGodownTypes(['Warehouse', 'Silo', 'Storage', 'Cold Storage']);
+      // Fallback to default types if API fails, or show an error notification
+      notify.showError('Failed to load godown types from the server.');
+      setGodownTypes(['Warehouse', 'Silo', 'Storage', 'Cold Storage']); // Fallback
     }
   };
 
@@ -307,7 +314,7 @@ export default function MasterViewScreen({ navigation }) {
           console.log('✅ Create response:', response);
           notify.showSuccess('Supplier added successfully');
         }
-        
+
         await loadSuppliers();
         setModalVisible(false);
         setLoading(false);
@@ -691,7 +698,7 @@ export default function MasterViewScreen({ navigation }) {
 
                 <Text style={styles.label}>Type *</Text>
                 <SelectDropdown
-                  data={godownTypes.map(type => ({ label: type, value: type }))}
+                  data={godownTypes.map(type => ({ label: type, value: type }))} // Use fetched godown types
                   value={godownFormData.type}
                   onSelect={(item) => setGodownFormData({ ...godownFormData, type: item.value })}
                   placeholder="Select Type"
