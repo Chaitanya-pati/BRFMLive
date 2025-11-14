@@ -22,6 +22,9 @@ const API_URL = process.env.REACT_APP_API_URL || getCurrentAPIUrl();
 
 console.log("API Base URL:", API_URL);
 
+// Export API_BASE_URL for components that need direct fetch calls
+export const API_BASE_URL = API_URL.replace('/api', '');
+
 export const api = axios.create({
   baseURL: API_URL,
   headers: {

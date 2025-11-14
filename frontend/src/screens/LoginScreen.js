@@ -15,6 +15,8 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
+    console.log('🔐 Attempting login with:', { username, apiUrl: API_BASE_URL });
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
@@ -24,11 +26,16 @@ export default function LoginScreen({ navigation }) {
         body: JSON.stringify({ username, password }),
       });
 
+      console.log('📡 Login response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Invalid username or password');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Login failed:', errorData);
+        throw new Error(errorData.detail || 'Invalid username or password');
       }
 
       const data = await response.json();
+      console.log('✅ Login successful:', data);
       
       Alert.alert(
         'Login Successful',
@@ -41,6 +48,7 @@ export default function LoginScreen({ navigation }) {
         ]
       );
     } catch (error) {
+      console.error('❌ Login error:', error);
       Alert.alert('Login Failed', error.message || 'Invalid username or password');
     } finally {
       setLoading(false);
