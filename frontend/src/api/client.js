@@ -3,17 +3,16 @@ import axios from "axios";
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
   if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
     const hostname = window.location.hostname;
 
-    // For Replit deployments, use the same hostname with port 8000
+    // For Replit deployments, always use HTTP for backend communication
     if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Use the same domain but with port 8000 for the backend
-      return `${protocol}//${hostname}:8000/api`;
+      // Use HTTP protocol for internal backend communication
+      return `http://${hostname}:8000/api`;
     }
 
-    // For local development - use port 8000 on same host
-    return `${protocol}//${hostname}:8000/api`;
+    // For local development - use HTTP on port 8000
+    return `http://${hostname}:8000/api`;
   }
   return 'http://0.0.0.0:8000/api';
 };
