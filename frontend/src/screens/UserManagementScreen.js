@@ -155,7 +155,9 @@ export default function UserManagementScreen({ navigation }) {
     { 
       key: 'branches', 
       header: 'Branches',
-      render: (user) => user.branches.map(b => b.name).join(', ') || 'None'
+      render: (user) => (user.branches && user.branches.length > 0) 
+        ? user.branches.map(b => b.name).join(', ') 
+        : 'None'
     },
   ];
 

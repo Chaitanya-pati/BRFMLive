@@ -63,7 +63,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
           )}
         </View>
       </View>
-      
+
       <View style={styles.mobileCardContent}>
         {columns.slice(1, 5).map((col, colIndex) => (
           <View key={colIndex} style={styles.mobileCardRow}>
@@ -78,7 +78,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
           </View>
         ))}
       </View>
-      
+
       {(onEdit || onCustomAction || onDelete) && (
         <View style={styles.mobileCardFooter}>
           {onEdit && (
