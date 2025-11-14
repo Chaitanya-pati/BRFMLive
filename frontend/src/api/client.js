@@ -5,25 +5,24 @@ const getCurrentAPIUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
 
-    // For Replit deployments, use the port-specific HTTPS subdomain
+    // For Replit deployments, access backend via exposed port 8000
     if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Replace port 5000 with 8000 in the hostname
-      const backendHostname = hostname.replace('-5000', '-8000');
-      return `https://${backendHostname}`;
+      // Use the same hostname with port 8000
+      return `https://${hostname}:8000/api`;
     }
 
     // For local development - use HTTP on port 8000
-    return `http://${hostname}:8000`;
+    return `http://localhost:8000/api`;
   }
-  return 'http://0.0.0.0:8000';
+  return 'http://0.0.0.0:8000/api';
 };
 
 const API_URL = process.env.REACT_APP_API_URL || getCurrentAPIUrl();
 
 console.log("API Base URL:", API_URL);
 
-// Export API_BASE_URL for components that need direct fetch calls
-export const API_BASE_URL = API_URL;
+// Export API_BASE_URL for components that need direct fetch calls (without /api suffix)
+export const API_BASE_URL = API_URL.replace('/api', '');
 
 export const api = axios.create({
   baseURL: API_URL,
