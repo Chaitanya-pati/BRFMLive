@@ -1394,7 +1394,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Username already exists")
     
-    db_user = models.User(username=user.username, password=user.password)
+    db_user = models.User(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=user.password,
+        role=user.role or "user",
+        is_active=True
+    )
     
     if user.branch_ids:
         branches = db.query(models.Branch).filter(models.Branch.id.in_(user.branch_ids)).all()
@@ -1432,7 +1439,16 @@ def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(ge
         db_user.username = user.username
     
     if user.password is not None and user.password != "":
-        db_user.password = user.password
+        db_user.hashed_password = user.password
+    
+    if user.email is not None:
+        db_user.email = user.email
+    
+    if user.full_name is not None:
+        db_user.full_name = user.full_name
+    
+    if user.role is not None:
+        db_user.role = user.role
     
     if user.branch_ids is not None:
         branches = db.query(models.Branch).filter(models.Branch.id.in_(user.branch_ids)).all()
@@ -1458,12 +1474,15 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == credentials.username).first()
     
-    if not user or user.password != credentials.password:
+    if not user or not user.is_active or user.hashed_password != credentials.password:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     return schemas.LoginResponse(
         user_id=user.id,
         username=user.username,
+        full_name=user.full_name,
+        email=user.email,
+        role=user.role,
         branches=user.branches
     )
 

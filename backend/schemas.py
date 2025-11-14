@@ -390,21 +390,34 @@ class Branch(BranchBase):
 
 class UserBase(ISTModel):
     username: str
+    email: str
+    full_name: str
     password: str
+    role: Optional[str] = None
 
 class UserCreate(ISTModel):
     username: str
+    email: str
+    full_name: str
     password: str
+    role: Optional[str] = None
     branch_ids: list[int] = []
 
 class UserUpdate(ISTModel):
     username: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
     password: Optional[str] = None
+    role: Optional[str] = None
     branch_ids: Optional[list[int]] = None
 
 class User(ISTModel):
     id: int
     username: str
+    email: str
+    full_name: str
+    role: Optional[str] = None
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -418,6 +431,9 @@ class LoginRequest(BaseModel):
 class LoginResponse(ISTModel):
     user_id: int
     username: str
+    full_name: str
+    email: str
+    role: str | None = None
     branches: list[Branch] = []
 
 # Resolve forward references

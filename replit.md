@@ -67,6 +67,21 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ## Recent Changes (November 2025)
 
+### User Authentication System Update (November 14, 2025)
+- **Updated User Model**: Modified the User model to match the database schema with fields: username, email, full_name, hashed_password, role, is_active
+- **Enhanced Login Response**: Login now returns full user details including email, full_name, role, and associated branches
+- **Sample Users Created**: Added 4 test users with different roles:
+  - **admin** (password: admin123) - Admin role, access to all 3 branches
+  - **manager** (password: manager123) - Manager role, access to Main and North branches
+  - **operator** (password: operator123) - Operator role, access to Main branch
+  - **user1** (password: password123) - User role, access to Main branch
+- **Sample Branches Created**: Created 3 branches: Main Branch, North Branch, South Branch
+- **Multi-Branch Support**: Users can now be assigned to multiple branches, with branch information returned in login response
+- **Frontend Dependencies**: Installed all missing npm packages including Expo
+- **Both Workflows Running**: Backend API (port 8000) and Frontend (port 5000) are both running successfully
+
+## Recent Changes (November 2025)
+
 ### Database Schema Updates (November 13, 2025)
 - **Comprehensive Schema Migration**: Created Alembic migrations (280ef23ee020, c8c942541efa) to add all missing database columns
 - **Suppliers Table**: Added columns: email, street, district, zip_code, gstin
