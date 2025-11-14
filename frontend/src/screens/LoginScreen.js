@@ -15,10 +15,11 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
-    console.log('🔐 Attempting login with:', { username, apiUrl: API_BASE_URL });
+    const loginUrl = `${API_BASE_URL}/api/login`;
+    console.log('🔐 Attempting login with:', { username, apiUrl: API_BASE_URL, fullUrl: loginUrl });
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,6 +28,15 @@ export default function LoginScreen({ navigation }) {
       });
 
       console.log('📡 Login response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response received:', text.substring(0, 200));
+        throw new Error('Server returned invalid response. Please check if backend is running on port 8000.');
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
