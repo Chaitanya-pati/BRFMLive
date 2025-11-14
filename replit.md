@@ -79,6 +79,9 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 - **Multi-Branch Support**: Users can now be assigned to multiple branches, with branch information returned in login response
 - **Frontend Dependencies**: Installed all missing npm packages including Expo
 - **Both Workflows Running**: Backend API (port 8000) and Frontend (port 5000) are both running successfully
+- **Fixed Database Schema Mismatch**: Updated Supplier and VehicleEntry models to match actual database schema, removing non-existent columns
+- **User Management Screen**: Enhanced with full name, email, and role fields. Users can now create/edit users with complete information
+- **Fixed Blank Screen Issue**: Resolved API errors that were causing blank screen in User Management by aligning models with database schema
 
 ## Recent Changes (November 2025)
 

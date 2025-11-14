@@ -18,7 +18,10 @@ export default function UserManagementScreen({ navigation }) {
   const [editMode, setEditMode] = useState(false);
   const [currentUser, setCurrentUser] = useState({ 
     username: '', 
+    email: '',
+    full_name: '',
     password: '', 
+    role: 'user',
     branch_ids: [] 
   });
   const [selectedBranches, setSelectedBranches] = useState([]);
@@ -47,7 +50,7 @@ export default function UserManagementScreen({ navigation }) {
   };
 
   const handleAdd = () => {
-    setCurrentUser({ username: '', password: '', branch_ids: [] });
+    setCurrentUser({ username: '', email: '', full_name: '', password: '', role: 'user', branch_ids: [] });
     setSelectedBranches([]);
     setEditMode(false);
     setModalVisible(true);
@@ -70,6 +73,16 @@ export default function UserManagementScreen({ navigation }) {
       return;
     }
 
+    if (!currentUser.email) {
+      Alert.alert('Error', 'Email is required');
+      return;
+    }
+
+    if (!currentUser.full_name) {
+      Alert.alert('Error', 'Full name is required');
+      return;
+    }
+
     if (!editMode && !currentUser.password) {
       Alert.alert('Error', 'Password is required for new users');
       return;
@@ -84,6 +97,9 @@ export default function UserManagementScreen({ navigation }) {
 
       const payload = {
         username: currentUser.username,
+        email: currentUser.email,
+        full_name: currentUser.full_name,
+        role: currentUser.role || 'user',
         branch_ids: selectedBranches,
       };
 
@@ -152,6 +168,9 @@ export default function UserManagementScreen({ navigation }) {
 
   const columns = [
     { key: 'username', header: 'Username' },
+    { key: 'full_name', header: 'Full Name' },
+    { key: 'email', header: 'Email' },
+    { key: 'role', header: 'Role' },
     { 
       key: 'branches', 
       header: 'Branches',
@@ -211,6 +230,34 @@ export default function UserManagementScreen({ navigation }) {
           onChangeText={(text) => setCurrentUser({ ...currentUser, username: text })}
           placeholder="Enter username"
           autoCapitalize="none"
+        />
+
+        <InputField
+          label="Full Name"
+          value={currentUser.full_name}
+          onChangeText={(text) => setCurrentUser({ ...currentUser, full_name: text })}
+          placeholder="Enter full name"
+        />
+
+        <InputField
+          label="Email"
+          value={currentUser.email}
+          onChangeText={(text) => setCurrentUser({ ...currentUser, email: text })}
+          placeholder="Enter email address"
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <SelectDropdown
+          label="Role"
+          value={currentUser.role}
+          onValueChange={(value) => setCurrentUser({ ...currentUser, role: value })}
+          items={[
+            { label: 'User', value: 'user' },
+            { label: 'Operator', value: 'operator' },
+            { label: 'Manager', value: 'manager' },
+            { label: 'Admin', value: 'admin' },
+          ]}
         />
 
         <InputField

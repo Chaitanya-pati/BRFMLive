@@ -34,14 +34,9 @@ class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[str] = None
     address: Optional[str] = None
-    street: Optional[str] = None
     city: str
-    district: Optional[str] = None
     state: str
-    zip_code: Optional[str] = None
-    gstin: Optional[str] = None
 
 class SupplierCreate(SupplierBase):
     pass
@@ -61,8 +56,6 @@ class VehicleEntryBase(ISTModel):
     driver_name: Optional[str] = None
     driver_phone: Optional[str] = None
     arrival_time: Optional[datetime] = None
-    empty_weight: Optional[float] = None
-    gross_weight: Optional[float] = None
     notes: Optional[str] = None
     
     @validator('arrival_time', pre=True)
@@ -77,12 +70,7 @@ class VehicleEntry(VehicleEntryBase):
     created_at: datetime
     updated_at: datetime
     supplier_bill_photo: Optional[str] = None
-    vehicle_photo_front: Optional[str] = None
-    vehicle_photo_back: Optional[str] = None
-    vehicle_photo_side: Optional[str] = None
-    internal_weighment_slip: Optional[str] = None
-    client_weighment_slip: Optional[str] = None
-    transportation_copy: Optional[str] = None
+    vehicle_photo: Optional[str] = None
 
 class VehicleEntryWithSupplier(VehicleEntry):
     supplier: Supplier
