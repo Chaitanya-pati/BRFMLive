@@ -272,3 +272,33 @@ class WasteEntry(Base):
 
     transfer_session = relationship("TransferSession")
     godown = relationship("GodownMaster")
+
+class Branch(Base):
+    __tablename__ = "branches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True)
+    description = Column(Text)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    users = relationship("User", secondary="user_branches", back_populates="branches")
+
+class UserBranch(Base):
+    __tablename__ = "user_branches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(255), nullable=False, unique=True)
+    password = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branches = relationship("Branch", secondary="user_branches", back_populates="users")

@@ -373,6 +373,53 @@ class WasteEntryWithDetails(WasteEntry):
     transfer_session: TransferSession
     godown: GodownMaster
 
+class BranchBase(ISTModel):
+    name: str
+    description: Optional[str] = None
+
+class BranchCreate(BranchBase):
+    pass
+
+class BranchUpdate(BranchBase):
+    pass
+
+class Branch(BranchBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+class UserBase(ISTModel):
+    username: str
+    password: str
+
+class UserCreate(ISTModel):
+    username: str
+    password: str
+    branch_ids: list[int] = []
+
+class UserUpdate(ISTModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
+    branch_ids: Optional[list[int]] = None
+
+class User(ISTModel):
+    id: int
+    username: str
+    created_at: datetime
+    updated_at: datetime
+
+class UserWithBranches(User):
+    branches: list[Branch] = []
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(ISTModel):
+    user_id: int
+    username: str
+    branches: list[Branch] = []
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
 TransferSessionWithDetails.model_rebuild()

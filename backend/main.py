@@ -1341,6 +1341,132 @@ def get_transfer_details_report(
 
     return result
 
+@app.post("/api/branches", response_model=schemas.Branch)
+def create_branch(branch: schemas.BranchCreate, db: Session = Depends(get_db)):
+    db_branch = db.query(models.Branch).filter(models.Branch.name == branch.name).first()
+    if db_branch:
+        raise HTTPException(status_code=400, detail="Branch with this name already exists")
+    
+    db_branch = models.Branch(**branch.dict())
+    db.add(db_branch)
+    db.commit()
+    db.refresh(db_branch)
+    return db_branch
+
+@app.get("/api/branches", response_model=List[schemas.Branch])
+def get_branches(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    branches = db.query(models.Branch).offset(skip).limit(limit).all()
+    return branches
+
+@app.get("/api/branches/{branch_id}", response_model=schemas.Branch)
+def get_branch(branch_id: int, db: Session = Depends(get_db)):
+    branch = db.query(models.Branch).filter(models.Branch.id == branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return branch
+
+@app.put("/api/branches/{branch_id}", response_model=schemas.Branch)
+def update_branch(branch_id: int, branch: schemas.BranchUpdate, db: Session = Depends(get_db)):
+    db_branch = db.query(models.Branch).filter(models.Branch.id == branch_id).first()
+    if not db_branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    for key, value in branch.dict(exclude_unset=True).items():
+        setattr(db_branch, key, value)
+    
+    db.commit()
+    db.refresh(db_branch)
+    return db_branch
+
+@app.delete("/api/branches/{branch_id}")
+def delete_branch(branch_id: int, db: Session = Depends(get_db)):
+    db_branch = db.query(models.Branch).filter(models.Branch.id == branch_id).first()
+    if not db_branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    db.delete(db_branch)
+    db.commit()
+    return {"message": "Branch deleted successfully"}
+
+@app.post("/api/users", response_model=schemas.UserWithBranches)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    db_user = models.User(username=user.username, password=user.password)
+    
+    if user.branch_ids:
+        branches = db.query(models.Branch).filter(models.Branch.id.in_(user.branch_ids)).all()
+        if len(branches) != len(user.branch_ids):
+            raise HTTPException(status_code=404, detail="One or more branches not found")
+        db_user.branches = branches
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.get("/api/users", response_model=List[schemas.UserWithBranches])
+def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = db.query(models.User).offset(skip).limit(limit).all()
+    return users
+
+@app.get("/api/users/{user_id}", response_model=schemas.UserWithBranches)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.put("/api/users/{user_id}", response_model=schemas.UserWithBranches)
+def update_user(user_id: int, user: schemas.UserUpdate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.username is not None:
+        existing = db.query(models.User).filter(models.User.username == user.username, models.User.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already exists")
+        db_user.username = user.username
+    
+    if user.password is not None and user.password != "":
+        db_user.password = user.password
+    
+    if user.branch_ids is not None:
+        branches = db.query(models.Branch).filter(models.Branch.id.in_(user.branch_ids)).all()
+        if len(branches) != len(user.branch_ids):
+            raise HTTPException(status_code=404, detail="One or more branches not found")
+        db_user.branches = branches
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db.delete(db_user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
+@app.post("/api/login", response_model=schemas.LoginResponse)
+def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == credentials.username).first()
+    
+    if not user or user.password != credentials.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    return schemas.LoginResponse(
+        user_id=user.id,
+        username=user.username,
+        branches=user.branches
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

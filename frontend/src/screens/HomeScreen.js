@@ -45,6 +45,8 @@ export default function HomeScreen({ navigation }) {
   };
 
   const quickActions = [
+    { title: 'Branch Master', route: 'BranchMaster', icon: '🏪', color: colors.primary },
+    { title: 'User Management', route: 'UserManagement', icon: '👥', color: colors.secondary },
     { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.info },
     { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: colors.purple },
     { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: colors.success },
