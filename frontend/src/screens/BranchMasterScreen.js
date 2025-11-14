@@ -54,7 +54,7 @@ export default function BranchMasterScreen({ navigation }) {
       const url = editMode 
         ? `${API_BASE_URL}/api/branches/${currentBranch.id}`
         : `${API_BASE_URL}/api/branches`;
-      
+
       const method = editMode ? 'PUT' : 'POST';
 
       const payload = {
@@ -116,19 +116,7 @@ export default function BranchMasterScreen({ navigation }) {
     { key: 'description', header: 'Description' },
   ];
 
-  const actions = [
-    {
-      label: 'Edit',
-      onPress: handleEdit,
-      color: colors.primary,
-    },
-    {
-      label: 'Delete',
-      onPress: handleDelete,
-      color: '#e74c3c',
-    },
-  ];
-
+  // Removed 'actions' prop from DataTable and passed individual handlers
   if (loading) {
     return (
       <Layout navigation={navigation} title="Branch Master">
@@ -148,10 +136,11 @@ export default function BranchMasterScreen({ navigation }) {
         </View>
 
         <DataTable
-          data={branches}
           columns={columns}
-          actions={actions}
-          emptyMessage="No branches found. Click 'Add Branch' to create one."
+          data={branches}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
         />
       </Card>
 
