@@ -20,11 +20,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('lab_tests')]
+    
     # Add missing columns to lab_tests table
-    op.add_column('lab_tests', sa.Column('wheat_variety', sa.String(100), nullable=True))
-    op.add_column('lab_tests', sa.Column('bill_number', sa.String(100), nullable=True))
-    op.add_column('lab_tests', sa.Column('category', sa.String(50), nullable=True))
-    op.add_column('lab_tests', sa.Column('raise_claim', sa.Integer(), default=0, nullable=True))
+    if 'wheat_variety' not in columns:
+        op.add_column('lab_tests', sa.Column('wheat_variety', sa.String(100), nullable=True))
+    if 'bill_number' not in columns:
+        op.add_column('lab_tests', sa.Column('bill_number', sa.String(100), nullable=True))
+    if 'category' not in columns:
+        op.add_column('lab_tests', sa.Column('category', sa.String(50), nullable=True))
+    if 'raise_claim' not in columns:
+        op.add_column('lab_tests', sa.Column('raise_claim', sa.Integer(), default=0, nullable=True))
 
 
 def downgrade() -> None:

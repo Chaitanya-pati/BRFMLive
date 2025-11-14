@@ -20,22 +20,40 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    
     # Add missing columns to suppliers table
-    op.add_column('suppliers', sa.Column('email', sa.String(255), nullable=True))
-    op.add_column('suppliers', sa.Column('street', sa.String(255), nullable=True))
-    op.add_column('suppliers', sa.Column('district', sa.String(100), nullable=True))
-    op.add_column('suppliers', sa.Column('zip_code', sa.String(20), nullable=True))
-    op.add_column('suppliers', sa.Column('gstin', sa.String(15), nullable=True))
+    supplier_columns = [col['name'] for col in inspector.get_columns('suppliers')]
+    if 'email' not in supplier_columns:
+        op.add_column('suppliers', sa.Column('email', sa.String(255), nullable=True))
+    if 'street' not in supplier_columns:
+        op.add_column('suppliers', sa.Column('street', sa.String(255), nullable=True))
+    if 'district' not in supplier_columns:
+        op.add_column('suppliers', sa.Column('district', sa.String(100), nullable=True))
+    if 'zip_code' not in supplier_columns:
+        op.add_column('suppliers', sa.Column('zip_code', sa.String(20), nullable=True))
+    if 'gstin' not in supplier_columns:
+        op.add_column('suppliers', sa.Column('gstin', sa.String(15), nullable=True))
     
     # Add missing columns to vehicle_entries table
-    op.add_column('vehicle_entries', sa.Column('empty_weight', sa.Float(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('gross_weight', sa.Float(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('vehicle_photo_front', sa.LargeBinary(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('vehicle_photo_back', sa.LargeBinary(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('vehicle_photo_side', sa.LargeBinary(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('internal_weighment_slip', sa.LargeBinary(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('client_weighment_slip', sa.LargeBinary(), nullable=True))
-    op.add_column('vehicle_entries', sa.Column('transportation_copy', sa.LargeBinary(), nullable=True))
+    vehicle_columns = [col['name'] for col in inspector.get_columns('vehicle_entries')]
+    if 'empty_weight' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('empty_weight', sa.Float(), nullable=True))
+    if 'gross_weight' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('gross_weight', sa.Float(), nullable=True))
+    if 'vehicle_photo_front' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('vehicle_photo_front', sa.LargeBinary(), nullable=True))
+    if 'vehicle_photo_back' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('vehicle_photo_back', sa.LargeBinary(), nullable=True))
+    if 'vehicle_photo_side' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('vehicle_photo_side', sa.LargeBinary(), nullable=True))
+    if 'internal_weighment_slip' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('internal_weighment_slip', sa.LargeBinary(), nullable=True))
+    if 'client_weighment_slip' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('client_weighment_slip', sa.LargeBinary(), nullable=True))
+    if 'transportation_copy' not in vehicle_columns:
+        op.add_column('vehicle_entries', sa.Column('transportation_copy', sa.LargeBinary(), nullable=True))
 
 
 def downgrade() -> None:

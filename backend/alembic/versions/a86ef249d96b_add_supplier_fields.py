@@ -20,11 +20,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('suppliers', sa.Column('email', sa.String(length=255), nullable=True))
-    op.add_column('suppliers', sa.Column('street', sa.String(length=255), nullable=True))
-    op.add_column('suppliers', sa.Column('district', sa.String(length=100), nullable=True))
-    op.add_column('suppliers', sa.Column('zip_code', sa.String(length=20), nullable=True))
-    op.add_column('suppliers', sa.Column('gstin', sa.String(length=15), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('suppliers')]
+    
+    if 'email' not in columns:
+        op.add_column('suppliers', sa.Column('email', sa.String(length=255), nullable=True))
+    if 'street' not in columns:
+        op.add_column('suppliers', sa.Column('street', sa.String(length=255), nullable=True))
+    if 'district' not in columns:
+        op.add_column('suppliers', sa.Column('district', sa.String(length=100), nullable=True))
+    if 'zip_code' not in columns:
+        op.add_column('suppliers', sa.Column('zip_code', sa.String(length=20), nullable=True))
+    if 'gstin' not in columns:
+        op.add_column('suppliers', sa.Column('gstin', sa.String(length=15), nullable=True))
 
 
 def downgrade() -> None:
