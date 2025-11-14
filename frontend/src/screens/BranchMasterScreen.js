@@ -112,8 +112,8 @@ export default function BranchMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'name', header: 'Branch Name' },
-    { key: 'description', header: 'Description' },
+    { label: 'Branch Name', field: 'name' },
+    { label: 'Description', field: 'description' },
   ];
 
   // Removed 'actions' prop from DataTable and passed individual handlers
