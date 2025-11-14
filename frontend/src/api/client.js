@@ -5,10 +5,11 @@ const getCurrentAPIUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
 
-    // For Replit deployments, always use HTTP for backend communication
+    // For Replit deployments, use the port-specific HTTPS subdomain
     if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Use HTTP protocol for internal backend communication
-      return `http://${hostname}:8000/api`;
+      // Replace the frontend port (5000) with backend port (8000) in the hostname
+      const backendHostname = hostname.replace('-5000.', '-8000.');
+      return `https://${backendHostname}/api`;
     }
 
     // For local development - use HTTP on port 8000
