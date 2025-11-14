@@ -37,16 +37,8 @@ export default function LoginScreen({ navigation }) {
       const data = await response.json();
       console.log('✅ Login successful:', data);
       
-      Alert.alert(
-        'Login Successful',
-        `Welcome ${data.username}!\nYour branches: ${data.branches.map(b => b.name).join(', ') || 'None'}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.replace('Home', { user: data })
-          }
-        ]
-      );
+      // Auto-redirect to Home screen
+      navigation.replace('Home', { user: data });
     } catch (error) {
       console.error('❌ Login error:', error);
       Alert.alert('Login Failed', error.message || 'Invalid username or password');
