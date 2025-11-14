@@ -7,9 +7,9 @@ const getCurrentAPIUrl = () => {
 
     // For Replit deployments, use the port-specific HTTPS subdomain
     if (hostname.includes('repl.co') || hostname.includes('replit.dev')) {
-      // Extract the base replit domain and use port 8000
-      const replDomain = hostname.split('-5000')[0];
-      return `https://${replDomain}-8000.${hostname.split('.').slice(-2).join('.')}`;
+      // Replace port 5000 with 8000 in the hostname
+      const backendHostname = hostname.replace('-5000', '-8000');
+      return `https://${backendHostname}`;
     }
 
     // For local development - use HTTP on port 8000

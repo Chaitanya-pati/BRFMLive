@@ -16,7 +16,12 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     const loginUrl = `${API_BASE_URL}/api/login`;
-    console.log('🔐 Attempting login with:', { username, apiUrl: API_BASE_URL, fullUrl: loginUrl });
+    console.log('🔐 Attempting login with:', { 
+      username, 
+      apiUrl: API_BASE_URL, 
+      fullUrl: loginUrl,
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A'
+    });
     
     try {
       const response = await fetch(loginUrl, {
