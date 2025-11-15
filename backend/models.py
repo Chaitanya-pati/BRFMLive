@@ -55,9 +55,11 @@ class Supplier(Base):
     state = Column(String(100), nullable=False)
     zip_code = Column(String(20))
     gstin = Column(String(15))
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("Branch")
     vehicle_entries = relationship("VehicleEntry", back_populates="supplier")
 
 class VehicleEntry(Base):
@@ -81,9 +83,11 @@ class VehicleEntry(Base):
     client_weighment_slip = Column(LargeBinary)
     transportation_copy = Column(LargeBinary)
     notes = Column(Text)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("Branch")
     supplier = relationship("Supplier", back_populates="vehicle_entries")
     lab_tests = relationship("LabTest", back_populates="vehicle_entry")
 
@@ -123,10 +127,12 @@ class LabTest(Base):
     remarks = Column(Text)
     tested_by = Column(String(255))
     raise_claim = Column(Integer, default=0)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
 
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("Branch")
     vehicle_entry = relationship("VehicleEntry", back_populates="lab_tests")
     claims = relationship("Claim", back_populates="lab_test")
 
@@ -152,9 +158,11 @@ class GodownMaster(Base):
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
     current_storage = Column(Float, default=0.0)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("Branch")
     unloading_entries = relationship("UnloadingEntry", back_populates="godown")
 
 class UnloadingEntry(Base):
@@ -174,10 +182,12 @@ class UnloadingEntry(Base):
     unloading_start_time = Column(DateTime, default=get_utc_now)
     unloading_end_time = Column(DateTime, default=get_utc_now)
     notes = Column(Text)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
 
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
+    branch = relationship("Branch")
     vehicle_entry = relationship("VehicleEntry")
     godown = relationship("GodownMaster", back_populates="unloading_entries")
 
@@ -190,8 +200,11 @@ class Bin(Base):
     current_quantity = Column(Float, default=0.0)
     material_type = Column(String(100))
     status = Column(String(20), default="Active", nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
 
 class Magnet(Base):
     __tablename__ = "magnets"
@@ -200,8 +213,11 @@ class Magnet(Base):
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text)
     status = Column(String(20), default="Active", nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
 
 class RouteMagnetMapping(Base):
     __tablename__ = "route_magnet_mappings"
