@@ -49,13 +49,15 @@ app.get('/', (req, res, next) => {
 
 // Start Expo Metro bundler as a child process
 console.log('📦 Starting Expo Metro Bundler...');
+console.log('⚙️  Security disabled with EXPO_NO_DEV_SERVER_SECURITY=1');
 const expo = spawn('npx', ['expo', 'start', '--web', '--port', PORT.toString()], {
   cwd: __dirname,
   stdio: 'inherit',
   env: { 
     ...process.env, 
     EXPO_DEVTOOLS_LISTEN_ADDRESS: '0.0.0.0',
-    EXPO_NO_DEV_SERVER_SECURITY: '1'
+    EXPO_NO_DEV_SERVER_SECURITY: '1',
+    EXPO_NO_HTTPS: '1'
   }
 });
 
