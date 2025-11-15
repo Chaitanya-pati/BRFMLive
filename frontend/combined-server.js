@@ -52,7 +52,11 @@ console.log('📦 Starting Expo Metro Bundler...');
 const expo = spawn('npx', ['expo', 'start', '--web', '--port', PORT.toString()], {
   cwd: __dirname,
   stdio: 'inherit',
-  env: { ...process.env, EXPO_DEVTOOLS_LISTEN_ADDRESS: '0.0.0.0' }
+  env: { 
+    ...process.env, 
+    EXPO_DEVTOOLS_LISTEN_ADDRESS: '0.0.0.0',
+    EXPO_NO_DEV_SERVER_SECURITY: '1'
+  }
 });
 
 expo.on('error', (error) => {
