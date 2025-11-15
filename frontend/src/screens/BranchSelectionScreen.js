@@ -4,7 +4,7 @@ import { storage } from '../utils/storage';
 import { useBranch } from '../context/BranchContext';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { colors } from '../utils/theme';
+import colors from '../theme/colors';
 
 export default function BranchSelectionScreen({ navigation, route }) {
   const { setActiveBranch, setUserBranches } = useBranch();
@@ -46,7 +46,7 @@ export default function BranchSelectionScreen({ navigation, route }) {
       const success = await setActiveBranch(branch);
       
       if (success) {
-        navigation.replace('Dashboard');
+        navigation.replace('Home');
       } else {
         Alert.alert('Error', 'Failed to set active branch');
       }

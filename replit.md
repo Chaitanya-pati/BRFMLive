@@ -67,6 +67,29 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ## Recent Changes (November 2025)
 
+### Branch Selection System (November 15, 2025)
+- **Branch Selection Flow**: Implemented complete branch selection system after login
+  - Auto-selects if user has only 1 branch
+  - Prompts selection screen if user has multiple branches
+  - User cannot access dashboard until branch is selected
+- **Cross-Platform Session Storage**: Using AsyncStorage for Web, Android, and iOS compatibility
+  - Stores active branch across sessions
+  - Persists until user logs out or switches branch
+- **Branch Switcher**: Added branch switcher in header (top-right corner)
+  - Shows current active branch name
+  - Click to open branch selection modal
+  - Switches branch and reloads dashboard
+- **Logout Functionality**: Added logout button in header that clears all session data
+- **Files Created**:
+  - `frontend/src/utils/storage.js` - AsyncStorage wrapper for cross-platform storage
+  - `frontend/src/context/BranchContext.js` - React Context for branch state management
+  - `frontend/src/screens/BranchSelectionScreen.js` - Branch selection UI
+- **Files Modified**:
+  - `frontend/src/screens/LoginScreen.js` - Added branch selection logic after login
+  - `frontend/App.js` - Added BranchProvider and BranchSelectionScreen route
+  - `frontend/src/components/Layout.js` - Added branch switcher, logout button, replaced SVG with Unicode icons for cross-platform compatibility
+- **Alembic Migration**: Updated Alembic head to e136788c1e5e to match current database state
+
 ### User Authentication System Update (November 14, 2025)
 - **Updated User Model**: Modified the User model to match the database schema with fields: username, email, full_name, hashed_password, role, is_active
 - **Enhanced Login Response**: Login now returns full user details including email, full_name, role, and associated branches
@@ -77,7 +100,7 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
   - **user1** (password: password123) - User role, access to Main branch
 - **Sample Branches Created**: Created 3 branches: Main Branch, North Branch, South Branch
 - **Multi-Branch Support**: Users can now be assigned to multiple branches, with branch information returned in login response
-- **Frontend Dependencies**: Installed all missing npm packages including Expo
+- **Frontend Dependencies**: Installed all missing npm packages including Expo and AsyncStorage
 - **Both Workflows Running**: Backend API (port 8000) and Frontend (port 5000) are both running successfully
 - **Fixed Database Schema Mismatch**: Updated Supplier and VehicleEntry models to match actual database schema, removing non-existent columns
 - **User Management Screen**: Enhanced with full name, email, and role fields. Users can now create/edit users with complete information

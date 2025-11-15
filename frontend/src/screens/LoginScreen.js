@@ -66,7 +66,7 @@ export default function LoginScreen({ navigation }) {
       
       if (data.branches.length === 1) {
         await setActiveBranch(data.branches[0]);
-        navigation.replace('Dashboard');
+        navigation.replace('Home');
       } else {
         navigation.replace('BranchSelection');
       }

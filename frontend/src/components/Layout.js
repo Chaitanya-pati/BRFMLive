@@ -28,162 +28,47 @@ const colors = {
   onInfo: "#ffffff",
 };
 
-// Icon Components
+// Icon Components (using simple text for cross-platform compatibility)
 const HomeIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={active ? "#3b82f6" : "none"}
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    H
+  </Text>
 );
 
 const DatabaseIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <ellipse
-      cx="12"
-      cy="5"
-      rx="9"
-      ry="3"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      fill={active ? "#3b82f6" : "none"}
-    />
-    <path
-      d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <path
-      d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    D
+  </Text>
 );
 
 const TruckIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M16 3h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-1M16 3v13M16 3H1v13h15"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <circle
-      cx="5.5"
-      cy="18.5"
-      r="2.5"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      fill={active ? "#3b82f6" : "none"}
-    />
-    <circle
-      cx="18.5"
-      cy="18.5"
-      r="2.5"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      fill={active ? "#3b82f6" : "none"}
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    T
+  </Text>
 );
 
 const ClipboardIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M9 12l2 2 4-4"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    Q
+  </Text>
 );
 
 const PackageIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={active ? "#3b82f6" : "none"}
-    />
-    <path
-      d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    U
+  </Text>
 );
 
 const FileTextIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={active ? "#3b82f6" : "none"}
-    />
-    <path
-      d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    C
+  </Text>
 );
 
 const BinIcon = ({ active }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <rect
-      x="3"
-      y="7"
-      width="18"
-      height="14"
-      rx="2"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={active ? "#3b82f6" : "none"}
-    />
-    <path
-      d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M12 11v6M9 14h6"
-      stroke={active ? "#ffffff" : "#94a3b8"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+    P
+  </Text>
 );
 
 export default function Layout({ children, title, currentRoute }) {
@@ -264,7 +149,6 @@ export default function Layout({ children, title, currentRoute }) {
       await setActiveBranch(branch);
       setBranchModalVisible(false);
       Alert.alert('Success', `Switched to ${branch.name}`);
-      navigation.replace('Dashboard');
     } catch (error) {
       console.error('Error switching branch:', error);
       Alert.alert('Error', 'Failed to switch branch');
@@ -307,14 +191,7 @@ export default function Layout({ children, title, currentRoute }) {
             style={styles.menuToggle}
             onPress={toggleMobileMenu}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 12h18M3 6h18M3 18h18"
-                stroke="#cbd5e1"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
           <Image
             source={require("../../assets/new-logo.png")}
@@ -332,15 +209,7 @@ export default function Layout({ children, title, currentRoute }) {
               onPress={() => setBranchModalVisible(true)}
             >
               <Text style={styles.branchName}>{activeBranch.name}</Text>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6 9l6 6 6-6"
-                  stroke="#ffffff"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Text style={styles.branchDropdownIcon}>▼</Text>
             </TouchableOpacity>
           )}
           <View style={styles.adminProfile}>
@@ -453,15 +322,7 @@ export default function Layout({ children, title, currentRoute }) {
                   </View>
                   {activeBranch?.id === branch.id && (
                     <View style={styles.activeCheckmark}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M20 6L9 17l-5-5"
-                          stroke="#3b82f6"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <Text style={styles.checkmarkIcon}>✓</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -509,6 +370,8 @@ const styles = StyleSheet.create({
   },
   menuToggleIcon: {
     color: "#cbd5e1",
+    fontSize: 24,
+    fontWeight: "600",
   },
   logo: {
     height: 40,
@@ -550,6 +413,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  branchDropdownIcon: {
+    color: "#ffffff",
+    fontSize: 10,
+    marginLeft: 4,
   },
   adminProfile: {
     flexDirection: "row",
@@ -693,6 +561,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  iconText: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
   menuText: {
     color: "#b8c5d6",
     fontSize: 15,
@@ -791,6 +663,11 @@ const styles = StyleSheet.create({
   },
   activeCheckmark: {
     marginLeft: 12,
+  },
+  checkmarkIcon: {
+    color: "#3b82f6",
+    fontSize: 20,
+    fontWeight: "bold",
   },
   modalCloseButton: {
     backgroundColor: "#f1f5f9",
