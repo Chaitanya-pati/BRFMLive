@@ -8,10 +8,10 @@ const getCurrentAPIUrl = () => {
     const currentUrl = window.location.href;
     // If we're on a Replit domain, construct the backend URL
     if (currentUrl.includes('replit.dev')) {
-      // Extract the base Replit URL and append port 8000
+      // Extract the base Replit URL and change port from 5000 to 8000
       const hostname = window.location.hostname;
-      // Replit format: https://hostname--8000.replit.dev
-      const backendHost = hostname.replace(/\.replit\.dev$/, '--8000.replit.dev');
+      // Replace the port in the hostname (changes -5000 to -8000)
+      const backendHost = hostname.replace(/-5000\./, '-8000.');
       return `https://${backendHost}/api`;
     }
   }
