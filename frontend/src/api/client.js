@@ -6,31 +6,17 @@ const getCurrentAPIUrl = () => {
   // In Replit, we need to construct the backend URL using the Replit domain format
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
     
     // Check if we're on a Replit domain
     if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      // Extract the base Replit URL (everything before the port number)
-      // Format: <repl-name>-<port>.<user>.replit.dev
-      const parts = hostname.split('.');
-      
-      if (parts.length >= 3) {
-        // Get the first part which contains repl-name-port
-        const replPart = parts[0];
-        
-        // Replace the port (5000) with backend port (8000)
-        const backendReplPart = replPart.replace(/-5000$/, '-8000');
-        
-        // Reconstruct the hostname
-        const backendHost = [backendReplPart, ...parts.slice(1)].join('.');
-        
-        const protocol = window.location.protocol;
-        return `${protocol}//${backendHost}/api`;
-      }
+      // In Replit, frontend runs on port 5000, backend on port 8000
+      // Just use the same hostname with port 8000
+      return `${protocol}//${hostname}:8000/api`;
     }
     
     // For local development, use the same host with different port
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      const protocol = window.location.protocol;
       return `${protocol}//${hostname}:8000/api`;
     }
   }

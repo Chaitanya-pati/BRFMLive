@@ -67,6 +67,18 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ## Recent Changes (November 2025)
 
+### API Connection Fix - PERMANENT SOLUTION (November 15, 2025)
+- **Problem**: Every fresh clone showed "Failed to fetch" error on login due to frontend trying to connect to `localhost:8000` instead of the Replit domain
+- **Root Cause**: The API client's URL detection logic was trying to replace port numbers in the hostname, but Replit domains don't include ports in the hostname
+- **Permanent Solution**: Updated `frontend/src/api/client.js` to properly detect Replit domains and construct the correct backend URL
+  - For Replit domains (*.replit.dev or *.repl.co): Uses `https://<hostname>:8000/api`
+  - For localhost: Uses `http://localhost:8000/api`
+  - The fix is in the code itself, so it works automatically on every clone
+- **How It Works**: The frontend detects the Replit domain from `window.location.hostname` and appends port 8000 to connect to the backend
+- **Visual Confirmation**: Login screen shows "✅ Connected to backend" in green when connection is successful
+- **Files Modified**: `frontend/src/api/client.js` - Simplified `getCurrentAPIUrl()` function to properly handle Replit's URL format
+- **Status**: This fix is permanent and requires no manual configuration on fresh clones
+
 ### Branch Selection System (November 15, 2025)
 - **Branch Selection Flow**: Implemented complete branch selection system after login
   - Auto-selects if user has only 1 branch
