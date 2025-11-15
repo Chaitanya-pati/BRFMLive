@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const express = require('express');
+const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -9,6 +10,13 @@ const app = express();
 const PORT = 5000;
 
 console.log('🚀 Starting Combined Frontend + API Proxy Server...');
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Branch-Id']
+}));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
