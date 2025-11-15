@@ -3,16 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
-import SvgIcon from 'react-native-svg-icon'; // Assuming you have this library or a similar one for SVG icons
 
-// Import your SVG icons
-// Example:
-// import { BuildingIcon, TruckIcon, FlaskIcon, ClockIcon } from '../assets/icons';
-
-// Placeholder for SVG icons if not explicitly imported
-const IconPlaceholder = ({ name, size, color }) => (
-  <Text style={{ fontSize: size, color: color, marginRight: 16 }}>{name}</Text>
-);
+// Icon component using Unicode symbols
+const Icon = ({ name, size = 36, color }) => {
+  const iconMap = {
+    'building': '🏢',
+    'truck': '🚛',
+    'flask': '🧪',
+    'clock': '⏰',
+    'storefront': '🏪',
+    'people': '👥',
+    'person-add': '➕',
+    'car': '🚗',
+  };
+  
+  return (
+    <Text style={{ fontSize: size, marginRight: 16 }}>
+      {iconMap[name] || '📋'}
+    </Text>
+  );
+};
 
 export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -73,12 +83,10 @@ export default function HomeScreen({ navigation }) {
           {stats.map((stat, index) => (
             <View key={index} style={[
               styles.statCard,
-              { borderLeftColor: stat.color }, // Using the new color
+              { borderLeftColor: stat.color },
               isMobile && styles.statCardMobile,
             ]}>
-              {/* Replace text icon with SvgIcon */}
-              {/* Example: <SvgIcon name={stat.icon} width={36} height={36} color={stat.color} /> */}
-              <IconPlaceholder name={stat.icon} size={isMobile ? 28 : 36} color={stat.color} />
+              <Icon name={stat.icon} size={isMobile ? 28 : 36} color={stat.color} />
               <View style={styles.statInfo}>
                 <Text style={[styles.statTitle, isMobile && styles.statTitleMobile]}>{stat.title}</Text>
                 {loading ? (
@@ -106,9 +114,7 @@ export default function HomeScreen({ navigation }) {
               ]}
               onPress={() => navigation.navigate(action.route)}
             >
-              {/* Replace text icon with SvgIcon */}
-              {/* Example: <SvgIcon name={action.icon} width={32} height={32} color={colors.onPrimary} /> */}
-              <IconPlaceholder name={action.icon} size={isMobile ? 28 : 32} color={colors.onPrimary} />
+              <Icon name={action.icon} size={isMobile ? 28 : 32} />
               <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>{action.title}</Text>
             </TouchableOpacity>
           ))}
