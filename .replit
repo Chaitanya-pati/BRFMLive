@@ -61,25 +61,21 @@ args = "cd frontend && npm run web"
 name = "Frontend"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm run web"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && node combined-server.js"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 5000
 
 [[ports]]
-localPort = 32775
+localPort = 37059
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
