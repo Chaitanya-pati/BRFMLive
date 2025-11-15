@@ -2,8 +2,20 @@ import axios from "axios";
 
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
-  // Use relative URL - webpack dev server will proxy to backend
-  return '/api';
+  // In Replit, we need to construct the backend URL using the Replit domain format
+  if (typeof window !== 'undefined') {
+    const currentUrl = window.location.href;
+    // If we're on a Replit domain, construct the backend URL
+    if (currentUrl.includes('replit.dev')) {
+      // Extract the base Replit URL and append port 8000
+      const hostname = window.location.hostname;
+      // Replit format: https://hostname--8000.replit.dev
+      const backendHost = hostname.replace(/\.replit\.dev$/, '--8000.replit.dev');
+      return `https://${backendHost}/api`;
+    }
+  }
+  // Fallback for local development
+  return 'http://localhost:8000/api';
 };
 
 const API_URL = process.env.REACT_APP_API_URL || getCurrentAPIUrl();
