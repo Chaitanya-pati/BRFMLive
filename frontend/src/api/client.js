@@ -5,17 +5,37 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const getCurrentAPIUrl = () => {
   // In Replit, we need to construct the backend URL using the Replit domain format
   if (typeof window !== 'undefined') {
-    const currentUrl = window.location.href;
-    // If we're on a Replit domain, construct the backend URL
-    if (currentUrl.includes('replit.dev')) {
-      // Extract the base Replit URL and change port from 5000 to 8000
-      const hostname = window.location.hostname;
-      // Replace the port in the hostname (changes -5000 to -8000)
-      const backendHost = hostname.replace(/-5000\./, '-8000.');
-      return `https://${backendHost}/api`;
+    const hostname = window.location.hostname;
+    
+    // Check if we're on a Replit domain
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      // Extract the base Replit URL (everything before the port number)
+      // Format: <repl-name>-<port>.<user>.replit.dev
+      const parts = hostname.split('.');
+      
+      if (parts.length >= 3) {
+        // Get the first part which contains repl-name-port
+        const replPart = parts[0];
+        
+        // Replace the port (5000) with backend port (8000)
+        const backendReplPart = replPart.replace(/-5000$/, '-8000');
+        
+        // Reconstruct the hostname
+        const backendHost = [backendReplPart, ...parts.slice(1)].join('.');
+        
+        const protocol = window.location.protocol;
+        return `${protocol}//${backendHost}/api`;
+      }
+    }
+    
+    // For local development, use the same host with different port
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const protocol = window.location.protocol;
+      return `${protocol}//${hostname}:8000/api`;
     }
   }
-  // Fallback for local development
+  
+  // Final fallback
   return 'http://localhost:8000/api';
 };
 

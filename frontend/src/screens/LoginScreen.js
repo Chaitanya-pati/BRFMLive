@@ -9,7 +9,25 @@ export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking');
   const { setActiveBranch, setUserBranches } = useBranch();
+
+  useEffect(() => {
+    // Check backend connectivity on mount
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/`, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(5000)
+        });
+        setBackendStatus(response.ok ? 'connected' : 'error');
+      } catch (error) {
+        console.error('Backend health check failed:', error);
+        setBackendStatus('disconnected');
+      }
+    };
+    checkBackend();
+  }, []);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -23,7 +41,9 @@ export default function LoginScreen({ navigation }) {
       username, 
       apiUrl: API_BASE_URL, 
       fullUrl: loginUrl,
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A'
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A',
+      port: typeof window !== 'undefined' ? window.location.port : 'N/A'
     });
     
     try {
@@ -72,7 +92,15 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (error) {
       console.error('❌ Login error:', error);
-      Alert.alert('Login Failed', error.message || 'Invalid username or password');
+      
+      let errorMessage = error.message || 'Invalid username or password';
+      
+      // Check if it's a network/connection error
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        errorMessage = `Cannot connect to backend server.\n\nBackend URL: ${API_BASE_URL}\n\nPlease ensure:\n1. Backend server is running (port 8000)\n2. Click the Run button to start both servers\n3. Wait for "Uvicorn running on http://0.0.0.0:8000" message\n\nIf issue persists, check the console logs for API URL details.`;
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -82,6 +110,19 @@ export default function LoginScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.loginBox}>
         <Text style={styles.title}>Login</Text>
+        
+        {backendStatus === 'disconnected' && (
+          <View style={styles.statusBanner}>
+            <Text style={styles.statusTextError}>
+              ⚠️ Backend Disconnected - Click Run button to start server
+            </Text>
+          </View>
+        )}
+        {backendStatus === 'connected' && (
+          <View style={[styles.statusBanner, styles.statusBannerSuccess]}>
+            <Text style={styles.statusTextSuccess}>✅ Connected to backend</Text>
+          </View>
+        )}
         
         <Text style={styles.label}>Username</Text>
         <TextInput
@@ -175,5 +216,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  statusBanner: {
+    backgroundColor: '#fff3cd',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  statusBannerSuccess: {
+    backgroundColor: '#d4edda',
+    borderLeftColor: '#28a745',
+  },
+  statusTextError: {
+    color: '#856404',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  statusTextSuccess: {
+    color: '#155724',
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
