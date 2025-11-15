@@ -65,7 +65,10 @@ const expo = spawn('npx', ['expo', 'start', '--web', '--port', PORT.toString()],
     ...process.env, 
     EXPO_DEVTOOLS_LISTEN_ADDRESS: '0.0.0.0',
     EXPO_NO_DEV_SERVER_SECURITY: '1',
-    EXPO_NO_HTTPS: '1'
+    EXPO_NO_HTTPS: '1',
+    EXPO_NO_CORS: '1',
+    EXPO_TUNNEL: '0',
+    CI: '1'
   }
 });
 
