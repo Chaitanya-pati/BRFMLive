@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,15 @@ import pytz
 from database import engine, get_db, Base
 import models
 import schemas
+
+def get_branch_id(x_branch_id: Optional[str] = Header(None)) -> Optional[int]:
+    """Extract branch_id from request header"""
+    if x_branch_id:
+        try:
+            return int(x_branch_id)
+        except ValueError:
+            return None
+    return None
 
 # IST timezone
 IST = pytz.timezone('Asia/Kolkata')
@@ -98,16 +107,22 @@ def read_root():
     return {"message": "Gate Entry & Lab Testing API", "status": "running"}
 
 @app.post("/api/suppliers", response_model=schemas.Supplier)
-def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_db)):
-    db_supplier = models.Supplier(**supplier.dict())
+def create_supplier(supplier: schemas.SupplierCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    supplier_data = supplier.dict()
+    if branch_id and not supplier_data.get('branch_id'):
+        supplier_data['branch_id'] = branch_id
+    db_supplier = models.Supplier(**supplier_data)
     db.add(db_supplier)
     db.commit()
     db.refresh(db_supplier)
     return db_supplier
 
 @app.get("/api/suppliers", response_model=List[schemas.Supplier])
-def get_suppliers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    suppliers = db.query(models.Supplier).offset(skip).limit(limit).all()
+def get_suppliers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Supplier)
+    if branch_id:
+        query = query.filter(models.Supplier.branch_id == branch_id)
+    suppliers = query.offset(skip).limit(limit).all()
     return suppliers
 
 @app.get("/api/suppliers/{supplier_id}", response_model=schemas.Supplier)
@@ -156,7 +171,8 @@ async def create_vehicle_entry(
     internal_weighment_slip: Optional[UploadFile] = File(None),
     client_weighment_slip: Optional[UploadFile] = File(None),
     transportation_copy: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    branch_id: Optional[int] = Depends(get_branch_id)
 ):
     arrival_dt = parse_ist_datetime(arrival_time) if arrival_time else get_utc_now()
 
@@ -169,6 +185,9 @@ async def create_vehicle_entry(
         arrival_time=arrival_dt,
         notes=notes
     )
+    
+    if branch_id:
+        db_vehicle.branch_id = branch_id
 
     if supplier_bill_photo:
         bill_path = await save_upload_file(supplier_bill_photo)
@@ -204,24 +223,28 @@ async def create_vehicle_entry(
     return db_vehicle
 
 @app.get("/api/vehicles/available-for-testing", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicles_available_for_testing(db: Session = Depends(get_db)):
+def get_vehicles_available_for_testing(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     # Get all vehicle IDs that already have lab tests
     tested_vehicle_ids = db.query(models.LabTest.vehicle_entry_id).distinct().all()
     tested_vehicle_ids = [vid[0] for vid in tested_vehicle_ids] if tested_vehicle_ids else []
 
     # Get vehicles that don't have lab tests yet
+    query = db.query(models.VehicleEntry)
+    if branch_id:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    
     if tested_vehicle_ids:
-        available_vehicles = db.query(models.VehicleEntry).filter(
+        available_vehicles = query.filter(
             ~models.VehicleEntry.id.in_(tested_vehicle_ids)
         ).all()
     else:
         # If no lab tests exist, all vehicles are available
-        available_vehicles = db.query(models.VehicleEntry).all()
+        available_vehicles = query.all()
 
     return available_vehicles
 
 @app.get("/api/vehicles/lab-tested", response_model=List[schemas.VehicleEntryWithLabTests])
-def get_lab_tested_vehicles(db: Session = Depends(get_db)):
+def get_lab_tested_vehicles(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     # Get all lab test records with their vehicle entries
     lab_tests = db.query(models.LabTest).all()
 
@@ -232,15 +255,22 @@ def get_lab_tested_vehicles(db: Session = Depends(get_db)):
     tested_vehicle_ids = list(set([test.vehicle_entry_id for test in lab_tests]))
 
     # Fetch vehicles with those IDs
-    lab_tested_vehicles = db.query(models.VehicleEntry).filter(
+    query = db.query(models.VehicleEntry).filter(
         models.VehicleEntry.id.in_(tested_vehicle_ids)
-    ).all()
+    )
+    if branch_id:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    
+    lab_tested_vehicles = query.all()
 
     return lab_tested_vehicles
 
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    vehicles = db.query(models.VehicleEntry).offset(skip).limit(limit).all()
+def get_vehicle_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.VehicleEntry)
+    if branch_id:
+        query = query.filter(models.VehicleEntry.branch_id == branch_id)
+    vehicles = query.offset(skip).limit(limit).all()
 
     # Convert binary image paths to strings
     for vehicle in vehicles:
@@ -408,7 +438,7 @@ def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
     raise HTTPException(status_code=404, detail="Vehicle photo not found")
 
 @app.post("/api/lab-tests", response_model=schemas.LabTest)
-def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_db)):
+def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     vehicle = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == lab_test.vehicle_entry_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
@@ -419,6 +449,10 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     # Auto-fetch bill number from vehicle entry
     if not lab_test_data.get('bill_number'):
         lab_test_data['bill_number'] = vehicle.bill_no
+    
+    # Set branch_id if provided
+    if branch_id and not lab_test_data.get('branch_id'):
+        lab_test_data['branch_id'] = branch_id
 
     db_lab_test = models.LabTest(**lab_test_data)
     db.add(db_lab_test)
@@ -427,8 +461,11 @@ def create_lab_test(lab_test: schemas.LabTestCreate, db: Session = Depends(get_d
     return db_lab_test
 
 @app.get("/api/lab-tests", response_model=List[schemas.LabTestWithVehicle])
-def get_lab_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    lab_tests = db.query(models.LabTest).offset(skip).limit(limit).all()
+def get_lab_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.LabTest)
+    if branch_id:
+        query = query.filter(models.LabTest.branch_id == branch_id)
+    lab_tests = query.offset(skip).limit(limit).all()
 
     # Add has_claim flag to each lab test
     result = []
@@ -526,16 +563,22 @@ def get_godown_types():
         return ["Warehouse", "Silo", "Storage", "Cold Storage"]
 
 @app.post("/api/godowns", response_model=schemas.GodownMaster)
-def create_godown(godown: schemas.GodownMasterCreate, db: Session = Depends(get_db)):
-    db_godown = models.GodownMaster(**godown.dict())
+def create_godown(godown: schemas.GodownMasterCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    godown_data = godown.dict()
+    if branch_id and not godown_data.get('branch_id'):
+        godown_data['branch_id'] = branch_id
+    db_godown = models.GodownMaster(**godown_data)
     db.add(db_godown)
     db.commit()
     db.refresh(db_godown)
     return db_godown
 
 @app.get("/api/godowns", response_model=List[schemas.GodownMaster])
-def get_godowns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    godowns = db.query(models.GodownMaster).offset(skip).limit(limit).all()
+def get_godowns(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.GodownMaster)
+    if branch_id:
+        query = query.filter(models.GodownMaster.branch_id == branch_id)
+    godowns = query.offset(skip).limit(limit).all()
     return godowns
 
 @app.get("/api/godowns/{godown_id}", response_model=schemas.GodownMaster)
@@ -577,7 +620,8 @@ async def create_unloading_entry(
     notes: Optional[str] = Form(None),
     before_unloading_image: Optional[UploadFile] = File(None),
     after_unloading_image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    branch_id: Optional[int] = Depends(get_branch_id)
 ):
     # Get weights from vehicle entry
     vehicle_entry = db.query(models.VehicleEntry).filter(models.VehicleEntry.id == vehicle_entry_id).first()
@@ -601,6 +645,9 @@ async def create_unloading_entry(
         unloading_end_time=end_time,
         notes=notes
     )
+    
+    if branch_id:
+        db_entry.branch_id = branch_id
 
     if before_unloading_image and before_unloading_image.filename:
         db_entry.before_unloading_image = await save_upload_file(before_unloading_image)
@@ -620,8 +667,11 @@ async def create_unloading_entry(
     return db_entry
 
 @app.get("/api/unloading-entries", response_model=List[schemas.UnloadingEntryWithDetails])
-def get_unloading_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    entries = db.query(models.UnloadingEntry).offset(skip).limit(limit).all()
+def get_unloading_entries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.UnloadingEntry)
+    if branch_id:
+        query = query.filter(models.UnloadingEntry.branch_id == branch_id)
+    entries = query.offset(skip).limit(limit).all()
 
     # Images are already stored as strings in UnloadingEntry, no conversion needed
     return entries
@@ -712,16 +762,22 @@ def delete_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     return {"message": "Unloading entry deleted successfully"}
 
 @app.post("/api/bins", response_model=schemas.Bin)
-def create_bin(bin_data: schemas.BinCreate, db: Session = Depends(get_db)):
-    db_bin = models.Bin(**bin_data.dict())
+def create_bin(bin_data: schemas.BinCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    bin_dict = bin_data.dict()
+    if branch_id and not bin_dict.get('branch_id'):
+        bin_dict['branch_id'] = branch_id
+    db_bin = models.Bin(**bin_dict)
     db.add(db_bin)
     db.commit()
     db.refresh(db_bin)
     return db_bin
 
 @app.get("/api/bins", response_model=List[schemas.Bin])
-def get_bins(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    bins = db.query(models.Bin).offset(skip).limit(limit).all()
+def get_bins(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Bin)
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    bins = query.offset(skip).limit(limit).all()
     # Sanitize float values
     for bin_obj in bins:
         bin_obj.capacity = sanitize_float(bin_obj.capacity)
@@ -774,16 +830,22 @@ def delete_bin(bin_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to delete bin: {str(e)}")
 
 @app.post("/api/magnets", response_model=schemas.Magnet)
-def create_magnet(magnet_data: schemas.MagnetCreate, db: Session = Depends(get_db)):
-    db_magnet = models.Magnet(**magnet_data.dict())
+def create_magnet(magnet_data: schemas.MagnetCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    magnet_dict = magnet_data.dict()
+    if branch_id and not magnet_dict.get('branch_id'):
+        magnet_dict['branch_id'] = branch_id
+    db_magnet = models.Magnet(**magnet_dict)
     db.add(db_magnet)
     db.commit()
     db.refresh(db_magnet)
     return db_magnet
 
 @app.get("/api/magnets", response_model=List[schemas.Magnet])
-def get_magnets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    magnets = db.query(models.Magnet).offset(skip).limit(limit).all()
+def get_magnets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Magnet)
+    if branch_id:
+        query = query.filter(models.Magnet.branch_id == branch_id)
+    magnets = query.offset(skip).limit(limit).all()
     return magnets
 
 @app.get("/api/magnets/{magnet_id}", response_model=schemas.Magnet)
