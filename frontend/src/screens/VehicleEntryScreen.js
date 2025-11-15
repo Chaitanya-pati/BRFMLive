@@ -86,8 +86,8 @@ export default function VehicleEntryScreen() {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.vehicle_state_code || !formData.vehicle_second_part || !formData.vehicle_third_part || !formData.supplier_id || !formData.bill_no) {
-        showNotification('Please fill in all required fields', 'error');
+      if (!formData.vehicle_state_code || !formData.vehicle_second_part || !formData.vehicle_third_part || !formData.supplier_id || !formData.bill_no || !formData.arrival_time) {
+        showNotification('Please fill in all required fields (Vehicle Number, Supplier, Bill Number, Arrival Time)', 'error');
         return;
       }
 
@@ -344,6 +344,40 @@ export default function VehicleEntryScreen() {
     }
   };
 
+  const captureImage = async (field) => {
+    // Request camera permission if not already granted
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (status !== 'granted') {
+      showNotification('Camera permission is required to take photos', 'error');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setFormData({ ...formData, [field]: result.assets[0] });
+    }
+  };
+
+  const showImageOptions = (field) => {
+    if (Platform.OS === 'web') {
+      // On web, just use file picker
+      pickImage(field);
+    } else {
+      // On mobile, show options
+      alert('Choose an option', '', [
+        { text: 'Take Photo', onPress: () => captureImage(field) },
+        { text: 'Choose from Library', onPress: () => pickImage(field) },
+        { text: 'Cancel', style: 'cancel' }
+      ]);
+    }
+  };
+
   const columns = [
     { label: 'ID', field: 'id', flex: 0.5 },
     { label: 'Vehicle Number', field: 'vehicle_number', flex: 1 },
@@ -504,19 +538,29 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Supplier bill photo loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.supplier_bill_photo.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('supplier_bill_photo')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Bill Photo</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('supplier_bill_photo')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('supplier_bill_photo')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
           <View style={styles.imageSection}>
-            <Text style={styles.label}>Vehicle Photo - Front *</Text>
+            <Text style={styles.label}>Vehicle Photo - Front</Text>
             {formData.vehicle_photo_front ? (
               <View>
                 <Image 
@@ -530,19 +574,29 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Vehicle photo front loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_front.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('vehicle_photo_front')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Front Photo</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('vehicle_photo_front')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_front')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
           <View style={styles.imageSection}>
-            <Text style={styles.label}>Vehicle Photo - Back *</Text>
+            <Text style={styles.label}>Vehicle Photo - Back</Text>
             {formData.vehicle_photo_back ? (
               <View>
                 <Image 
@@ -556,19 +610,29 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Vehicle photo back loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_back.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('vehicle_photo_back')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Back Photo</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('vehicle_photo_back')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_back')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
           <View style={styles.imageSection}>
-            <Text style={styles.label}>Vehicle Photo - Side *</Text>
+            <Text style={styles.label}>Vehicle Photo - Side</Text>
             {formData.vehicle_photo_side ? (
               <View>
                 <Image 
@@ -582,14 +646,24 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Vehicle photo side loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.vehicle_photo_side.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('vehicle_photo_side')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Side Photo</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('vehicle_photo_side')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('vehicle_photo_side')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -608,14 +682,24 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Internal weighment slip loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.internal_weighment_slip.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('internal_weighment_slip')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Internal Weighment Slip</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('internal_weighment_slip')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('internal_weighment_slip')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -634,14 +718,24 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Client weighment slip loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.client_weighment_slip.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('client_weighment_slip')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Client Weighment Slip</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('client_weighment_slip')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('client_weighment_slip')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -660,14 +754,24 @@ export default function VehicleEntryScreen() {
                   onLoad={() => console.log('Transportation copy loaded successfully')}
                 />
                 <Text style={styles.imageUrlDebug}>URL: {formData.transportation_copy.uri}</Text>
-                <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={styles.changeImageButton}>
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                </TouchableOpacity>
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity onPress={() => captureImage('transportation_copy')} style={[styles.imageActionButton, styles.cameraButton]}>
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={[styles.imageActionButton, styles.galleryButton]}>
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>+ Tap to Upload Transportation Copy</Text>
-              </TouchableOpacity>
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity onPress={() => captureImage('transportation_copy')} style={[styles.uploadButton, styles.cameraButton]}>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => pickImage('transportation_copy')} style={[styles.uploadButton, styles.galleryButton]}>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -802,6 +906,44 @@ const styles = StyleSheet.create({
   uploadPlaceholderText: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  imageButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  imageActionButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  cameraButton: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  galleryButton: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  imageActionText: {
+    color: colors.onPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  uploadButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   imageUrlDebug: {
     fontSize: 10,

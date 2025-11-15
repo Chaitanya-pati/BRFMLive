@@ -38,7 +38,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     notes: '',
   });
 
-  
+
 
   useEffect(() => {
     loadEntries();
@@ -89,7 +89,7 @@ export default function UnloadingEntryScreen({ navigation }) {
   const handleVehicleChange = (vehicleId) => {
     // Find the selected vehicle and get its lab test category
     const selectedVehicle = vehicles.find(v => v.id === vehicleId);
-    
+
     setFormData({ ...formData, vehicle_entry_id: vehicleId });
 
     if (selectedVehicle && selectedVehicle.lab_tests && selectedVehicle.lab_tests.length > 0) {
@@ -110,42 +110,53 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const pickImage = async (type) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      if (type === 'before') {
-        setBeforeImage(result.assets[0]);
-      } else {
-        setAfterImage(result.assets[0]);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        if (type === 'before') {
+          setBeforeImage(result.assets[0]);
+        } else {
+          setAfterImage(result.assets[0]);
+        }
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      notify.showError('Failed to pick image');
     }
   };
 
-  const takePhoto = async (type) => {
-    if (!cameraPermission) {
-      notify.showWarning('Camera permission is required to take photos', 'Permission Required');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      if (type === 'before') {
-        setBeforeImage(result.assets[0]);
-      } else {
-        setAfterImage(result.assets[0]);
+  const captureImage = async (type) => {
+    try {
+      if (!cameraPermission) {
+        await requestCameraPermission();
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        if (type === 'before') {
+          setBeforeImage(result.assets[0]);
+        } else {
+          setAfterImage(result.assets[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      notify.showError('Failed to capture image');
     }
   };
+
 
   const openAddModal = () => {
     setFormData({
@@ -386,63 +397,77 @@ export default function UnloadingEntryScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Before Unloading Image (Optional)</Text>
-          <View style={styles.imageSection}>
-            {beforeImage ? (
-              <Image 
-                source={{ uri: beforeImage.uri || beforeImage }} 
-                style={styles.imagePreview}
-                onError={(e) => console.log('Error loading before image:', e.nativeEvent.error)}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>No image</Text>
+          <Text style={styles.label}>Before Unloading Photo</Text>
+          {beforeImage ? (
+            <View>
+              <Image source={{ uri: beforeImage.uri }} style={styles.imagePreview} />
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity
+                  onPress={() => captureImage('before')}
+                  style={[styles.imageActionButton, styles.cameraButton]}
+                >
+                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => pickImage('before')}
+                  style={[styles.imageActionButton, styles.galleryButton]}
+                >
+                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                </TouchableOpacity>
               </View>
-            )}
-            <View style={styles.imageButtons}>
+            </View>
+          ) : (
+            <View style={styles.imageButtonRow}>
               <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => takePhoto('before')}
+                onPress={() => captureImage('before')}
+                style={[styles.uploadButton, styles.cameraButton]}
               >
-                <Text style={styles.imageButtonText}>📷 Camera</Text>
+                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.imageButton}
                 onPress={() => pickImage('before')}
+                style={[styles.uploadButton, styles.galleryButton]}
               >
-                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
+                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          )}
 
-          <Text style={styles.label}>After Unloading Image (Optional)</Text>
-          <View style={styles.imageSection}>
-            {afterImage ? (
-              <Image 
-                source={{ uri: afterImage.uri || afterImage }} 
-                style={styles.imagePreview}
-                onError={(e) => console.log('Error loading after image:', e.nativeEvent.error)}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>No image</Text>
+          <Text style={styles.label}>After Unloading Photo</Text>
+          {afterImage ? (
+            <View>
+              <Image source={{ uri: afterImage.uri }} style={styles.imagePreview} />
+              <View style={styles.imageButtonRow}>
+                <TouchableOpacity
+                  onPress={() => captureImage('after')}
+                  style={[styles.imageActionButton, styles.cameraButton]}
+                >
+                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => pickImage('after')}
+                  style={[styles.imageActionButton, styles.galleryButton]}
+                >
+                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                </TouchableOpacity>
               </View>
-            )}
-            <View style={styles.imageButtons}>
+            </View>
+          ) : (
+            <View style={styles.imageButtonRow}>
               <TouchableOpacity
-                style={styles.imageButton}
-                onPress={() => takePhoto('after')}
+                onPress={() => captureImage('after')}
+                style={[styles.uploadButton, styles.cameraButton]}
               >
-                <Text style={styles.imageButtonText}>📷 Camera</Text>
+                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.imageButton}
                 onPress={() => pickImage('after')}
+                style={[styles.uploadButton, styles.galleryButton]}
               >
-                <Text style={styles.imageButtonText}>🖼️ Gallery</Text>
+                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          )}
 
           <Text style={styles.label}>Notes</Text>
           <TextInput
@@ -573,6 +598,56 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  changeImageButton: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  changeImageText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  imageButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  imageActionButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  cameraButton: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  galleryButton: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  imageActionText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
