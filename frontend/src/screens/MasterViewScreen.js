@@ -16,10 +16,6 @@ import Modal from '../components/Modal';
 import SelectDropdown from '../components/SelectDropdown';
 import { godownApi, supplierApi, binApi, magnetApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
-import axios from 'axios'; // Import axios
-
-// Assuming API_URL is defined elsewhere or you can define it here
-const API_URL = 'http://localhost:3000'; // Replace with your actual API URL
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
@@ -99,15 +95,17 @@ export default function MasterViewScreen({ navigation }) {
   // Function to load godown types from API
   const loadGodownTypes = async () => {
     try {
-      // Use axios to fetch data from the backend API
-      const response = await axios.get(`${API_URL}/api/godown-types`);
-      console.log('Godown types response:', response.data);
+      console.log('📋 Loading godown types...');
+      const response = await godownApi.getTypes();
+      console.log('📋 Godown types response:', response.data);
       setGodownTypes(response.data || []);
     } catch (error) {
-      console.error('Error loading godown types:', error);
-      // Fallback to default types if API fails, or show an error notification
-      notify.showError('Failed to load godown types from the server.');
-      setGodownTypes(['Warehouse', 'Silo', 'Storage', 'Cold Storage']); // Fallback
+      console.error('❌ Error loading godown types:', error);
+      // Fallback to default types if API fails
+      const fallbackTypes = ['Mill', 'Low Mill', 'HD-1', 'HD-2', 'HD-3', 'Warehouse', 'Silo', 'Storage', 'Cold Storage'];
+      console.log('📋 Using fallback godown types:', fallbackTypes);
+      setGodownTypes(fallbackTypes);
+      notify.showWarning('Using default godown types. Backend may be unavailable.');
     }
   };
 
