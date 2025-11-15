@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import colors from '../theme/colors';
 
@@ -12,15 +12,23 @@ export default function SelectDropdown({
   error,
   enabled = true,
 }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.pickerContainer, error && styles.pickerContainerError, !enabled && styles.pickerDisabled]}>
+      {label && <Text style={[styles.label, isMobile && styles.labelMobile]}>{label}</Text>}
+      <View style={[
+        styles.pickerContainer, 
+        isMobile && styles.pickerContainerMobile,
+        error && styles.pickerContainerError, 
+        !enabled && styles.pickerDisabled
+      ]}>
         <Picker
           selectedValue={value}
           onValueChange={onValueChange}
           enabled={enabled}
-          style={styles.picker}
+          style={[styles.picker, isMobile && styles.pickerMobile]}
           dropdownIconColor={enabled ? colors.textPrimary : colors.textSecondary}
           itemStyle={Platform.OS === 'ios' ? styles.pickerItem : undefined}
         >
@@ -56,6 +64,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 8,
   },
+  labelMobile: {
+    fontSize: 13,
+  },
   pickerContainer: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -63,6 +74,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.surface,
     minHeight: Platform.select({ web: 48, default: 50 }),
+  },
+  pickerContainerMobile: {
+    minHeight: Platform.select({ web: 44, default: 48 }),
   },
   pickerContainerError: {
     borderColor: colors.error,
@@ -80,6 +94,15 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     paddingHorizontal: Platform.OS === 'web' ? 12 : 0,
+  },
+  pickerMobile: {
+    fontSize: 13,
+    height: Platform.select({ 
+      ios: 180, 
+      android: 48,
+      web: 44 
+    }),
+    paddingHorizontal: Platform.OS === 'web' ? 10 : 0,
   },
   pickerItem: {
     fontSize: 14,

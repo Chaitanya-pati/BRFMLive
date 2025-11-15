@@ -806,17 +806,23 @@ const styles = StyleSheet.create({
   },
   vehicleNumberRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: isMobile ? 6 : 8,
     marginBottom: 16,
     alignItems: 'center',
+    flexWrap: isMobile ? 'nowrap' : 'nowrap',
   },
   vehicleInput: {
     flex: 1,
     marginBottom: 0,
     textAlign: 'center',
+    minWidth: isMobile ? 50 : 60,
+    fontSize: isMobile ? 14 : 16,
+    paddingHorizontal: isMobile ? 8 : 12,
+    paddingVertical: isMobile ? 10 : 12,
   },
   vehicleInputLarge: {
-    flex: 1.5,
+    flex: isMobile ? 2 : 1.5,
+    minWidth: isMobile ? 100 : 120,
   },
   imageSection: {
     marginBottom: 12,

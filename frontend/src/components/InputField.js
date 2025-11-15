@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
 import colors from '../theme/colors';
 
 export default function InputField({
@@ -15,12 +15,16 @@ export default function InputField({
   editable = true,
   ...props
 }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, isMobile && styles.labelMobile]}>{label}</Text>}
       <TextInput
         style={[
           styles.input,
+          isMobile && styles.inputMobile,
           multiline && styles.inputMultiline,
           error && styles.inputError,
           !editable && styles.inputDisabled,
@@ -51,6 +55,9 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     marginBottom: 8,
   },
+  labelMobile: {
+    fontSize: 13,
+  },
   input: {
     backgroundColor: colors.inputBackground,
     borderWidth: 1,
@@ -60,6 +67,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: colors.onSurface,
+  },
+  inputMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
   },
   inputMultiline: {
     minHeight: 80,
