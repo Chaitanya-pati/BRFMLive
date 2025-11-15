@@ -556,7 +556,8 @@ async def save_upload_file(file: UploadFile) -> str:
 @app.get("/api/godown-types")
 def get_godown_types():
     try:
-        with open("godown_types.json", "r") as f:
+        godown_types_path = Path(__file__).parent / "godown_types.json"
+        with open(godown_types_path, "r") as f:
             data = json.load(f)
         print(f"📋 Godown types loaded: {data['godown_types']}")
         return data["godown_types"]
