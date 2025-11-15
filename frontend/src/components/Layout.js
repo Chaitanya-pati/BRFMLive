@@ -78,6 +78,7 @@ export default function Layout({ children, title, currentRoute }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isMobile);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branchModalVisible, setBranchModalVisible] = useState(false);
+  const [userMenuVisible, setUserMenuVisible] = useState(false);
   const { activeBranch, userBranches, setActiveBranch } = useBranch();
 
   useEffect(() => {
@@ -203,27 +204,60 @@ export default function Layout({ children, title, currentRoute }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
-          {activeBranch && (
-            <TouchableOpacity
-              style={styles.branchSelector}
-              onPress={() => setBranchModalVisible(true)}
-            >
-              <Text style={styles.branchName}>{activeBranch.name}</Text>
-              <Text style={styles.branchDropdownIcon}>▼</Text>
-            </TouchableOpacity>
+          {!isMobile && activeBranch && (
+            <View style={styles.branchBadge}>
+              <Text style={styles.branchBadgeText}>{activeBranch.name}</Text>
+            </View>
           )}
-          <View style={styles.adminProfile}>
+          <TouchableOpacity
+            style={styles.userMenuButton}
+            onPress={() => setUserMenuVisible(!userMenuVisible)}
+          >
             <View style={styles.adminAvatar}>
               <Text style={styles.adminAvatarText}>AD</Text>
             </View>
-            {!isMobile && <Text style={styles.adminName}>Admin</Text>}
-          </View>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
+            {!isMobile && <Text style={styles.userMenuText}>▼</Text>}
           </TouchableOpacity>
+          
+          {userMenuVisible && (
+            <>
+              <TouchableOpacity
+                style={styles.userMenuOverlay}
+                onPress={() => setUserMenuVisible(false)}
+                activeOpacity={1}
+              />
+              <View style={[styles.userDropdown, isMobile && styles.userDropdownMobile]}>
+                <View style={styles.userDropdownHeader}>
+                  <Text style={styles.userDropdownName}>Admin</Text>
+                </View>
+                {activeBranch && (
+                  <>
+                    <View style={styles.userDropdownDivider} />
+                    <TouchableOpacity
+                      style={styles.userDropdownItem}
+                      onPress={() => {
+                        setUserMenuVisible(false);
+                        setBranchModalVisible(true);
+                      }}
+                    >
+                      <Text style={styles.userDropdownItemLabel}>Branch</Text>
+                      <Text style={styles.userDropdownItemValue}>{activeBranch.name}</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <View style={styles.userDropdownDivider} />
+                <TouchableOpacity
+                  style={styles.userDropdownItemDanger}
+                  onPress={() => {
+                    setUserMenuVisible(false);
+                    handleLogout();
+                  }}
+                >
+                  <Text style={styles.userDropdownItemDangerText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -398,44 +432,94 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
   },
-  branchSelector: {
+  branchBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    marginRight: 8,
+  },
+  branchBadgeText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  userMenuButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    padding: 4,
+  },
+  userMenuText: {
+    color: "#ffffff",
+    fontSize: 12,
+  },
+  userMenuOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+  },
+  userDropdown: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    backgroundColor: "#ffffff",
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    minWidth: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 999,
+    overflow: "hidden",
   },
-  branchName: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "600",
+  userDropdownMobile: {
+    right: 10,
+    minWidth: 180,
   },
-  branchDropdownIcon: {
-    color: "#ffffff",
-    fontSize: 10,
-    marginLeft: 4,
+  userDropdownHeader: {
+    padding: 16,
+    backgroundColor: "#f8fafc",
   },
-  adminProfile: {
+  userDropdownName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  userDropdownDivider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+  },
+  userDropdownItem: {
+    padding: 16,
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 12,
   },
-  logoutButton: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
+  userDropdownItemLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "500",
   },
-  logoutText: {
-    color: "#ffffff",
+  userDropdownItemValue: {
+    fontSize: 14,
+    color: "#1f2937",
+    fontWeight: "600",
+  },
+  userDropdownItemDanger: {
+    padding: 16,
+    backgroundColor: "#fef2f2",
+  },
+  userDropdownItemDangerText: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#dc2626",
   },
   adminAvatar: {
     width: 40,

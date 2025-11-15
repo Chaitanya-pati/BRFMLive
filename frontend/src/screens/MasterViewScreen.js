@@ -685,7 +685,7 @@ export default function MasterViewScreen({ navigation }) {
           onClose={() => setModalVisible(false)}
           title={editMode ? `Edit ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}` : `Add New ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}`}
         >
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={true}>
             {activeTab === 'godown' && (
               <>
                 <Text style={styles.label}>Name *</Text>
@@ -955,6 +955,10 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
+    maxHeight: Platform.select({ 
+      web: 'calc(100vh - 200px)', 
+      default: '80%' 
+    }),
   },
   label: {
     fontSize: 14,
