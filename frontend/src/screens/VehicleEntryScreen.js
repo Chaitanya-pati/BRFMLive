@@ -373,24 +373,28 @@ export default function VehicleEntryScreen() {
       >
         <ScrollView style={styles.form}>
           <Text style={styles.label}>Vehicle Number *</Text>
-          <View style={styles.vehicleNumberContainer}>
-            <InputField
-              label="State Code"
+          <View style={styles.vehicleNumberRow}>
+            <TextInput
+              style={[styles.input, styles.vehicleInput]}
               value={formData.vehicle_state_code}
               onChangeText={(text) => setFormData({ ...formData, vehicle_state_code: text.toUpperCase() })}
               placeholder="KA"
+              maxLength={2}
             />
-            <InputField
-              label="Second Part"
+            <TextInput
+              style={[styles.input, styles.vehicleInput]}
               value={formData.vehicle_second_part}
               onChangeText={(text) => setFormData({ ...formData, vehicle_second_part: text })}
               placeholder="01"
+              keyboardType="numeric"
+              maxLength={2}
             />
-            <InputField
-              label="Third Part"
+            <TextInput
+              style={[styles.input, styles.vehicleInput, styles.vehicleInputLarge]}
               value={formData.vehicle_third_part}
               onChangeText={(text) => setFormData({ ...formData, vehicle_third_part: text.toUpperCase() })}
               placeholder="AB-1234"
+              maxLength={7}
             />
           </View>
 
@@ -675,10 +679,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 8,
   },
-  vehicleNumberContainer: {
-    flexDirection: 'column',
-    gap: 12,
-    marginBottom: 12,
+  vehicleNumberRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  vehicleInput: {
+    flex: 1,
+    marginBottom: 0,
+    textAlign: 'center',
+  },
+  vehicleInputLarge: {
+    flex: 1.5,
   },
   imageSection: {
     marginBottom: 12,
