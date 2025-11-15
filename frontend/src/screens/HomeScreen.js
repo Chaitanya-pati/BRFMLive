@@ -3,24 +3,36 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
+import { 
+  FaBuilding, 
+  FaTruck, 
+  FaFlask, 
+  FaClock, 
+  FaStore, 
+  FaUsers, 
+  FaUserPlus, 
+  FaCar 
+} from 'react-icons/fa';
 
-// Icon component using Unicode symbols
+// Icon component using Font Awesome icons
 const Icon = ({ name, size = 36, color }) => {
   const iconMap = {
-    'building': '🏢',
-    'truck': '🚛',
-    'flask': '🧪',
-    'clock': '⏰',
-    'storefront': '🏪',
-    'people': '👥',
-    'person-add': '➕',
-    'car': '🚗',
+    'building': FaBuilding,
+    'truck': FaTruck,
+    'flask': FaFlask,
+    'clock': FaClock,
+    'storefront': FaStore,
+    'people': FaUsers,
+    'person-add': FaUserPlus,
+    'car': FaCar,
   };
   
+  const IconComponent = iconMap[name] || FaBuilding;
+  
   return (
-    <Text style={{ fontSize: size, marginRight: 16 }}>
-      {iconMap[name] || '📋'}
-    </Text>
+    <View style={{ marginRight: 16 }}>
+      <IconComponent color={color || colors.primary} size={size} />
+    </View>
   );
 };
 

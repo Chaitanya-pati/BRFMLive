@@ -14,6 +14,15 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useBranch } from "../context/BranchContext";
 import { storage } from "../utils/storage";
+import { 
+  FaHome, 
+  FaDatabase, 
+  FaTruck, 
+  FaFlask, 
+  FaBox, 
+  FaClipboardList, 
+  FaWarehouse 
+} from "react-icons/fa";
 
 const colors = {
   background: "#f5f6fa",
@@ -28,12 +37,12 @@ const colors = {
   onInfo: "#ffffff",
 };
 
-// Icon Components with proper SVG icons
+// Icon Components with Font Awesome icons
 const SvgHomeIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>🏠</Text>
+      <FaHome color={color} size={18} />
     </View>
   );
 };
@@ -42,7 +51,7 @@ const SvgDatabaseIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>📊</Text>
+      <FaDatabase color={color} size={18} />
     </View>
   );
 };
@@ -51,7 +60,7 @@ const SvgTruckIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>🚛</Text>
+      <FaTruck color={color} size={18} />
     </View>
   );
 };
@@ -60,7 +69,7 @@ const SvgClipboardIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>🧪</Text>
+      <FaFlask color={color} size={18} />
     </View>
   );
 };
@@ -69,7 +78,7 @@ const SvgPackageIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>📦</Text>
+      <FaBox color={color} size={18} />
     </View>
   );
 };
@@ -78,7 +87,7 @@ const SvgFileTextIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>📋</Text>
+      <FaClipboardList color={color} size={18} />
     </View>
   );
 };
@@ -87,7 +96,7 @@ const SvgBinIcon = ({ active }) => {
   const color = active ? "#ffffff" : "#94a3b8";
   return (
     <View style={styles.iconContainer}>
-      <Text style={{ fontSize: 18, color }}>🗑️</Text>
+      <FaWarehouse color={color} size={18} />
     </View>
   );
 };
