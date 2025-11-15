@@ -30,6 +30,12 @@ export default function VehicleEntryScreen() {
   const [suppliers, setSuppliers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
+  
+  // Refs for auto-focus on vehicle number fields
+  let stateCodeRef = null;
+  let secondPartRef = null;
+  let thirdPartRef = null;
+  
   const [formData, setFormData] = useState({
     vehicle_state_code: '',
     vehicle_second_part: '',
@@ -375,21 +381,35 @@ export default function VehicleEntryScreen() {
           <Text style={styles.label}>Vehicle Number *</Text>
           <View style={styles.vehicleNumberRow}>
             <TextInput
+              ref={(ref) => (stateCodeRef = ref)}
               style={[styles.input, styles.vehicleInput]}
               value={formData.vehicle_state_code}
-              onChangeText={(text) => setFormData({ ...formData, vehicle_state_code: text.toUpperCase() })}
+              onChangeText={(text) => {
+                const upperText = text.toUpperCase();
+                setFormData({ ...formData, vehicle_state_code: upperText });
+                if (upperText.length === 2 && secondPartRef) {
+                  secondPartRef.focus();
+                }
+              }}
               placeholder="KA"
               maxLength={2}
             />
             <TextInput
+              ref={(ref) => (secondPartRef = ref)}
               style={[styles.input, styles.vehicleInput]}
               value={formData.vehicle_second_part}
-              onChangeText={(text) => setFormData({ ...formData, vehicle_second_part: text })}
+              onChangeText={(text) => {
+                setFormData({ ...formData, vehicle_second_part: text });
+                if (text.length === 2 && thirdPartRef) {
+                  thirdPartRef.focus();
+                }
+              }}
               placeholder="01"
               keyboardType="numeric"
               maxLength={2}
             />
             <TextInput
+              ref={(ref) => (thirdPartRef = ref)}
               style={[styles.input, styles.vehicleInput, styles.vehicleInputLarge]}
               value={formData.vehicle_third_part}
               onChangeText={(text) => setFormData({ ...formData, vehicle_third_part: text.toUpperCase() })}
@@ -438,10 +458,11 @@ export default function VehicleEntryScreen() {
           </View>
 
           <DatePicker
-            label="Arrival Time"
+            label="Arrival Time *"
             value={formData.arrival_time}
             onChange={(date) => setFormData({ ...formData, arrival_time: date })}
             mode="datetime"
+            placeholder="Select arrival date and time"
           />
 
           <InputField
