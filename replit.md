@@ -5,7 +5,16 @@ This full-stack, cross-platform application manages supplier information, vehicl
 
 ## 🚀 Quick Setup (After Cloning to New Replit)
 
-When you clone this project to a new Replit, run this **one-time setup**:
+### Automatic Migration System (New!)
+**No manual setup required!** The application now automatically runs database migrations on startup.
+
+When you click the **Run** button:
+1. ✅ Backend automatically checks for pending migrations
+2. ✅ Applies all migrations to bring database to latest schema
+3. ✅ Starts the API server
+
+### Optional: Manual Setup with Sample Data
+If you want to seed sample data, run this **one-time setup**:
 
 ```bash
 bash setup_new_clone.sh
@@ -14,10 +23,13 @@ bash setup_new_clone.sh
 This script will:
 - ✅ Wait for PostgreSQL to start
 - ✅ Create the uploads directory
-- ✅ Run all database migrations
+- ✅ Run all database migrations (redundant with auto-migration)
 - ✅ Optionally seed sample data
 
-After setup completes, just click the **Run** button to start the application!
+**Key Files:**
+- `backend/run_migrations.py` - Automatic migration runner (runs on app startup)
+- `backend/main.py` - Calls `apply_migrations()` before starting FastAPI server
+- Migration approach uses subprocess to avoid circular import issues
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -66,6 +78,28 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 - Connection pooling for database reliability.
 
 ## Recent Changes (November 2025)
+
+### Automatic Database Migrations (November 15, 2025)
+- **Auto-Migration on Startup**: Implemented automatic database migration system
+  - Backend automatically runs `alembic upgrade head` on every startup
+  - No manual migration commands needed on fresh clones
+  - Migrations run in subprocess to avoid circular import issues
+- **Complete Schema Rebuild**: Reset database and applied all migrations from scratch
+  - Database now at head revision: `745207073606` (add_branches_and_users_tables)
+  - All missing columns have been added to all tables
+- **Verified Schema Completion**:
+  - **Suppliers table**: ✅ email, street, district, zip_code, gstin, branch_id
+  - **Vehicle Entries table**: ✅ empty_weight, gross_weight, vehicle_photo_front, vehicle_photo_back, vehicle_photo_side, internal_weighment_slip, client_weighment_slip, transportation_copy, branch_id
+  - **Lab Tests table**: ✅ hectoliter_weight, sedimentation_value, other_grains, soft_wheat, heat_damaged, immature_wheat, broken_wheat, comments_action, approved, department, wheat_variety, bill_number, category, raise_claim, branch_id
+- **Files Created/Modified**:
+  - `backend/run_migrations.py` - Automatic migration runner using subprocess
+  - `backend/main.py` - Updated to call `apply_migrations()` before starting FastAPI
+- **Migration Status**: Database schema is now fully aligned with models.py, all tables have all required columns
+- **How It Works**: 
+  1. On app startup, `main.py` imports and calls `apply_migrations()`
+  2. `run_migrations.py` uses subprocess to run `alembic upgrade head`
+  3. Subprocess approach avoids circular import issues with SQLAlchemy Base
+  4. Logs show "Database migrations completed successfully!" in console
 
 ### API Connection Fix - PERMANENT SOLUTION (November 15, 2025)
 - **Problem**: Every fresh clone showed "Failed to fetch" error on login due to frontend trying to connect to `localhost:8000` instead of the Replit domain

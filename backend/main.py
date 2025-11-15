@@ -16,6 +16,7 @@ import pytz
 from database import engine, get_db, Base
 import models
 import schemas
+from run_migrations import apply_migrations
 
 def get_branch_id(x_branch_id: Optional[str] = Header(None)) -> Optional[int]:
     """Extract branch_id from request header"""
@@ -75,7 +76,7 @@ def sanitize_float(value):
             return None
     return value
 
-Base.metadata.create_all(bind=engine)
+apply_migrations()
 
 app = FastAPI(title="Gate Entry & Lab Testing API")
 
