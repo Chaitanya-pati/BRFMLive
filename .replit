@@ -8,7 +8,7 @@ channel = "stable-25_05"
 packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
 
 [workflows]
-runButton = "Start Full Application"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -41,7 +41,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000"
+args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000"
 waitForPort = 8000
 
 [[workflows.workflow]]
@@ -87,8 +87,16 @@ localPort = 5000
 externalPort = 5000
 
 [[ports]]
+localPort = 8000
+externalPort = 8000
+
+[[ports]]
 localPort = 37059
 externalPort = 80
+
+[[ports]]
+localPort = 41361
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
