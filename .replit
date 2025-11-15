@@ -8,7 +8,7 @@ channel = "stable-25_05"
 packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
 
 [workflows]
-runButton = "Project"
+runButton = "Start Full Application"
 
 [[workflows.workflow]]
 name = "Project"
@@ -68,6 +68,19 @@ outputType = "webview"
 task = "shell.exec"
 args = "cd frontend && node combined-server.js"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Full Application"
+author = 49362085
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && node combined-server.js"
 
 [[ports]]
 localPort = 5000

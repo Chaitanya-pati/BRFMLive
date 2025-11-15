@@ -25,11 +25,11 @@ app.get('/health', (req, res) => {
 
 // Proxy all /api requests to the backend at port 8000
 app.use('/api', createProxyMiddleware({
-  target: 'http://localhost:8000',
+  target: 'http://0.0.0.0:8000',
   changeOrigin: true,
   logLevel: 'info',
   onProxyReq: (proxyReq, req, res) => {
-    console.log(`[API Proxy] ${req.method} ${req.url} -> http://localhost:8000${req.url}`);
+    console.log(`[API Proxy] ${req.method} ${req.url} -> http://0.0.0.0:8000${req.url}`);
   },
   onError: (err, req, res) => {
     console.error('[API Proxy Error]', err.message);
@@ -46,7 +46,7 @@ app.get('/', (req, res, next) => {
   // Check if this is an API health check (Accept: application/json)
   if (req.headers.accept && req.headers.accept.includes('application/json')) {
     const proxy = createProxyMiddleware({
-      target: 'http://localhost:8000',
+      target: 'http://0.0.0.0:8000',
       changeOrigin: true
     });
     proxy(req, res, next);
