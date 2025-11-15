@@ -167,29 +167,19 @@ export default function UserManagementScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'username', header: 'Username' },
-    { key: 'full_name', header: 'Full Name' },
-    { key: 'email', header: 'Email' },
-    { key: 'role', header: 'Role' },
+    { label: 'Username', field: 'username' },
+    { label: 'Full Name', field: 'full_name' },
+    { label: 'Email', field: 'email' },
+    { label: 'Role', field: 'role' },
     { 
-      key: 'branches', 
-      header: 'Branches',
-      render: (user) => (user.branches && user.branches.length > 0) 
-        ? user.branches.map(b => b.name).join(', ') 
-        : 'None'
-    },
-  ];
-
-  const actions = [
-    {
-      label: 'Edit',
-      onPress: handleEdit,
-      color: colors.primary,
-    },
-    {
-      label: 'Delete',
-      onPress: handleDelete,
-      color: '#e74c3c',
+      label: 'Branches', 
+      field: 'branches',
+      render: (value, user) => {
+        if (!user || !user.branches || user.branches.length === 0) {
+          return 'None';
+        }
+        return user.branches.map(b => b.name).join(', ');
+      }
     },
   ];
 
@@ -212,10 +202,10 @@ export default function UserManagementScreen({ navigation }) {
         </View>
 
         <DataTable
-          data={users}
           columns={columns}
-          actions={actions}
-          emptyMessage="No users found. Click 'Add User' to create one."
+          data={users}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
         />
       </Card>
 

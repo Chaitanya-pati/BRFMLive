@@ -65,18 +65,30 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
       </View>
 
       <View style={styles.mobileCardContent}>
-        {columns.slice(1, 5).map((col, colIndex) => (
-          <View key={colIndex} style={styles.mobileCardRow}>
-            <Text style={styles.mobileCardLabel}>{col.label}</Text>
-            <Text style={styles.mobileCardValue} numberOfLines={2}>
-              {col.render 
-                ? col.render(row[col.field], row) 
-                : col.type === 'datetime' && row[col.field]
-                ? formatISTDateTime(row[col.field])
-                : row[col.field] || '-'}
-            </Text>
-          </View>
-        ))}
+        {columns.slice(1, 5).map((col, colIndex) => {
+          let cellContent = '-';
+          try {
+            if (col.render) {
+              cellContent = col.render(row[col.field], row);
+            } else if (col.type === 'datetime' && row[col.field]) {
+              cellContent = formatISTDateTime(row[col.field]);
+            } else if (row[col.field] !== undefined && row[col.field] !== null) {
+              cellContent = row[col.field];
+            }
+          } catch (error) {
+            console.error('Error rendering mobile cell:', error);
+            cellContent = '-';
+          }
+          
+          return (
+            <View key={colIndex} style={styles.mobileCardRow}>
+              <Text style={styles.mobileCardLabel}>{col.label}</Text>
+              <Text style={styles.mobileCardValue} numberOfLines={2}>
+                {cellContent}
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       {(onEdit || onCustomAction || onDelete) && (
@@ -137,17 +149,29 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
         ) : (
           filteredData.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.tableRow}>
-              {columns.map((col, colIndex) => (
-                <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
-                  <Text style={styles.cellText} numberOfLines={2}>
-                    {col.render 
-                      ? col.render(row[col.field], row) 
-                      : col.type === 'datetime' && row[col.field]
-                      ? formatISTDateTime(row[col.field])
-                      : row[col.field] || '-'}
-                  </Text>
-                </View>
-              ))}
+              {columns.map((col, colIndex) => {
+                let cellContent = '-';
+                try {
+                  if (col.render) {
+                    cellContent = col.render(row[col.field], row);
+                  } else if (col.type === 'datetime' && row[col.field]) {
+                    cellContent = formatISTDateTime(row[col.field]);
+                  } else if (row[col.field] !== undefined && row[col.field] !== null) {
+                    cellContent = row[col.field];
+                  }
+                } catch (error) {
+                  console.error('Error rendering cell:', error);
+                  cellContent = '-';
+                }
+                
+                return (
+                  <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
+                    <Text style={styles.cellText} numberOfLines={2}>
+                      {cellContent}
+                    </Text>
+                  </View>
+                );
+              })}
               <View style={[styles.cell, { flex: onCustomAction ? 1.5 : 1 }]}>
                 <View style={styles.actionButtons}>
                   {onEdit && (
