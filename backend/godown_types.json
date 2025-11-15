@@ -1,4 +1,3 @@
-
 {
-  "godown_types": ["Mill", "Low Mill", "HD-1", "HD-2", "HD-3", "Warehouse", "Silo", "Storage", "Cold Storage"]
+  "godown_types": ["Mill", "Low Mill", "HD"]
 }
