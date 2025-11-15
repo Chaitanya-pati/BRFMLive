@@ -169,13 +169,12 @@ class ClaimWithLabTest(Claim):
 class GodownMasterBase(ISTModel):
     name: str
     type: str
-    current_storage: Optional[float] = 0.0
 
 class GodownMasterCreate(GodownMasterBase):
-    pass
+    current_storage: Optional[float] = 0.0
 
 class GodownMasterUpdate(GodownMasterBase):
-    pass
+    current_storage: Optional[float] = None
 
 class GodownMaster(GodownMasterBase):
     id: int
