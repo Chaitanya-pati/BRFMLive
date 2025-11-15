@@ -18,9 +18,14 @@ import UserManagementScreen from './src/screens/UserManagementScreen';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  console.log('App component rendering...');
+  
   return (
     <BranchProvider>
-      <NavigationContainer>
+      <NavigationContainer
+        onStateChange={(state) => console.log('Navigation state changed:', state)}
+        onError={(error) => console.error('Navigation error:', error)}
+      >
         <Stack.Navigator
           initialRouteName="Login"
           screenOptions={{

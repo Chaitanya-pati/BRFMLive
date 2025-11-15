@@ -41,7 +41,7 @@ api.interceptors.request.use(
     if (config.data) {
       console.log('📦 Request Data:', config.data);
     }
-    
+
     // Add active branch ID to request header
     try {
       const activeBranchJson = await AsyncStorage.getItem('@active_branch');
@@ -55,7 +55,7 @@ api.interceptors.request.use(
     } catch (error) {
       console.error('Error retrieving active branch:', error);
     }
-    
+
     // Add authentication token if available
     try {
       const token = localStorage.getItem('auth_token');
@@ -65,7 +65,7 @@ api.interceptors.request.use(
     } catch (error) {
       console.error('Error retrieving auth token:', error);
     }
-    
+
     return config;
   },
   (error) => {
