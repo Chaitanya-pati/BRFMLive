@@ -1,4 +1,3 @@
-
 const colors = {
   primary: '#2563eb',
   primaryDark: '#1e40af',

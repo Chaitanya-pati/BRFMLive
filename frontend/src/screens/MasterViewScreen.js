@@ -973,12 +973,20 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
+    borderColor: colors.border,
+    borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: colors.surface,
+    minHeight: Platform.select({ web: 48, default: 50 }),
   },
   picker: {
-    height: 50,
+    height: Platform.select({ 
+      ios: 180, 
+      android: 50,
+      web: 48 
+    }),
+    color: colors.textPrimary,
+    fontSize: 14,
   },
   buttonContainer: {
     flexDirection: 'row',
