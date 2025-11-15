@@ -79,7 +79,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
             console.error('Error rendering mobile cell:', error);
             cellContent = '-';
           }
-          
+
           return (
             <View key={colIndex} style={styles.mobileCardRow}>
               <Text style={styles.mobileCardLabel}>{col.label}</Text>
@@ -163,7 +163,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
                   console.error('Error rendering cell:', error);
                   cellContent = '-';
                 }
-                
+
                 return (
                   <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
                     <Text style={styles.cellText} numberOfLines={2}>
@@ -427,19 +427,19 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primaryHover,
+    backgroundColor: 'rgba(45, 62, 80, 0.25)',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   headerCell: {
     padding: 14,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: 'rgba(45, 62, 80, 0.1)',
   },
   headerText: {
     fontWeight: '700',
     fontSize: 12,
-    color: colors.onPrimary,
+    color: '#2d3e50',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },

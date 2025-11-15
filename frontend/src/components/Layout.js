@@ -28,62 +28,69 @@ const colors = {
   onInfo: "#ffffff",
 };
 
-// Icon Components (using simple SVG for better UI)
-const SvgHomeIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      H
-    </Text>
-  </View>
-);
+// Icon Components with proper SVG icons
+const SvgHomeIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>🏠</Text>
+    </View>
+  );
+};
 
-const SvgDatabaseIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      D
-    </Text>
-  </View>
-);
+const SvgDatabaseIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>📊</Text>
+    </View>
+  );
+};
 
-const SvgTruckIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      T
-    </Text>
-  </View>
-);
+const SvgTruckIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>🚛</Text>
+    </View>
+  );
+};
 
-const SvgClipboardIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      Q
-    </Text>
-  </View>
-);
+const SvgClipboardIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>🧪</Text>
+    </View>
+  );
+};
 
-const SvgPackageIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      U
-    </Text>
-  </View>
-);
+const SvgPackageIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>📦</Text>
+    </View>
+  );
+};
 
-const SvgFileTextIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      C
-    </Text>
-  </View>
-);
+const SvgFileTextIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>📋</Text>
+    </View>
+  );
+};
 
-const SvgBinIcon = ({ active }) => (
-  <View style={styles.iconContainer}>
-    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-      P
-    </Text>
-  </View>
-);
+const SvgBinIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <Text style={{ fontSize: 18, color }}>🗑️</Text>
+    </View>
+  );
+};
 
 export default function Layout({ children, title, currentRoute }) {
   const navigation = useNavigation();
@@ -680,10 +687,6 @@ const styles = StyleSheet.create({
     height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 18,
-    fontWeight: "600",
   },
   menuText: {
     color: "#b8c5d6",
