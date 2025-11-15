@@ -1,0 +1,6 @@
+INFO:run_migrations:Starting automatic database migrations...
+INFO:run_migrations:Database migrations completed successfully!
+INFO:     Started server process [3636]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
