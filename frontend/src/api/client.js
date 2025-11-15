@@ -1,4 +1,5 @@
 import axios from "axios";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
@@ -33,12 +34,26 @@ export const api = axios.create({
   timeout: 10000,
 });
 
-// Add request interceptor for authentication
+// Add request interceptor for authentication and branch filtering
 api.interceptors.request.use(
   async (config) => {
     console.log('📤 API Request:', config.method?.toUpperCase(), config.baseURL + config.url);
     if (config.data) {
       console.log('📦 Request Data:', config.data);
+    }
+    
+    // Add active branch ID to request header
+    try {
+      const activeBranchJson = await AsyncStorage.getItem('@active_branch');
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch && activeBranch.id) {
+          config.headers['X-Branch-ID'] = activeBranch.id.toString();
+          console.log('🏢 Branch ID:', activeBranch.id, 'Branch Name:', activeBranch.name);
+        }
+      }
+    } catch (error) {
+      console.error('Error retrieving active branch:', error);
     }
     
     // Add authentication token if available

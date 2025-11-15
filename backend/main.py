@@ -511,8 +511,11 @@ def create_claim(claim: schemas.ClaimCreate, db: Session = Depends(get_db)):
     return db_claim
 
 @app.get("/api/claims", response_model=List[schemas.ClaimWithLabTest])
-def get_claims(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    claims = db.query(models.Claim).offset(skip).limit(limit).all()
+def get_claims(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Claim)
+    if branch_id:
+        query = query.filter(models.Claim.branch_id == branch_id)
+    claims = query.offset(skip).limit(limit).all()
     return claims
 
 @app.patch("/api/claims/{claim_id}", response_model=schemas.Claim)
