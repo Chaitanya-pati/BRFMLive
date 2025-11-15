@@ -8,8 +8,12 @@ import {
   Platform,
   useWindowDimensions,
   Image,
+  Modal as RNModal,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useBranch } from "../context/BranchContext";
+import { storage } from "../utils/storage";
 
 const colors = {
   background: "#f5f6fa",
@@ -188,6 +192,8 @@ export default function Layout({ children, title, currentRoute }) {
   const isMobile = width < 768;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isMobile);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [branchModalVisible, setBranchModalVisible] = useState(false);
+  const { activeBranch, userBranches, setActiveBranch } = useBranch();
 
   useEffect(() => {
     if (isMobile) {
@@ -253,6 +259,23 @@ export default function Layout({ children, title, currentRoute }) {
     }
   };
 
+  const handleBranchSwitch = async (branch) => {
+    try {
+      await setActiveBranch(branch);
+      setBranchModalVisible(false);
+      Alert.alert('Success', `Switched to ${branch.name}`);
+      navigation.replace('Dashboard');
+    } catch (error) {
+      console.error('Error switching branch:', error);
+      Alert.alert('Error', 'Failed to switch branch');
+    }
+  };
+
+  const handleLogout = async () => {
+    await storage.clearAll();
+    navigation.replace('Login');
+  };
+
   const renderMenuItem = (item, index) => {
     const IconComponent = item.icon;
     const isActive = currentRoute === item.route;
@@ -303,12 +326,35 @@ export default function Layout({ children, title, currentRoute }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
+          {activeBranch && (
+            <TouchableOpacity
+              style={styles.branchSelector}
+              onPress={() => setBranchModalVisible(true)}
+            >
+              <Text style={styles.branchName}>{activeBranch.name}</Text>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M6 9l6 6 6-6"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </TouchableOpacity>
+          )}
           <View style={styles.adminProfile}>
             <View style={styles.adminAvatar}>
               <Text style={styles.adminAvatarText}>AD</Text>
             </View>
             {!isMobile && <Text style={styles.adminName}>Admin</Text>}
           </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -365,6 +411,71 @@ export default function Layout({ children, title, currentRoute }) {
           <ScrollView style={styles.contentScroll}>{children}</ScrollView>
         </View>
       </View>
+
+      {/* Branch Switcher Modal */}
+      <RNModal
+        visible={branchModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setBranchModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setBranchModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Switch Branch</Text>
+            <View style={styles.branchList}>
+              {userBranches.map((branch) => (
+                <TouchableOpacity
+                  key={branch.id}
+                  style={[
+                    styles.branchOption,
+                    activeBranch?.id === branch.id && styles.branchOptionActive,
+                  ]}
+                  onPress={() => handleBranchSwitch(branch)}
+                >
+                  <View style={styles.branchOptionContent}>
+                    <Text
+                      style={[
+                        styles.branchOptionName,
+                        activeBranch?.id === branch.id && styles.branchOptionNameActive,
+                      ]}
+                    >
+                      {branch.name}
+                    </Text>
+                    {branch.description && (
+                      <Text style={styles.branchOptionDescription}>
+                        {branch.description}
+                      </Text>
+                    )}
+                  </View>
+                  {activeBranch?.id === branch.id && (
+                    <View style={styles.activeCheckmark}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M20 6L9 17l-5-5"
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setBranchModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </RNModal>
     </View>
   );
 }
@@ -422,11 +533,41 @@ const styles = StyleSheet.create({
   topBarRight: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 16,
+  },
+  branchSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  branchName: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   adminProfile: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  logoutButton: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  logoutText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   adminAvatar: {
     width: 40,
@@ -587,5 +728,79 @@ const styles = StyleSheet.create({
   contentScroll: {
     flex: 1,
     padding: Platform.select({ web: 24, default: 16 }),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 24,
+    width: "100%",
+    maxWidth: 500,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  branchList: {
+    marginBottom: 20,
+  },
+  branchOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  branchOptionActive: {
+    backgroundColor: "#eff6ff",
+    borderColor: "#3b82f6",
+  },
+  branchOptionContent: {
+    flex: 1,
+  },
+  branchOptionName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  branchOptionNameActive: {
+    color: "#3b82f6",
+  },
+  branchOptionDescription: {
+    fontSize: 14,
+    color: "#666",
+  },
+  activeCheckmark: {
+    marginLeft: 12,
+  },
+  modalCloseButton: {
+    backgroundColor: "#f1f5f9",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
   },
 });

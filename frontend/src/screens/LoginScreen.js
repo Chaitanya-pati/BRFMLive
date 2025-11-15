@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { API_BASE_URL } from '../api/client';
+import { storage } from '../utils/storage';
+import { useBranch } from '../context/BranchContext';
 import colors from '../theme/colors';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { setActiveBranch, setUserBranches } = useBranch();
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -52,8 +55,21 @@ export default function LoginScreen({ navigation }) {
       const data = await response.json();
       console.log('✅ Login successful:', data);
       
-      // Auto-redirect to Home screen
-      navigation.replace('Home', { user: data });
+      await storage.setUserData(data);
+      
+      if (!data.branches || data.branches.length === 0) {
+        Alert.alert('Error', 'You are not assigned to any branch. Please contact your administrator.');
+        return;
+      }
+      
+      setUserBranches(data.branches);
+      
+      if (data.branches.length === 1) {
+        await setActiveBranch(data.branches[0]);
+        navigation.replace('Dashboard');
+      } else {
+        navigation.replace('BranchSelection');
+      }
     } catch (error) {
       console.error('❌ Login error:', error);
       Alert.alert('Login Failed', error.message || 'Invalid username or password');

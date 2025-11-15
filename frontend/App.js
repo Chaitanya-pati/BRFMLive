@@ -1,7 +1,9 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { BranchProvider } from './src/context/BranchContext';
 import LoginScreen from './src/screens/LoginScreen';
+import BranchSelectionScreen from './src/screens/BranchSelectionScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import SupplierMasterScreen from './src/screens/SupplierMasterScreen';
 import VehicleEntryScreen from './src/screens/VehicleEntryScreen';
@@ -17,25 +19,29 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Login"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="BranchMaster" component={BranchMasterScreen} />
-        <Stack.Screen name="UserManagement" component={UserManagementScreen} />
-        <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
-        <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
-        <Stack.Screen name="LabTest" component={LabTestScreen} />
-        <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} />
-        <Stack.Screen name="MasterView" component={MasterViewScreen} />
-        <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
-        <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <BranchProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Login"
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="BranchSelection" component={BranchSelectionScreen} />
+          <Stack.Screen name="Dashboard" component={HomeScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="BranchMaster" component={BranchMasterScreen} />
+          <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+          <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
+          <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
+          <Stack.Screen name="LabTest" component={LabTestScreen} />
+          <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} />
+          <Stack.Screen name="MasterView" component={MasterViewScreen} />
+          <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
+          <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </BranchProvider>
   );
 }
