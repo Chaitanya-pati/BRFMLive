@@ -204,10 +204,15 @@ export default function Layout({ children, title, currentRoute }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
-          {!isMobile && activeBranch && (
-            <View style={styles.branchBadge}>
-              <Text style={styles.branchBadgeText}>{activeBranch.name}</Text>
-            </View>
+          {activeBranch && (
+            <TouchableOpacity
+              style={[styles.branchBadge, isMobile && styles.branchBadgeMobile]}
+              onPress={() => setBranchModalVisible(true)}
+            >
+              <Text style={[styles.branchBadgeText, isMobile && styles.branchBadgeTextMobile]}>
+                {activeBranch.name}
+              </Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.userMenuButton}
@@ -327,9 +332,13 @@ export default function Layout({ children, title, currentRoute }) {
           activeOpacity={1}
           onPress={() => setBranchModalVisible(false)}
         >
-          <View style={styles.modalContent}>
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>Switch Branch</Text>
-            <View style={styles.branchList}>
+            <ScrollView style={styles.branchList}>
               {userBranches.map((branch) => (
                 <TouchableOpacity
                   key={branch.id}
@@ -361,14 +370,14 @@ export default function Layout({ children, title, currentRoute }) {
                   )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setBranchModalVisible(false)}
             >
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </RNModal>
     </View>
@@ -430,7 +439,7 @@ const styles = StyleSheet.create({
   topBarRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 8,
   },
   branchBadge: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -439,12 +448,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
-    marginRight: 8,
+    marginRight: 4,
   },
   branchBadgeText: {
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "600",
+  },
+  branchBadgeMobile: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  branchBadgeTextMobile: {
+    fontSize: 10,
   },
   userMenuButton: {
     flexDirection: "row",
@@ -698,6 +714,7 @@ const styles = StyleSheet.create({
     padding: 24,
     width: "100%",
     maxWidth: 500,
+    maxHeight: "80%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -713,6 +730,7 @@ const styles = StyleSheet.create({
   },
   branchList: {
     marginBottom: 20,
+    maxHeight: 400,
   },
   branchOption: {
     flexDirection: "row",
