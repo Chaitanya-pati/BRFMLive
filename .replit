@@ -94,10 +94,6 @@ externalPort = 8000
 localPort = 37059
 externalPort = 80
 
-[[ports]]
-localPort = 41361
-externalPort = 3000
-
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000"]
