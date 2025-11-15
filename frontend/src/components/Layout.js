@@ -28,47 +28,61 @@ const colors = {
   onInfo: "#ffffff",
 };
 
-// Icon Components (using simple text for cross-platform compatibility)
-const HomeIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    H
-  </Text>
+// Icon Components (using simple SVG for better UI)
+const SvgHomeIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      H
+    </Text>
+  </View>
 );
 
-const DatabaseIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    D
-  </Text>
+const SvgDatabaseIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      D
+    </Text>
+  </View>
 );
 
-const TruckIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    T
-  </Text>
+const SvgTruckIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      T
+    </Text>
+  </View>
 );
 
-const ClipboardIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    Q
-  </Text>
+const SvgClipboardIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      Q
+    </Text>
+  </View>
 );
 
-const PackageIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    U
-  </Text>
+const SvgPackageIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      U
+    </Text>
+  </View>
 );
 
-const FileTextIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    C
-  </Text>
+const SvgFileTextIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      C
+    </Text>
+  </View>
 );
 
-const BinIcon = ({ active }) => (
-  <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
-    P
-  </Text>
+const SvgBinIcon = ({ active }) => (
+  <View style={styles.iconContainer}>
+    <Text style={[styles.iconText, { color: active ? "#ffffff" : "#94a3b8" }]}>
+      P
+    </Text>
+  </View>
 );
 
 export default function Layout({ children, title, currentRoute }) {
@@ -91,41 +105,41 @@ export default function Layout({ children, title, currentRoute }) {
   }, [isMobile]);
 
   const menuItems = [
-    { name: "Dashboard", route: "Home", icon: HomeIcon, section: null },
+    { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: null },
     {
       name: "Master Data",
       route: "MasterView",
-      icon: DatabaseIcon,
+      icon: SvgDatabaseIcon,
       section: "Operations",
     },
     {
       name: "Gate Entry",
       route: "VehicleEntry",
-      icon: TruckIcon,
+      icon: SvgTruckIcon,
       section: "Operations",
     },
     {
       name: "Quality Control",
       route: "LabTest",
-      icon: ClipboardIcon,
+      icon: SvgClipboardIcon,
       section: "Operations",
     },
     {
       name: "Unloading Entry",
       route: "UnloadingEntry",
-      icon: PackageIcon,
+      icon: SvgPackageIcon,
       section: "Operations",
     },
     {
       name: "Precleaning Process",
       route: "PrecleaningBin",
-      icon: BinIcon,
+      icon: SvgBinIcon,
       section: "Operations",
     },
     {
       name: "Claim Tracking",
       route: "ClaimTracking",
-      icon: FileTextIcon,
+      icon: SvgFileTextIcon,
       section: "Operations",
     },
   ];
@@ -223,7 +237,7 @@ export default function Layout({ children, title, currentRoute }) {
             </View>
             {!isMobile && <Text style={styles.userMenuText}>▼</Text>}
           </TouchableOpacity>
-          
+
           {userMenuVisible && (
             <>
               <TouchableOpacity
@@ -332,8 +346,8 @@ export default function Layout({ children, title, currentRoute }) {
           activeOpacity={1}
           onPress={() => setBranchModalVisible(false)}
         >
-          <TouchableOpacity 
-            activeOpacity={1} 
+          <TouchableOpacity
+            activeOpacity={1}
             style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}
           >
@@ -660,6 +674,12 @@ const styles = StyleSheet.create({
     width: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconContainer: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconText: {
     fontSize: 18,

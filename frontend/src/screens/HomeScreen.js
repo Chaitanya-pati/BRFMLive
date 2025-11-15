@@ -3,6 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
+import SvgIcon from 'react-native-svg-icon'; // Assuming you have this library or a similar one for SVG icons
+
+// Import your SVG icons
+// Example:
+// import { BuildingIcon, TruckIcon, FlaskIcon, ClockIcon } from '../assets/icons';
+
+// Placeholder for SVG icons if not explicitly imported
+const IconPlaceholder = ({ name, size, color }) => (
+  <Text style={{ fontSize: size, color: color, marginRight: 16 }}>{name}</Text>
+);
 
 export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -10,10 +20,10 @@ export default function HomeScreen({ navigation }) {
   const isTablet = width >= 768 && width < 1024;
 
   const [stats, setStats] = useState([
-    { title: 'Total Suppliers', value: '-', color: colors.info, icon: '🏢' },
-    { title: 'Vehicle Entries', value: '-', color: colors.purple, icon: '🚛' },
-    { title: 'Lab Tests', value: '-', color: colors.success, icon: '🔬' },
-    { title: 'Pending Tests', value: '-', color: colors.warning, icon: '⏱️' },
+    { title: 'Total Suppliers', value: '-', color: '#3b82f6', icon: 'building', gradient: ['#3b82f6', '#2563eb'] },
+    { title: 'Vehicle Entries', value: '-', color: '#8b5cf6', icon: 'truck', gradient: ['#8b5cf6', '#7c3aed'] },
+    { title: 'Lab Tests', value: '-', color: '#10b981', icon: 'flask', gradient: ['#10b981', '#059669'] },
+    { title: 'Pending Tests', value: '-', color: '#f59e0b', icon: 'clock', gradient: ['#f59e0b', '#d97706'] },
   ]);
   const [loading, setLoading] = useState(true);
 
@@ -32,10 +42,10 @@ export default function HomeScreen({ navigation }) {
       ]);
 
       setStats([
-        { title: 'Total Suppliers', value: suppliersRes.data.length.toString(), color: colors.info, icon: '🏢' },
-        { title: 'Vehicle Entries', value: vehiclesRes.data.length.toString(), color: colors.purple, icon: '🚛' },
-        { title: 'Lab Tests', value: labTestsRes.data.length.toString(), color: colors.success, icon: '🔬' },
-        { title: 'Pending Tests', value: availableVehiclesRes.data.length.toString(), color: colors.warning, icon: '⏱️' },
+        { title: 'Total Suppliers', value: suppliersRes.data.length.toString(), color: '#3b82f6', icon: 'building', gradient: ['#3b82f6', '#2563eb'] },
+        { title: 'Vehicle Entries', value: vehiclesRes.data.length.toString(), color: '#8b5cf6', icon: 'truck', gradient: ['#8b5cf6', '#7c3aed'] },
+        { title: 'Lab Tests', value: labTestsRes.data.length.toString(), color: '#10b981', icon: 'flask', gradient: ['#10b981', '#059669'] },
+        { title: 'Pending Tests', value: availableVehiclesRes.data.length.toString(), color: '#f59e0b', icon: 'clock', gradient: ['#f59e0b', '#d97706'] },
       ]);
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -45,11 +55,11 @@ export default function HomeScreen({ navigation }) {
   };
 
   const quickActions = [
-    { title: 'Branch Master', route: 'BranchMaster', icon: '🏪', color: colors.primary },
-    { title: 'User Management', route: 'UserManagement', icon: '👥', color: colors.secondary },
-    { title: 'Add Supplier', route: 'SupplierMaster', icon: '➕', color: colors.info },
-    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: '🚛', color: colors.purple },
-    { title: 'New Lab Test', route: 'LabTest', icon: '🔬', color: colors.success },
+    { title: 'Branch Master', route: 'BranchMaster', icon: 'storefront', color: '#3b82f6' }, // Changed icon
+    { title: 'User Management', route: 'UserManagement', icon: 'people', color: '#6366f1' }, // Changed icon
+    { title: 'Add Supplier', route: 'SupplierMaster', icon: 'person-add', color: '#06b6d4' }, // Changed icon
+    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: 'car', color: '#f43f5e' }, // Changed icon
+    { title: 'New Lab Test', route: 'LabTest', icon: 'flask', color: '#10b981' }, // Changed icon
   ];
 
   return (
@@ -63,10 +73,12 @@ export default function HomeScreen({ navigation }) {
           {stats.map((stat, index) => (
             <View key={index} style={[
               styles.statCard,
-              { borderLeftColor: stat.color },
+              { borderLeftColor: stat.color }, // Using the new color
               isMobile && styles.statCardMobile,
             ]}>
-              <Text style={[styles.statIcon, isMobile && styles.statIconMobile]}>{stat.icon}</Text>
+              {/* Replace text icon with SvgIcon */}
+              {/* Example: <SvgIcon name={stat.icon} width={36} height={36} color={stat.color} /> */}
+              <IconPlaceholder name={stat.icon} size={isMobile ? 28 : 36} color={stat.color} />
               <View style={styles.statInfo}>
                 <Text style={[styles.statTitle, isMobile && styles.statTitleMobile]}>{stat.title}</Text>
                 {loading ? (
@@ -94,7 +106,9 @@ export default function HomeScreen({ navigation }) {
               ]}
               onPress={() => navigation.navigate(action.route)}
             >
-              <Text style={[styles.actionIcon, isMobile && styles.actionIconMobile]}>{action.icon}</Text>
+              {/* Replace text icon with SvgIcon */}
+              {/* Example: <SvgIcon name={action.icon} width={32} height={32} color={colors.onPrimary} /> */}
+              <IconPlaceholder name={action.icon} size={isMobile ? 28 : 32} color={colors.onPrimary} />
               <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>{action.title}</Text>
             </TouchableOpacity>
           ))}
@@ -112,6 +126,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20, // Added padding for better spacing
   },
   statsContainer: {
     flexDirection: 'row',
@@ -132,11 +147,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 20,
     borderRadius: 12,
-    borderLeftWidth: 4,
+    borderLeftWidth: 4, // Kept for emphasis, can be removed or styled differently
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 0,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)', // Softer shadow
+    overflow: 'hidden', // To ensure gradient clipping if used
   },
   statCardMobile: {
     minWidth: '100%',
@@ -145,6 +161,7 @@ const styles = StyleSheet.create({
   statIcon: {
     fontSize: 36,
     marginRight: 16,
+    // Removed direct icon styling, will rely on SvgIcon or placeholder
   },
   statIconMobile: {
     fontSize: 28,
@@ -174,14 +191,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20, // Increased font size for better hierarchy
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 16,
-    marginTop: 8,
+    marginTop: 12, // Increased margin top
   },
   sectionTitleMobile: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 12,
   },
   quickActions: {
@@ -200,7 +217,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     minWidth: 150,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)', // Softer shadow
+    justifyContent: 'center', // Center content vertically
   },
   actionCardMobile: {
     minWidth: Platform.select({ web: 'calc(50% - 6px)', default: '45%' }),
@@ -209,6 +227,7 @@ const styles = StyleSheet.create({
   actionIcon: {
     fontSize: 32,
     marginBottom: 8,
+    // Removed direct icon styling, will rely on SvgIcon or placeholder
   },
   actionIconMobile: {
     fontSize: 28,
@@ -228,10 +247,13 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     borderWidth: 0,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)', // Softer shadow
+    minHeight: 100, // Give it some height
+    justifyContent: 'center', // Center text
+    alignItems: 'center',
   },
   activityText: {
     color: colors.textTertiary,
-    textAlign: 'center',
+    fontSize: 16,
   },
 });
