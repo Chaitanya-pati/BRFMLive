@@ -1,14 +1,30 @@
+
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 const app = express();
 const PORT = 5000;
 const BACKEND_URL = 'http://localhost:8000';
 const DIST_DIR = path.join(__dirname, 'dist');
 
-console.log('🚀 Starting Production-Ready Server...');
+console.log('🚀 Starting Production-Ready Server (Metro-Free)...');
+
+// Kill any existing Metro processes before starting
+const killMetro = () => {
+  console.log('🔪 Killing any existing Metro/Expo processes...');
+  try {
+    spawn('pkill', ['-9', '-f', 'metro']);
+    spawn('pkill', ['-9', '-f', 'expo']);
+    spawn('pkill', ['-9', '-f', 'expo-cli']);
+  } catch (err) {
+    // Ignore errors if processes don't exist
+  }
+};
+
+killMetro();
 
 // Check if dist directory exists
 if (!fs.existsSync(DIST_DIR)) {
@@ -36,7 +52,6 @@ app.use((req, res, next) => {
 });
 
 // API proxy middleware - proxy all /api/* requests to backend
-// Note: Express strips '/api' from req.path, so we prepend it back
 app.use('/api', createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
@@ -73,6 +88,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔗 API proxy: /api/* -> ${BACKEND_URL}/api/*`);
   console.log(`📁 Serving static files from: ${DIST_DIR}`);
   console.log('🎉 No CORS issues - serving pre-built static files!');
+  console.log('🚫 Metro bundler is NOT running - pure static file serving');
   console.log('');
   console.log('💡 To rebuild the app, run: cd frontend && npx expo export --platform web');
 });
+
+// Periodically check and kill Metro if it somehow starts
+setInterval(() => {
+  killMetro();
+}, 30000); // Every 30 seconds
