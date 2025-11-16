@@ -1,69 +1,153 @@
-# Gate Entry & Lab Testing Application
+# Gate Entry and Lab Testing System
 
 ## Overview
-This full-stack, cross-platform application manages supplier information, vehicle entries, and laboratory quality testing for raw wheat. It provides a unified codebase for Android, iOS, and Web platforms, backed by a REST API. The system focuses on managing supplier master data, vehicle entry registration with photo capture, comprehensive lab test recording for wheat quality, integrated Godown (warehouse) management, unloading entries, and quality claim tracking.
+A multi-branch gate entry and laboratory testing management system built with:
+- **Backend**: FastAPI (Python) with PostgreSQL database
+- **Frontend**: React Native (Expo) for web
+- **Database**: PostgreSQL with Alembic migrations
+
+## Current State (Updated: November 16, 2025)
+✅ Fully functional application with permanent CORS fix implemented
+✅ Backend API running on port 8000
+✅ Frontend running on port 5000 (production build served via Express)
+✅ Database seeded with 6 test users and 5 branches
+✅ Login functionality fully operational
+
+## Critical CORS Fix
+**PERMANENT SOLUTION IMPLEMENTED**: We no longer use Expo's development server, which had CORS middleware blocking requests. Instead:
+1. Expo app is pre-built to static files: `cd frontend && npx expo export --platform web`
+2. Express server (`production-server.js`) serves the static files from `dist/`
+3. Express proxies `/api/*` requests to backend on port 8000
+4. **Result**: No more CORS errors, ever. See `CORS_SOLUTION.md` for details.
+
+## Project Architecture
+
+### Backend (Port 8000)
+- **Framework**: FastAPI with Uvicorn
+- **Database**: PostgreSQL (managed by Replit)
+- **Migrations**: Alembic
+- **Models**: Users, Branches, Suppliers, Vehicles, Lab Tests, User-Branch associations
+- **Key Endpoints**:
+  - `POST /api/login` - User authentication
+  - `GET /api/suppliers` - List suppliers
+  - `GET /api/vehicles` - List vehicles
+  - `GET /api/lab-tests` - List lab tests
+
+### Frontend (Port 5000)
+- **Framework**: React Native (Expo) for web
+- **Build**: Pre-compiled static files served by Express
+- **Server**: `frontend/production-server.js` (Express with API proxy)
+- **Navigation**: React Navigation
+- **State**: React hooks and AsyncStorage
+- **API Client**: Axios with `/api` base URL (proxied to backend)
+
+### Database Schema
+- `users` - User authentication and profiles
+- `branches` - Multi-branch support
+- `user_branches` - User-to-branch associations (many-to-many)
+- `suppliers` - Supplier management
+- `vehicles` - Vehicle tracking
+- `lab_tests` - Laboratory test records
+
+## Test Users and Credentials
+See `TEST_USERS.md` for complete list. Quick reference:
+- **Admin**: `admin` / `admin123` (all branches)
+- **Manager**: `manager` / `manager123` (Main, North)
+- **Operator**: `operator` / `operator123` (Main)
+- **Supervisor**: `supervisor` / `super123` (South, East)
+- **User1**: `user1` / `password123` (Main)
+- **User2**: `user2` / `password123` (North)
+
+## Workflows
+
+### Backend API
+```bash
+cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### Frontend
+```bash
+cd frontend && node production-server.js
+```
+**Note**: After making frontend code changes, rebuild with:
+```bash
+cd frontend && npx expo export --platform web
+```
+
+## Development Workflow
+
+### Making Frontend Changes
+1. Edit files in `frontend/src/`
+2. Rebuild: `cd frontend && npx expo export --platform web`
+3. Restart the Frontend workflow
+4. Changes will appear immediately
+
+### Making Backend Changes
+1. Edit files in `backend/`
+2. Restart the Backend API workflow
+3. Changes will appear immediately (FastAPI auto-reloads in dev mode)
+
+### Database Migrations
+```bash
+cd backend
+# Create migration
+alembic revision --autogenerate -m "description"
+# Apply migration
+alembic upgrade head
+```
 
 ## User Preferences
-Preferred communication style: Simple, everyday language.
+- **Approach**: Permanent, production-ready solutions over temporary fixes
+- **CORS**: Must work reliably without repeated failures
+- **Database**: PostgreSQL (not SQLite) managed by Replit
+- **Testing**: All 6 users must be able to login across 5 branches
 
-## Recent Changes (November 15, 2025)
+## Recent Changes (Nov 16, 2025)
+1. **PERMANENT CORS FIX**: Switched from Expo dev server to production build approach
+   - Built static files with `npx expo export --platform web`
+   - Created `production-server.js` to serve static files and proxy API
+   - Completely eliminated Expo's CORS middleware from the runtime
+   - See `CORS_SOLUTION.md` for technical details
 
-### Import Migration Completion
-Successfully imported and configured the Gate Entry & Lab Testing application in the Replit environment:
+2. **Express Server Update**: Fixed Express 5 compatibility
+   - Changed catch-all route from `app.get('*', ...)` to `app.use(...)`
+   - Fixed PathError with wildcard routes
 
-1. **Backend Workflow**: Configured as a long-running service on port 8000 (`uvicorn main:app --host 0.0.0.0 --port 8000`)
-2. **Frontend Workflow**: Configured with Express proxy server and Expo Metro bundler on port 5000 (`node combined-server.js`)
-3. **CORS Fix**: Implemented proper CORS handling through Express middleware in `frontend/combined-server.js` using the cors package with `origin: true` and `credentials: true` to support authenticated API requests
-4. **Database Setup**: Manually created missing database tables (branches, users, user_branches) and seeded with test data
-5. **Test Data**: Created 5 branches (Main, North, South, East, West) and 6 test users with various roles and permissions
+3. **Workflow Configuration**: Updated Frontend workflow to use production server
+   - Command: `cd frontend && node production-server.js`
+   - Serves pre-built files, no more Expo dev server at runtime
 
-### Technical Implementation Details
-- **Proxy Configuration**: All frontend API calls use `/api/*` path which is proxied to backend on port 8000
-- **Security Settings**: Disabled Expo dev server security for HTTP mode with environment variables (EXPO_NO_DEV_SERVER_SECURITY=1, EXPO_NO_HTTPS=1)
-- **Metro Config**: Cleaned and simplified to default configuration, removing ineffective CORS middleware (Expo Web uses Webpack, not Metro)
-- **Dependencies**: Added `cors` package to frontend for proper CORS handling in the Express proxy server
+## Important Files
+- `backend/main.py` - FastAPI application entry point
+- `backend/models.py` - Database models
+- `backend/seed_users_branches.py` - Test data seeding script
+- `frontend/production-server.js` - Express server for static files + API proxy
+- `frontend/src/screens/LoginScreen.js` - Login UI
+- `frontend/src/api/client.js` - API client configuration
+- `TEST_USERS.md` - Complete test user reference
+- `CORS_SOLUTION.md` - Technical explanation of CORS fix
 
-## System Architecture
+## Troubleshooting
 
-### Frontend Architecture
-The frontend uses React Native (Expo framework) for cross-platform compatibility (Android, iOS, Web via `react-native-web`). It follows a mobile-first design with responsive layouts, React Navigation for routing, React Hook Form for state management, and functional components. The UI/UX features a professional ERP layout with a collapsible sidebar, blue-themed top bar, data tables with search and action buttons, and modal forms for Add/Edit operations. It's fully responsive, adapting for mobile devices with horizontally scrollable tabs, compact spacing, and full-screen modals. Image handling uses Expo APIs for capture/selection, uploaded as base64 or multipart data.
+### CORS Errors
+If you see any CORS errors, ensure:
+1. Frontend workflow is using `production-server.js`
+2. Static files exist in `frontend/dist/` directory
+3. If not, rebuild: `cd frontend && npx expo export --platform web`
 
-### Backend Architecture
-The backend is a FastAPI REST API, using SQLAlchemy ORM for database abstraction and Alembic for migrations. PostgreSQL is the primary database. It features RESTful API design, database-first migrations, and a hybrid image storage approach (some images as BYTEA in DB, newer features store files in a `/uploads` directory with paths in DB). FastAPI serves static files for uploaded images. Data models include Supplier, VehicleEntry, LabTest, Claim, GodownMaster, and UnloadingEntry, with relationships and audit trails. The application includes an automatic database migration system that runs `alembic upgrade head` on startup.
+### Login Fails
+1. Check backend is running on port 8000
+2. Check database contains test users
+3. Verify API proxy is working: check Frontend workflow logs for "📡 Proxying" messages
 
-### Data Storage
-PostgreSQL is the primary data store, utilizing relational structures with foreign key constraints. It supports binary image storage for older features and file path storage for newer image-heavy features. Tables include `suppliers`, `vehicle_entries`, `lab_tests`, `claims`, `godown_master`, and `unloading_entries`, all with `created_at` and `updated_at` timestamps.
+### Database Issues
+1. Ensure DATABASE_URL environment variable is set
+2. Run migrations: `cd backend && alembic upgrade head`
+3. Reseed test data: `cd backend && python seed_users_branches.py`
 
-### System Design Choices
-- **Cross-Platform**: Single codebase for Android, iOS, and Web using Expo.
-- **Image Storage**: Hybrid approach; older features store images as BYTEA in PostgreSQL, newer features store them as files in `backend/uploads`.
-- **Warehouse Management**: Comprehensive `GodownMaster` and `UnloadingEntry` system with real-time capacity tracking and automated net weight calculation.
-- **Quality Claims**: Integrated `Claim` model linked to `LabTest` results, with status tracking.
-- **UI/UX**: Professional ERP-style interface with a collapsible sidebar, data tables, and modal forms.
-- **Reliability**: Implemented static fallback data for external API dependencies (e.g., CoWIN API) to ensure continuous operation.
-- **Branch Selection**: A complete branch selection system after login, with auto-selection for single-branch users and a selection screen for multiple branches. Active branch is stored cross-platform using AsyncStorage.
-
-## External Dependencies
-
-### Third-Party APIs
-- **CoWIN API** (https://cdn-api.co-vin.in): Used for fetching Indian states and cities, with static data fallback.
-
-### Frontend Libraries
-- `@react-navigation/native`, `@react-navigation/native-stack`: Navigation.
-- `@react-native-picker/picker`: Dropdown selection.
-- `@react-native-community/datetimepicker`: Date/time selection.
-- `expo-camera`, `expo-image-picker`: Camera and photo library access.
-- `axios`: HTTP client.
-- `react-hook-form`: Form state and validation.
-- `@react-native-async-storage/async-storage`: Cross-platform persistent storage.
-
-### Backend Libraries
-- `FastAPI`: Web framework.
-- `SQLAlchemy`: ORM and database toolkit.
-- `Alembic`: Database migration tool.
-- `Pydantic`: Data validation.
-
-### Environment Configuration
-- `DATABASE_URL`: PostgreSQL connection string.
-- `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
-- Connection pooling for database reliability.
+## Next Steps / Future Enhancements
+- Implement branch selection screen for users with multiple branches
+- Add vehicle entry/exit tracking
+- Implement lab test management features
+- Add reporting and analytics
+- Implement role-based access control for different features

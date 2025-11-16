@@ -66,7 +66,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && node combined-server.js"
+args = "cd frontend && node production-server.js"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -84,11 +84,7 @@ args = "cd frontend && node combined-server.js"
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
+externalPort = 80
 
 [[ports]]
 localPort = 35803
@@ -97,6 +93,10 @@ externalPort = 3000
 [[ports]]
 localPort = 37059
 externalPort = 80
+
+[[ports]]
+localPort = 44159
+externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"
