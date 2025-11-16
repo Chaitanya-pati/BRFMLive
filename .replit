@@ -107,7 +107,7 @@ args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --re
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && pkill -9 -f metro ; pkill -9 -f expo ; sleep 1 && node production-server.js"
+args = "cd frontend && pkill -9 -f metro ; pkill -9 -f expo ; sleep 3 && node production-server.js"
 
 [[ports]]
 localPort = 5000
