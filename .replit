@@ -21,7 +21,7 @@ args = "Backend API"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend"
+args = "Frontend Production"
 
 [[workflows.workflow]]
 name = "Backend API Server"
@@ -58,18 +58,6 @@ task = "shell.exec"
 args = "cd frontend && npm run web"
 
 [[workflows.workflow]]
-name = "Frontend"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npx expo start --web --port 5000"
-waitForPort = 5000
-
-[[workflows.workflow]]
 name = "Start Full Application"
 author = 49362085
 mode = "parallel"
@@ -84,28 +72,24 @@ args = "cd frontend && node combined-server.js"
 
 [[workflows.workflow]]
 name = "Frontend Production"
-author = 49362156
+author = "agent"
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd frontend && node production-server.js"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
 localPort = 37059
 externalPort = 80
-
-[[ports]]
-localPort = 44237
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
