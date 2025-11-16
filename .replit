@@ -8,7 +8,7 @@ channel = "stable-25_05"
 packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
 
 [workflows]
-runButton = "Run Application"
+runButton = "Clean Application Start"
 
 [[workflows.workflow]]
 name = "Project"
@@ -95,6 +95,19 @@ args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --re
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd frontend && node production-server.js"
+
+[[workflows.workflow]]
+name = "Clean Application Start"
+author = 49362156
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = 'cd frontend && pkill -f "expo\|metro" ; sleep 2 && node production-server.js'
 
 [[ports]]
 localPort = 5000
