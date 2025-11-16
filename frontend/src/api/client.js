@@ -8,11 +8,11 @@ const getCurrentAPIUrl = () => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     const port = window.location.port;
-    
+
     // Use relative URL that will be proxied by combined-server.js
     return '/api';
   }
-  
+
   // Final fallback - use relative URL
   return '/api';
 };
