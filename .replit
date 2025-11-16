@@ -66,7 +66,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && node production-server.js"
+args = "cd frontend && npx expo start --web --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -87,12 +87,16 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 35803
-externalPort = 3000
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 37059
 externalPort = 80
+
+[[ports]]
+localPort = 44237
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
