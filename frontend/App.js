@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BranchProvider } from './src/context/BranchContext';
+import { storage } from './src/utils/storage';
 import LoginScreen from './src/screens/LoginScreen';
 import BranchSelectionScreen from './src/screens/BranchSelectionScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -16,11 +18,60 @@ import BranchMasterScreen from './src/screens/BranchMasterScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
 import MachineManagementScreen from './src/screens/MachineManagementScreen';
 import RouteConfigurationScreen from './src/screens/RouteConfigurationScreen';
+import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  console.log('App component rendering...');
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Login');
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      console.log('🔍 Checking authentication status...');
+      const userData = await storage.getUserData();
+      const activeBranch = await storage.getActiveBranch();
+
+      if (userData && userData.user_id) {
+        console.log('✅ User data found:', { userId: userData.user_id, username: userData.username });
+        
+        if (activeBranch && activeBranch.id) {
+          console.log('✅ Active branch found:', activeBranch.name);
+          setInitialRoute('Home');
+        } else if (userData.branches && userData.branches.length > 1) {
+          console.log('📋 Multiple branches found, redirecting to branch selection');
+          setInitialRoute('BranchSelection');
+        } else if (userData.branches && userData.branches.length === 1) {
+          console.log('✅ Single branch found, auto-selecting');
+          await storage.setActiveBranch(userData.branches[0]);
+          setInitialRoute('Home');
+        } else {
+          console.log('⚠️ No branches found');
+          setInitialRoute('Login');
+        }
+      } else {
+        console.log('❌ No user data found, redirecting to login');
+        setInitialRoute('Login');
+      }
+    } catch (error) {
+      console.error('❌ Error checking auth status:', error);
+      setInitialRoute('Login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <BranchProvider>
@@ -29,7 +80,7 @@ export default function App() {
         onError={(error) => console.error('Navigation error:', error)}
       >
         <Stack.Navigator
-          initialRouteName="Login"
+          initialRouteName={initialRoute}
           screenOptions={{
             headerShown: false,
           }}
@@ -53,3 +104,12 @@ export default function App() {
     </BranchProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+});
