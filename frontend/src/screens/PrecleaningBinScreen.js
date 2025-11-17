@@ -463,14 +463,11 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const fetchRouteMappings = async () => {
     try {
-      setLoading(true);
       const response = await routeMagnetMappingApi.getAll();
       setRouteMappings(response.data);
     } catch (error) {
       console.error('Error fetching route mappings:', error);
       Alert.alert('Error', 'Failed to load route mappings');
-    } finally {
-      setLoading(false);
     }
   };
 
