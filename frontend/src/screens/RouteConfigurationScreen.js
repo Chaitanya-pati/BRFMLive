@@ -31,6 +31,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    sourceType: 'godown', // New field to track source type selection
     stages: [
       { sequence_no: 1, component_type: 'godown', component_id: null },
       { sequence_no: 2, component_type: 'bin', component_id: null },
@@ -134,6 +135,7 @@ export default function RouteConfigurationScreen({ navigation }) {
     setFormData({
       name: '',
       description: '',
+      sourceType: 'godown',
       stages: [
         { sequence_no: 1, component_type: 'godown', component_id: null },
         { sequence_no: 2, component_type: 'bin', component_id: null },
@@ -145,11 +147,13 @@ export default function RouteConfigurationScreen({ navigation }) {
   const openEditModal = (route) => {
     setEditMode(true);
     setCurrentRoute(route);
+    const sourceType = route.stages?.[0]?.component_type || 'godown';
     setFormData({
       name: route.name,
       description: route.description || '',
+      sourceType: sourceType,
       stages: route.stages || [
-        { sequence_no: 1, component_type: 'godown', component_id: null },
+        { sequence_no: 1, component_type: sourceType, component_id: null },
         { sequence_no: 2, component_type: 'bin', component_id: null },
       ],
     });
@@ -187,6 +191,12 @@ export default function RouteConfigurationScreen({ navigation }) {
     setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
   };
 
+  const handleSourceTypeChange = (value) => {
+    const stages = [...formData.stages];
+    stages[0] = { ...stages[0], component_type: value, component_id: null };
+    setFormData({ ...formData, sourceType: value, stages });
+  };
+
   const handleStageChange = (index, field, value) => {
     const stages = [...formData.stages];
     stages[index] = { ...stages[index], [field]: value };
@@ -217,8 +227,8 @@ export default function RouteConfigurationScreen({ navigation }) {
       return;
     }
 
-    if (formData.stages[0].component_type !== 'godown' && formData.stages[0].component_type !== 'bin') {
-      showAlert('Validation Error', 'First stage must be a godown or bin');
+    if (formData.sourceType !== 'godown' && formData.sourceType !== 'bin') {
+      showAlert('Validation Error', 'Source type must be a godown or bin');
       return;
     }
 
@@ -293,16 +303,16 @@ export default function RouteConfigurationScreen({ navigation }) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>
-            Component Type {isFirst ? '(First = Godown or Bin)' : isLast ? '(Last = Bin)' : ''}
+            Component Type {isFirst ? '(Locked - Set by Source Type)' : isLast ? '(Last = Bin)' : ''}
           </Text>
-          <View style={[styles.pickerContainer, isLast && styles.disabledPicker]}>
+          <View style={[styles.pickerContainer, (isFirst || isLast) && styles.disabledPicker]}>
             <Picker
               selectedValue={stage.component_type}
               onValueChange={(value) => handleStageChange(index, 'component_type', value)}
               style={styles.picker}
-              enabled={isFirst || (!isFirst && !isLast)}
+              enabled={!isFirst && !isLast}
             >
-              {(isFirst ? firstStageTypes : isLast ? ['bin'] : componentTypes).map((type) => (
+              {(isFirst ? [formData.sourceType] : isLast ? ['bin'] : componentTypes).map((type) => (
                 <Picker.Item key={type} label={type.charAt(0).toUpperCase() + type.slice(1)} value={type} />
               ))}
             </Picker>
@@ -351,6 +361,23 @@ export default function RouteConfigurationScreen({ navigation }) {
           multiline
           numberOfLines={3}
         />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Source Type (First Stage) *</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={formData.sourceType}
+            onValueChange={handleSourceTypeChange}
+            style={styles.picker}
+          >
+            <Picker.Item label="Godown" value="godown" />
+            <Picker.Item label="Bin" value="bin" />
+          </Picker>
+        </View>
+        <Text style={styles.helperText}>
+          This will set the component type for Stage 1 and cannot be changed after selection
+        </Text>
       </View>
 
       <View style={styles.stagesSection}>
@@ -565,5 +592,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 5,
+    fontStyle: 'italic',
   },
 });
