@@ -180,12 +180,28 @@ export const magnetApi = {
   delete: (id) => api.delete(`/magnets/${id}`),
 };
 
+export const machineApi = {
+  getAll: () => api.get("/machines"),
+  getById: (id) => api.get(`/machines/${id}`),
+  create: (data) => api.post("/machines", data),
+  update: (id, data) => api.put(`/machines/${id}`, data),
+  delete: (id) => api.delete(`/machines/${id}`),
+};
+
 export const routeMagnetMappingApi = {
   getAll: () => api.get("/route-magnet-mappings"),
   getById: (id) => api.get(`/route-magnet-mappings/${id}`),
   create: (data) => api.post("/route-magnet-mappings", data),
   update: (id, data) => api.put(`/route-magnet-mappings/${id}`, data),
   delete: (id) => api.delete(`/route-magnet-mappings/${id}`),
+};
+
+export const routeConfigurationApi = {
+  getAll: () => api.get("/route-configurations"),
+  getById: (id) => api.get(`/route-configurations/${id}`),
+  create: (data) => api.post("/route-configurations", data),
+  update: (id, data) => api.put(`/route-configurations/${id}`, data),
+  delete: (id) => api.delete(`/route-configurations/${id}`),
 };
 
 export const magnetCleaningRecordApi = {
