@@ -21,7 +21,9 @@ import {
   FaFlask, 
   FaBox, 
   FaClipboardList, 
-  FaWarehouse 
+  FaWarehouse,
+  FaCog,
+  FaRoute
 } from "react-icons/fa";
 
 const colors = {
@@ -101,6 +103,24 @@ const SvgBinIcon = ({ active }) => {
   );
 };
 
+const SvgCogIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaCog color={color} size={18} />
+    </View>
+  );
+};
+
+const SvgRouteIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaRoute color={color} size={18} />
+    </View>
+  );
+};
+
 export default function Layout({ children, title, currentRoute }) {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
@@ -126,6 +146,18 @@ export default function Layout({ children, title, currentRoute }) {
       name: "Master Data",
       route: "MasterView",
       icon: SvgDatabaseIcon,
+      section: "Operations",
+    },
+    {
+      name: "Machine Management",
+      route: "MachineManagement",
+      icon: SvgCogIcon,
+      section: "Operations",
+    },
+    {
+      name: "Route Configuration",
+      route: "RouteConfiguration",
+      icon: SvgRouteIcon,
       section: "Operations",
     },
     {

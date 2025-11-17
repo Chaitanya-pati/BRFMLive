@@ -14,6 +14,8 @@ import UnloadingEntryScreen from './src/screens/UnloadingEntryScreen';
 import PrecleaningBinScreen from './src/screens/PrecleaningBinScreen';
 import BranchMasterScreen from './src/screens/BranchMasterScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
+import MachineManagementScreen from './src/screens/MachineManagementScreen';
+import RouteConfigurationScreen from './src/screens/RouteConfigurationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +40,8 @@ export default function App() {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="BranchMaster" component={BranchMasterScreen} />
           <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+          <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
+          <Stack.Screen name="RouteConfiguration" component={RouteConfigurationScreen} />
           <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
           <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
           <Stack.Screen name="LabTest" component={LabTestScreen} />
