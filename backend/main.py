@@ -897,6 +897,69 @@ def delete_magnet(magnet_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete magnet: {str(e)}")
 
+@app.post("/api/machines", response_model=schemas.Machine)
+def create_machine(machine_data: schemas.MachineCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    machine_dict = machine_data.dict()
+    if branch_id and not machine_dict.get('branch_id'):
+        machine_dict['branch_id'] = branch_id
+    db_machine = models.Machine(**machine_dict)
+    db.add(db_machine)
+    db.commit()
+    db.refresh(db_machine)
+    return db_machine
+
+@app.get("/api/machines", response_model=List[schemas.Machine])
+def get_machines(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Machine)
+    if branch_id:
+        query = query.filter(models.Machine.branch_id == branch_id)
+    machines = query.offset(skip).limit(limit).all()
+    return machines
+
+@app.get("/api/machines/{machine_id}", response_model=schemas.Machine)
+def get_machine(machine_id: int, db: Session = Depends(get_db)):
+    machine_data = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not machine_data:
+        raise HTTPException(status_code=404, detail="Machine not found")
+    return machine_data
+
+@app.put("/api/machines/{machine_id}", response_model=schemas.Machine)
+def update_machine(machine_id: int, machine_update: schemas.MachineUpdate, db: Session = Depends(get_db)):
+    db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not db_machine:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    update_data = machine_update.dict(exclude_unset=True)
+
+    if 'name' in update_data and update_data['name'] != db_machine.name:
+        existing_machine = db.query(models.Machine).filter(
+            models.Machine.name == update_data['name'],
+            models.Machine.id != machine_id
+        ).first()
+        if existing_machine:
+            raise HTTPException(status_code=400, detail="Machine name already exists")
+
+    for key, value in update_data.items():
+        setattr(db_machine, key, value)
+
+    db.commit()
+    db.refresh(db_machine)
+    return db_machine
+
+@app.delete("/api/machines/{machine_id}")
+def delete_machine(machine_id: int, db: Session = Depends(get_db)):
+    db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if not db_machine:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    try:
+        db.delete(db_machine)
+        db.commit()
+        return {"message": "Machine deleted successfully", "id": machine_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete machine: {str(e)}")
+
 @app.post("/api/route-magnet-mappings", response_model=schemas.RouteMagnetMapping)
 def create_route_magnet_mapping(mapping_data: schemas.RouteMagnetMappingCreate, db: Session = Depends(get_db)):
     # Validate that either source_godown_id or source_bin_id is provided
@@ -1005,6 +1068,80 @@ def delete_route_magnet_mapping(mapping_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete route magnet mapping: {str(e)}")
+
+@app.post("/api/route-configurations", response_model=schemas.RouteConfiguration)
+def create_route_configuration(route_data: schemas.RouteConfigurationCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    route_dict = route_data.dict(exclude={'stages'})
+    if branch_id and not route_dict.get('branch_id'):
+        route_dict['branch_id'] = branch_id
+    
+    db_route = models.RouteConfiguration(**route_dict)
+    db.add(db_route)
+    db.flush()
+    
+    for stage_data in route_data.stages:
+        db_stage = models.RouteStage(
+            route_id=db_route.id,
+            **stage_data.dict()
+        )
+        db.add(db_stage)
+    
+    db.commit()
+    db.refresh(db_route)
+    return db_route
+
+@app.get("/api/route-configurations", response_model=List[schemas.RouteConfiguration])
+def get_route_configurations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.RouteConfiguration)
+    if branch_id:
+        query = query.filter(models.RouteConfiguration.branch_id == branch_id)
+    routes = query.offset(skip).limit(limit).all()
+    return routes
+
+@app.get("/api/route-configurations/{route_id}", response_model=schemas.RouteConfiguration)
+def get_route_configuration(route_id: int, db: Session = Depends(get_db)):
+    route = db.query(models.RouteConfiguration).filter(models.RouteConfiguration.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route configuration not found")
+    return route
+
+@app.put("/api/route-configurations/{route_id}", response_model=schemas.RouteConfiguration)
+def update_route_configuration(route_id: int, route_update: schemas.RouteConfigurationUpdate, db: Session = Depends(get_db)):
+    db_route = db.query(models.RouteConfiguration).filter(models.RouteConfiguration.id == route_id).first()
+    if not db_route:
+        raise HTTPException(status_code=404, detail="Route configuration not found")
+    
+    update_data = route_update.dict(exclude_unset=True, exclude={'stages'})
+    for key, value in update_data.items():
+        setattr(db_route, key, value)
+    
+    if route_update.stages is not None:
+        db.query(models.RouteStage).filter(models.RouteStage.route_id == route_id).delete()
+        
+        for stage_data in route_update.stages:
+            db_stage = models.RouteStage(
+                route_id=route_id,
+                **stage_data.dict()
+            )
+            db.add(db_stage)
+    
+    db.commit()
+    db.refresh(db_route)
+    return db_route
+
+@app.delete("/api/route-configurations/{route_id}")
+def delete_route_configuration(route_id: int, db: Session = Depends(get_db)):
+    db_route = db.query(models.RouteConfiguration).filter(models.RouteConfiguration.id == route_id).first()
+    if not db_route:
+        raise HTTPException(status_code=404, detail="Route configuration not found")
+    
+    try:
+        db.delete(db_route)
+        db.commit()
+        return {"message": "Route configuration deleted successfully", "id": route_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete route configuration: {str(e)}")
 
 @app.post("/api/magnet-cleaning-records", response_model=schemas.MagnetCleaningRecord)
 async def create_magnet_cleaning_record(

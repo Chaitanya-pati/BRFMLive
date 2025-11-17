@@ -229,6 +229,20 @@ class Magnet(Base):
 
     branch = relationship("Branch")
 
+class Machine(Base):
+    __tablename__ = "machines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    machine_type = Column(String(50), nullable=False)
+    description = Column(Text)
+    status = Column(String(20), default="Active", nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+
 class RouteMagnetMapping(Base):
     __tablename__ = "route_magnet_mappings"
 
@@ -245,6 +259,32 @@ class RouteMagnetMapping(Base):
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
     source_bin = relationship("Bin", foreign_keys=[source_bin_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+
+class RouteConfiguration(Base):
+    __tablename__ = "route_configurations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+    stages = relationship("RouteStage", back_populates="route", cascade="all, delete-orphan", order_by="RouteStage.sequence_no")
+
+class RouteStage(Base):
+    __tablename__ = "route_stages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    route_id = Column(Integer, ForeignKey("route_configurations.id", ondelete="CASCADE"), nullable=False)
+    sequence_no = Column(Integer, nullable=False)
+    component_type = Column(String(20), nullable=False)
+    component_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    route = relationship("RouteConfiguration", back_populates="stages")
 
 class TransferSession(Base):
     __tablename__ = "transfer_sessions"

@@ -258,6 +258,27 @@ class Magnet(MagnetBase):
     created_at: datetime
     updated_at: datetime
 
+class MachineBase(ISTModel):
+    name: str
+    machine_type: str
+    description: Optional[str] = None
+    status: str = "Active"
+
+class MachineCreate(MachineBase):
+    branch_id: Optional[int] = None
+
+class MachineUpdate(ISTModel):
+    name: Optional[str] = None
+    machine_type: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+class Machine(MachineBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
 class RouteMagnetMappingBase(ISTModel):
     magnet_id: int
     source_godown_id: Optional[int] = None
@@ -285,6 +306,40 @@ class RouteMagnetMappingWithDetails(RouteMagnetMapping):
     source_godown: Optional[GodownMaster] = None
     source_bin: Optional[Bin] = None
     destination_bin: Bin
+
+class RouteStageBase(ISTModel):
+    sequence_no: int
+    component_type: str
+    component_id: int
+
+class RouteStageCreate(RouteStageBase):
+    pass
+
+class RouteStage(RouteStageBase):
+    id: int
+    route_id: int
+    created_at: datetime
+    updated_at: datetime
+
+class RouteConfigurationBase(ISTModel):
+    name: str
+    description: Optional[str] = None
+
+class RouteConfigurationCreate(RouteConfigurationBase):
+    branch_id: Optional[int] = None
+    stages: list[RouteStageCreate]
+
+class RouteConfigurationUpdate(ISTModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    stages: Optional[list[RouteStageCreate]] = None
+
+class RouteConfiguration(RouteConfigurationBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    stages: list[RouteStage] = []
 
 class TransferSessionBase(ISTModel):
     source_godown_id: int

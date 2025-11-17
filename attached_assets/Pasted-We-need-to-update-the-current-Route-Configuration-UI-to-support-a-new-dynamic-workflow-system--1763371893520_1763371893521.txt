@@ -1,0 +1,104 @@
+We need to update the current “Route Configuration” UI to support a new dynamic workflow system.
+
+Right now the UI only has:
+
+Magnet dropdown
+
+Source Type
+
+Source Godown
+
+Destination Bin
+
+Cleaning Interval
+
+This was based on the old design.
+
+Now update it completely to support the new design:
+
+1. Add Machine Configuration Module First
+
+Before updating the route screen, create CRUD screens for machine configuration similar to the existing magnet configuration.
+Machines include:
+
+Separator Machine
+
+Drum Shield
+
+Any future machines
+
+Each machine should have:
+
+Name
+
+Type (Separator / Drum Shield / Other)
+
+Status (Active/Inactive)
+
+Store machines in a new database table.
+
+2. Update Route Creation Screen
+
+Remove the old static dropdowns (magnet, source type, source godown, destination bin).
+
+Replace them with a Dynamic Stage Workflow Builder:
+
+Dynamic Stage Builder Rules:
+
+First stage is always Godown (auto-locked)
+
+Last stage is always Bin (auto-locked)
+
+Middle stages can be:
+
+Magnet
+
+Machine
+
+Component Type dropdown options:
+
+Godown/Bin based on source type (locked for first only)
+
+Magnet
+
+Machine
+
+Bin (locked for last only)
+
+3. Component Dropdown Must Be Dependent on Selected Type
+
+When user selects a component type:
+
+If Magnet → load magnet list from magnet configuration
+
+If Machine → load machine list (that we added above)
+
+If Godown → load godown list
+
+If Bin → load bin list
+
+All data must come dynamically from DB.
+
+4. Allow User to Add Unlimited Middle Stages
+
+“+ Add Stage” button
+
+Delete stage (except first and last)
+
+5. Save
+
+When saving, store an ordered list in the DB like:
+
+[
+  { sequence_no: 1, type: "godown", component_id: X },
+  { sequence_no: 2, type: "magnet", component_id: Y },
+  { sequence_no: 3, type: "machine", component_id: Z },
+  ...
+  { sequence_no: N, type: "bin", component_id: B }
+]
+
+Summary
+
+Before modifying the route builder UI:
+✔ Add full CRUD for machine configuration
+✔ Then update the route screen to a dynamic stage builder where component dropdown depends on component type.
