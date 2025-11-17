@@ -3,40 +3,54 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = 5000;
 const BACKEND_URL = 'http://localhost:8000';
 const DIST_DIR = path.join(__dirname, 'dist');
 
-console.log('🚀 Starting Production-Ready Server (Metro-Free)...');
+console.log('🚀 Starting Production Server (Metro-Free)...');
 
-// Kill any existing Metro processes before starting
-const killMetro = () => {
-  console.log('🔪 Killing any existing Metro/Expo processes...');
+// Aggressively kill Metro and Expo processes
+const killMetroProcesses = () => {
+  console.log('🔪 Killing all Metro/Expo/Node dev processes...');
   try {
-    spawn('pkill', ['-9', '-f', 'metro']);
-    spawn('pkill', ['-9', '-f', 'expo']);
-    spawn('pkill', ['-9', '-f', 'expo-cli']);
+    execSync('pkill -9 -f "metro" || true', { stdio: 'ignore' });
+    execSync('pkill -9 -f "expo" || true', { stdio: 'ignore' });
+    execSync('pkill -9 -f "expo-cli" || true', { stdio: 'ignore' });
+    execSync('pkill -9 -f "@expo/metro" || true', { stdio: 'ignore' });
+    execSync('pkill -9 -f "react-native" || true', { stdio: 'ignore' });
+    console.log('✅ All dev processes terminated');
   } catch (err) {
-    // Ignore errors if processes don't exist
+    // Ignore errors - processes may not exist
   }
 };
 
-killMetro();
+// Kill immediately on startup
+killMetroProcesses();
 
 // Check if dist directory exists
 if (!fs.existsSync(DIST_DIR)) {
   console.error('❌ dist directory not found!');
-  console.error('Please run: cd frontend && npx expo export --platform web');
-  process.exit(1);
+  console.error('📦 Building static files now...');
+  console.error('Please wait, this may take 60-90 seconds...');
+  try {
+    execSync('npx expo export --platform web', { 
+      cwd: __dirname,
+      stdio: 'inherit'
+    });
+    console.log('✅ Build complete!');
+  } catch (err) {
+    console.error('❌ Build failed:', err.message);
+    process.exit(1);
+  }
 }
 
 console.log('✅ Found pre-built files in dist/');
 console.log('🌐 Starting Express server...');
 
-// CORS middleware to allow all origins
+// CORS middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -51,7 +65,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// API proxy middleware - proxy all /api/* requests to backend
+// API proxy
 app.use('/api', createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
@@ -67,7 +81,7 @@ app.use('/api', createProxyMiddleware({
   }
 }));
 
-// Serve static files from dist directory
+// Serve static files
 app.use(express.static(DIST_DIR, {
   setHeaders: (res, path) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -76,24 +90,35 @@ app.use(express.static(DIST_DIR, {
   }
 }));
 
-// Fallback to index.html for client-side routing
+// Fallback to index.html
 app.use((req, res) => {
   res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
-// Start the server
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Production server started successfully!');
-  console.log(`🌐 Server running at http://0.0.0.0:${PORT}`);
+  console.log(`🌐 Server: http://0.0.0.0:${PORT}`);
   console.log(`🔗 API proxy: /api/* -> ${BACKEND_URL}/api/*`);
-  console.log(`📁 Serving static files from: ${DIST_DIR}`);
-  console.log('🎉 No CORS issues - serving pre-built static files!');
-  console.log('🚫 Metro bundler is NOT running - pure static file serving');
+  console.log(`📁 Static files: ${DIST_DIR}`);
+  console.log('🚫 Metro bundler is DISABLED');
   console.log('');
-  console.log('💡 To rebuild the app, run: cd frontend && npx expo export --platform web');
 });
 
-// Periodically check and kill Metro if it somehow starts
+// Kill Metro every 30 seconds as a safeguard
 setInterval(() => {
-  killMetro();
-}, 30000); // Every 30 seconds
+  killMetroProcesses();
+}, 30000);
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Shutting down gracefully...');
+  killMetroProcesses();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  killMetroProcesses();
+  process.exit(0);
+});

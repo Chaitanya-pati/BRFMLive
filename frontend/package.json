@@ -3,12 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npx expo start",
-    "android": "npx expo start --android",
-    "ios": "npx expo start --ios",
-    "web": "EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
     "build": "npx expo export --platform web",
-    "serve": "npx serve dist"
+    "production": "node production-server.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
