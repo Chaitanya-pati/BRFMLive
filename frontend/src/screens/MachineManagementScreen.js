@@ -142,15 +142,15 @@ export default function MachineManagementScreen({ navigation }) {
   };
 
   const columns = [
-    { title: 'ID', key: 'id', width: 60 },
-    { title: 'Name', key: 'name', width: 200 },
-    { title: 'Type', key: 'machine_type', width: 150 },
-    { title: 'Description', key: 'description', width: 250 },
-    { title: 'Status', key: 'status', width: 100 },
+    { label: 'ID', field: 'id', flex: 0.5 },
+    { label: 'Name', field: 'name', flex: 1.5 },
+    { label: 'Type', field: 'machine_type', flex: 1 },
+    { label: 'Description', field: 'description', flex: 2 },
+    { label: 'Status', field: 'status', flex: 0.8 },
   ];
 
   const renderModalContent = () => (
-    <ScrollView style={styles.modalScroll}>
+    <ScrollView style={styles.modalScrollContent}>
       <View style={styles.formGroup}>
         <Text style={styles.label}>Machine Name *</Text>
         <TextInput
@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  modalScroll: {
-    maxHeight: 500,
+  modalScrollContent: {
+    flex: 1,
   },
   formGroup: {
     marginBottom: 15,

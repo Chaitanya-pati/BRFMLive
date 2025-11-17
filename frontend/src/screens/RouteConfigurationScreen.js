@@ -265,10 +265,10 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const columns = [
-    { title: 'ID', key: 'id', width: 60 },
-    { title: 'Name', key: 'name', width: 200 },
-    { title: 'Description', key: 'description', width: 250 },
-    { title: 'Stages', key: 'stages', width: 100, render: (row) => row.stages?.length || 0 },
+    { label: 'ID', field: 'id', flex: 0.5 },
+    { label: 'Name', field: 'name', flex: 1.5 },
+    { label: 'Description', field: 'description', flex: 2 },
+    { label: 'Stages', field: 'stages', flex: 0.8, render: (value, row) => row.stages?.length || 0 },
   ];
 
   const renderStage = (stage, index) => {
@@ -329,7 +329,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const renderModalContent = () => (
-    <ScrollView style={styles.modalScroll}>
+    <ScrollView style={styles.modalScrollContent}>
       <View style={styles.formGroup}>
         <Text style={styles.label}>Route Name *</Text>
         <TextInput
@@ -443,8 +443,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  modalScroll: {
-    maxHeight: 600,
+  modalScrollContent: {
+    flex: 1,
   },
   formGroup: {
     marginBottom: 15,
