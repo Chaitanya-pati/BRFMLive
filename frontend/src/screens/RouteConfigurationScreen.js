@@ -38,6 +38,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   });
 
   const componentTypes = ['godown', 'magnet', 'machine', 'bin'];
+  const firstStageTypes = ['godown', 'bin'];
 
   const showAlert = (title, message) => {
     if (Platform.OS === 'web') {
@@ -216,8 +217,8 @@ export default function RouteConfigurationScreen({ navigation }) {
       return;
     }
 
-    if (formData.stages[0].component_type !== 'godown') {
-      showAlert('Validation Error', 'First stage must be a godown');
+    if (formData.stages[0].component_type !== 'godown' && formData.stages[0].component_type !== 'bin') {
+      showAlert('Validation Error', 'First stage must be a godown or bin');
       return;
     }
 
@@ -292,16 +293,16 @@ export default function RouteConfigurationScreen({ navigation }) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>
-            Component Type {isFirst ? '(First = Godown)' : isLast ? '(Last = Bin)' : ''}
+            Component Type {isFirst ? '(First = Godown or Bin)' : isLast ? '(Last = Bin)' : ''}
           </Text>
-          <View style={[styles.pickerContainer, (isFirst || isLast) && styles.disabledPicker]}>
+          <View style={[styles.pickerContainer, isLast && styles.disabledPicker]}>
             <Picker
               selectedValue={stage.component_type}
               onValueChange={(value) => handleStageChange(index, 'component_type', value)}
               style={styles.picker}
-              enabled={!isFirst && !isLast}
+              enabled={isFirst || (!isFirst && !isLast)}
             >
-              {componentTypes.map((type) => (
+              {(isFirst ? firstStageTypes : isLast ? ['bin'] : componentTypes).map((type) => (
                 <Picker.Item key={type} label={type.charAt(0).toUpperCase() + type.slice(1)} value={type} />
               ))}
             </Picker>
@@ -329,7 +330,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const renderModalContent = () => (
-    <ScrollView style={styles.modalScrollContent}>
+    <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.formGroup}>
         <Text style={styles.label}>Route Name *</Text>
         <TextInput

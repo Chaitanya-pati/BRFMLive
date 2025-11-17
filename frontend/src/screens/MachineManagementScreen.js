@@ -150,7 +150,7 @@ export default function MachineManagementScreen({ navigation }) {
   ];
 
   const renderModalContent = () => (
-    <ScrollView style={styles.modalScrollContent}>
+    <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.formGroup}>
         <Text style={styles.label}>Machine Name *</Text>
         <TextInput
