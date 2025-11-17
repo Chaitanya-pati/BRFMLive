@@ -46,7 +46,12 @@ export default function BranchSelectionScreen({ navigation, route }) {
       const success = await setActiveBranch(branch);
       
       if (success) {
-        navigation.replace('Home');
+        // Reload the page to ensure all branch data is fresh
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        } else {
+          navigation.replace('Home');
+        }
       } else {
         Alert.alert('Error', 'Failed to set active branch');
       }

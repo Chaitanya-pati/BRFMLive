@@ -14,13 +14,13 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useBranch } from "../context/BranchContext";
 import { storage } from "../utils/storage";
-import { 
-  FaHome, 
-  FaDatabase, 
-  FaTruck, 
-  FaFlask, 
-  FaBox, 
-  FaClipboardList, 
+import {
+  FaHome,
+  FaDatabase,
+  FaTruck,
+  FaFlask,
+  FaBox,
+  FaClipboardList,
   FaWarehouse,
   FaCog,
   FaRoute
@@ -203,9 +203,17 @@ export default function Layout({ children, title, currentRoute }) {
 
   const handleBranchSwitch = async (branch) => {
     try {
-      await setActiveBranch(branch);
-      setBranchModalVisible(false);
-      Alert.alert('Success', `Switched to ${branch.name}`);
+      const success = await setActiveBranch(branch);
+      if (success) {
+        setBranchModalVisible(false);
+        Alert.alert('Success', `Switched to ${branch.name}`);
+        // Reload the page to fetch new branch data
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+      } else {
+        Alert.alert('Error', 'Failed to switch branch');
+      }
     } catch (error) {
       console.error('Error switching branch:', error);
       Alert.alert('Error', 'Failed to switch branch');
