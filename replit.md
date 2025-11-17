@@ -65,7 +65,32 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 - `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
 - Connection pooling for database reliability.
 
+## Test Credentials
+
+**Login Information:**
+- Username: `admin`
+- Password: `admin123`
+- Branch: Main Branch
+
 ## Recent Changes (November 2025)
+
+### Database Migration System Fixed (November 17, 2025)
+- **Migration Chain Resolved**: Fixed complex migration dependency issues with multiple heads
+  - Merged two separate migration branches (branches/users and machines/routes)
+  - Created merge migration to properly sequence table creation
+  - Removed foreign key constraints from initial machine/route creation to avoid dependency issues
+  - Added foreign key constraints in merge migration after all tables exist
+- **Complete Schema Initialization**: All database tables now created successfully via Alembic
+  - Tables: suppliers, vehicle_entries, lab_tests, claims, godown_master, unloading_entries
+  - Tables: bins, magnets, transfer_sessions, magnet_cleaning_records, route_magnet_mappings
+  - Tables: branches, users, user_branches, machines, route_configurations, route_stages
+- **Test Data Created**: Added initial admin user and branch for testing
+  - Default admin user: admin/admin123
+  - Default branch: Main Branch
+- **Migration Files Modified**:
+  - `backend/alembic/versions/add_machine_and_route_fields.py` - Updated to create tables without FK constraints
+  - `backend/alembic/versions/e4337eb8f37a_merge_branches_and_machine_fields.py` - Added FK constraints after merge
+- **Status**: Database fully initialized and ready for use. Login functionality verified and working.
 
 ### Dynamic Workflow System Implementation (November 17, 2025)
 - **Machine Management Module**: Added comprehensive machine management system

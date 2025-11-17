@@ -20,17 +20,58 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add make and serial_number to machines, interval_hours to route_stages."""
-    # Add make and serial_number columns to machines table
-    op.add_column('machines', sa.Column('make', sa.String(length=100), nullable=True))
-    op.add_column('machines', sa.Column('serial_number', sa.String(length=100), nullable=True))
+    """Create machines and route tables with all fields."""
     
-    # Add interval_hours column to route_stages table
-    op.add_column('route_stages', sa.Column('interval_hours', sa.Float(), nullable=True))
+    # Create machines table (without FK constraint to branches for now)
+    op.create_table('machines',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=100), nullable=False),
+        sa.Column('machine_type', sa.String(length=50), nullable=False),
+        sa.Column('make', sa.String(length=100), nullable=True),
+        sa.Column('serial_number', sa.String(length=100), nullable=True),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('status', sa.String(length=20), nullable=False, server_default='Active'),
+        sa.Column('branch_id', sa.Integer(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name')
+    )
+    op.create_index(op.f('ix_machines_id'), 'machines', ['id'], unique=False)
+    
+    # Create route_configurations table (without FK constraint to branches for now)
+    op.create_table('route_configurations',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('branch_id', sa.Integer(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_route_configurations_id'), 'route_configurations', ['id'], unique=False)
+    
+    # Create route_stages table
+    op.create_table('route_stages',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('route_id', sa.Integer(), nullable=False),
+        sa.Column('sequence_no', sa.Integer(), nullable=False),
+        sa.Column('component_type', sa.String(length=20), nullable=False),
+        sa.Column('component_id', sa.Integer(), nullable=False),
+        sa.Column('interval_hours', sa.Float(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(['route_id'], ['route_configurations.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_route_stages_id'), 'route_stages', ['id'], unique=False)
 
 
 def downgrade() -> None:
-    """Remove added columns."""
-    op.drop_column('route_stages', 'interval_hours')
-    op.drop_column('machines', 'serial_number')
-    op.drop_column('machines', 'make')
+    """Drop route and machines tables."""
+    op.drop_index(op.f('ix_route_stages_id'), table_name='route_stages')
+    op.drop_table('route_stages')
+    op.drop_index(op.f('ix_route_configurations_id'), table_name='route_configurations')
+    op.drop_table('route_configurations')
+    op.drop_index(op.f('ix_machines_id'), table_name='machines')
+    op.drop_table('machines')
