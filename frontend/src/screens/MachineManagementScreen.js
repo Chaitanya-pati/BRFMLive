@@ -26,6 +26,8 @@ export default function MachineManagementScreen({ navigation }) {
   const [formData, setFormData] = useState({
     name: '',
     machine_type: 'Separator',
+    make: '',
+    serial_number: '',
     description: '',
     status: 'Active',
   });
@@ -74,6 +76,8 @@ export default function MachineManagementScreen({ navigation }) {
     setFormData({
       name: '',
       machine_type: 'Separator',
+      make: '',
+      serial_number: '',
       description: '',
       status: 'Active',
     });
@@ -86,6 +90,8 @@ export default function MachineManagementScreen({ navigation }) {
     setFormData({
       name: machine.name,
       machine_type: machine.machine_type,
+      make: machine.make || '',
+      serial_number: machine.serial_number || '',
       description: machine.description || '',
       status: machine.status,
     });
@@ -143,10 +149,12 @@ export default function MachineManagementScreen({ navigation }) {
 
   const columns = [
     { label: 'ID', field: 'id', flex: 0.5 },
-    { label: 'Name', field: 'name', flex: 1.5 },
-    { label: 'Type', field: 'machine_type', flex: 1 },
-    { label: 'Description', field: 'description', flex: 2 },
-    { label: 'Status', field: 'status', flex: 0.8 },
+    { label: 'Name', field: 'name', flex: 1.2 },
+    { label: 'Type', field: 'machine_type', flex: 0.8 },
+    { label: 'Make', field: 'make', flex: 0.8 },
+    { label: 'Serial No.', field: 'serial_number', flex: 0.8 },
+    { label: 'Description', field: 'description', flex: 1.5 },
+    { label: 'Status', field: 'status', flex: 0.6 },
   ];
 
   const renderModalContent = () => (
@@ -174,6 +182,26 @@ export default function MachineManagementScreen({ navigation }) {
             ))}
           </Picker>
         </View>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Make (Brand)</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.make}
+          onChangeText={(text) => setFormData({ ...formData, make: text })}
+          placeholder="Enter machine make/brand"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Serial Number</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.serial_number}
+          onChangeText={(text) => setFormData({ ...formData, serial_number: text })}
+          placeholder="Enter serial number"
+        />
       </View>
 
       <View style={styles.formGroup}>

@@ -235,6 +235,8 @@ class Machine(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     machine_type = Column(String(50), nullable=False)
+    make = Column(String(100))
+    serial_number = Column(String(100))
     description = Column(Text)
     status = Column(String(20), default="Active", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
@@ -281,6 +283,7 @@ class RouteStage(Base):
     sequence_no = Column(Integer, nullable=False)
     component_type = Column(String(20), nullable=False)
     component_id = Column(Integer, nullable=False)
+    interval_hours = Column(Float, nullable=True)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 

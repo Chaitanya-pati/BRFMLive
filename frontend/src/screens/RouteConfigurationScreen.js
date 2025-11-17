@@ -33,8 +33,8 @@ export default function RouteConfigurationScreen({ navigation }) {
     description: '',
     sourceType: 'godown', // New field to track source type selection
     stages: [
-      { sequence_no: 1, component_type: 'godown', component_id: null },
-      { sequence_no: 2, component_type: 'bin', component_id: null },
+      { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
+      { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
     ],
   });
 
@@ -137,8 +137,8 @@ export default function RouteConfigurationScreen({ navigation }) {
       description: '',
       sourceType: 'godown',
       stages: [
-        { sequence_no: 1, component_type: 'godown', component_id: null },
-        { sequence_no: 2, component_type: 'bin', component_id: null },
+        { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
+        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
       ],
     });
     setModalVisible(true);
@@ -153,8 +153,8 @@ export default function RouteConfigurationScreen({ navigation }) {
       description: route.description || '',
       sourceType: sourceType,
       stages: route.stages || [
-        { sequence_no: 1, component_type: sourceType, component_id: null },
-        { sequence_no: 2, component_type: 'bin', component_id: null },
+        { sequence_no: 1, component_type: sourceType, component_id: null, interval_hours: null },
+        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
       ],
     });
     setModalVisible(true);
@@ -168,6 +168,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       sequence_no: stages.length,
       component_type: 'magnet',
       component_id: null,
+      interval_hours: null,
     };
     
     stages[stages.length - 1] = newStage;
@@ -176,6 +177,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       sequence_no: stages.length + 1,
       component_type: 'bin',
       component_id: lastStage.component_id,
+      interval_hours: null,
     });
     
     setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
@@ -193,7 +195,7 @@ export default function RouteConfigurationScreen({ navigation }) {
 
   const handleSourceTypeChange = (value) => {
     const stages = [...formData.stages];
-    stages[0] = { ...stages[0], component_type: value, component_id: null };
+    stages[0] = { ...stages[0], component_type: value, component_id: null, interval_hours: null };
     setFormData({ ...formData, sourceType: value, stages });
   };
 
@@ -334,6 +336,23 @@ export default function RouteConfigurationScreen({ navigation }) {
               })}
             </Picker>
           </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Interval (Hours)</Text>
+          <TextInput
+            style={styles.input}
+            value={stage.interval_hours?.toString() || ''}
+            onChangeText={(text) => {
+              const value = text === '' ? null : parseFloat(text);
+              handleStageChange(index, 'interval_hours', value);
+            }}
+            placeholder="Enter interval in hours (e.g., 0.001 for testing)"
+            keyboardType="decimal-pad"
+          />
+          <Text style={styles.helperText}>
+            Enter decimal hours (e.g., 0.001 for testing, 1.5 for 1.5 hours)
+          </Text>
         </View>
       </View>
     );

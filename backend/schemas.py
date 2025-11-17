@@ -261,6 +261,8 @@ class Magnet(MagnetBase):
 class MachineBase(ISTModel):
     name: str
     machine_type: str
+    make: Optional[str] = None
+    serial_number: Optional[str] = None
     description: Optional[str] = None
     status: str = "Active"
 
@@ -270,6 +272,8 @@ class MachineCreate(MachineBase):
 class MachineUpdate(ISTModel):
     name: Optional[str] = None
     machine_type: Optional[str] = None
+    make: Optional[str] = None
+    serial_number: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
 
@@ -311,6 +315,7 @@ class RouteStageBase(ISTModel):
     sequence_no: int
     component_type: str
     component_id: int
+    interval_hours: Optional[float] = None
 
 class RouteStageCreate(RouteStageBase):
     pass
