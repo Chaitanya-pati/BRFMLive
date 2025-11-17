@@ -67,6 +67,35 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 
 ## Recent Changes (November 2025)
 
+### Dynamic Workflow System Implementation (November 17, 2025)
+- **Machine Management Module**: Added comprehensive machine management system
+  - New `Machine` model with fields: name, machine_type, description, status, branch_id
+  - Full CRUD API endpoints: POST/GET/PUT/DELETE `/api/machines`
+  - Frontend screen: `MachineManagementScreen.js` with data table and modal forms
+  - Supports branch-scoped multi-tenancy
+  - Test credentials: Login with admin/admin123 to access
+- **Dynamic Route Configuration**: Implemented flexible workflow routing system
+  - New `RouteConfiguration` and `RouteStage` models for storing dynamic workflows
+  - Routes support unlimited stages with component composition
+  - **Stage Rules**:
+    * First stage: Always Godown (locked, cannot be changed)
+    * Last stage: Always Bin (locked, cannot be changed)
+    * Middle stages: Unlimited, can be Magnet or Machine (dynamically add/remove)
+  - **Dependent Dropdowns**: Component selection adapts based on type selected
+  - API endpoints: POST/GET/PUT/DELETE `/api/route-configurations`
+  - Frontend screen: `RouteConfigurationScreen.js` with visual stage builder
+  - **Example Route**: Godown → Magnet → Machine → Magnet → Bin
+- **Database Tables Created**: `machines`, `route_configurations`, `route_stages`
+- **Files Created**:
+  - `frontend/src/screens/MachineManagementScreen.js` - Machine CRUD interface
+  - `frontend/src/screens/RouteConfigurationScreen.js` - Dynamic workflow builder
+- **Files Modified**:
+  - `backend/models.py` - Added Machine, RouteConfiguration, RouteStage models
+  - `backend/schemas.py` - Added Pydantic schemas for new models
+  - `backend/main.py` - Added API endpoints for machines and routes
+  - `frontend/src/api/client.js` - Added machineApi and routeConfigurationApi
+- **Testing**: Successfully tested machine creation and 3-stage route (godown→machine→bin)
+
 ### API Connection Fix - PERMANENT SOLUTION (November 15, 2025)
 - **Problem**: Every fresh clone showed "Failed to fetch" error on login due to frontend trying to connect to `localhost:8000` instead of the Replit domain
 - **Root Cause**: The API client's URL detection logic was trying to replace port numbers in the hostname, but Replit domains don't include ports in the hostname
