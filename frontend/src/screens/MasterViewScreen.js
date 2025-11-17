@@ -14,7 +14,7 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import SelectDropdown from '../components/SelectDropdown';
-import { godownApi, supplierApi, binApi, magnetApi, stateCityApi } from '../api/client';
+import { godownApi, supplierApi, binApi, magnetApi, machineApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
 
 export default function MasterViewScreen({ navigation }) {
@@ -24,6 +24,7 @@ export default function MasterViewScreen({ navigation }) {
   const [suppliers, setSuppliers] = useState([]);
   const [bins, setBins] = useState([]);
   const [magnets, setMagnets] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
@@ -63,6 +64,15 @@ export default function MasterViewScreen({ navigation }) {
     status: 'Active',
   });
 
+  const [machineFormData, setMachineFormData] = useState({
+    name: '',
+    machine_type: 'Separator',
+    make: '',
+    serial_number: '',
+    description: '',
+    status: 'Active',
+  });
+
   // Comprehensive list of Indian states - this static list is no longer used for the picker,
   // it's replaced by states fetched from the API.
   const indianStates = [
@@ -85,6 +95,7 @@ export default function MasterViewScreen({ navigation }) {
         loadSuppliers(),
         loadBins(),
         loadMagnets(),
+        loadMachines(),
         loadGodownTypes(), // Load godown types here
         loadStatesFromApi()
       ]);
@@ -142,6 +153,15 @@ export default function MasterViewScreen({ navigation }) {
       setMagnets(response.data);
     } catch (error) {
       console.error('Error loading magnets:', error);
+    }
+  };
+
+  const loadMachines = async () => {
+    try {
+      const response = await machineApi.getAll();
+      setMachines(response.data);
+    } catch (error) {
+      console.error('Error loading machines:', error);
     }
   };
 
@@ -267,6 +287,8 @@ export default function MasterViewScreen({ navigation }) {
         await handleBinSubmit();
       } else if (activeTab === 'magnets') {
         await handleMagnetSubmit();
+      } else if (activeTab === 'machines') {
+        await handleMachineSubmit();
       } else if (activeTab === 'supplier') {
         // Trim and validate required fields
         const trimmedSupplierName = supplierFormData.supplier_name?.trim();
@@ -397,6 +419,18 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'description', label: 'Description', flex: 2 },
     { field: 'status', label: 'Status', flex: 1 },
   ];
+
+  const machineColumns = [
+    { field: 'id', label: 'ID', flex: 0.5 },
+    { field: 'name', label: 'Name', flex: 1.2 },
+    { field: 'machine_type', label: 'Type', flex: 0.8 },
+    { field: 'make', label: 'Make', flex: 0.8 },
+    { field: 'serial_number', label: 'Serial No.', flex: 0.8 },
+    { field: 'description', label: 'Description', flex: 1.5 },
+    { field: 'status', label: 'Status', flex: 0.6 },
+  ];
+
+  const machineTypes = ['Separator', 'Drum Shield', 'Other'];
 
   const statusOptions = [
     { label: 'Active', value: 'Active' },
@@ -602,6 +636,86 @@ export default function MasterViewScreen({ navigation }) {
     );
   };
 
+  const openMachineModal = () => {
+    setEditMode(false);
+    setCurrentItem(null);
+    setMachineFormData({
+      name: '',
+      machine_type: 'Separator',
+      make: '',
+      serial_number: '',
+      description: '',
+      status: 'Active',
+    });
+    setActiveTab('machines');
+    setModalVisible(true);
+  };
+
+  const openEditMachineModal = (machine) => {
+    setEditMode(true);
+    setCurrentItem(machine);
+    setMachineFormData({
+      name: machine.name,
+      machine_type: machine.machine_type,
+      make: machine.make || '',
+      serial_number: machine.serial_number || '',
+      description: machine.description || '',
+      status: machine.status,
+    });
+    setActiveTab('machines');
+    setModalVisible(true);
+  };
+
+  const handleMachineSubmit = async () => {
+    if (!machineFormData.name || !machineFormData.machine_type) {
+      notify.showWarning('Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        name: machineFormData.name,
+        machine_type: machineFormData.machine_type,
+        make: machineFormData.make,
+        serial_number: machineFormData.serial_number,
+        description: machineFormData.description,
+        status: machineFormData.status,
+      };
+
+      if (editMode && currentItem) {
+        await machineApi.update(currentItem.id, payload);
+        notify.showSuccess('Machine updated successfully');
+      } else {
+        await machineApi.create(payload);
+        notify.showSuccess('Machine created successfully');
+      }
+
+      setModalVisible(false);
+      loadMachines();
+    } catch (error) {
+      notify.showError(editMode ? 'Failed to update machine' : 'Failed to create machine');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMachineDelete = (machine) => {
+    notify.showConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete machine ${machine.name}?`,
+      async () => {
+        try {
+          await machineApi.delete(machine.id);
+          notify.showSuccess('Machine deleted successfully');
+          loadMachines();
+        } catch (error) {
+          notify.showError('Failed to delete machine');
+        }
+      }
+    );
+  };
+
 
   return (
     <Layout navigation={navigation} title="Master Data">
@@ -637,6 +751,14 @@ export default function MasterViewScreen({ navigation }) {
           >
             <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText]}>
               Magnets
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'machines' && styles.activeTab]}
+            onPress={() => setActiveTab('machines')}
+          >
+            <Text style={[styles.tabText, activeTab === 'machines' && styles.activeTabText]}>
+              Machines
             </Text>
           </TouchableOpacity>
         </View>
@@ -677,11 +799,20 @@ export default function MasterViewScreen({ navigation }) {
             onDelete={handleMagnetDelete}
           />
         )}
+        {activeTab === 'machines' && (
+          <DataTable
+            columns={machineColumns}
+            data={machines}
+            onAdd={openMachineModal}
+            onEdit={openEditMachineModal}
+            onDelete={handleMachineDelete}
+          />
+        )}
 
         <Modal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          title={editMode ? `Edit ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}` : `Add New ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : 'Supplier'}`}
+          title={editMode ? `Edit ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : activeTab === 'machines' ? 'Machine' : 'Supplier'}` : `Add New ${activeTab === 'godown' ? 'Godown' : activeTab === 'bins' ? 'Bin' : activeTab === 'magnets' ? 'Magnet' : activeTab === 'machines' ? 'Machine' : 'Supplier'}`}
         >
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={true}>
             {activeTab === 'godown' && (
@@ -775,6 +906,68 @@ export default function MasterViewScreen({ navigation }) {
                   <Picker
                     selectedValue={magnetFormData.status}
                     onValueChange={(value) => setMagnetFormData({ ...magnetFormData, status: value })}
+                    style={styles.picker}
+                  >
+                    {statusOptions.map((option, index) => (
+                      <Picker.Item key={index} label={option.label} value={option.value} />
+                    ))}
+                  </Picker>
+                </View>
+              </>
+            )}
+            {activeTab === 'machines' && (
+              <>
+                <Text style={styles.label}>Machine Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={machineFormData.name}
+                  onChangeText={(text) => setMachineFormData({ ...machineFormData, name: text })}
+                  placeholder="Enter machine name"
+                />
+
+                <Text style={styles.label}>Machine Type *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={machineFormData.machine_type}
+                    onValueChange={(value) => setMachineFormData({ ...machineFormData, machine_type: value })}
+                    style={styles.picker}
+                  >
+                    {machineTypes.map((type) => (
+                      <Picker.Item key={type} label={type} value={type} />
+                    ))}
+                  </Picker>
+                </View>
+
+                <Text style={styles.label}>Make (Brand)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={machineFormData.make}
+                  onChangeText={(text) => setMachineFormData({ ...machineFormData, make: text })}
+                  placeholder="Enter machine make/brand"
+                />
+
+                <Text style={styles.label}>Serial Number</Text>
+                <TextInput
+                  style={styles.input}
+                  value={machineFormData.serial_number}
+                  onChangeText={(text) => setMachineFormData({ ...machineFormData, serial_number: text })}
+                  placeholder="Enter serial number"
+                />
+
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={styles.input}
+                  value={machineFormData.description}
+                  onChangeText={(text) => setMachineFormData({ ...machineFormData, description: text })}
+                  placeholder="Enter description"
+                  multiline
+                />
+
+                <Text style={styles.label}>Status *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={machineFormData.status}
+                    onValueChange={(value) => setMachineFormData({ ...machineFormData, status: value })}
                     style={styles.picker}
                   >
                     {statusOptions.map((option, index) => (

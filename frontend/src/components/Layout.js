@@ -149,12 +149,6 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
-      name: "Machine Management",
-      route: "MachineManagement",
-      icon: SvgCogIcon,
-      section: "Operations",
-    },
-    {
       name: "Route Configuration",
       route: "RouteConfiguration",
       icon: SvgRouteIcon,

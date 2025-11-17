@@ -21,7 +21,7 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   console.log('App component rendering...');
-  
+
   return (
     <BranchProvider>
       <NavigationContainer
@@ -40,7 +40,6 @@ export default function App() {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="BranchMaster" component={BranchMasterScreen} />
           <Stack.Screen name="UserManagement" component={UserManagementScreen} />
-          <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
           <Stack.Screen name="RouteConfiguration" component={RouteConfigurationScreen} />
           <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
           <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
