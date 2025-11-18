@@ -1,6 +1,7 @@
 
 from database import SessionLocal
 import models
+import bcrypt
 
 def seed_default_user():
     db = SessionLocal()
@@ -13,10 +14,17 @@ def seed_default_user():
             print(f"   Password: admin123")
             return
         
+        # Hash the password
+        hashed_password = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
         # Create default admin user
         admin_user = models.User(
             username="admin",
-            password="admin123"  # In production, you should hash this!
+            email="admin@example.com",
+            full_name="System Administrator",
+            hashed_password=hashed_password,
+            role="admin",
+            is_active=True
         )
         
         db.add(admin_user)
