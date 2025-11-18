@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BranchProvider } from './src/context/BranchContext';
 import { storage } from './src/utils/storage';
+import { setToastContainer, setAlertContainer } from './src/utils/customAlerts';
+import ToastContainer from './src/components/ToastContainer';
+import AlertContainer from './src/components/AlertContainer';
 import LoginScreen from './src/screens/LoginScreen';
 import BranchSelectionScreen from './src/screens/BranchSelectionScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -23,6 +26,17 @@ import colors from './src/theme/colors';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const toastRef = useRef(null);
+  const alertRef = useRef(null);
+
+  useEffect(() => {
+    if (toastRef.current) {
+      setToastContainer(toastRef.current);
+    }
+    if (alertRef.current) {
+      setAlertContainer(alertRef.current);
+    }
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
 
@@ -100,6 +114,8 @@ export default function App() {
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
         </Stack.Navigator>
+        <ToastContainer ref={toastRef} />
+        <AlertContainer ref={alertRef} />
       </NavigationContainer>
     </BranchProvider>
   );

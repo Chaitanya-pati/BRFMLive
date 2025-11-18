@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
   ScrollView,
 } from 'react-native';
@@ -14,6 +13,7 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { routeConfigurationApi, magnetApi, machineApi, godownApi, binApi } from '../api/client';
+import { showToast, showAlert, showConfirm } from '../utils/customAlerts';
 import colors from '../theme/colors';
 
 export default function RouteConfigurationScreen({ navigation }) {
@@ -41,26 +41,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   const componentTypes = ['godown', 'magnet', 'machine', 'bin'];
   const firstStageTypes = ['godown', 'bin'];
 
-  const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onConfirm }
-      ]);
-    }
-  };
+  
 
   useEffect(() => {
     loadRoutes();
@@ -81,7 +62,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       setBins(binsRes.data);
     } catch (error) {
       console.error('Error loading components:', error);
-      showAlert('Error', 'Failed to load components');
+      showToast('Failed to load components', 'error');
     }
   };
 
@@ -91,7 +72,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       setRoutes(response.data);
     } catch (error) {
       console.error('Error loading routes:', error);
-      showAlert('Error', 'Failed to load routes');
+      showToast('Failed to load routes', 'error');
     }
   };
 
@@ -185,7 +166,7 @@ export default function RouteConfigurationScreen({ navigation }) {
 
   const handleRemoveStage = (index) => {
     if (index === 0 || index === formData.stages.length - 1) {
-      showAlert('Error', 'Cannot remove first or last stage');
+      showAlert('Error', 'Cannot remove first or last stage', 'error');
       return;
     }
     
@@ -212,7 +193,7 @@ export default function RouteConfigurationScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!formData.name) {
-      showAlert('Validation Error', 'Route name is required');
+      showAlert('Validation Error', 'Route name is required', 'error');
       return;
     }
 
@@ -222,7 +203,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       const componentId = stage.component_id ? parseInt(stage.component_id) : null;
       
       if (!componentId) {
-        showAlert('Validation Error', `Please select a component for stage ${i + 1}`);
+        showAlert('Validation Error', `Please select a component for stage ${i + 1}`, 'error');
         return;
       }
       
@@ -232,7 +213,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       if (stage.component_type === 'magnet') {
         const intervalValue = parseFloat(stage.interval_hours);
         if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
-          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`);
+          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`, 'error');
           return;
         }
         // Convert string to float for submission
@@ -241,17 +222,17 @@ export default function RouteConfigurationScreen({ navigation }) {
     }
 
     if (formData.stages.length < 2) {
-      showAlert('Validation Error', 'At least 2 stages (godown and bin) are required');
+      showAlert('Validation Error', 'At least 2 stages (godown and bin) are required', 'error');
       return;
     }
 
     if (formData.sourceType !== 'godown' && formData.sourceType !== 'bin') {
-      showAlert('Validation Error', 'Source type must be a godown or bin');
+      showAlert('Validation Error', 'Source type must be a godown or bin', 'error');
       return;
     }
 
     if (formData.stages[formData.stages.length - 1].component_type !== 'bin') {
-      showAlert('Validation Error', 'Last stage must be a bin');
+      showAlert('Validation Error', 'Last stage must be a bin', 'error');
       return;
     }
 
@@ -259,17 +240,17 @@ export default function RouteConfigurationScreen({ navigation }) {
     try {
       if (editMode) {
         await routeConfigurationApi.update(currentRoute.id, formData);
-        showAlert('Success', 'Route updated successfully');
+        showToast('Route updated successfully', 'success');
       } else {
         await routeConfigurationApi.create(formData);
-        showAlert('Success', 'Route created successfully');
+        showToast('Route created successfully', 'success');
       }
       setModalVisible(false);
       loadRoutes();
     } catch (error) {
       console.error('Error saving route:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to save route';
-      showAlert('Error', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -282,12 +263,12 @@ export default function RouteConfigurationScreen({ navigation }) {
       async () => {
         try {
           await routeConfigurationApi.delete(route.id);
-          showAlert('Success', 'Route deleted successfully');
+          showToast('Route deleted successfully', 'success');
           loadRoutes();
         } catch (error) {
           console.error('Error deleting route:', error);
           const errorMessage = error.response?.data?.detail || 'Failed to delete route';
-          showAlert('Error', errorMessage);
+          showToast(errorMessage, 'error');
         }
       }
     );
