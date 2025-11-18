@@ -51,3 +51,44 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 ### Environment Configuration
 - `DATABASE_URL`: PostgreSQL connection string.
 - `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
+
+## Test Users & Login Credentials
+
+The application is seeded with the following test users for different roles:
+
+### Admin User
+- **Username**: `admin`
+- **Password**: `admin123`
+- **Role**: Admin
+- **Branches**: All branches (Main, North, South, East, West)
+
+### Manager User
+- **Username**: `manager`
+- **Password**: `manager123`
+- **Role**: Manager
+- **Branches**: Main Branch, North Branch
+
+### Operator User
+- **Username**: `operator`
+- **Password**: `operator123`
+- **Role**: Operator
+- **Branches**: Main Branch
+
+### Supervisor User
+- **Username**: `supervisor`
+- **Password**: `super123`
+- **Role**: Supervisor
+- **Branches**: South Branch, East Branch
+
+### Test Users
+- **Username**: `user1` / Password: `password123` (Main Branch)
+- **Username**: `user2` / Password: `password123` (North Branch)
+
+## Recent Changes
+
+### November 18, 2025
+- Set up PostgreSQL database with all required tables
+- Created test users and branches for login functionality
+- Configured Backend workflow (FastAPI on port 8000)
+- Configured Frontend workflow (Expo on port 5000)
+- Verified login system is working properly with backend connectivity
