@@ -221,6 +221,7 @@ class BinBase(ISTModel):
     capacity: float
     current_quantity: Optional[float] = 0.0
     material_type: Optional[str] = None
+    bin_type: Optional[str] = None
     status: BinStatusEnum = BinStatusEnum.ACTIVE
 
 class BinCreate(BinBase):
@@ -231,6 +232,7 @@ class BinUpdate(ISTModel):
     capacity: Optional[float] = None
     current_quantity: Optional[float] = None
     material_type: Optional[str] = None
+    bin_type: Optional[str] = None
     status: Optional[BinStatusEnum] = None
 
 class Bin(BinBase):

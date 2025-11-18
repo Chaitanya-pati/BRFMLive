@@ -209,6 +209,7 @@ class Bin(Base):
     capacity = Column(Float, nullable=False)
     current_quantity = Column(Float, default=0.0)
     material_type = Column(String(100))
+    bin_type = Column(String(50))
     status = Column(String(20), default="Active", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)

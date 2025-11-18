@@ -55,6 +55,7 @@ export default function MasterViewScreen({ navigation }) {
     bin_number: '',
     capacity: '',
     current_quantity: '',
+    bin_type: '',
     status: 'Active',
   });
 
@@ -410,6 +411,7 @@ export default function MasterViewScreen({ navigation }) {
     { field: 'bin_number', label: 'Bin Number', flex: 1 },
     { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
     { field: 'current_quantity', label: 'Current Quantity (tons)', flex: 1.2 },
+    { field: 'bin_type', label: 'Bin Type', flex: 1.2 },
     { field: 'status', label: 'Status', flex: 1 },
   ];
 
@@ -437,6 +439,12 @@ export default function MasterViewScreen({ navigation }) {
     { label: 'Inactive', value: 'Inactive' },
     { label: 'Full', value: 'Full' },
     { label: 'Maintenance', value: 'Maintenance' },
+  ];
+
+  const binTypeOptions = [
+    { label: 'Raw wheat bin', value: 'Raw wheat bin' },
+    { label: '24 hours bin', value: '24 hours bin' },
+    { label: '12 hours bin', value: '12 hours bin' },
   ];
 
   const openGodownModal = () => {
@@ -498,6 +506,7 @@ export default function MasterViewScreen({ navigation }) {
       bin_number: '',
       capacity: '',
       current_quantity: '',
+      bin_type: '',
       status: 'Active',
     });
     setActiveTab('bins');
@@ -511,6 +520,7 @@ export default function MasterViewScreen({ navigation }) {
       bin_number: bin.bin_number,
       capacity: bin.capacity.toString(),
       current_quantity: bin.current_quantity?.toString() || '0',
+      bin_type: bin.bin_type || '',
       status: bin.status || 'Active',
     });
     setActiveTab('bins');
@@ -529,6 +539,7 @@ export default function MasterViewScreen({ navigation }) {
         bin_number: binFormData.bin_number,
         capacity: parseFloat(binFormData.capacity),
         current_quantity: parseFloat(binFormData.current_quantity) || 0,
+        bin_type: binFormData.bin_type,
         status: binFormData.status,
       };
 
@@ -867,6 +878,20 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter current quantity"
                   keyboardType="numeric"
                 />
+
+                <Text style={styles.label}>Bin Type</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={binFormData.bin_type}
+                    onValueChange={(value) => setBinFormData({ ...binFormData, bin_type: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Bin Type" value="" />
+                    {binTypeOptions.map((option, index) => (
+                      <Picker.Item key={index} label={option.label} value={option.value} />
+                    ))}
+                  </Picker>
+                </View>
 
                 <Text style={styles.label}>Status *</Text>
                 <View style={styles.pickerContainer}>
