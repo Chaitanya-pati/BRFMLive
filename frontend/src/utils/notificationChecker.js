@@ -7,7 +7,7 @@
  * Calculate which magnets need cleaning based on transfer sessions and cleaning records
  * @param {Array} transferSessions - Active transfer sessions
  * @param {Array} cleaningRecords - All cleaning records
- * @param {Array} routeMappings - Route magnet mappings
+ * @param {Array} routeMappings - Route magnet mappings (deprecated, kept for backward compatibility)
  * @param {Array} magnets - All magnets
  * @param {Array} godowns - All godowns  
  * @param {Array} bins - All bins
@@ -31,55 +31,102 @@ export function calculateMagnetNotifications(
 
     const now = currentTime;
     const startTime = new Date(session.start_timestamp);
-    const elapsedSeconds = (now - startTime) / 1000;
-    const cleaningIntervalSeconds = session.cleaning_interval_hours;
-    const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+    const godown = godowns.find((g) => g.id === session.source_godown_id);
+    const bin = bins.find((b) => b.id === session.destination_bin_id);
 
-    // Skip if first interval hasn't passed yet
-    if (intervalsPassed === 0) return;
+    // NEW: Process each magnet from session_magnets (from route configuration)
+    const sessionMagnets = session.session_magnets || [];
+    
+    if (sessionMagnets.length > 0) {
+      // NEW SYSTEM: Use route configuration magnets
+      sessionMagnets.forEach((sessionMagnet) => {
+        const elapsedSeconds = (now - startTime) / 1000;
+        // Note: cleaning_interval_hours is actually stored in seconds despite the name
+        const cleaningIntervalSeconds = sessionMagnet.cleaning_interval_hours;
+        const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
 
-    // Calculate current interval boundaries
-    const currentIntervalNumber = intervalsPassed;
-    const currentIntervalStart = new Date(
-      startTime.getTime() + currentIntervalNumber * cleaningIntervalSeconds * 1000
-    );
+        // Skip if first interval hasn't passed yet
+        if (intervalsPassed === 0) return;
 
-    // Check if magnet was cleaned in current interval
-    const cleanedInCurrentInterval = cleaningRecords.some((record) => {
-      const recordTime = new Date(record.cleaning_timestamp);
-      return (
-        record.magnet_id === session.magnet_id &&
-        record.transfer_session_id === session.id &&
-        recordTime >= currentIntervalStart
-      );
-    });
+        // Calculate current interval boundaries
+        const currentIntervalNumber = intervalsPassed;
+        const currentIntervalStart = new Date(
+          startTime.getTime() + currentIntervalNumber * cleaningIntervalSeconds * 1000
+        );
 
-    // If NOT cleaned in current interval, create notification
-    if (!cleanedInCurrentInterval) {
-      const route = routeMappings.find(
-        (r) =>
-          r.source_godown_id === session.source_godown_id &&
-          r.destination_bin_id === session.destination_bin_id &&
-          r.magnet_id === session.magnet_id
-      );
-
-      const magnet = magnets.find((m) => m.id === session.magnet_id);
-      const godown = godowns.find((g) => g.id === session.source_godown_id);
-      const bin = bins.find((b) => b.id === session.destination_bin_id);
-
-      if (route && magnet && godown && bin) {
-        notifications.push({
-          id: `magnet-${session.magnet_id}-session-${session.id}`,
-          type: 'MAGNET_CLEANING_REQUIRED',
-          magnetId: session.magnet_id,
-          magnetName: magnet.name,
-          sessionId: session.id,
-          sourceGodownName: godown.name,
-          destinationBinNumber: bin.bin_number,
-          intervalNumber: currentIntervalNumber,
-          cleaningIntervalHours: session.cleaning_interval_hours,
-          message: `MAGNET CLEANING REQUIRED: ${magnet.name} needs cleaning (Interval #${currentIntervalNumber})`,
+        // Check if THIS specific magnet was cleaned in current interval
+        const cleanedInCurrentInterval = cleaningRecords.some((record) => {
+          const recordTime = new Date(record.cleaning_timestamp);
+          return (
+            record.magnet_id === sessionMagnet.magnet_id &&
+            record.transfer_session_id === session.id &&
+            recordTime >= currentIntervalStart
+          );
         });
+
+        // If NOT cleaned in current interval, create notification
+        if (!cleanedInCurrentInterval) {
+          const magnet = sessionMagnet.magnet || magnets.find((m) => m.id === sessionMagnet.magnet_id);
+
+          if (magnet && godown && bin) {
+            notifications.push({
+              id: `magnet-${sessionMagnet.magnet_id}-session-${session.id}`,
+              type: 'MAGNET_CLEANING_REQUIRED',
+              magnetId: sessionMagnet.magnet_id,
+              magnetName: magnet.name,
+              sessionId: session.id,
+              sourceGodownName: godown.name,
+              destinationBinNumber: bin.bin_number,
+              intervalNumber: currentIntervalNumber,
+              cleaningIntervalHours: sessionMagnet.cleaning_interval_hours,
+              message: `MAGNET CLEANING REQUIRED: ${magnet.name} needs cleaning (Interval #${currentIntervalNumber})`,
+            });
+          }
+        }
+      });
+    } else {
+      // OLD SYSTEM: Backward compatibility with single magnet per session
+      const elapsedSeconds = (now - startTime) / 1000;
+      const cleaningIntervalSeconds = session.cleaning_interval_hours;
+      const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+
+      // Skip if first interval hasn't passed yet
+      if (intervalsPassed === 0) return;
+
+      // Calculate current interval boundaries
+      const currentIntervalNumber = intervalsPassed;
+      const currentIntervalStart = new Date(
+        startTime.getTime() + currentIntervalNumber * cleaningIntervalSeconds * 1000
+      );
+
+      // Check if magnet was cleaned in current interval
+      const cleanedInCurrentInterval = cleaningRecords.some((record) => {
+        const recordTime = new Date(record.cleaning_timestamp);
+        return (
+          record.magnet_id === session.magnet_id &&
+          record.transfer_session_id === session.id &&
+          recordTime >= currentIntervalStart
+        );
+      });
+
+      // If NOT cleaned in current interval, create notification
+      if (!cleanedInCurrentInterval && session.magnet_id) {
+        const magnet = magnets.find((m) => m.id === session.magnet_id);
+
+        if (magnet && godown && bin) {
+          notifications.push({
+            id: `magnet-${session.magnet_id}-session-${session.id}`,
+            type: 'MAGNET_CLEANING_REQUIRED',
+            magnetId: session.magnet_id,
+            magnetName: magnet.name,
+            sessionId: session.id,
+            sourceGodownName: godown.name,
+            destinationBinNumber: bin.bin_number,
+            intervalNumber: currentIntervalNumber,
+            cleaningIntervalHours: session.cleaning_interval_hours,
+            message: `MAGNET CLEANING REQUIRED: ${magnet.name} needs cleaning (Interval #${currentIntervalNumber})`,
+          });
+        }
       }
     }
   });

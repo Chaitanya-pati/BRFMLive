@@ -314,7 +314,22 @@ class TransferSession(Base):
     magnet = relationship("Magnet", foreign_keys=[magnet_id])
     cleaning_records = relationship("MagnetCleaningRecord", back_populates="transfer_session")
     bin_transfers = relationship("BinTransfer", back_populates="transfer_session", cascade="all, delete-orphan")
+    session_magnets = relationship("TransferSessionMagnet", back_populates="transfer_session", cascade="all, delete-orphan")
 
+
+class TransferSessionMagnet(Base):
+    __tablename__ = "transfer_session_magnets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id", ondelete="CASCADE"), nullable=False)
+    magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=False)
+    cleaning_interval_hours = Column(Float, nullable=False)
+    sequence_no = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    transfer_session = relationship("TransferSession", back_populates="session_magnets")
+    magnet = relationship("Magnet")
 
 class BinTransfer(Base):
     __tablename__ = "bin_transfers"

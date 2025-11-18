@@ -368,6 +368,20 @@ class BinTransfer(BinTransferBase):
 class BinTransferWithBin(BinTransfer):
     bin: Bin
 
+class TransferSessionMagnetBase(ISTModel):
+    magnet_id: int
+    cleaning_interval_hours: float
+    sequence_no: int
+
+class TransferSessionMagnet(TransferSessionMagnetBase):
+    id: int
+    transfer_session_id: int
+    created_at: datetime
+    updated_at: datetime
+
+class TransferSessionMagnetWithDetails(TransferSessionMagnet):
+    magnet: Magnet
+
 class TransferSessionBase(ISTModel):
     source_godown_id: int
     destination_bin_id: int
@@ -409,6 +423,7 @@ class TransferSessionWithDetails(TransferSession):
     magnet: Optional[Magnet] = None
     cleaning_records: list['MagnetCleaningRecord'] = []
     bin_transfers: list['BinTransferWithBin'] = []
+    session_magnets: list['TransferSessionMagnetWithDetails'] = []
 
 class MagnetCleaningRecordBase(ISTModel):
     magnet_id: int

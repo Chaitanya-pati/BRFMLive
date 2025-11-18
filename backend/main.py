@@ -1288,21 +1288,41 @@ def start_transfer_session(
     if not destination_bin:
         raise HTTPException(status_code=404, detail="Destination bin not found")
 
-    # Try to get cleaning interval and magnet from route mapping (optional)
-    route_mapping = db.query(models.RouteMagnetMapping).filter(
-        models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
-        models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
-    ).first()
-
-    # Use route mapping values if available, otherwise use provided values or None
+    # Find route configuration based on source godown and destination bin
+    # Route configuration has stages, first stage should be source godown, last stage should be destination bin
+    route_config = None
+    magnet_stages = []
+    
+    # Query all route configurations and check their stages
+    all_routes = db.query(models.RouteConfiguration).all()
+    for route in all_routes:
+        if len(route.stages) < 2:
+            continue
+        
+        # Check if first stage is source godown and last stage is destination bin
+        first_stage = route.stages[0]
+        last_stage = route.stages[-1]
+        
+        if (first_stage.component_type.lower() == 'godown' and 
+            first_stage.component_id == session_data.source_godown_id and
+            last_stage.component_type.lower() == 'bin' and 
+            last_stage.component_id == session_data.destination_bin_id):
+            route_config = route
+            # Extract all magnet stages
+            magnet_stages = [stage for stage in route.stages if stage.component_type.lower() == 'magnet']
+            break
+    
+    # Set default values for backward compatibility
     cleaning_interval = None
     magnet_id = None
     
-    if route_mapping:
-        cleaning_interval = route_mapping.cleaning_interval_hours
-        magnet_id = route_mapping.magnet_id
+    # If we found magnet stages, use the first one for backward compatibility with old system
+    if magnet_stages:
+        # Convert hours to seconds for backward compatibility (field stores seconds despite name)
+        cleaning_interval = magnet_stages[0].interval_hours * 3600
+        magnet_id = magnet_stages[0].component_id
     elif session_data.magnet_id and session_data.cleaning_interval_hours:
-        # Allow manual specification if no route mapping exists
+        # Allow manual specification if no route configuration exists
         cleaning_interval = session_data.cleaning_interval_hours
         magnet_id = session_data.magnet_id
 
@@ -1311,8 +1331,15 @@ def start_transfer_session(
     print(f"\n🚀 BACKEND: Starting transfer session")
     print(f"   Source Godown ID: {session_data.source_godown_id}")
     print(f"   Destination Bin ID: {session_data.destination_bin_id}")
-    print(f"   Magnet ID: {magnet_id}")
-    print(f"   Cleaning Interval: {cleaning_interval}s")
+    if route_config:
+        print(f"   ✅ Found Route Configuration: {route_config.name}")
+        print(f"   📍 Magnet stages found: {len(magnet_stages)}")
+        for idx, stage in enumerate(magnet_stages):
+            print(f"      Magnet {idx + 1}: ID={stage.component_id}, Interval={stage.interval_hours}h")
+    else:
+        print(f"   ⚠️ No route configuration found")
+        print(f"   Magnet ID: {magnet_id}")
+        print(f"   Cleaning Interval: {cleaning_interval}s")
 
     # Create new transfer session
     db_session = models.TransferSession(
@@ -1330,6 +1357,21 @@ def start_transfer_session(
     db.add(db_session)
     db.flush()
 
+    # Create TransferSessionMagnet records for each magnet in the route
+    if magnet_stages:
+        print(f"   📝 Creating session magnet records...")
+        for idx, magnet_stage in enumerate(magnet_stages):
+            # Convert hours to seconds for storage (despite column name, it stores seconds)
+            interval_seconds = magnet_stage.interval_hours * 3600
+            session_magnet = models.TransferSessionMagnet(
+                transfer_session_id=db_session.id,
+                magnet_id=magnet_stage.component_id,
+                cleaning_interval_hours=interval_seconds,  # Stored in seconds despite column name
+                sequence_no=magnet_stage.sequence_no
+            )
+            db.add(session_magnet)
+            print(f"      ✅ Added Magnet {idx + 1}: ID={magnet_stage.component_id}, Interval={magnet_stage.interval_hours}h ({interval_seconds}s)")
+
     # Create first bin transfer record
     bin_transfer = models.BinTransfer(
         transfer_session_id=db_session.id,
@@ -1345,6 +1387,8 @@ def start_transfer_session(
     print(f"   ✅ Created transfer session ID {db_session.id}")
     print(f"   ✅ Current bin: {db_session.current_bin_id}")
     print(f"   ✅ Status: {db_session.status}")
+    if magnet_stages:
+        print(f"   ✅ Session magnets: {len(db_session.session_magnets)} magnets configured")
 
     # Sanitize float values before returning
     db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
