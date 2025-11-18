@@ -1061,15 +1061,39 @@ export default function PrecleaningBinScreen({ navigation }) {
             />
 
             {/* Only show destination bin selection if a source godown is selected */}
-            {selectedSourceGodown && (
-              <SelectDropdown
-                label="Destination Bin * (Ordered Sequentially)"
-                value={transferSessionFormData.destination_bin_id}
-                onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, destination_bin_id: value })}
-                // Options are dynamically set based on route mappings and sorted
-                options={availableDestinationBins.map(b => ({ label: `Bin ${b.bin_number}`, value: String(b.id) }))}
-                placeholder="Select destination bin"
-              />
+            {selectedSourceGodown && availableDestinationBins.length > 0 && (
+              <View style={styles.binSelectionContainer}>
+                <Text style={styles.binSelectionLabel}>Destination Bin * (Ordered Sequentially)</Text>
+                <View style={styles.binListContainer}>
+                  {availableDestinationBins.map((bin) => (
+                    <TouchableOpacity
+                      key={bin.id}
+                      style={styles.binOption}
+                      onPress={() => setTransferSessionFormData({ ...transferSessionFormData, destination_bin_id: String(bin.id) })}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.radioOuter}>
+                        {transferSessionFormData.destination_bin_id === String(bin.id) && (
+                          <View style={styles.radioInner} />
+                        )}
+                      </View>
+                      <View style={styles.binInfoContainer}>
+                        <Text style={styles.binNumberText}>Bin {bin.bin_number}</Text>
+                        <Text style={styles.binDetailsText}>
+                          Capacity: {bin.capacity} tons | Current: {bin.current_quantity || 0} tons
+                        </Text>
+                        <Text style={[styles.binStatusText, bin.status === 'Active' && styles.binStatusActive]}>
+                          {bin.status}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {selectedSourceGodown && availableDestinationBins.length === 0 && (
+              <Text style={styles.noBinsText}>No bins available for this godown. Please configure route mappings first.</Text>
             )}
 
             <View style={styles.buttonContainer}>
@@ -1507,5 +1531,73 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 16,
     fontWeight: '600',
+  },
+  binSelectionContainer: {
+    marginBottom: 16,
+  },
+  binSelectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 12,
+  },
+  binListContainer: {
+    gap: 12,
+  },
+  binOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  binInfoContainer: {
+    flex: 1,
+  },
+  binNumberText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  binDetailsText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  binStatusText: {
+    fontSize: 12,
+    color: colors.gray[600],
+    fontWeight: '500',
+  },
+  binStatusActive: {
+    color: colors.success || '#10b981',
+  },
+  noBinsText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginVertical: 16,
+    textAlign: 'center',
   },
 });
