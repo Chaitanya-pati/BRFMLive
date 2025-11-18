@@ -65,7 +65,7 @@ class VehicleEntryBase(ISTModel):
     empty_weight: Optional[float] = 0.0
     gross_weight: Optional[float] = 0.0
     notes: Optional[str] = None
-    
+
     @validator('arrival_time', pre=True)
     def _parse_arrival_time(cls, v):
         return parse_datetime(v)
@@ -122,7 +122,7 @@ class LabTestBase(ISTModel):
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
     raise_claim: Optional[int] = 0  # 0 = No, 1 = Yes
-    
+
     @validator('test_date', pre=True)
     def _parse_dates(cls, v):
         return parse_datetime(v)
@@ -146,7 +146,7 @@ class ClaimBase(ISTModel):
     claim_type: Optional[ClaimTypeEnum] = None
     claim_amount: Optional[float] = None
     claim_date: Optional[datetime] = None
-    
+
     @validator('claim_date', pre=True)
     def _parse_claim_date(cls, v):
         return parse_datetime(v)
@@ -196,7 +196,7 @@ class UnloadingEntryBase(ISTModel):
     unloading_start_time: Optional[datetime] = None
     unloading_end_time: Optional[datetime] = None
     notes: Optional[str] = None
-    
+
     @validator('unloading_start_time', 'unloading_end_time', pre=True)
     def _parse_unloading_times(cls, v):
         return parse_datetime(v)
@@ -352,7 +352,7 @@ class BinTransferBase(ISTModel):
     end_timestamp: Optional[datetime] = None
     quantity: Optional[float] = None
     sequence: int
-    
+
     @validator('start_timestamp', 'end_timestamp', pre=True)
     def _parse_timestamps(cls, v):
         return parse_datetime(v)
@@ -370,8 +370,12 @@ class TransferSessionBase(ISTModel):
     magnet_id: Optional[int] = None
     notes: Optional[str] = None
 
-class TransferSessionCreate(TransferSessionBase):
-    pass
+class TransferSessionCreate(BaseModel):
+    source_godown_id: int
+    destination_bin_id: int
+    magnet_id: Optional[int] = None
+    cleaning_interval_hours: Optional[int] = None
+    notes: Optional[str] = None
 
 class TransferSessionDivert(ISTModel):
     new_bin_id: int
@@ -407,7 +411,7 @@ class MagnetCleaningRecordBase(ISTModel):
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
-    
+
     @validator('cleaning_timestamp', pre=True)
     def _parse_cleaning_timestamp(cls, v):
         return parse_datetime(v)
@@ -420,7 +424,7 @@ class MagnetCleaningRecordUpdate(ISTModel):
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
-    
+
     @validator('cleaning_timestamp', pre=True)
     def _parse_cleaning_timestamp(cls, v):
         return parse_datetime(v)
@@ -444,7 +448,7 @@ class WasteEntryBase(ISTModel):
     recorded_timestamp: Optional[datetime] = None
     recorded_by: Optional[str] = None
     notes: Optional[str] = None
-    
+
     @validator('recorded_timestamp', pre=True)
     def _parse_recorded_timestamp(cls, v):
         return parse_datetime(v)

@@ -201,23 +201,17 @@ export default function PrecleaningBinScreen({ navigation }) {
     });
   };
 
-  // Update available bins when source godown changes
+  // Update available bins when source godown changes - show ALL active bins
   useEffect(() => {
     if (selectedSourceGodown) {
-      const godownId = parseInt(selectedSourceGodown);
-      const mappingsForGodown = routeMappings.filter(
-        mapping => mapping.source_godown_id === godownId
-      );
-
-      const binIds = mappingsForGodown.map(m => m.destination_bin_id);
-      const availableBins = bins.filter(b => binIds.includes(b.id));
-      const sortedBins = getSortedBinsByLastDigit(availableBins);
-
+      // Show all active bins, not just those with route mappings
+      const activeBins = bins.filter(b => b.status === 'Active');
+      const sortedBins = getSortedBinsByLastDigit(activeBins);
       setAvailableDestinationBins(sortedBins);
     } else {
       setAvailableDestinationBins([]);
     }
-  }, [selectedSourceGodown, routeMappings, bins]);
+  }, [selectedSourceGodown, bins]);
 
   // Store interval IDs for each active transfer session
   const notificationIntervalsRef = useRef({});
@@ -321,32 +315,18 @@ export default function PrecleaningBinScreen({ navigation }) {
       return;
     }
 
-    // Find the route mapping based on source godown and destination bin
+    // Try to find a route mapping (optional - only needed for cleaning reminders)
     const selectedRouteMapping = routeMappings.find(
       mapping => mapping.source_godown_id === parseInt(transferSessionFormData.source_godown_id) &&
                  mapping.destination_bin_id === parseInt(transferSessionFormData.destination_bin_id)
     );
 
-    if (!selectedRouteMapping) {
-      const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Selected Godown';
-      const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Selected Bin';
-
-      const errorMessage = `No route mapping found for:\n${sourceName} → Bin ${destBin}\n\nPlease configure a route mapping first in the "Route Mappings" tab.`;
-
-      if (Platform.OS === 'web') {
-        alert(`⚠️ Route Not Found\n\n${errorMessage}`);
-      } else {
-        Alert.alert('⚠️ Route Not Found', errorMessage);
-      }
-      return;
-    }
-
     const payload = {
       source_godown_id: parseInt(transferSessionFormData.source_godown_id),
       destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
-      magnet_id: selectedRouteMapping.magnet_id,
-      cleaning_interval_hours: selectedRouteMapping.cleaning_interval_hours,
-      notes: '' // Notes are not part of this initial start flow
+      magnet_id: selectedRouteMapping?.magnet_id || null,
+      cleaning_interval_hours: selectedRouteMapping?.cleaning_interval_hours || null,
+      notes: ''
     };
 
     try {
@@ -354,41 +334,43 @@ export default function PrecleaningBinScreen({ navigation }) {
       const response = await transferSessionApi.start(payload);
       const data = response.data;
 
-      // Start notification check for the new session
-      startNotificationCheck(data.id, selectedRouteMapping.cleaning_interval_hours);
+      // Start notification check only if there's a magnet and cleaning interval
+      if (data.magnet_id && data.cleaning_interval_hours) {
+        startNotificationCheck(data.id, data.cleaning_interval_hours);
+      }
 
       // Prepare success message details
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
-      const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
-      const intervalMin = Math.floor(selectedRouteMapping.cleaning_interval_hours / 60);
-      const intervalSec = selectedRouteMapping.cleaning_interval_hours % 60;
-      const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
+      
+      let successMessage = `✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}`;
+      
+      if (data.magnet_id) {
+        const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
+        const intervalMin = Math.floor(data.cleaning_interval_hours / 60);
+        const intervalSec = data.cleaning_interval_hours % 60;
+        const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
+        successMessage += `\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals.`;
+      } else {
+        successMessage += `\n\n⚠️ No route mapping configured - cleaning reminders disabled.\nTo enable cleaning reminders, create a route mapping in the "Route Mappings" tab.`;
+      }
 
       // Show success alert
       if (Platform.OS === 'web') {
-        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
+        alert(successMessage);
       } else {
-        Alert.alert('✅ Transfer Started', `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}`);
+        Alert.alert('✅ Transfer Started', successMessage);
       }
 
-      setStartTransferModal(false); // Close the start transfer modal
-      await fetchTransferSessions(); // Refresh the list of transfer sessions
+      setStartTransferModal(false);
+      await fetchTransferSessions();
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
 
       let errorMessage = 'An unexpected error occurred while starting the transfer.';
       let errorTitle = '❌ Transfer Failed';
 
-      if (error.response?.status === 404) {
-        const detail = error.response?.data?.detail || '';
-        if (detail.includes('No route mapping found')) {
-          errorTitle = '⚠️ Route Not Found';
-          errorMessage = `No route mapping exists for the selected source and destination.\n\nPlease go to the "Route Mappings" tab and create a mapping.`;
-        } else {
-          errorMessage = detail; // Use the specific error detail if available
-        }
-      } else if (error.response?.status === 400) {
+      if (error.response?.status === 400) {
         errorTitle = '⚠️ Invalid Request';
         errorMessage = error.response?.data?.detail || 'Please check your selections and try again.';
       } else if (error.message === 'Network Error' || !error.response) {
@@ -398,14 +380,13 @@ export default function PrecleaningBinScreen({ navigation }) {
         errorMessage = error.response?.data?.detail || errorMessage;
       }
 
-      // Show error alert
       if (Platform.OS === 'web') {
         alert(`${errorTitle}\n\n${errorMessage}`);
       } else {
         Alert.alert(errorTitle, errorMessage);
       }
     } finally {
-      setLoading(false); // Ensure loading indicator is turned off
+      setLoading(false);
     }
   };
 
@@ -1093,7 +1074,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             )}
 
             {selectedSourceGodown && availableDestinationBins.length === 0 && (
-              <Text style={styles.noBinsText}>No bins available for this godown. Please configure route mappings first.</Text>
+              <Text style={styles.noBinsText}>No active bins available. Please check bin status in the system.</Text>
             )}
 
             <View style={styles.buttonContainer}>

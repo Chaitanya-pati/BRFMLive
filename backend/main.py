@@ -1288,21 +1288,23 @@ def start_transfer_session(
     if not destination_bin:
         raise HTTPException(status_code=404, detail="Destination bin not found")
 
-    # Get cleaning interval and magnet from route mapping - MUST exist
+    # Try to get cleaning interval and magnet from route mapping (optional)
     route_mapping = db.query(models.RouteMagnetMapping).filter(
         models.RouteMagnetMapping.source_godown_id == session_data.source_godown_id,
         models.RouteMagnetMapping.destination_bin_id == session_data.destination_bin_id
     ).first()
 
-    if not route_mapping:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No route mapping found for godown {session_data.source_godown_id} to bin {session_data.destination_bin_id}. Please create a route mapping first."
-        )
-
-    # Use route mapping's cleaning interval and magnet
-    cleaning_interval = route_mapping.cleaning_interval_hours
-    magnet_id = route_mapping.magnet_id
+    # Use route mapping values if available, otherwise use provided values or None
+    cleaning_interval = None
+    magnet_id = None
+    
+    if route_mapping:
+        cleaning_interval = route_mapping.cleaning_interval_hours
+        magnet_id = route_mapping.magnet_id
+    elif session_data.magnet_id and session_data.cleaning_interval_hours:
+        # Allow manual specification if no route mapping exists
+        cleaning_interval = session_data.cleaning_interval_hours
+        magnet_id = session_data.magnet_id
 
     utc_now = get_utc_now()
 
