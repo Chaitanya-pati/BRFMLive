@@ -362,9 +362,11 @@ class BinTransferBase(ISTModel):
 class BinTransfer(BinTransferBase):
     id: int
     transfer_session_id: int
-    bin: Bin
     created_at: datetime
     updated_at: datetime
+
+class BinTransferWithBin(BinTransfer):
+    bin: Bin
 
 class TransferSessionBase(ISTModel):
     source_godown_id: int
@@ -406,7 +408,7 @@ class TransferSessionWithDetails(TransferSession):
     current_bin: Optional[Bin] = None
     magnet: Optional[Magnet] = None
     cleaning_records: list['MagnetCleaningRecord'] = []
-    bin_transfers: list[BinTransfer] = []
+    bin_transfers: list['BinTransferWithBin'] = []
 
 class MagnetCleaningRecordBase(ISTModel):
     magnet_id: int
@@ -538,5 +540,6 @@ class LoginResponse(ISTModel):
 
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
+BinTransferWithBin.model_rebuild()
 TransferSessionWithDetails.model_rebuild()
 WasteEntryWithDetails.model_rebuild()

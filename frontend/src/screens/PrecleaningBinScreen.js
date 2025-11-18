@@ -342,9 +342,9 @@ export default function PrecleaningBinScreen({ navigation }) {
       // Prepare success message details
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
-      
+
       let successMessage = `✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}`;
-      
+
       if (data.magnet_id) {
         const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
         const intervalMin = Math.floor(data.cleaning_interval_hours / 60);
@@ -429,7 +429,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setViewActiveTransferModal(false);
       setActiveTransferSession(null);
       setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
-      
+
       // Refresh data
       await fetchTransferSessions();
       await fetchBins();
@@ -485,7 +485,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setViewActiveTransferModal(false);
       setActiveTransferSession(null);
       setStopTransferFormData({ transferred_quantity: '' });
-      
+
       // Refresh data
       await fetchTransferSessions();
       await fetchBins();
@@ -1031,8 +1031,8 @@ export default function PrecleaningBinScreen({ navigation }) {
               value={selectedSourceGodown}
               onValueChange={(value) => {
                 setSelectedSourceGodown(value); // Update selected source godown
-                setTransferSessionFormData({ 
-                  ...transferSessionFormData, 
+                setTransferSessionFormData({
+                  ...transferSessionFormData,
                   source_godown_id: value,
                   destination_bin_id: '' // Reset destination bin when source changes
                 });
@@ -1096,53 +1096,105 @@ export default function PrecleaningBinScreen({ navigation }) {
         <Modal
           visible={viewActiveTransferModal}
           onClose={() => setViewActiveTransferModal(false)}
-          title="Active Transfer Details"
+          title="Active Transfer Session Details"
         >
           <ScrollView style={styles.modalContent}>
             {activeTransferSession ? (
               <>
-                <Text style={styles.routeFlowTitle}>Transfer Details</Text>
-                <View style={styles.routeFlowPreview}>
-                  <Text style={styles.routeFlowText}>
-                    Source: {activeTransferSession.source_godown?.name || 'N/A'}
+                <Text style={styles.sectionTitle}>Transfer Details</Text>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Source Godown:</Text>
+                  <Text style={styles.infoValue}>
+                    {activeTransferSession.source_godown?.name || 'N/A'}
                   </Text>
-                  <Text style={styles.routeFlowText}>
-                    {/* Display current bin or destination bin */}
-                    Current Bin: Bin {bins.find(b => b.id === activeTransferSession.current_bin_id)?.bin_number || activeTransferSession.destination_bin?.bin_number || 'N/A'}
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Destination Bin:</Text>
+                  <Text style={styles.infoValue}>
+                    {activeTransferSession.destination_bin?.bin_number || 'N/A'}
                   </Text>
-                  <Text style={styles.routeFlowText}>
-                    Magnet: <Text style={styles.routeFlowMagnet}>{activeTransferSession.magnet?.name || 'N/A'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Current Bin:</Text>
+                  <Text style={styles.infoValue}>
+                    {activeTransferSession.current_bin?.bin_number || 'N/A'}
                   </Text>
-                  <Text style={styles.routeFlowText}>
-                    Started: {formatISTDateTime(activeTransferSession.start_timestamp)}
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Magnet:</Text>
+                  <Text style={styles.infoValue}>
+                    {activeTransferSession.magnet?.name || 'N/A'}
                   </Text>
-                  <Text style={styles.routeFlowText}>
-                    Status: {activeTransferSession.status}
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Session Start:</Text>
+                  <Text style={styles.infoValue}>
+                    {formatISTDateTime(activeTransferSession.start_timestamp)}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Status:</Text>
+                  <Text style={styles.infoValue}>
+                    {activeTransferSession.status}
                   </Text>
                 </View>
 
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Divert to Next Bin"
-                    onPress={() => {
-                      setViewActiveTransferModal(false); // Close view modal
-                      setDivertTransferModal(true); // Open divert modal
-                    }}
-                    variant="secondary"
-                  />
-                  <Button
-                    title="Stop Transfer"
-                    onPress={() => {
-                      setViewActiveTransferModal(false); // Close view modal
-                      setStopTransferModal(true); // Open stop modal
-                    }}
-                    variant="outline"
-                  />
-                </View>
+                {/* Bin Transfer History */}
+                {activeTransferSession.bin_transfers && activeTransferSession.bin_transfers.length > 0 && (
+                  <>
+                    <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Bin Transfer History</Text>
+                    {activeTransferSession.bin_transfers
+                      .sort((a, b) => a.sequence - b.sequence)
+                      .map((binTransfer, index) => (
+                        <View key={binTransfer.id} style={styles.binTransferCard}>
+                          <Text style={styles.binTransferTitle}>
+                            Transfer #{binTransfer.sequence} - Bin {binTransfer.bin?.bin_number || binTransfer.bin_id}
+                          </Text>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Start Time:</Text>
+                            <Text style={styles.infoValue}>
+                              {formatISTDateTime(binTransfer.start_timestamp)}
+                            </Text>
+                          </View>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>End Time:</Text>
+                            <Text style={styles.infoValue}>
+                              {binTransfer.end_timestamp ? formatISTDateTime(binTransfer.end_timestamp) : 'In Progress'}
+                            </Text>
+                          </View>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Quantity:</Text>
+                            <Text style={styles.infoValue}>
+                              {binTransfer.quantity ? `${binTransfer.quantity.toFixed(2)} tons` : '-'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                  </>
+                )}
               </>
             ) : (
               <Text>No active transfer session found.</Text>
             )}
+
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Divert to Next Bin"
+                onPress={() => {
+                  setViewActiveTransferModal(false); // Close view modal
+                  setDivertTransferModal(true); // Open divert modal
+                }}
+                variant="secondary"
+              />
+              <Button
+                title="Stop Transfer"
+                onPress={() => {
+                  setViewActiveTransferModal(false); // Close view modal
+                  setStopTransferModal(true); // Open stop modal
+                }}
+                variant="outline"
+              />
+            </View>
           </ScrollView>
         </Modal>
 
@@ -1580,5 +1632,50 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginVertical: 16,
     textAlign: 'center',
+  },
+  // Styles for the new bin transfer history section
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    flex: 1, // Allow label to take up space
+  },
+  infoValue: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '500',
+    flex: 1.5, // Allow value to take up more space
+  },
+  binTransferCard: {
+    backgroundColor: '#f9f9f9', // Slightly different background for cards
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2, // for Android shadow
+  },
+  binTransferTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 10,
   },
 });
