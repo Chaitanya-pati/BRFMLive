@@ -3,23 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
-  // In Replit, we need to construct the backend URL using the Replit domain format
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    
-    // Check if we're on a Replit domain
-    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      // In Replit, frontend runs on port 5000, backend on port 8000
-      // Use HTTPS for Replit domains with port 8000
-      return `https://${hostname}:8000/api`;
-    }
-    
-    // For local development, use the same host with different port
+
+    // For local development, use localhost with port 8000
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return `http://${hostname}:8000/api`;
     }
+
+    // For Replit deployment, use relative /api path
+    // The Replit webview will proxy requests to the correct service
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      return '/api';
+    }
   }
-  
+
   // Final fallback
   return 'http://localhost:8000/api';
 };
