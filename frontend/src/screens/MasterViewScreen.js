@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,11 @@ export default function MasterViewScreen({ navigation }) {
   const [currentGodown, setCurrentGodown] = useState(null);
   const [currentBin, setCurrentBin] = useState(null);
   const [currentMagnet, setCurrentMagnet] = useState(null);
+
+  // State for scroll navigation
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabScrollRef = useRef(null);
 
 
   const [godownFormData, setGodownFormData] = useState({
@@ -266,6 +271,7 @@ export default function MasterViewScreen({ navigation }) {
         bin_number: item.bin_number,
         capacity: item.capacity.toString(),
         current_quantity: item.current_quantity?.toString() || '0',
+        bin_type: item.bin_type || '',
         status: item.status || 'Active',
       });
       setCurrentBin(item);
@@ -727,51 +733,116 @@ export default function MasterViewScreen({ navigation }) {
     );
   };
 
+  const tabs = [
+    { key: 'godown', label: 'Godown Master' },
+    { key: 'supplier', label: 'Supplier Master' },
+    { key: 'bins', label: 'Bins' },
+    { key: 'magnets', label: 'Magnets' },
+    { key: 'machines', label: 'Machines' },
+  ];
+
+  const handleScroll = (event) => {
+    if (!tabScrollRef.current) return;
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    setCanScrollLeft(contentOffset.x > 0);
+    setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width);
+  };
+
+  const scrollLeft = () => {
+    if (tabScrollRef.current) {
+      tabScrollRef.current.scrollTo({ x: 0, animated: true });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tabScrollRef.current) {
+      tabScrollRef.current.scrollToEnd({ animated: true });
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      switch (activeTab) {
+        case 'godown':
+          await loadGodowns();
+          break;
+        case 'supplier':
+          await loadSuppliers();
+          break;
+        case 'bins':
+          await loadBins();
+          break;
+        case 'magnets':
+          await loadMagnets();
+          break;
+        case 'machines':
+          await loadMachines();
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      notify.showError('Failed to load data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Layout navigation={navigation} title="Master Data">
+    <Layout navigation={navigation} title="Master Data" currentRoute="MasterView">
       <View style={styles.container}>
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'godown' && styles.activeTab]}
-            onPress={() => setActiveTab('godown')}
+          {canScrollLeft && (
+            <TouchableOpacity
+              style={[styles.scrollButton, styles.scrollButtonLeft]}
+              onPress={scrollLeft}
+            >
+              <Text style={styles.scrollButtonText}>‹</Text>
+            </TouchableOpacity>
+          )}
+          <ScrollView
+            ref={tabScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabScrollView}
+            contentContainerStyle={styles.tabScrollContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            onContentSizeChange={() => {
+              if (tabScrollRef.current) {
+                setTimeout(() => {
+                  tabScrollRef.current.scrollTo({ x: 0, animated: false });
+                  handleScroll({ nativeEvent: { contentOffset: { x: 0 }, contentSize: { width: 0 }, layoutMeasurement: { width: 0 } } });
+                }, 100);
+              }
+            }}
           >
-            <Text style={[styles.tabText, activeTab === 'godown' && styles.activeTabText]}>
-              Godown Master
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'supplier' && styles.activeTab]}
-            onPress={() => setActiveTab('supplier')}
-          >
-            <Text style={[styles.tabText, activeTab === 'supplier' && styles.activeTabText]}>
-              Supplier Master
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'bins' && styles.activeTab]}
-            onPress={() => setActiveTab('bins')}
-          >
-            <Text style={[styles.tabText, activeTab === 'bins' && styles.activeTabText]}>
-              Bins
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'magnets' && styles.activeTab]}
-            onPress={() => setActiveTab('magnets')}
-          >
-            <Text style={[styles.tabText, activeTab === 'magnets' && styles.activeTabText]}>
-              Magnets
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'machines' && styles.activeTab]}
-            onPress={() => setActiveTab('machines')}
-          >
-            <Text style={[styles.tabText, activeTab === 'machines' && styles.activeTabText]}>
-              Machines
-            </Text>
-          </TouchableOpacity>
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          {canScrollRight && (
+            <TouchableOpacity
+              style={[styles.scrollButton, styles.scrollButtonRight]}
+              onPress={scrollRight}
+            >
+              <Text style={styles.scrollButtonText}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {activeTab === 'godown' && (
@@ -1146,16 +1217,26 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#fff',
+    paddingVertical: 8, // Add some padding to the container
+  },
+  tabScrollView: {
+    flex: 1,
+    flexDirection: 'row', // Ensure tabs are laid out horizontally
+  },
+  tabScrollContent: {
+    flexDirection: 'row', // Ensure content inside ScrollView is also horizontal
   },
   tab: {
-    flex: 1,
     paddingVertical: 16,
+    paddingHorizontal: 20, // Increased padding for better touch area
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    marginHorizontal: 4, // Add some horizontal margin between tabs
   },
   activeTab: {
     borderBottomColor: colors.primary,
@@ -1171,9 +1252,9 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
-    maxHeight: Platform.select({ 
-      web: 'calc(100vh - 200px)', 
-      default: '80%' 
+    maxHeight: Platform.select({
+      web: 'calc(100vh - 200px)',
+      default: '80%'
     }),
   },
   label: {
@@ -1200,10 +1281,10 @@ const styles = StyleSheet.create({
     minHeight: Platform.select({ web: 48, default: 50 }),
   },
   picker: {
-    height: Platform.select({ 
-      ios: 180, 
+    height: Platform.select({
+      ios: 180,
       android: 50,
-      web: 48 
+      web: 48
     }),
     color: colors.textPrimary,
     fontSize: 14,
@@ -1254,5 +1335,27 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
+  },
+  scrollButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    marginVertical: 8, // Align vertically with tabs
+  },
+  scrollButtonLeft: {
+    marginLeft: 4,
+    marginRight: 0,
+  },
+  scrollButtonRight: {
+    marginRight: 4,
+    marginLeft: 0,
+  },
+  scrollButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.primary,
   },
 });
