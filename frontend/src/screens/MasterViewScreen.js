@@ -51,10 +51,12 @@ export default function MasterViewScreen({ navigation }) {
     supplier_name: '',
     contact_person: '',
     phone: '',
-    gstin: '',
     address: '',
-    state: '',
+    street: '',
     city: '',
+    state: '',
+    zip_code: '',
+    gstin: '',
   });
 
   const [binFormData, setBinFormData] = useState({
@@ -246,10 +248,12 @@ export default function MasterViewScreen({ navigation }) {
         supplier_name: item.supplier_name,
         contact_person: item.contact_person || '',
         phone: item.phone || '',
-        gstin: item.gstin || '',
         address: item.address || '',
-        state: item.state,
+        street: item.street || '',
         city: item.city,
+        state: item.state,
+        zip_code: item.zip_code || '',
+        gstin: item.gstin || '',
       });
 
       const stateObject = states.find(s => s.state_name === item.state);
@@ -312,10 +316,12 @@ export default function MasterViewScreen({ navigation }) {
           supplier_name: trimmedSupplierName,
           contact_person: supplierFormData.contact_person?.trim() || '',
           phone: supplierFormData.phone?.trim() || '',
-          gstin: supplierFormData.gstin?.trim() || '',
           address: supplierFormData.address?.trim() || '',
-          state: trimmedState,
+          street: supplierFormData.street?.trim() || '',
           city: trimmedCity,
+          state: trimmedState,
+          zip_code: supplierFormData.zip_code?.trim() || '',
+          gstin: supplierFormData.gstin?.trim() || '',
         };
 
         console.log('📤 Sending payload:', payload);
@@ -1090,12 +1096,29 @@ export default function MasterViewScreen({ navigation }) {
                   />
                 </View>
 
-                <Text style={styles.label}>GSTIN</Text>
+                <Text style={styles.label}>Address</Text>
                 <TextInput
                   style={styles.input}
-                  value={supplierFormData.gstin}
-                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, gstin: text })}
-                  placeholder="Enter GSTIN"
+                  value={supplierFormData.address}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, address: text })}
+                  placeholder="Enter full address"
+                  multiline
+                />
+
+                <Text style={styles.label}>Street</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.street}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, street: text })}
+                  placeholder="Enter street"
+                />
+
+                <Text style={styles.label}>City *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={supplierFormData.city || ''}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, city: text })}
+                  placeholder="Enter city name"
                 />
 
                 <Text style={styles.label}>State *</Text>
@@ -1116,21 +1139,21 @@ export default function MasterViewScreen({ navigation }) {
                   </Picker>
                 </View>
 
-                <Text style={styles.label}>City *</Text>
+                <Text style={styles.label}>ZIP Code</Text>
                 <TextInput
                   style={styles.input}
-                  value={supplierFormData.city || ''}
-                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, city: text })}
-                  placeholder="Enter city name"
+                  value={supplierFormData.zip_code}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, zip_code: text })}
+                  placeholder="Enter ZIP code"
+                  keyboardType="numeric"
                 />
 
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label}>GSTIN</Text>
                 <TextInput
                   style={styles.input}
-                  value={supplierFormData.address}
-                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, address: text })}
-                  placeholder="Enter full address"
-                  multiline
+                  value={supplierFormData.gstin}
+                  onChangeText={(text) => setSupplierFormData({ ...supplierFormData, gstin: text })}
+                  placeholder="Enter GSTIN"
                 />
               </>
             )}

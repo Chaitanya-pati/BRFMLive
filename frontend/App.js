@@ -21,6 +21,7 @@ import BranchMasterScreen from './src/screens/BranchMasterScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
 import MachineManagementScreen from './src/screens/MachineManagementScreen';
 import RouteConfigurationScreen from './src/screens/RouteConfigurationScreen';
+import DailyReportScreen from './src/screens/DailyReportScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -118,6 +119,7 @@ export default function App() {
           <Stack.Screen name="MasterView" component={MasterViewScreen} />
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
+          <Stack.Screen name="DailyReport" component={DailyReportScreen} />
         </Stack.Navigator>
       </BranchProvider>
     </NavigationContainer>

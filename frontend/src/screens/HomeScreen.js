@@ -26,9 +26,9 @@ const Icon = ({ name, size = 36, color }) => {
     'person-add': FaUserPlus,
     'car': FaCar,
   };
-  
+
   const IconComponent = iconMap[name] || FaBuilding;
-  
+
   return (
     <View style={{ marginRight: 16 }}>
       <IconComponent color={color || colors.primary} size={size} />
@@ -130,6 +130,18 @@ export default function HomeScreen({ navigation }) {
               <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>{action.title}</Text>
             </TouchableOpacity>
           ))}
+          {/* Daily Report Card */}
+          <TouchableOpacity
+            style={[
+              styles.actionCard,
+              { backgroundColor: colors.primary }, // Example color, adjust as needed
+              isMobile && styles.actionCardMobile,
+            ]}
+            onPress={() => navigation.navigate('DailyReport')}
+          >
+            <Icon name="chart-bar" size={isMobile ? 28 : 32} color={colors.onPrimary} />
+            <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>Daily Report</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>Recent Activity</Text>

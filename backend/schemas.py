@@ -34,11 +34,9 @@ class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[str] = None
     address: Optional[str] = None
     street: Optional[str] = None
     city: str
-    district: Optional[str] = None
     state: str
     zip_code: Optional[str] = None
     gstin: Optional[str] = None
