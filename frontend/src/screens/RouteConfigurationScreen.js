@@ -222,9 +222,14 @@ export default function RouteConfigurationScreen({ navigation }) {
         showAlert('Validation Error', `Please select a component for stage ${i + 1}`);
         return;
       }
-      if (stage.component_type === 'magnet' && !stage.interval_hours) {
-        showAlert('Validation Error', `Please enter a cleaning interval for magnet in stage ${i + 1}`);
-        return;
+      if (stage.component_type === 'magnet') {
+        const intervalValue = parseFloat(stage.interval_hours);
+        if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
+          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`);
+          return;
+        }
+        // Convert string to float for submission
+        formData.stages[i].interval_hours = intervalValue;
       }
     }
 
@@ -349,8 +354,11 @@ export default function RouteConfigurationScreen({ navigation }) {
               style={styles.input}
               value={stage.interval_hours?.toString() || ''}
               onChangeText={(text) => {
-                const value = text === '' ? null : parseFloat(text);
-                handleStageChange(index, 'interval_hours', value);
+                // Allow empty string, digits, and decimal point
+                if (text === '' || /^\d*\.?\d*$/.test(text)) {
+                  const value = text === '' ? null : text;
+                  handleStageChange(index, 'interval_hours', value);
+                }
               }}
               placeholder="Enter cleaning interval in hours (e.g., 0.001 for testing)"
               keyboardType="decimal-pad"

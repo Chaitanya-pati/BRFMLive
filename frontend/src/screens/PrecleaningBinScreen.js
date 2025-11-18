@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, useWindowDimensions } from 'react-native';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -127,668 +127,167 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      // Use refs to access the latest state values
+  // Store interval IDs for each active transfer session
+  const notificationIntervalsRef = useRef({});
+
+  const startNotificationCheck = (sessionId, cleaningIntervalSeconds) => {
+    // Clear any existing interval for this session
+    if (notificationIntervalsRef.current[sessionId]) {
+      clearInterval(notificationIntervalsRef.current[sessionId]);
+    }
+
+    // Start checking at the cleaning interval rate
+    notificationIntervalsRef.current[sessionId] = setInterval(() => {
       const transferSessions = transferSessionsRef.current;
+      const session = transferSessions.find(s => s.id === sessionId);
+
+      if (!session || session.status?.toLowerCase() !== 'active' || session.stop_timestamp) {
+        // Session ended, stop checking
+        clearInterval(notificationIntervalsRef.current[sessionId]);
+        delete notificationIntervalsRef.current[sessionId];
+        return;
+      }
+
+      // Check if cleaning is needed
       const godowns = godownsRef.current;
       const bins = binsRef.current;
       const magnets = magnetsRef.current;
       const routeMappings = routeMappingsRef.current;
       const cleaningRecords = cleaningRecordsRef.current;
 
-      // Filter for ACTIVE sessions (status-based, not just stop_timestamp)
-      const activeTransferSessions = transferSessions.filter(session => 
-        session.status?.toLowerCase() === 'active' && !session.stop_timestamp
+      const now = new Date();
+      const startTime = new Date(session.start_timestamp);
+      const elapsedSeconds = (now - startTime) / 1000;
+      const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+
+      if (intervalsPassed === 0) return;
+
+      const currentIntervalNumber = intervalsPassed;
+      const currentIntervalStart = new Date(
+        startTime.getTime() + currentIntervalNumber * cleaningIntervalSeconds * 1000
       );
 
-      console.log('🔍 Checking notifications every 5 seconds...', {
-        totalSessions: transferSessions.length,
-        activeSessions: activeTransferSessions.length
+      const cleanedInCurrentInterval = cleaningRecords.some((record) => {
+        const recordTime = new Date(record.cleaning_timestamp);
+        return (
+          record.magnet_id === session.magnet_id &&
+          record.transfer_session_id === session.id &&
+          recordTime >= currentIntervalStart
+        );
       });
 
-      activeTransferSessions.forEach(session => {
-        const startTime = new Date(session.start_timestamp);
-        const now = new Date();
-        const elapsedSeconds = (now - startTime) / 1000;
-        const cleaningIntervalSeconds = session.cleaning_interval_hours || 300; // default 5 minutes
+      if (!cleanedInCurrentInterval) {
+        const magnet = magnets.find((m) => m.id === session.magnet_id);
+        const godown = godowns.find((g) => g.id === session.source_godown_id);
+        const bin = bins.find((b) => b.id === session.destination_bin_id);
 
-        const intervalsPassed = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
+        if (magnet && godown && bin) {
+          const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
+          const intervalSeconds = cleaningIntervalSeconds % 60;
+          const intervalString = intervalMinutes > 0 ? `${intervalMinutes}m ${intervalSeconds}s` : `${intervalSeconds}s`;
 
-        console.log(`📊 Session ${session.id}: elapsed=${Math.floor(elapsedSeconds)}s, interval=${cleaningIntervalSeconds}s, intervalsPassed=${intervalsPassed}`);
+          const message = `🔔MAGNET CLEANING REQUIRED!\n\nMagnet: ${magnet.name}\nFrom: ${godown.name}\nTo: Bin ${bin.bin_number}\nInterval #${currentIntervalNumber}\nCleaning Interval: ${intervalString}\n\nPlease clean the magnet now!`;
 
-        // START showing alerts ONLY AFTER the first cleaning interval has passed
-        if (intervalsPassed > 0) {
-          const sourceName = godowns.find(g => g.id === session.source_godown_id)?.name || 'Unknown';
-          const destName = bins.find(b => b.id === session.destination_bin_id)?.bin_number || 'Unknown';
-
-          // Find ALL magnets on this route (same source godown -> destination bin)
-          const routeMagnetsOnThisRoute = routeMappings.filter(mapping => 
-            mapping.source_godown_id === session.source_godown_id &&
-            mapping.destination_bin_id === session.destination_bin_id
-          );
-
-          // Get ALL cleaning records for this session (across all magnets)
-          const allSessionCleaningRecords = cleaningRecords
-            .filter(record => record.transfer_session_id === session.id)
-            .sort((a, b) => new Date(b.cleaning_timestamp) - new Date(a.cleaning_timestamp));
-
-          // Calculate the start of the current interval period (session-level)
-          const currentIntervalNumber = Math.floor(elapsedSeconds / cleaningIntervalSeconds);
-          const currentIntervalStartTime = new Date(startTime.getTime() + (currentIntervalNumber * cleaningIntervalSeconds * 1000));
-          const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
-
-          console.log(`  ⏱️ Current interval #${currentIntervalNumber} started at ${intervalStartIST} (IST)`);
-
-          // Check which magnets have been cleaned recently (within the current interval)
-          const uncleanedMagnets = [];
-          const cleanedMagnets = [];
-
-          routeMagnetsOnThisRoute.forEach(mapping => {
-            const magnet = magnets.find(m => m.id === mapping.magnet_id);
-            if (!magnet) return;
-
-            // Find ALL cleaning records for this specific magnet in THIS SESSION
-            const sessionCleaningRecords = allSessionCleaningRecords
-              .filter(record => record.magnet_id === mapping.magnet_id);
-
-            console.log(`  🔍 Magnet ${magnet.name}: Found ${sessionCleaningRecords.length} cleaning records in session ${session.id}`);
-
-            // Check if ANY cleaning record exists AFTER the current interval started
-            const cleanedInCurrentInterval = sessionCleaningRecords.some(record => {
-              const cleaningTime = new Date(record.cleaning_timestamp);
-              const isAfterIntervalStart = cleaningTime >= currentIntervalStartTime;
-
-              // Log in IST for better readability
-              const cleaningTimeIST = cleaningTime.toLocaleString('en-IN', { hour12: true });
-              const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
-
-              console.log(`    🔎 Checking record ID ${record.id}:`);
-              console.log(`       cleaning_time (IST): ${cleaningTimeIST}`);
-              console.log(`       interval_start (IST): ${intervalStartIST}`);
-              console.log(`       is_after: ${isAfterIntervalStart}`);
-
-              return isAfterIntervalStart;
-            });
-
-            if (cleanedInCurrentInterval) {
-              const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-              const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { hour12: true });
-              console.log(`  ✅ Magnet ${magnet.name} is CLEAN (last cleaned at ${cleaningTimeIST} IST)`);
-              cleanedMagnets.push(magnet);
-            } else {
-              if (sessionCleaningRecords.length > 0) {
-                const mostRecentCleaning = new Date(sessionCleaningRecords[0].cleaning_timestamp);
-                const cleaningTimeIST = mostRecentCleaning.toLocaleString('en-IN', { hour12: true });
-                const intervalStartIST = currentIntervalStartTime.toLocaleString('en-IN', { hour12: true });
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (last cleaned at ${cleaningTimeIST} IST, before current interval which started at ${intervalStartIST} IST)`);
-              } else {
-                console.log(`  ❌ Magnet ${magnet.name} needs CLEANING (no cleaning records in this session)`);
-              }
-              uncleanedMagnets.push(magnet);
-            }
-          });
-
-          // Show notification EVERY 5 SECONDS if there are uncleaned magnets
-          // This will keep showing until a cleaning record is created
-          if (uncleanedMagnets.length > 0) {
-            const timeElapsed = Math.floor(elapsedSeconds);
-            const minutes = Math.floor(timeElapsed / 60);
-            const seconds = Math.floor(timeElapsed % 60);
-            const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-
-            // Format cleaning interval
-            const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
-            const intervalSeconds = cleaningIntervalSeconds % 60;
-            const intervalString = intervalMinutes > 0 ? `${intervalMinutes}m ${intervalSeconds}s` : `${intervalSeconds}s`;
-
-            const totalMagnetsOnRoute = routeMagnetsOnThisRoute.length;
-            const magnetNames = uncleanedMagnets.map(m => m.name).join(', ');
-
-            // Calculate IST timestamps for alert
-            const currentTimeIST = formatISTDateTime(new Date());
-            const nextCleaningDue = new Date(currentIntervalStartTime.getTime() + cleaningIntervalSeconds * 1000);
-            const nextCleaningDueIST = formatISTDateTime(nextCleaningDue);
-
-            // Get last cleaned time for this session (any magnet)
-            let lastCleanedTimeIST = 'Never';
-            if (allSessionCleaningRecords.length > 0) {
-              const mostRecentCleaning = new Date(allSessionCleaningRecords[0].cleaning_timestamp);
-              lastCleanedTimeIST = formatISTDateTime(mostRecentCleaning);
-            }
-
-            const alertMessage = `🔔MAGNET CLEANING REQUIRED!\n\nTransfer: ${sourceName} → Bin ${destName}\nUncleaned: ${uncleanedMagnets.length} of ${totalMagnetsOnRoute} magnets\nMagnets: ${magnetNames}\nRunning time: ${timeString}\nCleaning Interval: ${intervalString}\nCurrent Time (IST): ${currentTimeIST}\nNext Cleaning Due (IST): ${nextCleaningDueIST}\nLast Cleaned (IST): ${lastCleanedTimeIST}\n\n⚠️ Please create cleaning record NOW!`;
-
-            console.log(`🔔 ALERT EVERY 5 SECONDS for session ${session.id}: ${uncleanedMagnets.length} magnet(s) need cleaning`);
-
-            // Play notification sound every time
-            if (Platform.OS === 'web') {
-              try {
-                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+l9r0yHosBSJ1xe/glEILElyx6OyrWBUIRJze8L9qIAUuhM/z1YU1Bhxqvu7mnEoODlOq5O+zYBoHPJXY88p8LgUecL/v45dGChFcsujuq1oVB0Kb3fLBaiEELIHN89OENAM');
-                audio.play().catch(() => {});
-              } catch (e) {
-                console.error('Audio play error:', e);
-              }
-
-              // Show/update custom notification with bell icon (refreshes every 5 seconds)
-              showCleaningNotification(alertMessage, session.id, intervalString, uncleanedMagnets.length, totalMagnetsOnRoute, currentTimeIST, nextCleaningDueIST, lastCleanedTimeIST);
-            } else {
-              Alert.alert('🔔 Cleaning Reminder', alertMessage, [
-                { text: 'OK', style: 'default' }
-              ]);
-            }
+          if (Platform.OS === 'web') {
+            alert(message);
           } else {
-            // All magnets are cleaned - IMMEDIATELY REMOVE notification
-            if (Platform.OS === 'web') {
-              const notification = document.getElementById(`cleaning-notification-${session.id}`);
-              if (notification) {
-                console.log('✅ REMOVING notification for session', session.id, '- all magnets cleaned!');
-                notification.remove();
-              }
-            }
+            Alert.alert('Cleaning Required', message);
           }
-        } else {
-          // Before first interval - no alerts yet
-          console.log(`⏳ Session ${session.id}: Waiting for first interval (${Math.floor(cleaningIntervalSeconds - elapsedSeconds)}s remaining)`);
         }
-      });
-    }, 5000); // Check every 5 seconds
+      }
+    }, cleaningIntervalSeconds * 1000);
+  };
 
-    return () => clearInterval(intervalId);
+  const stopNotificationCheck = (sessionId) => {
+    if (notificationIntervalsRef.current[sessionId]) {
+      clearInterval(notificationIntervalsRef.current[sessionId]);
+      delete notificationIntervalsRef.current[sessionId];
+    }
+  };
+
+  // Clean up all intervals on unmount
+  useEffect(() => {
+    return () => {
+      Object.keys(notificationIntervalsRef.current).forEach(sessionId => {
+        clearInterval(notificationIntervalsRef.current[sessionId]);
+      });
+    };
   }, []);
 
-  const showCleaningNotification = (message, sessionId, intervalString, uncleanedCount, totalCount, currentTimeIST, nextCleaningDueIST, lastCleanedTimeIST) => {
-    // Remove any existing notifications for this session
-    const existingNotification = document.getElementById(`cleaning-notification-${sessionId}`);
-    if (existingNotification) {
-      existingNotification.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.id = `cleaning-notification-${sessionId}`;
-    notification.className = 'cleaning-notification';
-
-    const messageLines = message.split('\n').filter(line => line.trim());
-    const transferLine = messageLines.find(line => line.startsWith('Transfer')) || '';
-    const uncleanedLine = messageLines.find(line => line.startsWith('Uncleaned:')) || '';
-    const magnetsLine = messageLines.find(line => line.startsWith('Magnets:')) || '';
-    const timeLine = messageLines.find(line => line.startsWith('Running time:')) || '';
-    const intervalLine = messageLines.find(line => line.startsWith('Cleaning Interval:')) || '';
-    const currentTimeLine = `Current Time (IST): ${currentTimeIST}`;
-    const nextDueLine = `Next Cleaning Due (IST): ${nextCleaningDueIST}`;
-    const lastCleanedLine = `Last Cleaned (IST): ${lastCleanedTimeIST}`;
-
-    notification.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        padding: 20px 24px;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.4), 0 0 0 1px rgba(255,255,255,0.1);
-        display: flex;
-        align-items: flex-start;
-        gap: 16px;
-        z-index: 10000;
-        animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), shake 0.5s ease-in-out 0.4s;
-        min-width: 400px;
-        max-width: 520px;
-        border: 2px solid rgba(255,255,255,0.2);
-      ">
-        <div style="
-          background: rgba(255,255,255,0.25);
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 28px;
-          animation: bellRing 1s ease-in-out infinite;
-          flex-shrink: 0;
-        ">🔔</div>
-        <div style="flex: 1;">
-          <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-            ⚠️ MAGNET CLEANING REQUIRED
-          </div>
-          <div style="font-size: 14px; opacity: 0.95; line-height: 1.6;">
-            <div style="margin-bottom: 4px;">${transferLine}</div>
-            <div style="
-              background: rgba(255,255,255,0.2);
-              padding: 8px 12px;
-              border-radius: 8px;
-              margin: 8px 0;
-              font-weight: 700;
-              font-size: 15px;
-              border-left: 3px solid #fef3c7;
-            ">${uncleanedLine}</div>
-            <div style="font-size: 13px; margin-bottom: 4px; opacity: 0.9;">${magnetsLine}</div>
-            <div style="font-weight: 600; color: #fef3c7; margin-top: 8px; margin-bottom: 2px;">${timeLine}</div>
-            <div style="font-size: 12px; opacity: 0.85;">${intervalLine}</div>
-            <div style="
-              background: rgba(255,255,255,0.15);
-              padding: 8px 12px;
-              border-radius: 8px;
-              margin: 8px 0;
-              font-size: 12px;
-              border-left: 2px solid #fef3c7;
-            ">
-              <div style="margin-bottom: 3px;">🕐 ${currentTimeLine}</div>
-              <div style="margin-bottom: 3px;">⏰ ${nextDueLine}</div>
-              <div>🧲 ${lastCleanedLine}</div>
-            </div>
-          </div>
-        </div>
-        <button onclick="this.parentElement.parentElement.remove()" style="
-          background: rgba(255,255,255,0.2);
-          border: none;
-          color: white;
-          font-size: 24px;
-          cursor: pointer;
-          padding: 0;
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          flex-shrink: 0;
-          transition: background 0.2s;
-        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
-      </div>
-    `;
-
-    // Add animation styles if not already present
-    if (!document.getElementById('cleaning-notification-styles')) {
-      const style = document.createElement('style');
-      style.id = 'cleaning-notification-styles';
-      style.textContent = `
-        @keyframes slideInRight {
-          from {
-            transform: translateX(500px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-          20%, 40%, 60%, 80% { transform: translateX(5px); }
-        }
-        @keyframes bellRing {
-          0%, 100% { transform: rotate(0deg); }
-          10%, 30% { transform: rotate(-15deg); }
-          20%, 40% { transform: rotate(15deg); }
-          50% { transform: rotate(0deg); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    document.body.appendChild(notification);
-
-    // Keep notification visible (don't auto-remove for cleaning alerts)
-  };
-
-  const fetchBins = async () => {
-    try {
-      setLoading(true);
-      const response = await binApi.getAll();
-      setBins(response.data);
-    } catch (error) {
-      console.error('Error fetching bins:', error);
-      Alert.alert('Error', 'Failed to load bins');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMagnets = async () => {
-    try {
-      setLoading(true);
-      const response = await magnetApi.getAll();
-      setMagnets(response.data);
-    } catch (error) {
-      console.error('Error fetching magnets:', error);
-      Alert.alert('Error', 'Failed to load magnets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRouteMappings = async () => {
-    try {
-      const response = await routeMagnetMappingApi.getAll();
-      setRouteMappings(response.data);
-    } catch (error) {
-      console.error('Error fetching route mappings:', error);
-      Alert.alert('Error', 'Failed to load route mappings');
-    }
-  };
-
-  const fetchGodowns = async () => {
-    try {
-      const response = await godownApi.getAll();
-      setGodowns(response.data);
-    } catch (error) {
-      console.error('Error fetching godowns:', error);
-    }
-  };
-
-  const fetchCleaningRecords = async () => {
-    try {
-      setLoading(true);
-      const response = await magnetCleaningRecordApi.getAll();
-      setCleaningRecords(response.data);
-    } catch (error) {
-      console.error('Error fetching cleaning records:', error);
-      Alert.alert('Error', 'Failed to load cleaning records');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTransferSessions = async () => {
-    try {
-      setLoading(true);
-      const response = await transferSessionApi.getAll();
-      console.log('📦 Fetched transfer sessions:', response.data);
-      console.log('📊 Session details:', response.data.map(s => ({
-        id: s.id,
-        status: s.status,
-        stop_timestamp: s.stop_timestamp,
-        cleaning_interval: s.cleaning_interval_hours,
-        magnet_id: s.magnet_id
-      })));
-      setTransferSessions(response.data);
-    } catch (error) {
-      console.error('Error fetching transfer sessions:', error);
-
-      let errorMessage = 'Unable to load transfer sessions. Please try again.';
-      if (error.message === 'Network Error' || !error.response) {
-        errorMessage = '🔌 Connection Error\n\nUnable to connect to the server. Please check your internet connection and refresh the page.';
-      } else if (error.response?.status >= 500) {
-        errorMessage = '🔧 Server Error\n\nThe server encountered an error. Please try again in a moment.';
-      }
-
+  const handleSubmitTransferSession = async () => {
+    if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id || !transferSessionFormData.magnet_id) {
       if (Platform.OS === 'web') {
-        console.error(errorMessage);
-      } else {
-        Alert.alert('⚠️ Loading Error', errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddBin = () => {
-    setEditingBin(null);
-    setEditingMagnet(null);
-    setBinFormData({
-      bin_number: '',
-      capacity: '',
-      current_quantity: '',
-      status: 'Active',
-    });
-    setModalVisible(true);
-  };
-
-  const handleAddMagnet = () => {
-    setEditingBin(null);
-    setEditingMagnet(null);
-    setEditingRouteMapping(null);
-    setMagnetFormData({
-      name: '',
-      description: '',
-      status: 'Active',
-    });
-    setModalVisible(true);
-  };
-
-  const handleAddRouteMapping = () => {
-    setEditingBin(null);
-    setEditingMagnet(null);
-    setEditingRouteMapping(null);
-    setRouteMappingFormData({
-      magnet_id: '',
-      source_type: 'godown',
-      source_godown_id: '',
-      source_bin_id: '',
-      destination_bin_id: '',
-      cleaning_interval_hours: '300', // 5 minutes in seconds
-    });
-    setModalVisible(true);
-  };
-
-  const handleEditRouteMapping = (mapping) => {
-    setEditingRouteMapping(mapping);
-    setEditingBin(null);
-    setEditingMagnet(null);
-    const sourceType = mapping.source_godown_id ? 'godown' : 'bin';
-    setRouteMappingFormData({
-      magnet_id: String(mapping.magnet_id),
-      source_type: sourceType,
-      source_godown_id: mapping.source_godown_id ? String(mapping.source_godown_id) : '',
-      source_bin_id: mapping.source_bin_id ? String(mapping.source_bin_id) : '',
-      destination_bin_id: String(mapping.destination_bin_id),
-      cleaning_interval_hours: String(mapping.cleaning_interval_hours),
-    });
-    setModalVisible(true);
-  };
-
-  const handleAddCleaningRecord = () => {
-    setEditingBin(null);
-    setEditingMagnet(null);
-    setEditingRouteMapping(null);
-    setEditingCleaningRecord(null);
-
-    // Find any active transfer session to pre-select
-    const activeSession = transferSessions.find(
-      s => s.status?.toLowerCase() === 'active' && !s.stop_timestamp
-    );
-
-    setCleaningRecordFormData({
-      magnet_id: activeSession?.magnet_id ? String(activeSession.magnet_id) : '',
-      transfer_session_id: activeSession ? String(activeSession.id) : '',
-      cleaning_timestamp: null, // Will be set to current time on submit
-      notes: '',
-      before_cleaning_photo: null,
-      after_cleaning_photo: null,
-    });
-    setModalVisible(true);
-  };
-
-  const handleEditCleaningRecord = (record) => {
-    setEditingCleaningRecord(record);
-    setEditingBin(null);
-    setEditingMagnet(null);
-    setEditingRouteMapping(null);
-    setCleaningRecordFormData({
-      magnet_id: String(record.magnet_id),
-      cleaning_timestamp: record.cleaning_timestamp,
-      notes: record.notes || '',
-      before_cleaning_photo: null,
-      after_cleaning_photo: null,
-    });
-    setModalVisible(true);
-  };
-
-  const handleDeleteCleaningRecord = async (record) => {
-    const confirmDelete = Platform.OS === 'web' 
-      ? window.confirm(`Are you sure you want to delete this cleaning record?`)
-      : await new Promise((resolve) => {
-          Alert.alert(
-            'Confirm Delete',
-            `Are you sure you want to delete this cleaning record?`,
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
-            ]
-          );
-        });
-
-    if (!confirmDelete) return;
-
-    try {
-      setLoading(true);
-      await magnetCleaningRecordApi.delete(record.id);
-      await fetchCleaningRecords();
-
-      if (Platform.OS === 'web') {
-        alert('Cleaning record deleted successfully');
-      } else {
-        Alert.alert('Success', 'Cleaning record deleted successfully');
-      }
-    } catch (error) {
-      console.error('Error deleting cleaning record:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
-
-      if (Platform.OS === 'web') {
-        alert(`Error: ${errorMessage}`);
-      } else {
-        Alert.alert('Error', errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitCleaningRecord = async () => {
-    if (!cleaningRecordFormData.magnet_id) {
-      Alert.alert('Error', 'Please select a magnet');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Get current IST time for display
-      const now = new Date();
-      const istTime = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-
-      console.log('📝 CREATING CLEANING RECORD:');
-      console.log('  🇮🇳 Current IST time:', istTime);
-      console.log('  🧲 Magnet ID:', cleaningRecordFormData.magnet_id);
-      console.log('  🔄 Transfer Session ID:', cleaningRecordFormData.transfer_session_id);
-
-      const formData = new FormData();
-      formData.append('magnet_id', cleaningRecordFormData.magnet_id);
-      if (cleaningRecordFormData.transfer_session_id) {
-        formData.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
-      }
-
-      // Backend will use current UTC time automatically (no timestamp sent)
-
-      if (cleaningRecordFormData.notes) {
-        formData.append('notes', cleaningRecordFormData.notes);
-      }
-
-      if (cleaningRecordFormData.before_cleaning_photo) {
-        formData.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
-      }
-
-      if (cleaningRecordFormData.after_cleaning_photo) {
-        formData.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
-      }
-
-      let createdRecord;
-      if (editingCleaningRecord) {
-        const response = await magnetCleaningRecordApi.update(editingCleaningRecord.id, formData);
-        createdRecord = response.data;
-        const recordIstTime = new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-        console.log('✅ UPDATED cleaning record ID', createdRecord.id, 'at', recordIstTime, 'IST');
-        Alert.alert('Success', 'Cleaning record updated successfully');
-      } else {
-        const response = await magnetCleaningRecordApi.create(formData);
-        createdRecord = response.data;
-        const recordIstTime = new Date(createdRecord.cleaning_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-        console.log('✅ CREATED cleaning record ID', createdRecord.id, 'at', recordIstTime, 'IST');
-        Alert.alert('Success', 'Cleaning record added successfully');
-      }
-
-      setModalVisible(false);
-
-      // FORCE IMMEDIATE REFRESH
-      console.log('🔄 Refreshing cleaning records...');
-      await fetchCleaningRecords();
-
-      // Wait and refresh again to ensure data is loaded
-      setTimeout(async () => {
-        await fetchCleaningRecords();
-      }, 500);
-
-      // VERIFY notification removal after cleaning
-      const sessionId = cleaningRecordFormData.transfer_session_id ? parseInt(cleaningRecordFormData.transfer_session_id) : null;
-
-      if (sessionId && Platform.OS === 'web') {
-        console.log(`🔍 Verifying notification removal for session ${sessionId}`);
-
-        // Force remove notification immediately
-        setTimeout(() => {
-          const notification = document.getElementById(`cleaning-notification-${sessionId}`);
-          if (notification) {
-            console.log(`🗑️ FORCE REMOVING notification for session ${sessionId} after cleaning submission`);
-            notification.remove();
-          }
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('❌ Error saving cleaning record:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartTransfer = () => {
-    setEditingTransferSession(null);
-    setTransferSessionFormData({
-      source_godown_id: '',
-      destination_bin_id: '',
-      notes: '',
-    });
-    setModalVisible(true);
-  };
-
-  const handleSubmitStartTransfer = async () => {
-    if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id) {
-      if (Platform.OS === 'web') {
-        alert('⚠️ Missing Information\n\nPlease select both:\n• Source Godown\n• Destination Bin\n\nThese are required to start the transfer.');
+        alert('⚠️ Missing Information\n\nPlease select:\n• Source Godown\n• Destination Bin\n• Magnet\n\nThese are required to start the transfer.');
       } else {
         Alert.alert(
           '⚠️ Missing Information',
-          'Please select both source godown and destination bin to start the transfer.',
+          'Please select source godown, destination bin, and magnet to start the transfer.',
           [{ text: 'OK', style: 'default' }]
         );
       }
       return;
     }
 
+    const selectedMagnetId = parseInt(transferSessionFormData.magnet_id);
+    const selectedRouteMapping = routeMappings.find(
+      mapping => mapping.magnet_id === selectedMagnetId &&
+                 mapping.source_godown_id === (transferSessionFormData.source_godown_id ? parseInt(transferSessionFormData.source_godown_id) : null) &&
+                 mapping.source_bin_id === (transferSessionFormData.source_type === 'bin' ? parseInt(transferSessionFormData.source_bin_id) : null) &&
+                 mapping.destination_bin_id === parseInt(transferSessionFormData.destination_bin_id)
+    );
+
+    if (!selectedRouteMapping) {
+      const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Selected Godown';
+      const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Selected Bin';
+      const magnetName = magnets.find(m => m.id === selectedMagnetId)?.name || 'Selected Magnet';
+
+      const errorMessage = `No route mapping found for:\n${sourceName} → Bin ${destBin} (with Magnet: ${magnetName})\n\nPlease configure a route mapping first in the "Route Mappings" tab.`;
+
+      if (Platform.OS === 'web') {
+        alert(`⚠️ Route Not Found\n\n${errorMessage}`);
+      } else {
+        Alert.alert('⚠️ Route Not Found', errorMessage, [{ text: 'OK', style: 'default' }]);
+      }
+      return;
+    }
+
+    const cleaningIntervalSeconds = parseInt(selectedRouteMapping.cleaning_interval_hours);
+    if (isNaN(cleaningIntervalSeconds) || cleaningIntervalSeconds <= 0) {
+      if (Platform.OS === 'web') {
+        alert('⚠️ Invalid Cleaning Interval\n\nThe selected route mapping has an invalid cleaning interval. Please update the route mapping.');
+      } else {
+        Alert.alert('⚠️ Invalid Cleaning Interval', 'The selected route mapping has an invalid cleaning interval. Please update the route mapping.', [{ text: 'OK', style: 'default' }]);
+      }
+      return;
+    }
+
+    const payload = {
+      source_godown_id: parseInt(transferSessionFormData.source_godown_id),
+      destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
+      magnet_id: selectedMagnetId,
+      cleaning_interval_hours: cleaningIntervalSeconds, // Store the interval in seconds
+      notes: transferSessionFormData.notes,
+    };
+
     try {
       setLoading(true);
-      const response = await transferSessionApi.start({
-        source_godown_id: parseInt(transferSessionFormData.source_godown_id),
-        destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
-        notes: transferSessionFormData.notes,
-      });
+      const response = await transferSessionApi.start(payload);
 
-      console.log('✅ Transfer session started:', response.data);
-      console.log('Cleaning interval (seconds):', response.data.cleaning_interval_hours);
+      const data = response.data;
+      console.log('✅ Transfer session started:', data);
+
+      // Start notification check for this session
+      startNotificationCheck(data.id, cleaningIntervalSeconds);
 
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
-      const magnetName = response.data.magnet?.name || 'Unknown';
-      const intervalSec = response.data.cleaning_interval_hours || 300;
-      const intervalMin = Math.floor(intervalSec / 60);
+      const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
+      const intervalMin = Math.floor(cleaningIntervalSeconds / 60);
+      const intervalSec = cleaningIntervalSeconds % 60;
       const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
 
       if (Platform.OS === 'web') {
-        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\n🔔 First notification will appear in ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
+        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\n🔔 First notification will appear in approximately ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
       } else {
         Alert.alert(
           '✅ Transfer Started',
@@ -797,8 +296,14 @@ export default function PrecleaningBinScreen({ navigation }) {
         );
       }
 
+      setTransferSessionFormData({
+        source_godown_id: '',
+        destination_bin_id: '',
+        magnet_id: '',
+        notes: '',
+      });
       setModalVisible(false);
-      await fetchTransferSessions();
+      await fetchTransferSessions(); // Refresh the list
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
       console.error('Error details:', error.response?.data);
@@ -810,9 +315,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         const detail = error.response?.data?.detail || '';
         if (detail.includes('No route mapping found')) {
           errorTitle = '⚠️ Route Not Configured';
-          const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'selected godown';
-          const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'selected bin';
-          errorMessage = `No route mapping exists for:\n${sourceName} → Bin ${destBin}\n\n📋 To fix this:\n1. Go to "Route Mappings" tab\n2. Click "Add Route Mapping"\n3. Configure the route with a magnet and cleaning interval\n\nThen try starting the transfer again.`;
+          errorMessage = `No route mapping exists for the selected source and destination.\n\nTo fix this, please go to the "Route Mappings" tab and create a mapping that includes the selected magnet, source, and destination.`;
         } else if (detail.includes('godown not found')) {
           errorTitle = '❌ Source Godown Not Found';
           errorMessage = 'The selected source godown no longer exists. Please refresh and try again.';
@@ -842,53 +345,25 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   };
 
-  const handleStopTransfer = (session) => {
-    setEditingTransferSession(session);
-    setStopTransferFormData({ transferred_quantity: '' });
-    setStopTransferModal(true);
-  };
-
-  const handleSubmitStopTransfer = async () => {
-    if (!stopTransferFormData.transferred_quantity) {
-      if (Platform.OS === 'web') {
-        alert('⚠️ Quantity Required\n\nPlease enter the quantity that was transferred (in tons) before stopping the session.');
-      } else {
-        Alert.alert(
-          '⚠️ Quantity Required',
-          'Please enter the transferred quantity in tons.',
-          [{ text: 'OK', style: 'default' }]
-        );
-      }
-      return;
-    }
-
-    const quantity = parseFloat(stopTransferFormData.transferred_quantity);
-    if (isNaN(quantity) || quantity <= 0) {
-      if (Platform.OS === 'web') {
-        alert('⚠️ Invalid Quantity\n\nPlease enter a valid positive number for the transferred quantity.');
-      } else {
-        Alert.alert(
-          '⚠️ Invalid Quantity',
-          'Please enter a valid positive number.',
-          [{ text: 'OK', style: 'default' }]
-        );
-      }
-      return;
-    }
-
+  const handleStopTransferSession = async (sessionId) => {
     try {
       setLoading(true);
-      await transferSessionApi.stop(editingTransferSession.id, quantity);
+      const response = await transferSessionApi.stop(sessionId);
+
+      if (!response.ok) throw new Error('Failed to stop transfer session');
+
+      // Stop notification check for this session
+      stopNotificationCheck(sessionId);
 
       const sourceName = editingTransferSession.source_godown?.name || 'Unknown';
       const destBin = editingTransferSession.destination_bin?.bin_number || 'Unknown';
 
       if (Platform.OS === 'web') {
-        alert(`✅ Transfer Completed Successfully!\n\n📦 Quantity: ${quantity} tons\n📍 Route: ${sourceName} → Bin ${destBin}\n\nGodown and bin quantities have been updated.`);
+        alert(`✅ Transfer Completed Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n\nGodown and bin quantities have been updated.`);
       } else {
         Alert.alert(
           '✅ Transfer Completed',
-          `${quantity} tons transferred from ${sourceName} to Bin ${destBin}.\n\nQuantities have been updated.`,
+          `Transfer from ${sourceName} to Bin ${destBin} completed.\n\nQuantities have been updated.`,
           [{ text: 'OK', style: 'default' }]
         );
       }
@@ -896,7 +371,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setStopTransferModal(false);
       setLastAlertTimes(prev => {
         const updated = { ...prev };
-        delete updated[editingTransferSession.id];
+        delete updated[sessionId];
         return updated;
       });
       setEditingTransferSession(null);
@@ -939,7 +414,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteTransferSession = async (session) => {
-    const confirmDelete = Platform.OS === 'web' 
+    const confirmDelete = Platform.OS === 'web'
       ? window.confirm(`Are you sure you want to delete this transfer session?`)
       : await new Promise((resolve) => {
           Alert.alert(
@@ -957,6 +432,8 @@ export default function PrecleaningBinScreen({ navigation }) {
     try {
       setLoading(true);
       await transferSessionApi.delete(session.id);
+      // Stop any active notification checks for this session before deleting
+      stopNotificationCheck(session.id);
       await fetchTransferSessions();
 
       if (Platform.OS === 'web') {
@@ -979,7 +456,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteRouteMapping = async (mapping) => {
-    const confirmDelete = Platform.OS === 'web' 
+    const confirmDelete = Platform.OS === 'web'
       ? window.confirm(`Are you sure you want to delete this route mapping?`)
       : await new Promise((resolve) => {
           Alert.alert(
@@ -1019,13 +496,20 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleSubmitRouteMapping = async () => {
-    const sourceId = routeMappingFormData.source_type === 'godown' 
-      ? routeMappingFormData.source_godown_id 
+    const sourceId = routeMappingFormData.source_type === 'godown'
+      ? routeMappingFormData.source_godown_id
       : routeMappingFormData.source_bin_id;
 
-    if (!routeMappingFormData.magnet_id || !sourceId || 
-        !routeMappingFormData.destination_bin_id || !routeMappingFormData.cleaning_interval_hours) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Validate cleaning_interval_hours as a number
+    const cleaningInterval = parseInt(routeMappingFormData.cleaning_interval_hours);
+    if (isNaN(cleaningInterval) || cleaningInterval <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid positive number for the Cleaning Interval (in seconds).');
+      return;
+    }
+
+    if (!routeMappingFormData.magnet_id || !sourceId ||
+        !routeMappingFormData.destination_bin_id) {
+      Alert.alert('Error', 'Please fill in all required fields (Magnet, Source, Destination)');
       return;
     }
 
@@ -1034,7 +518,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       const mappingData = {
         magnet_id: parseInt(routeMappingFormData.magnet_id),
         destination_bin_id: parseInt(routeMappingFormData.destination_bin_id),
-        cleaning_interval_hours: parseInt(routeMappingFormData.cleaning_interval_hours),
+        cleaning_interval_hours: cleaningInterval, // Use the validated integer value
       };
 
       // Add the appropriate source ID
@@ -1088,7 +572,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteBin = async (bin) => {
-    const confirmDelete = Platform.OS === 'web' 
+    const confirmDelete = Platform.OS === 'web'
       ? window.confirm(`Are you sure you want to delete bin ${bin.bin_number}?`)
       : await new Promise((resolve) => {
           Alert.alert(
@@ -1128,7 +612,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteMagnet = async (magnet) => {
-    const confirmDelete = Platform.OS === 'web' 
+    const confirmDelete = Platform.OS === 'web'
       ? window.confirm(`Are you sure you want to delete magnet ${magnet.name}?`)
       : await new Promise((resolve) => {
           Alert.alert(
@@ -1260,62 +744,62 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const routeMappingColumns = [
     { field: 'id', label: 'ID', flex: 0.4 },
-    { 
-      field: 'magnet', 
-      label: 'Magnet', 
-      flex: 1.2, 
+    {
+      field: 'magnet',
+      label: 'Magnet',
+      flex: 1.2,
       render: (val, item) => item?.magnet?.name || 'N/A'
     },
-    { 
-      field: 'route_flow', 
-      label: 'Route Flow', 
-      flex: 2.2, 
+    {
+      field: 'route_flow',
+      label: 'Route Flow',
+      flex: 2.2,
       render: (val, item) => {
         if (!item) return 'N/A';
-        const source = item.source_godown 
-          ? `Godown: ${item.source_godown.name}` 
-          : item.source_bin 
-            ? `Bin: ${item.source_bin.bin_number}` 
+        const source = item.source_godown
+          ? `Godown: ${item.source_godown.name}`
+          : item.source_bin
+            ? `Bin: ${item.source_bin.bin_number}`
             : 'N/A';
         const destination = item.destination_bin?.bin_number || 'N/A';
         return `${source} → Bin: ${destination}`;
       }
     },
-    { 
-      field: 'magnet_status', 
-      label: 'Magnet Status', 
-      flex: 0.8, 
-      render: (val, item) => item?.magnet?.status || 'N/A' 
+    {
+      field: 'magnet_status',
+      label: 'Magnet Status',
+      flex: 0.8,
+      render: (val, item) => item?.magnet?.status || 'N/A'
     },
-    { 
-      field: 'cleaning_interval_hours', 
-      label: 'Cleaning Interval (sec)', 
-      flex: 1 
+    {
+      field: 'cleaning_interval_hours',
+      label: 'Cleaning Interval (sec)',
+      flex: 1
     },
   ];
 
   const cleaningRecordColumns = [
-    { 
-      field: 'magnet', 
-      label: 'Magnet', 
+    {
+      field: 'magnet',
+      label: 'Magnet',
       flex: 1.5,
       render: (val) => val?.name || '-'
     },
-    { 
-      field: 'cleaning_timestamp', 
-      label: 'Cleaning Time (IST)', 
+    {
+      field: 'cleaning_timestamp',
+      label: 'Cleaning Time (IST)',
       flex: 2,
       render: (val) => formatISTDateTime(val)
     },
-    { 
-      field: 'before_cleaning_photo', 
-      label: 'Before Photo', 
+    {
+      field: 'before_cleaning_photo',
+      label: 'Before Photo',
       flex: 1,
       render: (val) => val ? '✓' : '-'
     },
-    { 
-      field: 'after_cleaning_photo', 
-      label: 'After Photo', 
+    {
+      field: 'after_cleaning_photo',
+      label: 'After Photo',
       flex: 1,
       render: (val) => val ? '✓' : '-'
     },
@@ -1323,45 +807,45 @@ export default function PrecleaningBinScreen({ navigation }) {
   ];
 
   const transferSessionColumns = [
-    { 
-      field: 'source_godown', 
-      label: 'Source Godown', 
+    {
+      field: 'source_godown',
+      label: 'Source Godown',
       flex: 1.2,
       render: (val) => val?.name || '-'
     },
-    { 
-      field: 'destination_bin', 
-      label: 'Destination Bin', 
+    {
+      field: 'destination_bin',
+      label: 'Destination Bin',
       flex: 1.2,
       render: (val) => val?.bin_number || '-'
     },
-    { 
-      field: 'magnet', 
-      label: 'Magnet', 
+    {
+      field: 'magnet',
+      label: 'Magnet',
       flex: 1.2,
       render: (val) => val?.name || '-'
     },
-    { 
-      field: 'start_timestamp', 
-      label: 'Start Time (IST)', 
+    {
+      field: 'start_timestamp',
+      label: 'Start Time (IST)',
       flex: 1.5,
       render: (val) => formatISTDateTime(val)
     },
-    { 
-      field: 'stop_timestamp', 
-      label: 'Stop Time (IST)', 
+    {
+      field: 'stop_timestamp',
+      label: 'Stop Time (IST)',
       flex: 1.5,
       render: (val) => formatISTDateTime(val)
     },
-    { 
-      field: 'transferred_quantity', 
-      label: 'Quantity (tons)', 
+    {
+      field: 'transferred_quantity',
+      label: 'Quantity (tons)',
       flex: 1,
       render: (val) => val ? val.toFixed(2) : '-'
     },
-    { 
-      field: 'status', 
-      label: 'Status', 
+    {
+      field: 'status',
+      label: 'Status',
       flex: 0.8,
       render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
     },
@@ -1370,8 +854,8 @@ export default function PrecleaningBinScreen({ navigation }) {
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
       <View style={styles.container}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabScrollView}
           contentContainerStyle={styles.tabScrollContent}
@@ -1438,7 +922,8 @@ export default function PrecleaningBinScreen({ navigation }) {
               data={transferSessions}
               onEdit={(session) => {
                 if (session.status?.toLowerCase() === 'active') {
-                  handleStopTransfer(session);
+                  setEditingTransferSession(session); // Set the session to be stopped
+                  setStopTransferModal(true);
                 }
               }}
               onDelete={handleDeleteTransferSession}
@@ -1472,11 +957,11 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           title={
-            editingBin ? 'Edit Bin' : 
+            editingBin ? 'Edit Bin' :
             editingMagnet ? 'Edit Magnet' :
             editingRouteMapping ? 'Edit Route Mapping' :
             editingCleaningRecord ? 'Edit Cleaning Record' :
-            activeTab === 'bins' ? 'Add Bin' : 
+            activeTab === 'bins' ? 'Add Bin' :
             activeTab === 'magnets' ? 'Add Magnet' :
             activeTab === 'routeMappings' ? 'Add Route Mapping' :
             activeTab === 'transferSessions' ? 'Start Transfer Session' : 'Add Cleaning Record'
@@ -1581,8 +1066,8 @@ export default function PrecleaningBinScreen({ navigation }) {
                 <SelectDropdown
                   label="Source Type *"
                   value={routeMappingFormData.source_type}
-                  onValueChange={(value) => setRouteMappingFormData({ 
-                    ...routeMappingFormData, 
+                  onValueChange={(value) => setRouteMappingFormData({
+                    ...routeMappingFormData,
                     source_type: value,
                     source_godown_id: '',
                     source_bin_id: ''
@@ -1659,6 +1144,14 @@ export default function PrecleaningBinScreen({ navigation }) {
                   placeholder="Select destination bin"
                 />
 
+                <SelectDropdown
+                  label="Magnet *"
+                  value={transferSessionFormData.magnet_id}
+                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, magnet_id: value })}
+                  options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
+                  placeholder="Select magnet"
+                />
+
                 <InputField
                   label="Notes"
                   placeholder="Enter notes (optional)"
@@ -1676,7 +1169,7 @@ export default function PrecleaningBinScreen({ navigation }) {
                   />
                   <Button
                     title="Start Transfer"
-                    onPress={handleSubmitStartTransfer}
+                    onPress={handleSubmitTransferSession}
                     variant="primary"
                   />
                 </View>
@@ -1691,8 +1184,8 @@ export default function PrecleaningBinScreen({ navigation }) {
                     const activeSession = transferSessions.find(
                       s => s.magnet_id === parseInt(value) && !s.stop_timestamp
                     );
-                    setCleaningRecordFormData({ 
-                      ...cleaningRecordFormData, 
+                    setCleaningRecordFormData({
+                      ...cleaningRecordFormData,
                       magnet_id: value,
                       transfer_session_id: activeSession ? String(activeSession.id) : ''
                     });
@@ -1708,9 +1201,9 @@ export default function PrecleaningBinScreen({ navigation }) {
                     onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, transfer_session_id: value })}
                     options={transferSessions
                       .filter(s => s.magnet_id === parseInt(cleaningRecordFormData.magnet_id))
-                      .map(s => ({ 
-                        label: `${s.source_godown?.name || 'N/A'} → ${s.destination_bin?.bin_number || 'N/A'} (${s.status})`, 
-                        value: String(s.id) 
+                      .map(s => ({
+                        label: `${s.source_godown?.name || 'N/A'} → ${s.destination_bin?.bin_number || 'N/A'} (${s.status})`,
+                        value: String(s.id)
                       }))}
                     placeholder="Select transfer session"
                   />
@@ -1719,8 +1212,8 @@ export default function PrecleaningBinScreen({ navigation }) {
                 <InputField
                   label="Cleaning Timestamp (IST)"
                   placeholder="Will be set to current time when you submit"
-                  value={editingCleaningRecord 
-                    ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp) 
+                  value={editingCleaningRecord
+                    ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp)
                     : '⏱️ Current time will be used automatically'}
                   editable={false}
                 />
