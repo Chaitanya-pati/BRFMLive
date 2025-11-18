@@ -295,8 +295,10 @@ class TransferSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     source_godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    current_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=True)
     magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=True)
     start_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
+    current_bin_start_timestamp = Column(DateTime, nullable=True)
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
     status = Column(String(20), default="active", nullable=False)
@@ -307,8 +309,27 @@ class TransferSession(Base):
 
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    current_bin = relationship("Bin", foreign_keys=[current_bin_id])
     magnet = relationship("Magnet", foreign_keys=[magnet_id])
     cleaning_records = relationship("MagnetCleaningRecord", back_populates="transfer_session")
+    bin_transfers = relationship("BinTransfer", back_populates="transfer_session", cascade="all, delete-orphan")
+
+
+class BinTransfer(Base):
+    __tablename__ = "bin_transfers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id", ondelete="CASCADE"), nullable=False)
+    bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    start_timestamp = Column(DateTime, nullable=False)
+    end_timestamp = Column(DateTime, nullable=True)
+    quantity = Column(Float, nullable=True)
+    sequence = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    transfer_session = relationship("TransferSession", back_populates="bin_transfers")
+    bin = relationship("Bin")
 
 class MagnetCleaningRecord(Base):
     __tablename__ = "magnet_cleaning_records"

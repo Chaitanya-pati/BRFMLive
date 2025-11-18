@@ -346,6 +346,24 @@ class RouteConfiguration(RouteConfigurationBase):
     updated_at: datetime
     stages: list[RouteStage] = []
 
+class BinTransferBase(ISTModel):
+    bin_id: int
+    start_timestamp: datetime
+    end_timestamp: Optional[datetime] = None
+    quantity: Optional[float] = None
+    sequence: int
+    
+    @validator('start_timestamp', 'end_timestamp', pre=True)
+    def _parse_timestamps(cls, v):
+        return parse_datetime(v)
+
+class BinTransfer(BinTransferBase):
+    id: int
+    transfer_session_id: int
+    bin: Bin
+    created_at: datetime
+    updated_at: datetime
+
 class TransferSessionBase(ISTModel):
     source_godown_id: int
     destination_bin_id: int
@@ -355,6 +373,10 @@ class TransferSessionBase(ISTModel):
 class TransferSessionCreate(TransferSessionBase):
     pass
 
+class TransferSessionDivert(ISTModel):
+    new_bin_id: int
+    quantity_transferred: float
+
 class TransferSessionUpdate(ISTModel):
     transferred_quantity: Optional[float] = None
     status: Optional[TransferSessionStatusEnum] = None
@@ -362,7 +384,9 @@ class TransferSessionUpdate(ISTModel):
 
 class TransferSession(TransferSessionBase):
     id: int
+    current_bin_id: Optional[int] = None
     start_timestamp: datetime
+    current_bin_start_timestamp: Optional[datetime] = None
     stop_timestamp: Optional[datetime] = None
     transferred_quantity: Optional[float] = None
     status: TransferSessionStatusEnum
@@ -373,8 +397,10 @@ class TransferSession(TransferSessionBase):
 class TransferSessionWithDetails(TransferSession):
     source_godown: GodownMaster
     destination_bin: Bin
+    current_bin: Optional[Bin] = None
     magnet: Optional[Magnet] = None
     cleaning_records: list['MagnetCleaningRecord'] = []
+    bin_transfers: list[BinTransfer] = []
 
 class MagnetCleaningRecordBase(ISTModel):
     magnet_id: int

@@ -219,6 +219,7 @@ export const transferSessionApi = {
   getAll: (status) => api.get("/transfer-sessions", { params: status ? { status } : {} }),
   getById: (id) => api.get(`/transfer-sessions/${id}`),
   start: (data) => api.post("/transfer-sessions/start", data),
+  divert: (id, data) => api.post(`/transfer-sessions/${id}/divert`, data),
   stop: (id, transferred_quantity) => api.post(`/transfer-sessions/${id}/stop`, null, { params: { transferred_quantity } }),
   update: (id, data) => api.put(`/transfer-sessions/${id}`, data),
   delete: (id) => api.delete(`/transfer-sessions/${id}`),

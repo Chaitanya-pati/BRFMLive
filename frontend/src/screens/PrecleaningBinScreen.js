@@ -97,12 +97,22 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [transferSessionFormData, setTransferSessionFormData] = useState({
     source_godown_id: '',
     destination_bin_id: '',
+    magnet_id: '',
     notes: '',
   });
 
   const [stopTransferFormData, setStopTransferFormData] = useState({
     transferred_quantity: '',
   });
+
+  const [divertTransferFormData, setDivertTransferFormData] = useState({
+    new_bin_id: '',
+    quantity_transferred: '',
+  });
+
+  const [divertTransferModal, setDivertTransferModal] = useState(false);
+  const [viewActiveTransferModal, setViewActiveTransferModal] = useState(false);
+  const [activeTransferSession, setActiveTransferSession] = useState(null);
 
   const statusOptions = [
     { label: 'Active', value: 'Active' },
@@ -368,7 +378,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (error.response?.status === 404) {
         const detail = error.response?.data?.detail || '';
         if (detail.includes('No route mapping found')) {
-          errorTitle = '⚠️ Route Not Configured';
+          errorTitle = '⚠️ Route Not Found';
           errorMessage = `No route mapping exists for the selected source and destination.\n\nTo fix this, please go to the "Route Mappings" tab and create a mapping that includes the selected magnet, source, and destination.`;
         } else if (detail.includes('godown not found')) {
           errorTitle = '❌ Source Godown Not Found';
@@ -1068,6 +1078,53 @@ export default function PrecleaningBinScreen({ navigation }) {
     await handleStopTransferSession(editingTransferSession.id);
   };
 
+  const handleDivertTransfer = async () => {
+    if (!divertTransferFormData.new_bin_id || !divertTransferFormData.quantity_transferred) {
+      Alert.alert('Error', 'Please fill in all required fields (New Bin and Quantity Transferred)');
+      return;
+    }
+
+    const quantity = parseFloat(divertTransferFormData.quantity_transferred);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid quantity transferred');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await transferSessionApi.divert(activeTransferSession.id, {
+        new_bin_id: parseInt(divertTransferFormData.new_bin_id),
+        quantity_transferred: quantity,
+      });
+
+      if (Platform.OS === 'web') {
+        alert('Transfer diverted successfully!');
+      } else {
+        Alert.alert('Success', 'Transfer diverted successfully!');
+      }
+
+      setDivertTransferModal(false);
+      setActiveTransferSession(null);
+      setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
+      await fetchTransferSessions(); // Refresh the list
+    } catch (error) {
+      console.error('Error diverting transfer:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to divert transfer';
+
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewActiveTransfer = (session) => {
+    setActiveTransferSession(session);
+    setViewActiveTransferModal(true);
+  };
 
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
@@ -1145,9 +1202,11 @@ export default function PrecleaningBinScreen({ navigation }) {
                 }
               }}
               onDelete={handleDeleteTransferSession}
+              onView={(session) => handleViewActiveTransfer(session)}
               loading={loading}
               emptyMessage="No transfer sessions found"
               editLabel={(row) => row.status?.toLowerCase() === 'active' ? 'Stop' : null}
+              viewLabel="View"
             />
           </>
         ) : (
@@ -1398,7 +1457,6 @@ export default function PrecleaningBinScreen({ navigation }) {
                   label="Magnet *"
                   value={cleaningRecordFormData.magnet_id}
                   onValueChange={(value) => {
-                    // Auto-select active transfer session for this magnet
                     const activeSession = transferSessions.find(
                       s => s.magnet_id === parseInt(value) && !s.stop_timestamp
                     );
@@ -1520,6 +1578,99 @@ export default function PrecleaningBinScreen({ navigation }) {
             </View>
           </ScrollView>
         </Modal>
+
+        <Modal
+          visible={divertTransferModal}
+          onClose={() => setDivertTransferModal(false)}
+          title="Divert Transfer"
+        >
+          <ScrollView style={styles.modalContent}>
+            <SelectDropdown
+              label="New Destination Bin *"
+              value={divertTransferFormData.new_bin_id}
+              onValueChange={(value) => setDivertTransferFormData({ ...divertTransferFormData, new_bin_id: value })}
+              options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
+              placeholder="Select new destination bin"
+            />
+
+            <InputField
+              label="Quantity Transferred (tons) *"
+              placeholder="Enter quantity transferred"
+              value={divertTransferFormData.quantity_transferred}
+              onChangeText={(text) => setDivertTransferFormData({ ...divertTransferFormData, quantity_transferred: text })}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Cancel"
+                onPress={() => setDivertTransferModal(false)}
+                variant="outline"
+              />
+              <Button
+                title="Divert Transfer"
+                onPress={handleDivertTransfer}
+                variant="primary"
+              />
+            </View>
+          </ScrollView>
+        </Modal>
+
+        <Modal
+          visible={viewActiveTransferModal}
+          onClose={() => setViewActiveTransferModal(false)}
+          title="Active Transfer Details"
+        >
+          <ScrollView style={styles.modalContent}>
+            {activeTransferSession ? (
+              <>
+                <Text style={styles.routeFlowTitle}>Transfer Details</Text>
+                <View style={styles.routeFlowPreview}>
+                  <Text style={styles.routeFlowText}>
+                    Source: {activeTransferSession.source_godown?.name || 'N/A'}
+                  </Text>
+                  <Text style={styles.routeFlowText}>
+                    Destination: Bin {activeTransferSession.destination_bin?.bin_number || 'N/A'}
+                  </Text>
+                  <Text style={styles.routeFlowText}>
+                    Magnet: <Text style={styles.routeFlowMagnet}>{activeTransferSession.magnet?.name || 'N/A'}</Text>
+                  </Text>
+                  <Text style={styles.routeFlowText}>
+                    Started: {formatISTDateTime(activeTransferSession.start_timestamp)}
+                  </Text>
+                  <Text style={styles.routeFlowText}>
+                    Status: {activeTransferSession.status}
+                  </Text>
+                  <Text style={styles.routeFlowText}>
+                    Quantity Transferred: {activeTransferSession.transferred_quantity?.toFixed(2) || '0.00'} tons
+                  </Text>
+                </View>
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title="Divert Transfer"
+                    onPress={() => {
+                      setDivertTransferModal(true);
+                      setViewActiveTransferModal(false); // Close view modal
+                    }}
+                    variant="secondary"
+                  />
+                  <Button
+                    title="Stop Transfer"
+                    onPress={() => {
+                      setStopTransferModal(true);
+                      setViewActiveTransferModal(false); // Close view modal
+                    }}
+                    variant="outline"
+                  />
+                </View>
+              </>
+            ) : (
+              <Text>No active transfer session found.</Text>
+            )}
+          </ScrollView>
+        </Modal>
+
       </View>
     </Layout>
   );

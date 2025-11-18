@@ -1304,13 +1304,9 @@ def start_transfer_session(
     cleaning_interval = route_mapping.cleaning_interval_hours
     magnet_id = route_mapping.magnet_id
 
-    # Get current IST time for logging
-    ist_now = datetime.now(IST)
     utc_now = get_utc_now()
 
     print(f"\n🚀 BACKEND: Starting transfer session")
-    print(f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
-    print(f"   UTC time (saving): {utc_now}")
     print(f"   Source Godown ID: {session_data.source_godown_id}")
     print(f"   Destination Bin ID: {session_data.destination_bin_id}")
     print(f"   Magnet ID: {magnet_id}")
@@ -1320,24 +1316,33 @@ def start_transfer_session(
     db_session = models.TransferSession(
         source_godown_id=session_data.source_godown_id,
         destination_bin_id=session_data.destination_bin_id,
+        current_bin_id=session_data.destination_bin_id,
         magnet_id=magnet_id,
         start_timestamp=utc_now,
+        current_bin_start_timestamp=utc_now,
         status="active",
         cleaning_interval_hours=cleaning_interval,
         notes=session_data.notes
     )
 
     db.add(db_session)
+    db.flush()
+
+    # Create first bin transfer record
+    bin_transfer = models.BinTransfer(
+        transfer_session_id=db_session.id,
+        bin_id=session_data.destination_bin_id,
+        start_timestamp=utc_now,
+        sequence=1
+    )
+    db.add(bin_transfer)
+    
     db.commit()
     db.refresh(db_session)
 
-    # Convert saved UTC timestamp back to IST for logging
-    saved_ist = pytz.UTC.localize(db_session.start_timestamp).astimezone(IST)
     print(f"   ✅ Created transfer session ID {db_session.id}")
-    print(f"   ✅ Saved start_timestamp (UTC): {db_session.start_timestamp}")
-    print(f"   ✅ Saved start_timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
+    print(f"   ✅ Current bin: {db_session.current_bin_id}")
     print(f"   ✅ Status: {db_session.status}")
-    print(f"   ✅ Returning to frontend: {db_session.start_timestamp.isoformat() if db_session.start_timestamp else 'None'}")
 
     # Sanitize float values before returning
     db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
@@ -1346,6 +1351,94 @@ def start_transfer_session(
     if db_session.destination_bin:
         db_session.destination_bin.capacity = sanitize_float(db_session.destination_bin.capacity)
         db_session.destination_bin.current_quantity = sanitize_float(db_session.destination_bin.current_quantity)
+    if db_session.current_bin:
+        db_session.current_bin.capacity = sanitize_float(db_session.current_bin.capacity)
+        db_session.current_bin.current_quantity = sanitize_float(db_session.current_bin.current_quantity)
+
+    return db_session
+
+@app.post("/api/transfer-sessions/{session_id}/divert", response_model=schemas.TransferSessionWithDetails)
+def divert_transfer_session(
+    session_id: int,
+    divert_data: schemas.TransferSessionDivert,
+    db: Session = Depends(get_db)
+):
+    # Get the transfer session
+    db_session = db.query(models.TransferSession).filter(models.TransferSession.id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Transfer session not found")
+
+    if db_session.status != "active":
+        raise HTTPException(status_code=400, detail="Transfer session is not active")
+
+    # Validate new bin exists
+    new_bin = db.query(models.Bin).filter(models.Bin.id == divert_data.new_bin_id).first()
+    if not new_bin:
+        raise HTTPException(status_code=404, detail="New bin not found")
+
+    utc_now = get_utc_now()
+
+    print(f"\n🔀 BACKEND: Diverting transfer session {session_id}")
+    print(f"   From bin: {db_session.current_bin_id}")
+    print(f"   To bin: {divert_data.new_bin_id}")
+    print(f"   Quantity transferred: {divert_data.quantity_transferred} tons")
+
+    # Close current bin transfer record
+    current_bin_transfer = db.query(models.BinTransfer).filter(
+        models.BinTransfer.transfer_session_id == session_id,
+        models.BinTransfer.end_timestamp == None
+    ).first()
+    
+    if current_bin_transfer:
+        current_bin_transfer.end_timestamp = utc_now
+        current_bin_transfer.quantity = divert_data.quantity_transferred
+
+    # Update current bin quantity
+    current_bin = db.query(models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
+    if current_bin:
+        current_bin.current_quantity = (current_bin.current_quantity or 0) + divert_data.quantity_transferred
+        if current_bin.current_quantity >= current_bin.capacity:
+            current_bin.status = models.BinStatus.FULL
+
+    # Update source godown
+    source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
+    if source_godown:
+        source_godown.current_storage = max(0, (source_godown.current_storage or 0) - divert_data.quantity_transferred)
+
+    # Get next sequence number
+    max_sequence = db.query(models.BinTransfer).filter(
+        models.BinTransfer.transfer_session_id == session_id
+    ).count()
+
+    # Create new bin transfer record
+    new_bin_transfer = models.BinTransfer(
+        transfer_session_id=session_id,
+        bin_id=divert_data.new_bin_id,
+        start_timestamp=utc_now,
+        sequence=max_sequence + 1
+    )
+    db.add(new_bin_transfer)
+
+    # Update session current bin
+    db_session.current_bin_id = divert_data.new_bin_id
+    db_session.current_bin_start_timestamp = utc_now
+
+    db.commit()
+    db.refresh(db_session)
+
+    print(f"   ✅ Diverted to bin {divert_data.new_bin_id}")
+    print(f"   ✅ Updated godown and bin quantities")
+
+    # Sanitize float values
+    db_session.transferred_quantity = sanitize_float(db_session.transferred_quantity)
+    if db_session.source_godown:
+        db_session.source_godown.current_storage = sanitize_float(db_session.source_godown.current_storage)
+    if db_session.destination_bin:
+        db_session.destination_bin.capacity = sanitize_float(db_session.destination_bin.capacity)
+        db_session.destination_bin.current_quantity = sanitize_float(db_session.destination_bin.current_quantity)
+    if db_session.current_bin:
+        db_session.current_bin.capacity = sanitize_float(db_session.current_bin.capacity)
+        db_session.current_bin.current_quantity = sanitize_float(db_session.current_bin.current_quantity)
 
     return db_session
 
@@ -1363,39 +1456,42 @@ def stop_transfer_session(
     if db_session.status != "active":
         raise HTTPException(status_code=400, detail="Transfer session is not active")
 
-    # Get current UTC time for database storage
     utc_now = get_utc_now()
-    ist_now = datetime.now(IST)
 
     print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
-    print(f"   Current IST time: {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}")
-    print(f"   Storing as UTC: {utc_now}")
     print(f"   Transferred Quantity: {transferred_quantity} tons")
+
+    # Close current bin transfer record
+    current_bin_transfer = db.query(models.BinTransfer).filter(
+        models.BinTransfer.transfer_session_id == session_id,
+        models.BinTransfer.end_timestamp == None
+    ).first()
+    
+    if current_bin_transfer:
+        current_bin_transfer.end_timestamp = utc_now
+        current_bin_transfer.quantity = transferred_quantity
 
     # Update session
     db_session.stop_timestamp = utc_now
     db_session.transferred_quantity = transferred_quantity
     db_session.status = "completed"
 
+    # Update current bin quantity (add)
+    current_bin = db.query(models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
+    if current_bin:
+        current_bin.current_quantity = (current_bin.current_quantity or 0) + transferred_quantity
+        if current_bin.current_quantity >= current_bin.capacity:
+            current_bin.status = models.BinStatus.FULL
+
     # Update source godown quantity (subtract)
     source_godown = db.query(models.GodownMaster).filter(models.GodownMaster.id == db_session.source_godown_id).first()
     if source_godown:
         source_godown.current_storage = max(0, (source_godown.current_storage or 0) - transferred_quantity)
 
-    # Update destination bin quantity (add)
-    destination_bin = db.query(models.Bin).filter(models.Bin.id == db_session.destination_bin_id).first()
-    if destination_bin:
-        destination_bin.current_quantity = (destination_bin.current_quantity or 0) + transferred_quantity
-
-        # Check if bin is full
-        if destination_bin.current_quantity >= destination_bin.capacity:
-            destination_bin.status = models.BinStatus.FULL
-
     db.commit()
     db.refresh(db_session)
 
     print(f"   ✅ Stopped transfer session ID {db_session.id}")
-    print(f"   ✅ Saved stop_timestamp (UTC): {db_session.stop_timestamp}")
     print(f"   ✅ Status: {db_session.status}")
     print(f"   ✅ Transferred Quantity: {db_session.transferred_quantity} tons")
 
