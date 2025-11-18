@@ -14,6 +14,7 @@ import { calculateMagnetNotifications } from '../utils/notificationChecker';
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024; // Define isTablet for modal width adjustments
 
   const [activeTab, setActiveTab] = useState('routeMappings');
   const [bins, setBins] = useState([]);
@@ -1024,6 +1025,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={startTransferModal}
           onClose={() => setStartTransferModal(false)}
           title="Start Transfer Session"
+          width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
           <ScrollView style={styles.modalContent}>
             <SelectDropdown
@@ -1097,6 +1099,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={viewActiveTransferModal}
           onClose={() => setViewActiveTransferModal(false)}
           title="Active Transfer Session Details"
+          width={isMobile ? '95%' : isTablet ? '80%' : '60%'}
         >
           <ScrollView style={styles.modalContent}>
             {activeTransferSession ? (
@@ -1203,6 +1206,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={divertTransferModal}
           onClose={() => setDivertTransferModal(false)}
           title="Divert Transfer to Next Bin"
+          width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
           <ScrollView style={styles.modalContent}>
             {activeTransferSession && (
@@ -1249,7 +1253,8 @@ export default function PrecleaningBinScreen({ navigation }) {
         <Modal
           visible={stopTransferModal}
           onClose={() => setStopTransferModal(false)}
-          title="Stop Transfer Session"
+          title="Stop Transfer"
+          width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
           <ScrollView style={styles.modalContent}>
             {activeTransferSession && (
@@ -1288,6 +1293,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={modalVisible && activeTab === 'routeMappings'}
           onClose={() => setModalVisible(false)}
           title={editingRouteMapping ? 'Edit Route Mapping' : 'Add Route Mapping'}
+          width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
           <ScrollView style={styles.modalContent}>
             <SelectDropdown
@@ -1369,6 +1375,7 @@ export default function PrecleaningBinScreen({ navigation }) {
           visible={modalVisible && activeTab === 'cleaningRecords'}
           onClose={() => setModalVisible(false)}
           title={editingCleaningRecord ? 'Edit Cleaning Record' : 'Add Cleaning Record'}
+          width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
           <ScrollView style={styles.modalContent}>
             <SelectDropdown
@@ -1491,16 +1498,21 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    marginBottom: 20,
+    gap: 8,
   },
   tabContainerMobile: {
     paddingHorizontal: 8,
   },
   tab: {
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderBottomWidth: 2,
+    paddingHorizontal: 16,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    whiteSpace: 'nowrap', // Ensures tab text stays on one line
+    minWidth: Platform.select({ web: 'auto', default: 100 }),
   },
   tabMobile: {
     paddingHorizontal: 16,
@@ -1510,16 +1522,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
-    color: colors.gray[600],
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   tabTextMobile: {
     fontSize: 14,
   },
   activeTabText: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   headerActions: {
     flexDirection: 'row',
@@ -1527,7 +1540,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalContent: {
-    padding: 20,
+    padding: 16,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -1635,29 +1648,29 @@ const styles = StyleSheet.create({
   },
   // Styles for the new bin transfer history section
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
     marginBottom: 12,
-    textTransform: 'uppercase',
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    flexDirection: 'column',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 4,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
-    fontWeight: '500',
-    flex: 1, // Allow label to take up space
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 14,
     color: colors.textPrimary,
     fontWeight: '500',
-    flex: 1.5, // Allow value to take up more space
   },
   binTransferCard: {
     backgroundColor: '#f9f9f9', // Slightly different background for cards
@@ -1677,5 +1690,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primary,
     marginBottom: 10,
+  },
+  // Moved actionButtonsContainer and related styles here as they were not in original styles
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 20,
+  },
+  actionButton: {
+    flex: 1,
+    minWidth: Platform.select({ web: 120, default: '100%' }),
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divertButton: {
+    backgroundColor: colors.warning,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  stopButton: {
+    backgroundColor: colors.error,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  actionButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
