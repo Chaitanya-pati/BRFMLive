@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWin
 import colors from '../theme/colors';
 import { formatISTDateTime } from '../utils/dateUtils';
 
-export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
+export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onView, viewLabel, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -45,10 +45,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
           <Text style={styles.mobileCardIdText}>#{row.id || rowIndex + 1}</Text>
         </View>
         <View style={styles.mobileCardHeaderActions}>
-          {onEdit && (
+          {onView && (!viewLabel || viewLabel(row)) && (
             <TouchableOpacity
               style={styles.mobileHeaderIconButton}
-              onPress={() => onEdit(row)}
+              onPress={() => onView(row)}
             >
               <EyeIcon />
             </TouchableOpacity>
@@ -91,8 +91,19 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
         })}
       </View>
 
-      {(onEdit || onCustomAction || onDelete) && (
+      {(onView || onEdit || onCustomAction || onDelete) && (
         <View style={styles.mobileCardFooter}>
+          {onView && (!viewLabel || viewLabel(row)) && (
+            <TouchableOpacity
+              style={[styles.mobileActionButton, styles.mobileViewButton]}
+              onPress={() => onView(row)}
+            >
+              <View style={styles.actionButtonContent}>
+                <EyeIcon />
+                <Text style={styles.mobileActionButtonText}>{viewLabel ? viewLabel(row) : 'View'}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
           {onEdit && (
             <TouchableOpacity
               style={[styles.mobileActionButton, styles.mobileEditButton]}
@@ -174,10 +185,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onCu
               })}
               <View style={[styles.cell, { flex: onCustomAction ? 1.5 : 1 }]}>
                 <View style={styles.actionButtons}>
-                  {onEdit && (
+                  {onView && (!viewLabel || viewLabel(row)) && (
                     <TouchableOpacity
                       style={styles.viewButton}
-                      onPress={() => onEdit(row)}
+                      onPress={() => onView(row)}
                     >
                       <EyeIcon />
                     </TouchableOpacity>
@@ -395,6 +406,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 40,
+  },
+  mobileViewButton: {
+    backgroundColor: '#3b82f6',
   },
   mobileEditButton: {
     backgroundColor: colors.info,
