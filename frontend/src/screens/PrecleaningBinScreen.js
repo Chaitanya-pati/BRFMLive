@@ -143,6 +143,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setBins(response.data || []);
     } catch (error) {
       console.error('Error fetching bins:', error);
+      setBins([]);
     }
   };
 
@@ -152,6 +153,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setMagnets(response.data || []);
     } catch (error) {
       console.error('Error fetching magnets:', error);
+      setMagnets([]);
     }
   };
 
@@ -161,6 +163,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setRouteMappings(response.data || []);
     } catch (error) {
       console.error('Error fetching route mappings:', error);
+      setRouteMappings([]);
     }
   };
 
@@ -170,6 +173,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setGodowns(response.data || []);
     } catch (error) {
       console.error('Error fetching godowns:', error);
+      setGodowns([]);
     }
   };
 
@@ -179,6 +183,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setCleaningRecords(response.data || []);
     } catch (error) {
       console.error('Error fetching cleaning records:', error);
+      setCleaningRecords([]);
     }
   };
 
@@ -188,6 +193,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       setTransferSessions(response.data || []);
     } catch (error) {
       console.error('Error fetching transfer sessions:', error);
+      setTransferSessions([]);
     }
   };
 

@@ -28,17 +28,18 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const toastRef = useRef(null);
   const alertRef = useRef(null);
-
-  useEffect(() => {
-    if (toastRef.current) {
-      setToastContainer(toastRef.current);
-    }
-    if (alertRef.current) {
-      setAlertContainer(alertRef.current);
-    }
-  }, []);
+  const [containersReady, setContainersReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
+
+  useEffect(() => {
+    if (toastRef.current && alertRef.current) {
+      setToastContainer(toastRef.current);
+      setAlertContainer(alertRef.current);
+      setContainersReady(true);
+      console.log('✅ Toast and Alert containers initialized');
+    }
+  }, []);
 
   useEffect(() => {
     checkAuthStatus();
@@ -79,9 +80,11 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !containersReady) {
     return (
       <View style={styles.loadingContainer}>
+        <ToastContainer ref={toastRef} />
+        <AlertContainer ref={alertRef} />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
