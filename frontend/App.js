@@ -52,7 +52,7 @@ export default function App() {
 
       if (userData && userData.user_id) {
         console.log('✅ User data found:', { userId: userData.user_id, username: userData.username });
-        
+
         if (activeBranch && activeBranch.id) {
           console.log('✅ Active branch found:', activeBranch.name);
           setInitialRoute('Home');
@@ -88,11 +88,13 @@ export default function App() {
   }
 
   return (
-    <BranchProvider>
-      <NavigationContainer
-        onStateChange={(state) => console.log('Navigation state changed:', state)}
-        onError={(error) => console.error('Navigation error:', error)}
-      >
+    <NavigationContainer
+      onStateChange={(state) => console.log('Navigation state changed:', state)}
+      onError={(error) => console.error('Navigation error:', error)}
+    >
+      <ToastContainer ref={toastRef} />
+      <AlertContainer ref={alertRef} />
+      <BranchProvider>
         <Stack.Navigator
           initialRouteName={initialRoute}
           screenOptions={{
@@ -114,10 +116,8 @@ export default function App() {
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
         </Stack.Navigator>
-        <ToastContainer ref={toastRef} />
-        <AlertContainer ref={alertRef} />
-      </NavigationContainer>
-    </BranchProvider>
+      </BranchProvider>
+    </NavigationContainer>
   );
 }
 

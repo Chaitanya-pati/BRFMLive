@@ -17,7 +17,9 @@ export const showToast = (message, type = 'info', duration = 3000) => {
   if (toastContainer) {
     toastContainer.show(message, type, duration);
   } else {
-    console.warn('Toast container not initialized');
+    console.warn('⚠️ Toast container not initialized. Message:', message);
+    // Fallback to console for debugging
+    console.log(`[${type.toUpperCase()}] ${message}`);
   }
 };
 
@@ -26,7 +28,12 @@ export const showAlert = (title, message, type = 'info', buttons = []) => {
     if (alertContainer) {
       alertContainer.show(title, message, type, buttons, resolve);
     } else {
-      console.warn('Alert container not initialized');
+      console.warn('⚠️ Alert container not initialized');
+      console.log(`[ALERT] ${title}: ${message}`);
+      // Fallback to browser alert in web environment
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(`${title}\n\n${message}`);
+      }
       resolve();
     }
   });
