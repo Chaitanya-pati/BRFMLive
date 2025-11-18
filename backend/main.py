@@ -513,8 +513,7 @@ def create_claim(claim: schemas.ClaimCreate, db: Session = Depends(get_db)):
 @app.get("/api/claims", response_model=List[schemas.ClaimWithLabTest])
 def get_claims(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     query = db.query(models.Claim)
-    if branch_id:
-        query = query.filter(models.Claim.branch_id == branch_id)
+    # Note: Claims don't have branch_id, they are filtered through lab_tests
     claims = query.offset(skip).limit(limit).all()
     return claims
 

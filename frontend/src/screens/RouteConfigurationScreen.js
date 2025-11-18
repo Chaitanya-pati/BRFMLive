@@ -218,10 +218,17 @@ export default function RouteConfigurationScreen({ navigation }) {
 
     for (let i = 0; i < formData.stages.length; i++) {
       const stage = formData.stages[i];
-      if (!stage.component_id) {
+      // Convert component_id to integer if it's a string
+      const componentId = stage.component_id ? parseInt(stage.component_id) : null;
+      
+      if (!componentId) {
         showAlert('Validation Error', `Please select a component for stage ${i + 1}`);
         return;
       }
+      
+      // Update the component_id to be an integer
+      formData.stages[i].component_id = componentId;
+      
       if (stage.component_type === 'magnet') {
         const intervalValue = parseFloat(stage.interval_hours);
         if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {

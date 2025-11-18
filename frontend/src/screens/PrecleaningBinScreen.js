@@ -111,6 +111,60 @@ export default function PrecleaningBinScreen({ navigation }) {
     { label: 'Maintenance', value: 'Maintenance' },
   ];
 
+  const fetchBins = async () => {
+    try {
+      const response = await binApi.getAll();
+      setBins(response.data || []);
+    } catch (error) {
+      console.error('Error fetching bins:', error);
+    }
+  };
+
+  const fetchMagnets = async () => {
+    try {
+      const response = await magnetApi.getAll();
+      setMagnets(response.data || []);
+    } catch (error) {
+      console.error('Error fetching magnets:', error);
+    }
+  };
+
+  const fetchRouteMappings = async () => {
+    try {
+      const response = await routeMagnetMappingApi.getAll();
+      setRouteMappings(response.data || []);
+    } catch (error) {
+      console.error('Error fetching route mappings:', error);
+    }
+  };
+
+  const fetchGodowns = async () => {
+    try {
+      const response = await godownApi.getAll();
+      setGodowns(response.data || []);
+    } catch (error) {
+      console.error('Error fetching godowns:', error);
+    }
+  };
+
+  const fetchCleaningRecords = async () => {
+    try {
+      const response = await magnetCleaningRecordApi.getAll();
+      setCleaningRecords(response.data || []);
+    } catch (error) {
+      console.error('Error fetching cleaning records:', error);
+    }
+  };
+
+  const fetchTransferSessions = async () => {
+    try {
+      const response = await transferSessionApi.getAll();
+      setTransferSessions(response.data || []);
+    } catch (error) {
+      console.error('Error fetching transfer sessions:', error);
+    }
+  };
+
   useEffect(() => {
     fetchBins();
     fetchMagnets();
@@ -850,6 +904,170 @@ export default function PrecleaningBinScreen({ navigation }) {
       render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
     },
   ];
+
+  const handleAddRouteMapping = () => {
+    setEditingRouteMapping(null);
+    setRouteMappingFormData({
+      magnet_id: '',
+      source_type: 'godown',
+      source_godown_id: '',
+      source_bin_id: '',
+      destination_bin_id: '',
+      cleaning_interval_hours: '300',
+    });
+    setModalVisible(true);
+  };
+
+  const handleEditRouteMapping = (mapping) => {
+    setEditingRouteMapping(mapping);
+    setRouteMappingFormData({
+      magnet_id: String(mapping.magnet_id),
+      source_type: mapping.source_godown_id ? 'godown' : 'bin',
+      source_godown_id: mapping.source_godown_id ? String(mapping.source_godown_id) : '',
+      source_bin_id: mapping.source_bin_id ? String(mapping.source_bin_id) : '',
+      destination_bin_id: String(mapping.destination_bin_id),
+      cleaning_interval_hours: String(mapping.cleaning_interval_hours || '300'),
+    });
+    setModalVisible(true);
+  };
+
+  const handleStartTransfer = () => {
+    setEditingTransferSession(null);
+    setTransferSessionFormData({
+      source_godown_id: '',
+      destination_bin_id: '',
+      magnet_id: '',
+      notes: '',
+    });
+    setModalVisible(true);
+  };
+
+  const handleAddCleaningRecord = () => {
+    setEditingCleaningRecord(null);
+    setCleaningRecordFormData({
+      magnet_id: '',
+      transfer_session_id: '',
+      cleaning_timestamp: new Date().toISOString(),
+      notes: '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true);
+  };
+
+  const handleEditCleaningRecord = (record) => {
+    setEditingCleaningRecord(record);
+    setCleaningRecordFormData({
+      magnet_id: String(record.magnet_id),
+      transfer_session_id: record.transfer_session_id ? String(record.transfer_session_id) : '',
+      cleaning_timestamp: record.cleaning_timestamp,
+      notes: record.notes || '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true);
+  };
+
+  const handleDeleteCleaningRecord = async (record) => {
+    const confirmDelete = Platform.OS === 'web'
+      ? window.confirm(`Are you sure you want to delete this cleaning record?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to delete this cleaning record?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      await magnetCleaningRecordApi.delete(record.id);
+      await fetchCleaningRecords();
+
+      if (Platform.OS === 'web') {
+        alert('Cleaning record deleted successfully');
+      } else {
+        Alert.alert('Success', 'Cleaning record deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting cleaning record:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
+
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitCleaningRecord = async () => {
+    if (!cleaningRecordFormData.magnet_id) {
+      Alert.alert('Error', 'Please select a magnet');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const formDataToSend = new FormData();
+      formDataToSend.append('magnet_id', cleaningRecordFormData.magnet_id);
+
+      if (cleaningRecordFormData.transfer_session_id) {
+        formDataToSend.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
+      }
+
+      if (cleaningRecordFormData.notes) {
+        formDataToSend.append('notes', cleaningRecordFormData.notes);
+      }
+
+      if (cleaningRecordFormData.before_cleaning_photo) {
+        formDataToSend.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
+      }
+
+      if (cleaningRecordFormData.after_cleaning_photo) {
+        formDataToSend.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
+      }
+
+      if (editingCleaningRecord) {
+        await magnetCleaningRecordApi.update(editingCleaningRecord.id, formDataToSend);
+        Alert.alert('Success', 'Cleaning record updated successfully');
+      } else {
+        await magnetCleaningRecordApi.create(formDataToSend);
+        Alert.alert('Success', 'Cleaning record added successfully');
+      }
+
+      setModalVisible(false);
+      await fetchCleaningRecords();
+    } catch (error) {
+      console.error('Error saving cleaning record:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitStopTransfer = async () => {
+    if (!stopTransferFormData.transferred_quantity) {
+      Alert.alert('Error', 'Please enter the transferred quantity');
+      return;
+    }
+
+    const quantity = parseFloat(stopTransferFormData.transferred_quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid transferred quantity');
+      return;
+    }
+
+    await handleStopTransferSession(editingTransferSession.id);
+  };
+
 
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
