@@ -2,7 +2,7 @@
 """add_bin_type_column
 
 Revision ID: add_bin_type_001
-Revises: 
+Revises: e4337eb8f37a
 Create Date: 2025-01-18
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_bin_type_001'
-down_revision = None
+down_revision = 'e4337eb8f37a'
 branch_labels = None
 depends_on = None
 
