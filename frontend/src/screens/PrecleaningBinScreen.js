@@ -27,10 +27,17 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [editingMagnet, setEditingMagnet] = useState(null);
   const [editingRouteMapping, setEditingRouteMapping] = useState(null);
   const [editingCleaningRecord, setEditingCleaningRecord] = useState(null);
-  const [editingTransferSession, setEditingTransferSession] = useState(null);
-  const [stopTransferModal, setStopTransferModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastAlertTimes, setLastAlertTimes] = useState({});
+
+  // New state for transfer session flow
+  const [startTransferModal, setStartTransferModal] = useState(false);
+  const [viewActiveTransferModal, setViewActiveTransferModal] = useState(false);
+  const [divertTransferModal, setDivertTransferModal] = useState(false);
+  const [stopTransferModal, setStopTransferModal] = useState(false);
+  const [activeTransferSession, setActiveTransferSession] = useState(null);
+  const [selectedSourceGodown, setSelectedSourceGodown] = useState('');
+  const [availableDestinationBins, setAvailableDestinationBins] = useState([]);
 
   const cleaningRecordsRef = React.useRef(cleaningRecords);
   const transferSessionsRef = React.useRef(transferSessions);
@@ -78,11 +85,11 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const [routeMappingFormData, setRouteMappingFormData] = useState({
     magnet_id: '',
-    source_type: 'godown', // 'godown' or 'bin'
+    source_type: 'godown',
     source_godown_id: '',
     source_bin_id: '',
     destination_bin_id: '',
-    cleaning_interval_hours: '300', // in seconds (300 = 5 minutes)
+    cleaning_interval_hours: '300',
   });
 
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
@@ -97,8 +104,6 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [transferSessionFormData, setTransferSessionFormData] = useState({
     source_godown_id: '',
     destination_bin_id: '',
-    magnet_id: '',
-    notes: '',
   });
 
   const [stopTransferFormData, setStopTransferFormData] = useState({
@@ -109,10 +114,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     new_bin_id: '',
     quantity_transferred: '',
   });
-
-  const [divertTransferModal, setDivertTransferModal] = useState(false);
-  const [viewActiveTransferModal, setViewActiveTransferModal] = useState(false);
-  const [activeTransferSession, setActiveTransferSession] = useState(null);
 
   const statusOptions = [
     { label: 'Active', value: 'Active' },
@@ -191,32 +192,55 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   }, [activeTab]);
 
+  // Sort bins by last digit sequentially
+  const getSortedBinsByLastDigit = (binsList) => {
+    return [...binsList].sort((a, b) => {
+      const lastDigitA = parseInt(a.bin_number.slice(-1)) || 0;
+      const lastDigitB = parseInt(b.bin_number.slice(-1)) || 0;
+      return lastDigitA - lastDigitB;
+    });
+  };
+
+  // Update available bins when source godown changes
+  useEffect(() => {
+    if (selectedSourceGodown) {
+      const godownId = parseInt(selectedSourceGodown);
+      const mappingsForGodown = routeMappings.filter(
+        mapping => mapping.source_godown_id === godownId
+      );
+
+      const binIds = mappingsForGodown.map(m => m.destination_bin_id);
+      const availableBins = bins.filter(b => binIds.includes(b.id));
+      const sortedBins = getSortedBinsByLastDigit(availableBins);
+
+      setAvailableDestinationBins(sortedBins);
+    } else {
+      setAvailableDestinationBins([]);
+    }
+  }, [selectedSourceGodown, routeMappings, bins]);
+
   // Store interval IDs for each active transfer session
   const notificationIntervalsRef = useRef({});
 
   const startNotificationCheck = (sessionId, cleaningIntervalSeconds) => {
-    // Clear any existing interval for this session
     if (notificationIntervalsRef.current[sessionId]) {
       clearInterval(notificationIntervalsRef.current[sessionId]);
     }
 
-    // Start checking at the cleaning interval rate
     notificationIntervalsRef.current[sessionId] = setInterval(() => {
       const transferSessions = transferSessionsRef.current;
       const session = transferSessions.find(s => s.id === sessionId);
 
       if (!session || session.status?.toLowerCase() !== 'active' || session.stop_timestamp) {
-        // Session ended, stop checking
         clearInterval(notificationIntervalsRef.current[sessionId]);
         delete notificationIntervalsRef.current[sessionId];
         return;
       }
 
-      // Check if cleaning is needed
       const godowns = godownsRef.current;
       const bins = binsRef.current;
       const magnets = magnetsRef.current;
-      const routeMappings = routeMappingsRef.current;
+      const routeMappings = routeMappingsRef.current; // Corrected from routeMappings.current
       const cleaningRecords = cleaningRecordsRef.current;
 
       const now = new Date();
@@ -243,7 +267,8 @@ export default function PrecleaningBinScreen({ navigation }) {
       if (!cleanedInCurrentInterval) {
         const magnet = magnets.find((m) => m.id === session.magnet_id);
         const godown = godowns.find((g) => g.id === session.source_godown_id);
-        const bin = bins.find((b) => b.id === session.destination_bin_id);
+        // Use current_bin_id if available, otherwise destination_bin_id
+        const bin = bins.find((b) => b.id === session.current_bin_id || b.id === session.destination_bin_id);
 
         if (magnet && godown && bin) {
           const intervalMinutes = Math.floor(cleaningIntervalSeconds / 60);
@@ -269,7 +294,6 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   };
 
-  // Clean up all intervals on unmount
   useEffect(() => {
     return () => {
       Object.keys(notificationIntervalsRef.current).forEach(sessionId => {
@@ -278,49 +302,41 @@ export default function PrecleaningBinScreen({ navigation }) {
     };
   }, []);
 
-  const handleSubmitTransferSession = async () => {
-    if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id || !transferSessionFormData.magnet_id) {
+  const handleStartTransfer = () => {
+    setSelectedSourceGodown('');
+    setTransferSessionFormData({
+      source_godown_id: '',
+      destination_bin_id: '',
+    });
+    setStartTransferModal(true);
+  };
+
+  const handleSubmitStartTransfer = async () => {
+    if (!transferSessionFormData.source_godown_id || !transferSessionFormData.destination_bin_id) {
       if (Platform.OS === 'web') {
-        alert('⚠️ Missing Information\n\nPlease select:\n• Source Godown\n• Destination Bin\n• Magnet\n\nThese are required to start the transfer.');
+        alert('⚠️ Missing Information\n\nPlease select:\n• Source Godown\n• Destination Bin');
       } else {
-        Alert.alert(
-          '⚠️ Missing Information',
-          'Please select source godown, destination bin, and magnet to start the transfer.',
-          [{ text: 'OK', style: 'default' }]
-        );
+        Alert.alert('⚠️ Missing Information', 'Please select source godown and destination bin.');
       }
       return;
     }
 
-    const selectedMagnetId = parseInt(transferSessionFormData.magnet_id);
+    // Find the route mapping based on source godown and destination bin
     const selectedRouteMapping = routeMappings.find(
-      mapping => mapping.magnet_id === selectedMagnetId &&
-                 mapping.source_godown_id === (transferSessionFormData.source_godown_id ? parseInt(transferSessionFormData.source_godown_id) : null) &&
-                 mapping.source_bin_id === (transferSessionFormData.source_type === 'bin' ? parseInt(transferSessionFormData.source_bin_id) : null) &&
+      mapping => mapping.source_godown_id === parseInt(transferSessionFormData.source_godown_id) &&
                  mapping.destination_bin_id === parseInt(transferSessionFormData.destination_bin_id)
     );
 
     if (!selectedRouteMapping) {
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Selected Godown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Selected Bin';
-      const magnetName = magnets.find(m => m.id === selectedMagnetId)?.name || 'Selected Magnet';
 
-      const errorMessage = `No route mapping found for:\n${sourceName} → Bin ${destBin} (with Magnet: ${magnetName})\n\nPlease configure a route mapping first in the "Route Mappings" tab.`;
+      const errorMessage = `No route mapping found for:\n${sourceName} → Bin ${destBin}\n\nPlease configure a route mapping first in the "Route Mappings" tab.`;
 
       if (Platform.OS === 'web') {
         alert(`⚠️ Route Not Found\n\n${errorMessage}`);
       } else {
-        Alert.alert('⚠️ Route Not Found', errorMessage, [{ text: 'OK', style: 'default' }]);
-      }
-      return;
-    }
-
-    const cleaningIntervalSeconds = parseInt(selectedRouteMapping.cleaning_interval_hours);
-    if (isNaN(cleaningIntervalSeconds) || cleaningIntervalSeconds <= 0) {
-      if (Platform.OS === 'web') {
-        alert('⚠️ Invalid Cleaning Interval\n\nThe selected route mapping has an invalid cleaning interval. Please update the route mapping.');
-      } else {
-        Alert.alert('⚠️ Invalid Cleaning Interval', 'The selected route mapping has an invalid cleaning interval. Please update the route mapping.', [{ text: 'OK', style: 'default' }]);
+        Alert.alert('⚠️ Route Not Found', errorMessage);
       }
       return;
     }
@@ -328,49 +344,38 @@ export default function PrecleaningBinScreen({ navigation }) {
     const payload = {
       source_godown_id: parseInt(transferSessionFormData.source_godown_id),
       destination_bin_id: parseInt(transferSessionFormData.destination_bin_id),
-      magnet_id: selectedMagnetId,
-      cleaning_interval_hours: cleaningIntervalSeconds, // Store the interval in seconds
-      notes: transferSessionFormData.notes,
+      magnet_id: selectedRouteMapping.magnet_id,
+      cleaning_interval_hours: selectedRouteMapping.cleaning_interval_hours,
+      notes: '' // Notes are not part of this initial start flow
     };
 
     try {
       setLoading(true);
       const response = await transferSessionApi.start(payload);
-
       const data = response.data;
-      console.log('✅ Transfer session started:', data);
 
-      // Start notification check for this session
-      startNotificationCheck(data.id, cleaningIntervalSeconds);
+      // Start notification check for the new session
+      startNotificationCheck(data.id, selectedRouteMapping.cleaning_interval_hours);
 
+      // Prepare success message details
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
       const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
-      const intervalMin = Math.floor(cleaningIntervalSeconds / 60);
-      const intervalSec = cleaningIntervalSeconds % 60;
+      const intervalMin = Math.floor(selectedRouteMapping.cleaning_interval_hours / 60);
+      const intervalSec = selectedRouteMapping.cleaning_interval_hours % 60;
       const intervalDisplay = intervalMin > 0 ? `${intervalMin} minute${intervalMin > 1 ? 's' : ''}` : `${intervalSec} seconds`;
 
+      // Show success alert
       if (Platform.OS === 'web') {
-        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\n🔔 First notification will appear in approximately ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
+        alert(`✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n🧲 Magnet: ${magnetName}\n⏱️ Cleaning Interval: ${intervalDisplay}\n\nThe system will remind you to clean the magnet at regular intervals during the transfer.`);
       } else {
-        Alert.alert(
-          '✅ Transfer Started',
-          `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}\n\nFirst notification in ${intervalDisplay}`,
-          [{ text: 'OK', style: 'default' }]
-        );
+        Alert.alert('✅ Transfer Started', `Route: ${sourceName} → Bin ${destBin}\nMagnet: ${magnetName}\nCleaning Interval: ${intervalDisplay}`);
       }
 
-      setTransferSessionFormData({
-        source_godown_id: '',
-        destination_bin_id: '',
-        magnet_id: '',
-        notes: '',
-      });
-      setModalVisible(false);
-      await fetchTransferSessions(); // Refresh the list
+      setStartTransferModal(false); // Close the start transfer modal
+      await fetchTransferSessions(); // Refresh the list of transfer sessions
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
-      console.error('Error details:', error.response?.data);
 
       let errorMessage = 'An unexpected error occurred while starting the transfer.';
       let errorTitle = '❌ Transfer Failed';
@@ -379,66 +384,128 @@ export default function PrecleaningBinScreen({ navigation }) {
         const detail = error.response?.data?.detail || '';
         if (detail.includes('No route mapping found')) {
           errorTitle = '⚠️ Route Not Found';
-          errorMessage = `No route mapping exists for the selected source and destination.\n\nTo fix this, please go to the "Route Mappings" tab and create a mapping that includes the selected magnet, source, and destination.`;
-        } else if (detail.includes('godown not found')) {
-          errorTitle = '❌ Source Godown Not Found';
-          errorMessage = 'The selected source godown no longer exists. Please refresh and try again.';
-        } else if (detail.includes('bin not found')) {
-          errorTitle = '❌ Destination Bin Not Found';
-          errorMessage = 'The selected destination bin no longer exists. Please refresh and try again.';
+          errorMessage = `No route mapping exists for the selected source and destination.\n\nPlease go to the "Route Mappings" tab and create a mapping.`;
         } else {
-          errorMessage = detail;
+          errorMessage = detail; // Use the specific error detail if available
         }
       } else if (error.response?.status === 400) {
         errorTitle = '⚠️ Invalid Request';
         errorMessage = error.response?.data?.detail || 'Please check your selections and try again.';
       } else if (error.message === 'Network Error' || !error.response) {
         errorTitle = '🔌 Connection Error';
-        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+        errorMessage = 'Unable to connect to the server. Please check your internet connection.';
       } else {
         errorMessage = error.response?.data?.detail || errorMessage;
       }
 
+      // Show error alert
       if (Platform.OS === 'web') {
         alert(`${errorTitle}\n\n${errorMessage}`);
       } else {
-        Alert.alert(errorTitle, errorMessage, [{ text: 'OK', style: 'default' }]);
+        Alert.alert(errorTitle, errorMessage);
+      }
+    } finally {
+      setLoading(false); // Ensure loading indicator is turned off
+    }
+  };
+
+  const handleViewActiveTransfer = (session) => {
+    setActiveTransferSession(session);
+    // Clear previous form data for divert and stop modals
+    setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
+    setStopTransferFormData({ transferred_quantity: '' });
+    setViewActiveTransferModal(true); // Show the view active transfer modal
+  };
+
+  const handleDivertTransfer = async () => {
+    if (!divertTransferFormData.new_bin_id || !divertTransferFormData.quantity_transferred) {
+      Alert.alert('Error', 'Please fill in all required fields (New Bin and Quantity Transferred)');
+      return;
+    }
+
+    const quantity = parseFloat(divertTransferFormData.quantity_transferred);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid quantity transferred');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await transferSessionApi.divert(activeTransferSession.id, {
+        new_bin_id: parseInt(divertTransferFormData.new_bin_id),
+        quantity_transferred: quantity,
+      });
+
+      // Show success message
+      if (Platform.OS === 'web') {
+        alert('✅ Transfer Diverted Successfully!');
+      } else {
+        Alert.alert('Success', 'Transfer diverted successfully!');
+      }
+
+      // Close modals and reset state
+      setDivertTransferModal(false);
+      setViewActiveTransferModal(false);
+      setActiveTransferSession(null);
+      setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
+      
+      // Refresh data
+      await fetchTransferSessions();
+      await fetchBins();
+      await fetchGodowns();
+    } catch (error) {
+      console.error('Error diverting transfer:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to divert transfer';
+
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errorMessage}`);
+      } else {
+        Alert.alert('Error', errorMessage);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStopTransferSession = async (sessionId) => {
+  const handleStopTransfer = async () => {
+    if (!stopTransferFormData.transferred_quantity) {
+      Alert.alert('Error', 'Please enter the transferred quantity');
+      return;
+    }
+
+    const quantity = parseFloat(stopTransferFormData.transferred_quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid transferred quantity');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await transferSessionApi.stop(sessionId);
+      // Call the stop API with the session ID and the transferred quantity
+      await transferSessionApi.stop(activeTransferSession.id, quantity);
 
-      if (!response.ok) throw new Error('Failed to stop transfer session');
+      // Stop any ongoing notification checks for this session
+      stopNotificationCheck(activeTransferSession.id);
 
-      // Stop notification check for this session
-      stopNotificationCheck(sessionId);
+      // Prepare success message details
+      const sourceName = activeTransferSession.source_godown?.name || 'Unknown';
+      // Determine the correct bin number to display in the success message
+      const destBin = bins.find(b => b.id === activeTransferSession.current_bin_id)?.bin_number || activeTransferSession.destination_bin?.bin_number || 'Unknown';
 
-      const sourceName = editingTransferSession.source_godown?.name || 'Unknown';
-      const destBin = editingTransferSession.destination_bin?.bin_number || 'Unknown';
-
+      // Show success message
       if (Platform.OS === 'web') {
         alert(`✅ Transfer Completed Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}\n\nGodown and bin quantities have been updated.`);
       } else {
-        Alert.alert(
-          '✅ Transfer Completed',
-          `Transfer from ${sourceName} to Bin ${destBin} completed.\n\nQuantities have been updated.`,
-          [{ text: 'OK', style: 'default' }]
-        );
+        Alert.alert('✅ Transfer Completed', `Transfer completed.\n\nQuantities have been updated.`);
       }
 
+      // Close modals and reset state
       setStopTransferModal(false);
-      setLastAlertTimes(prev => {
-        const updated = { ...prev };
-        delete updated[sessionId];
-        return updated;
-      });
-      setEditingTransferSession(null);
+      setViewActiveTransferModal(false);
+      setActiveTransferSession(null);
+      setStopTransferFormData({ transferred_quantity: '' });
+      
+      // Refresh data
       await fetchTransferSessions();
       await fetchBins();
       await fetchGodowns();
@@ -450,27 +517,22 @@ export default function PrecleaningBinScreen({ navigation }) {
 
       if (error.response?.status === 404) {
         errorTitle = '❌ Transfer Not Found';
-        errorMessage = 'This transfer session no longer exists. It may have already been stopped.';
+        errorMessage = 'This transfer session no longer exists.';
       } else if (error.response?.status === 400) {
-        const detail = error.response?.data?.detail || '';
-        if (detail.includes('not active')) {
-          errorTitle = '⚠️ Transfer Already Stopped';
-          errorMessage = 'This transfer session has already been stopped.';
-        } else {
-          errorTitle = '⚠️ Invalid Request';
-          errorMessage = detail || 'Please check the transferred quantity and try again.';
-        }
+        errorTitle = '⚠️ Invalid Request';
+        errorMessage = error.response?.data?.detail || 'Please check the transferred quantity.';
       } else if (error.message === 'Network Error' || !error.response) {
         errorTitle = '🔌 Connection Error';
-        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+        errorMessage = 'Unable to connect to the server.';
       } else {
         errorMessage = error.response?.data?.detail || errorMessage;
       }
 
+      // Show error alert
       if (Platform.OS === 'web') {
         alert(`${errorTitle}\n\n${errorMessage}`);
       } else {
-        Alert.alert(errorTitle, errorMessage, [{ text: 'OK', style: 'default' }]);
+        Alert.alert(errorTitle, errorMessage);
       }
     } finally {
       setLoading(false);
@@ -491,15 +553,15 @@ export default function PrecleaningBinScreen({ navigation }) {
           );
         });
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) return; // Exit if user cancels deletion
 
     try {
       setLoading(true);
-      await transferSessionApi.delete(session.id);
-      // Stop any active notification checks for this session before deleting
-      stopNotificationCheck(session.id);
-      await fetchTransferSessions();
+      await transferSessionApi.delete(session.id); // Call the delete API
+      stopNotificationCheck(session.id); // Stop any active notification checks
+      await fetchTransferSessions(); // Refresh the list
 
+      // Show success message
       if (Platform.OS === 'web') {
         alert('Transfer session deleted successfully');
       } else {
@@ -509,6 +571,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       console.error('Error deleting transfer session:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete transfer session';
 
+      // Show error message
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -533,13 +596,14 @@ export default function PrecleaningBinScreen({ navigation }) {
           );
         });
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) return; // Exit if user cancels deletion
 
     try {
       setLoading(true);
-      await routeMagnetMappingApi.delete(mapping.id);
-      await fetchRouteMappings();
+      await routeMagnetMappingApi.delete(mapping.id); // Call the delete API
+      await fetchRouteMappings(); // Refresh the list
 
+      // Show success message
       if (Platform.OS === 'web') {
         alert('Route mapping deleted successfully');
       } else {
@@ -549,6 +613,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       console.error('Error deleting route mapping:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete route mapping';
 
+      // Show error message
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -564,15 +629,15 @@ export default function PrecleaningBinScreen({ navigation }) {
       ? routeMappingFormData.source_godown_id
       : routeMappingFormData.source_bin_id;
 
-    // Validate cleaning_interval_hours as a number
+    // Validate cleaning interval
     const cleaningInterval = parseInt(routeMappingFormData.cleaning_interval_hours);
     if (isNaN(cleaningInterval) || cleaningInterval <= 0) {
       Alert.alert('Validation Error', 'Please enter a valid positive number for the Cleaning Interval (in seconds).');
       return;
     }
 
-    if (!routeMappingFormData.magnet_id || !sourceId ||
-        !routeMappingFormData.destination_bin_id) {
+    // Check for required fields
+    if (!routeMappingFormData.magnet_id || !sourceId || !routeMappingFormData.destination_bin_id) {
       Alert.alert('Error', 'Please fill in all required fields (Magnet, Source, Destination)');
       return;
     }
@@ -585,25 +650,27 @@ export default function PrecleaningBinScreen({ navigation }) {
         cleaning_interval_hours: cleaningInterval, // Use the validated integer value
       };
 
-      // Add the appropriate source ID
+      // Add source ID based on source type
       if (routeMappingFormData.source_type === 'godown') {
         mappingData.source_godown_id = parseInt(routeMappingFormData.source_godown_id);
-        mappingData.source_bin_id = null;
+        mappingData.source_bin_id = null; // Ensure source_bin_id is null for godown source
       } else {
         mappingData.source_bin_id = parseInt(routeMappingFormData.source_bin_id);
-        mappingData.source_godown_id = null;
+        mappingData.source_godown_id = null; // Ensure source_godown_id is null for bin source
       }
 
       if (editingRouteMapping) {
+        // Update existing route mapping
         await routeMagnetMappingApi.update(editingRouteMapping.id, mappingData);
         Alert.alert('Success', 'Route mapping updated successfully');
       } else {
+        // Create new route mapping
         await routeMagnetMappingApi.create(mappingData);
         Alert.alert('Success', 'Route mapping added successfully');
       }
 
-      setModalVisible(false);
-      await fetchRouteMappings();
+      setModalVisible(false); // Close the modal
+      await fetchRouteMappings(); // Refresh the list
     } catch (error) {
       console.error('Error saving route mapping:', error);
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save route mapping');
@@ -612,36 +679,69 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   };
 
-  const handleEditBin = (bin) => {
-    setEditingBin(bin);
-    setEditingMagnet(null);
-    setBinFormData({
-      bin_number: bin.bin_number,
-      capacity: String(bin.capacity),
-      current_quantity: String(bin.current_quantity || 0),
-      status: bin.status,
+  const handleAddRouteMapping = () => {
+    setEditingRouteMapping(null); // Ensure no mapping is being edited
+    // Reset form data for a new mapping
+    setRouteMappingFormData({
+      magnet_id: '',
+      source_type: 'godown', // Default to godown
+      source_godown_id: '',
+      source_bin_id: '',
+      destination_bin_id: '',
+      cleaning_interval_hours: '300', // Default cleaning interval
     });
-    setModalVisible(true);
+    setModalVisible(true); // Show the modal
   };
 
-  const handleEditMagnet = (magnet) => {
-    setEditingMagnet(magnet);
-    setEditingBin(null);
-    setMagnetFormData({
-      name: magnet.name,
-      description: magnet.description || '',
-      status: magnet.status,
+  const handleEditRouteMapping = (mapping) => {
+    setEditingRouteMapping(mapping); // Set the mapping to be edited
+    // Populate form data with the existing mapping details
+    setRouteMappingFormData({
+      magnet_id: String(mapping.magnet_id),
+      source_type: mapping.source_godown_id ? 'godown' : 'bin', // Determine source type
+      source_godown_id: mapping.source_godown_id ? String(mapping.source_godown_id) : '',
+      source_bin_id: mapping.source_bin_id ? String(mapping.source_bin_id) : '',
+      destination_bin_id: String(mapping.destination_bin_id),
+      cleaning_interval_hours: String(mapping.cleaning_interval_hours || '300'), // Use existing or default
     });
-    setModalVisible(true);
+    setModalVisible(true); // Show the modal
   };
 
-  const handleDeleteBin = async (bin) => {
+  const handleAddCleaningRecord = () => {
+    setEditingCleaningRecord(null); // Ensure no record is being edited
+    // Reset form data for a new cleaning record
+    setCleaningRecordFormData({
+      magnet_id: '',
+      transfer_session_id: '',
+      cleaning_timestamp: new Date().toISOString(), // Default to current time
+      notes: '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true); // Show the modal
+  };
+
+  const handleEditCleaningRecord = (record) => {
+    setEditingCleaningRecord(record); // Set the record to be edited
+    // Populate form data with the existing record details
+    setCleaningRecordFormData({
+      magnet_id: String(record.magnet_id),
+      transfer_session_id: record.transfer_session_id ? String(record.transfer_session_id) : '',
+      cleaning_timestamp: record.cleaning_timestamp,
+      notes: record.notes || '',
+      before_cleaning_photo: null, // Reset photo fields on edit to allow re-upload
+      after_cleaning_photo: null,
+    });
+    setModalVisible(true); // Show the modal
+  };
+
+  const handleDeleteCleaningRecord = async (record) => {
     const confirmDelete = Platform.OS === 'web'
-      ? window.confirm(`Are you sure you want to delete bin ${bin.bin_number}?`)
+      ? window.confirm(`Are you sure you want to delete this cleaning record?`)
       : await new Promise((resolve) => {
           Alert.alert(
             'Confirm Delete',
-            `Are you sure you want to delete bin ${bin.bin_number}?`,
+            `Are you sure you want to delete this cleaning record?`,
             [
               { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
               { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
@@ -649,22 +749,24 @@ export default function PrecleaningBinScreen({ navigation }) {
           );
         });
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) return; // Exit if user cancels deletion
 
     try {
       setLoading(true);
-      await binApi.delete(bin.id);
-      await fetchBins();
+      await magnetCleaningRecordApi.delete(record.id); // Call the delete API
+      await fetchCleaningRecords(); // Refresh the list
 
+      // Show success message
       if (Platform.OS === 'web') {
-        alert('Bin deleted successfully');
+        alert('Cleaning record deleted successfully');
       } else {
-        Alert.alert('Success', 'Bin deleted successfully');
+        Alert.alert('Success', 'Cleaning record deleted successfully');
       }
     } catch (error) {
-      console.error('Error deleting bin:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete bin';
+      console.error('Error deleting cleaning record:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
 
+      // Show error message
       if (Platform.OS === 'web') {
         alert(`Error: ${errorMessage}`);
       } else {
@@ -675,136 +777,53 @@ export default function PrecleaningBinScreen({ navigation }) {
     }
   };
 
-  const handleDeleteMagnet = async (magnet) => {
-    const confirmDelete = Platform.OS === 'web'
-      ? window.confirm(`Are you sure you want to delete magnet ${magnet.name}?`)
-      : await new Promise((resolve) => {
-          Alert.alert(
-            'Confirm Delete',
-            `Are you sure you want to delete magnet ${magnet.name}?`,
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
-            ]
-          );
-        });
-
-    if (!confirmDelete) return;
-
-    try {
-      setLoading(true);
-      await magnetApi.delete(magnet.id);
-      await fetchMagnets();
-
-      if (Platform.OS === 'web') {
-        alert('Magnet deleted successfully');
-      } else {
-        Alert.alert('Success', 'Magnet deleted successfully');
-      }
-    } catch (error) {
-      console.error('Error deleting magnet:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete magnet';
-
-      if (Platform.OS === 'web') {
-        alert(`Error: ${errorMessage}`);
-      } else {
-        Alert.alert('Error', errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitBin = async () => {
-    if (!binFormData.bin_number || !binFormData.capacity) {
-      Alert.alert('Error', 'Please fill in all required fields (Bin Number and Capacity)');
-      return;
-    }
-
-    const capacity = parseFloat(binFormData.capacity);
-    const currentQuantity = binFormData.current_quantity ? parseFloat(binFormData.current_quantity) : 0.0;
-
-    if (isNaN(capacity) || capacity <= 0) {
-      Alert.alert('Error', 'Please enter a valid capacity');
-      return;
-    }
-
-    if (isNaN(currentQuantity) || currentQuantity < 0) {
-      Alert.alert('Error', 'Please enter a valid current quantity');
+  const handleSubmitCleaningRecord = async () => {
+    if (!cleaningRecordFormData.magnet_id) {
+      Alert.alert('Error', 'Please select a magnet');
       return;
     }
 
     try {
       setLoading(true);
-      const binData = {
-        bin_number: binFormData.bin_number.trim(),
-        capacity: capacity,
-        current_quantity: currentQuantity,
-        status: binFormData.status,
-      };
+      const formDataToSend = new FormData(); // Use FormData for file uploads
+      formDataToSend.append('magnet_id', cleaningRecordFormData.magnet_id);
 
-      if (editingBin) {
-        await binApi.update(editingBin.id, binData);
-        Alert.alert('Success', 'Bin updated successfully');
-      } else {
-        await binApi.create(binData);
-        Alert.alert('Success', 'Bin added successfully');
+      if (cleaningRecordFormData.transfer_session_id) {
+        formDataToSend.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
       }
 
-      setModalVisible(false);
-      await fetchBins();
+      if (cleaningRecordFormData.notes) {
+        formDataToSend.append('notes', cleaningRecordFormData.notes);
+      }
+
+      // Append photos if they exist
+      if (cleaningRecordFormData.before_cleaning_photo) {
+        formDataToSend.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
+      }
+
+      if (cleaningRecordFormData.after_cleaning_photo) {
+        formDataToSend.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
+      }
+
+      if (editingCleaningRecord) {
+        // Update existing cleaning record
+        await magnetCleaningRecordApi.update(editingCleaningRecord.id, formDataToSend);
+        Alert.alert('Success', 'Cleaning record updated successfully');
+      } else {
+        // Create new cleaning record
+        await magnetCleaningRecordApi.create(formDataToSend);
+        Alert.alert('Success', 'Cleaning record added successfully');
+      }
+
+      setModalVisible(false); // Close the modal
+      await fetchCleaningRecords(); // Refresh the list
     } catch (error) {
-      console.error('Error saving bin:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to save bin');
+      console.error('Error saving cleaning record:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleSubmitMagnet = async () => {
-    if (!magnetFormData.name) {
-      Alert.alert('Error', 'Please fill in the magnet name');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const magnetData = {
-        name: magnetFormData.name.trim(),
-        description: magnetFormData.description.trim(),
-        status: magnetFormData.status,
-      };
-
-      if (editingMagnet) {
-        await magnetApi.update(editingMagnet.id, magnetData);
-        Alert.alert('Success', 'Magnet updated successfully');
-      } else {
-        await magnetApi.create(magnetData);
-        Alert.alert('Success', 'Magnet added successfully');
-      }
-
-      setModalVisible(false);
-      await fetchMagnets();
-    } catch (error) {
-      console.error('Error saving magnet:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to save magnet');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const binColumns = [
-    { field: 'bin_number', label: 'Bin Number', flex: 1 },
-    { field: 'capacity', label: 'Capacity (tons)', flex: 1 },
-    { field: 'current_quantity', label: 'Current Qty (tons)', flex: 1 },
-    { field: 'status', label: 'Status', flex: 1 },
-  ];
-
-  const magnetColumns = [
-    { field: 'name', label: 'Magnet Name', flex: 2 },
-    { field: 'description', label: 'Description', flex: 3 },
-    { field: 'status', label: 'Status', flex: 1 },
-  ];
 
   const routeMappingColumns = [
     { field: 'id', label: 'ID', flex: 0.4 },
@@ -878,10 +897,13 @@ export default function PrecleaningBinScreen({ navigation }) {
       render: (val) => val?.name || '-'
     },
     {
-      field: 'destination_bin',
-      label: 'Destination Bin',
+      field: 'current_bin', // Display current bin if available, otherwise destination bin
+      label: 'Current Bin',
       flex: 1.2,
-      render: (val) => val?.bin_number || '-'
+      render: (val, item) => {
+        if (item.current_bin) return item.current_bin.bin_number;
+        return item.destination_bin?.bin_number || '-';
+      }
     },
     {
       field: 'magnet',
@@ -914,217 +936,6 @@ export default function PrecleaningBinScreen({ navigation }) {
       render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
     },
   ];
-
-  const handleAddRouteMapping = () => {
-    setEditingRouteMapping(null);
-    setRouteMappingFormData({
-      magnet_id: '',
-      source_type: 'godown',
-      source_godown_id: '',
-      source_bin_id: '',
-      destination_bin_id: '',
-      cleaning_interval_hours: '300',
-    });
-    setModalVisible(true);
-  };
-
-  const handleEditRouteMapping = (mapping) => {
-    setEditingRouteMapping(mapping);
-    setRouteMappingFormData({
-      magnet_id: String(mapping.magnet_id),
-      source_type: mapping.source_godown_id ? 'godown' : 'bin',
-      source_godown_id: mapping.source_godown_id ? String(mapping.source_godown_id) : '',
-      source_bin_id: mapping.source_bin_id ? String(mapping.source_bin_id) : '',
-      destination_bin_id: String(mapping.destination_bin_id),
-      cleaning_interval_hours: String(mapping.cleaning_interval_hours || '300'),
-    });
-    setModalVisible(true);
-  };
-
-  const handleStartTransfer = () => {
-    setEditingTransferSession(null);
-    setTransferSessionFormData({
-      source_godown_id: '',
-      destination_bin_id: '',
-      magnet_id: '',
-      notes: '',
-    });
-    setModalVisible(true);
-  };
-
-  const handleAddCleaningRecord = () => {
-    setEditingCleaningRecord(null);
-    setCleaningRecordFormData({
-      magnet_id: '',
-      transfer_session_id: '',
-      cleaning_timestamp: new Date().toISOString(),
-      notes: '',
-      before_cleaning_photo: null,
-      after_cleaning_photo: null,
-    });
-    setModalVisible(true);
-  };
-
-  const handleEditCleaningRecord = (record) => {
-    setEditingCleaningRecord(record);
-    setCleaningRecordFormData({
-      magnet_id: String(record.magnet_id),
-      transfer_session_id: record.transfer_session_id ? String(record.transfer_session_id) : '',
-      cleaning_timestamp: record.cleaning_timestamp,
-      notes: record.notes || '',
-      before_cleaning_photo: null,
-      after_cleaning_photo: null,
-    });
-    setModalVisible(true);
-  };
-
-  const handleDeleteCleaningRecord = async (record) => {
-    const confirmDelete = Platform.OS === 'web'
-      ? window.confirm(`Are you sure you want to delete this cleaning record?`)
-      : await new Promise((resolve) => {
-          Alert.alert(
-            'Confirm Delete',
-            `Are you sure you want to delete this cleaning record?`,
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
-            ]
-          );
-        });
-
-    if (!confirmDelete) return;
-
-    try {
-      setLoading(true);
-      await magnetCleaningRecordApi.delete(record.id);
-      await fetchCleaningRecords();
-
-      if (Platform.OS === 'web') {
-        alert('Cleaning record deleted successfully');
-      } else {
-        Alert.alert('Success', 'Cleaning record deleted successfully');
-      }
-    } catch (error) {
-      console.error('Error deleting cleaning record:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
-
-      if (Platform.OS === 'web') {
-        alert(`Error: ${errorMessage}`);
-      } else {
-        Alert.alert('Error', errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitCleaningRecord = async () => {
-    if (!cleaningRecordFormData.magnet_id) {
-      Alert.alert('Error', 'Please select a magnet');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const formDataToSend = new FormData();
-      formDataToSend.append('magnet_id', cleaningRecordFormData.magnet_id);
-
-      if (cleaningRecordFormData.transfer_session_id) {
-        formDataToSend.append('transfer_session_id', cleaningRecordFormData.transfer_session_id);
-      }
-
-      if (cleaningRecordFormData.notes) {
-        formDataToSend.append('notes', cleaningRecordFormData.notes);
-      }
-
-      if (cleaningRecordFormData.before_cleaning_photo) {
-        formDataToSend.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
-      }
-
-      if (cleaningRecordFormData.after_cleaning_photo) {
-        formDataToSend.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
-      }
-
-      if (editingCleaningRecord) {
-        await magnetCleaningRecordApi.update(editingCleaningRecord.id, formDataToSend);
-        Alert.alert('Success', 'Cleaning record updated successfully');
-      } else {
-        await magnetCleaningRecordApi.create(formDataToSend);
-        Alert.alert('Success', 'Cleaning record added successfully');
-      }
-
-      setModalVisible(false);
-      await fetchCleaningRecords();
-    } catch (error) {
-      console.error('Error saving cleaning record:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to save cleaning record');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitStopTransfer = async () => {
-    if (!stopTransferFormData.transferred_quantity) {
-      Alert.alert('Error', 'Please enter the transferred quantity');
-      return;
-    }
-
-    const quantity = parseFloat(stopTransferFormData.transferred_quantity);
-    if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid transferred quantity');
-      return;
-    }
-
-    await handleStopTransferSession(editingTransferSession.id);
-  };
-
-  const handleDivertTransfer = async () => {
-    if (!divertTransferFormData.new_bin_id || !divertTransferFormData.quantity_transferred) {
-      Alert.alert('Error', 'Please fill in all required fields (New Bin and Quantity Transferred)');
-      return;
-    }
-
-    const quantity = parseFloat(divertTransferFormData.quantity_transferred);
-    if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity transferred');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await transferSessionApi.divert(activeTransferSession.id, {
-        new_bin_id: parseInt(divertTransferFormData.new_bin_id),
-        quantity_transferred: quantity,
-      });
-
-      if (Platform.OS === 'web') {
-        alert('Transfer diverted successfully!');
-      } else {
-        Alert.alert('Success', 'Transfer diverted successfully!');
-      }
-
-      setDivertTransferModal(false);
-      setActiveTransferSession(null);
-      setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
-      await fetchTransferSessions(); // Refresh the list
-    } catch (error) {
-      console.error('Error diverting transfer:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to divert transfer';
-
-      if (Platform.OS === 'web') {
-        alert(`Error: ${errorMessage}`);
-      } else {
-        Alert.alert('Error', errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleViewActiveTransfer = (session) => {
-    setActiveTransferSession(session);
-    setViewActiveTransferModal(true);
-  };
 
   return (
     <Layout title="Precleaning Process" navigation={navigation} currentRoute="PrecleaningBin">
@@ -1195,18 +1006,15 @@ export default function PrecleaningBinScreen({ navigation }) {
             <DataTable
               columns={transferSessionColumns}
               data={transferSessions}
-              onEdit={(session) => {
+              onView={(session) => { // Only allow viewing active sessions
                 if (session.status?.toLowerCase() === 'active') {
-                  setEditingTransferSession(session); // Set the session to be stopped
-                  setStopTransferModal(true);
+                  handleViewActiveTransfer(session);
                 }
               }}
               onDelete={handleDeleteTransferSession}
-              onView={(session) => handleViewActiveTransfer(session)}
               loading={loading}
               emptyMessage="No transfer sessions found"
-              editLabel={(row) => row.status?.toLowerCase() === 'active' ? 'Stop' : null}
-              viewLabel="View"
+              viewLabel={(row) => row.status?.toLowerCase() === 'active' ? 'View' : null} // Show "View" only for active sessions
             />
           </>
         ) : (
@@ -1230,392 +1038,56 @@ export default function PrecleaningBinScreen({ navigation }) {
           </>
         )}
 
+        {/* Start Transfer Modal */}
         <Modal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          title={
-            editingBin ? 'Edit Bin' :
-            editingMagnet ? 'Edit Magnet' :
-            editingRouteMapping ? 'Edit Route Mapping' :
-            editingCleaningRecord ? 'Edit Cleaning Record' :
-            activeTab === 'bins' ? 'Add Bin' :
-            activeTab === 'magnets' ? 'Add Magnet' :
-            activeTab === 'routeMappings' ? 'Add Route Mapping' :
-            activeTab === 'transferSessions' ? 'Start Transfer Session' : 'Add Cleaning Record'
-          }
-        >
-          <ScrollView style={styles.modalContent}>
-            {(editingBin || (!editingMagnet && !editingRouteMapping && activeTab === 'bins')) ? (
-              <>
-                <InputField
-                  label="Bin Number *"
-                  placeholder="Enter bin number"
-                  value={binFormData.bin_number}
-                  onChangeText={(text) => setBinFormData({ ...binFormData, bin_number: text })}
-                />
-
-                <InputField
-                  label="Capacity (tons) *"
-                  placeholder="Enter capacity in tons"
-                  value={binFormData.capacity}
-                  onChangeText={(text) => setBinFormData({ ...binFormData, capacity: text })}
-                  keyboardType="numeric"
-                />
-
-                <InputField
-                  label="Current Quantity (tons)"
-                  placeholder="Enter current quantity in tons"
-                  value={binFormData.current_quantity}
-                  onChangeText={(text) => setBinFormData({ ...binFormData, current_quantity: text })}
-                  keyboardType="numeric"
-                />
-
-                <SelectDropdown
-                  label="Status *"
-                  value={binFormData.status}
-                  onValueChange={(value) => setBinFormData({ ...binFormData, status: value })}
-                  options={statusOptions}
-                  placeholder="Select status"
-                />
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setModalVisible(false)}
-                    variant="outline"
-                  />
-                  <Button
-                    title={editingBin ? 'Update' : 'Add'}
-                    onPress={handleSubmitBin}
-                    variant="primary"
-                  />
-                </View>
-              </>
-            ) : (editingMagnet || (!editingBin && !editingRouteMapping && activeTab === 'magnets')) ? (
-              <>
-                <InputField
-                  label="Magnet Name *"
-                  placeholder="Enter magnet name"
-                  value={magnetFormData.name}
-                  onChangeText={(text) => setMagnetFormData({ ...magnetFormData, name: text })}
-                />
-
-                <InputField
-                  label="Description"
-                  placeholder="Enter description"
-                  value={magnetFormData.description}
-                  onChangeText={(text) => setMagnetFormData({ ...magnetFormData, description: text })}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <SelectDropdown
-                  label="Status *"
-                  value={magnetFormData.status}
-                  onValueChange={(value) => setMagnetFormData({ ...magnetFormData, status: value })}
-                  options={statusOptions}
-                  placeholder="Select status"
-                />
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setModalVisible(false)}
-                    variant="outline"
-                  />
-                  <Button
-                    title={editingMagnet ? 'Update' : 'Add'}
-                    onPress={handleSubmitMagnet}
-                    variant="primary"
-                  />
-                </View>
-              </>
-            ) : (editingRouteMapping || (!editingBin && !editingMagnet && !editingCleaningRecord && activeTab === 'routeMappings')) ? (
-              <>
-                <SelectDropdown
-                  label="Magnet *"
-                  value={routeMappingFormData.magnet_id}
-                  onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, magnet_id: value })}
-                  options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
-                  placeholder="Select magnet"
-                />
-
-                <SelectDropdown
-                  label="Source Type *"
-                  value={routeMappingFormData.source_type}
-                  onValueChange={(value) => setRouteMappingFormData({
-                    ...routeMappingFormData,
-                    source_type: value,
-                    source_godown_id: '',
-                    source_bin_id: ''
-                  })}
-                  options={[
-                    { label: 'Godown', value: 'godown' },
-                    { label: 'Bin', value: 'bin' }
-                  ]}
-                  placeholder="Select source type"
-                />
-
-                {routeMappingFormData.source_type === 'godown' ? (
-                  <SelectDropdown
-                    label="Source Godown *"
-                    value={routeMappingFormData.source_godown_id}
-                    onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_godown_id: value })}
-                    options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
-                    placeholder="Select source godown"
-                  />
-                ) : (
-                  <SelectDropdown
-                    label="Source Bin *"
-                    value={routeMappingFormData.source_bin_id}
-                    onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_bin_id: value })}
-                    options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
-                    placeholder="Select source bin"
-                  />
-                )}
-
-                <SelectDropdown
-                  label="Destination Bin *"
-                  value={routeMappingFormData.destination_bin_id}
-                  onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, destination_bin_id: value })}
-                  options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
-                  placeholder="Select destination bin"
-                />
-
-                <InputField
-                  label="Cleaning Interval (seconds) *"
-                  value={routeMappingFormData.cleaning_interval_hours}
-                  onChangeText={(text) => setRouteMappingFormData({ ...routeMappingFormData, cleaning_interval_hours: text })}
-                  placeholder="e.g., 300 (5 min) or 1800 (30 min)"
-                  keyboardType="numeric"
-                />
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setModalVisible(false)}
-                    variant="outline"
-                  />
-                  <Button
-                    title={editingRouteMapping ? 'Update' : 'Add'}
-                    onPress={handleSubmitRouteMapping}
-                    variant="primary"
-                  />
-                </View>
-              </>
-            ) : activeTab === 'transferSessions' ? (
-              <>
-                <SelectDropdown
-                  label="Source Godown *"
-                  value={transferSessionFormData.source_godown_id}
-                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, source_godown_id: value })}
-                  options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
-                  placeholder="Select source godown"
-                />
-
-                <SelectDropdown
-                  label="Destination Bin *"
-                  value={transferSessionFormData.destination_bin_id}
-                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, destination_bin_id: value })}
-                  options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
-                  placeholder="Select destination bin"
-                />
-
-                <SelectDropdown
-                  label="Magnet *"
-                  value={transferSessionFormData.magnet_id}
-                  onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, magnet_id: value })}
-                  options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
-                  placeholder="Select magnet"
-                />
-
-                <InputField
-                  label="Notes"
-                  placeholder="Enter notes (optional)"
-                  value={transferSessionFormData.notes}
-                  onChangeText={(text) => setTransferSessionFormData({ ...transferSessionFormData, notes: text })}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setModalVisible(false)}
-                    variant="outline"
-                  />
-                  <Button
-                    title="Start Transfer"
-                    onPress={handleSubmitTransferSession}
-                    variant="primary"
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <SelectDropdown
-                  label="Magnet *"
-                  value={cleaningRecordFormData.magnet_id}
-                  onValueChange={(value) => {
-                    const activeSession = transferSessions.find(
-                      s => s.magnet_id === parseInt(value) && !s.stop_timestamp
-                    );
-                    setCleaningRecordFormData({
-                      ...cleaningRecordFormData,
-                      magnet_id: value,
-                      transfer_session_id: activeSession ? String(activeSession.id) : ''
-                    });
-                  }}
-                  options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
-                  placeholder="Select magnet"
-                />
-
-                {cleaningRecordFormData.magnet_id && (
-                  <SelectDropdown
-                    label="Transfer Session (optional)"
-                    value={cleaningRecordFormData.transfer_session_id}
-                    onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, transfer_session_id: value })}
-                    options={transferSessions
-                      .filter(s => s.magnet_id === parseInt(cleaningRecordFormData.magnet_id))
-                      .map(s => ({
-                        label: `${s.source_godown?.name || 'N/A'} → ${s.destination_bin?.bin_number || 'N/A'} (${s.status})`,
-                        value: String(s.id)
-                      }))}
-                    placeholder="Select transfer session"
-                  />
-                )}
-
-                <InputField
-                  label="Cleaning Timestamp (IST)"
-                  placeholder="Will be set to current time when you submit"
-                  value={editingCleaningRecord
-                    ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp)
-                    : '⏱️ Current time will be used automatically'}
-                  editable={false}
-                />
-
-                <InputField
-                  label="Before Cleaning Photo"
-                  placeholder="Select photo"
-                  value={cleaningRecordFormData.before_cleaning_photo?.name || 'No file selected'}
-                  editable={false}
-                />
-                {Platform.OS === 'web' && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, before_cleaning_photo: e.target.files[0] })}
-                    style={{ marginBottom: 16 }}
-                  />
-                )}
-
-                <InputField
-                  label="After Cleaning Photo"
-                  placeholder="Select photo"
-                  value={cleaningRecordFormData.after_cleaning_photo?.name || 'No file selected'}
-                  editable={false}
-                />
-                {Platform.OS === 'web' && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, after_cleaning_photo: e.target.files[0] })}
-                    style={{ marginBottom: 16 }}
-                  />
-                )}
-
-                <InputField
-                  label="Notes"
-                  placeholder="Enter notes (optional)"
-                  value={cleaningRecordFormData.notes}
-                  onChangeText={(text) => setCleaningRecordFormData({ ...cleaningRecordFormData, notes: text })}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setModalVisible(false)}
-                    variant="outline"
-                  />
-                  <Button
-                    title={editingCleaningRecord ? 'Update' : 'Add'}
-                    onPress={handleSubmitCleaningRecord}
-                    variant="primary"
-                  />
-                </View>
-              </>
-            )}
-          </ScrollView>
-        </Modal>
-
-        <Modal
-          visible={stopTransferModal}
-          onClose={() => setStopTransferModal(false)}
-          title="Stop Transfer Session"
-        >
-          <ScrollView style={styles.modalContent}>
-            <InputField
-              label="Transferred Quantity (tons) *"
-              placeholder="Enter quantity in tons"
-              value={stopTransferFormData.transferred_quantity}
-              onChangeText={(text) => setStopTransferFormData({ ...stopTransferFormData, transferred_quantity: text })}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.buttonContainer}>
-              <Button
-                title="Cancel"
-                onPress={() => setStopTransferModal(false)}
-                variant="outline"
-              />
-              <Button
-                title="Stop Transfer"
-                onPress={handleSubmitStopTransfer}
-                variant="primary"
-              />
-            </View>
-          </ScrollView>
-        </Modal>
-
-        <Modal
-          visible={divertTransferModal}
-          onClose={() => setDivertTransferModal(false)}
-          title="Divert Transfer"
+          visible={startTransferModal}
+          onClose={() => setStartTransferModal(false)}
+          title="Start Transfer Session"
         >
           <ScrollView style={styles.modalContent}>
             <SelectDropdown
-              label="New Destination Bin *"
-              value={divertTransferFormData.new_bin_id}
-              onValueChange={(value) => setDivertTransferFormData({ ...divertTransferFormData, new_bin_id: value })}
-              options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
-              placeholder="Select new destination bin"
+              label="Source Godown *"
+              value={selectedSourceGodown}
+              onValueChange={(value) => {
+                setSelectedSourceGodown(value); // Update selected source godown
+                setTransferSessionFormData({ 
+                  ...transferSessionFormData, 
+                  source_godown_id: value,
+                  destination_bin_id: '' // Reset destination bin when source changes
+                });
+              }}
+              options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
+              placeholder="Select source godown"
             />
 
-            <InputField
-              label="Quantity Transferred (tons) *"
-              placeholder="Enter quantity transferred"
-              value={divertTransferFormData.quantity_transferred}
-              onChangeText={(text) => setDivertTransferFormData({ ...divertTransferFormData, quantity_transferred: text })}
-              keyboardType="numeric"
-            />
+            {/* Only show destination bin selection if a source godown is selected */}
+            {selectedSourceGodown && (
+              <SelectDropdown
+                label="Destination Bin * (Ordered Sequentially)"
+                value={transferSessionFormData.destination_bin_id}
+                onValueChange={(value) => setTransferSessionFormData({ ...transferSessionFormData, destination_bin_id: value })}
+                // Options are dynamically set based on route mappings and sorted
+                options={availableDestinationBins.map(b => ({ label: `Bin ${b.bin_number}`, value: String(b.id) }))}
+                placeholder="Select destination bin"
+              />
+            )}
 
             <View style={styles.buttonContainer}>
               <Button
                 title="Cancel"
-                onPress={() => setDivertTransferModal(false)}
+                onPress={() => setStartTransferModal(false)}
                 variant="outline"
               />
               <Button
-                title="Divert Transfer"
-                onPress={handleDivertTransfer}
+                title="Start Transfer"
+                onPress={handleSubmitStartTransfer}
                 variant="primary"
               />
             </View>
           </ScrollView>
         </Modal>
 
+        {/* View Active Transfer Modal */}
         <Modal
           visible={viewActiveTransferModal}
           onClose={() => setViewActiveTransferModal(false)}
@@ -1630,7 +1102,8 @@ export default function PrecleaningBinScreen({ navigation }) {
                     Source: {activeTransferSession.source_godown?.name || 'N/A'}
                   </Text>
                   <Text style={styles.routeFlowText}>
-                    Destination: Bin {activeTransferSession.destination_bin?.bin_number || 'N/A'}
+                    {/* Display current bin or destination bin */}
+                    Current Bin: Bin {bins.find(b => b.id === activeTransferSession.current_bin_id)?.bin_number || activeTransferSession.destination_bin?.bin_number || 'N/A'}
                   </Text>
                   <Text style={styles.routeFlowText}>
                     Magnet: <Text style={styles.routeFlowMagnet}>{activeTransferSession.magnet?.name || 'N/A'}</Text>
@@ -1641,25 +1114,22 @@ export default function PrecleaningBinScreen({ navigation }) {
                   <Text style={styles.routeFlowText}>
                     Status: {activeTransferSession.status}
                   </Text>
-                  <Text style={styles.routeFlowText}>
-                    Quantity Transferred: {activeTransferSession.transferred_quantity?.toFixed(2) || '0.00'} tons
-                  </Text>
                 </View>
 
                 <View style={styles.buttonContainer}>
                   <Button
-                    title="Divert Transfer"
+                    title="Divert to Next Bin"
                     onPress={() => {
-                      setDivertTransferModal(true);
                       setViewActiveTransferModal(false); // Close view modal
+                      setDivertTransferModal(true); // Open divert modal
                     }}
                     variant="secondary"
                   />
                   <Button
                     title="Stop Transfer"
                     onPress={() => {
-                      setStopTransferModal(true);
                       setViewActiveTransferModal(false); // Close view modal
+                      setStopTransferModal(true); // Open stop modal
                     }}
                     variant="outline"
                   />
@@ -1668,6 +1138,279 @@ export default function PrecleaningBinScreen({ navigation }) {
             ) : (
               <Text>No active transfer session found.</Text>
             )}
+          </ScrollView>
+        </Modal>
+
+        {/* Divert Transfer Modal */}
+        <Modal
+          visible={divertTransferModal}
+          onClose={() => setDivertTransferModal(false)}
+          title="Divert Transfer to Next Bin"
+        >
+          <ScrollView style={styles.modalContent}>
+            {activeTransferSession && (
+              <>
+                <Text style={styles.infoText}>
+                  Current Bin: {bins.find(b => b.id === activeTransferSession.current_bin_id)?.bin_number || 'N/A'}
+                </Text>
+
+                <SelectDropdown
+                  label="New Destination Bin *"
+                  value={divertTransferFormData.new_bin_id}
+                  onValueChange={(value) => setDivertTransferFormData({ ...divertTransferFormData, new_bin_id: value })}
+                  // Use sorted bins for selection
+                  options={getSortedBinsByLastDigit(bins).map(b => ({ label: `Bin ${b.bin_number}`, value: String(b.id) }))}
+                  placeholder="Select new destination bin"
+                />
+
+                <InputField
+                  label="Quantity Transferred to Current Bin (tons) *"
+                  placeholder="Enter quantity transferred"
+                  value={divertTransferFormData.quantity_transferred}
+                  onChangeText={(text) => setDivertTransferFormData({ ...divertTransferFormData, quantity_transferred: text })}
+                  keyboardType="numeric"
+                />
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setDivertTransferModal(false)}
+                    variant="outline"
+                  />
+                  <Button
+                    title="Divert Transfer"
+                    onPress={handleDivertTransfer}
+                    variant="primary"
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </Modal>
+
+        {/* Stop Transfer Modal */}
+        <Modal
+          visible={stopTransferModal}
+          onClose={() => setStopTransferModal(false)}
+          title="Stop Transfer Session"
+        >
+          <ScrollView style={styles.modalContent}>
+            {activeTransferSession && (
+              <>
+                <Text style={styles.infoText}>
+                  Current Bin: {bins.find(b => b.id === activeTransferSession.current_bin_id)?.bin_number || 'N/A'}
+                </Text>
+
+                <InputField
+                  label="Quantity Transferred to Current Bin (tons) *"
+                  placeholder="Enter quantity in tons"
+                  value={stopTransferFormData.transferred_quantity}
+                  onChangeText={(text) => setStopTransferFormData({ ...stopTransferFormData, transferred_quantity: text })}
+                  keyboardType="numeric"
+                />
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setStopTransferModal(false)}
+                    variant="outline"
+                  />
+                  <Button
+                    title="Stop Transfer"
+                    onPress={handleStopTransfer}
+                    variant="primary"
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </Modal>
+
+        {/* Route Mapping Modal (only shown when activeTab is routeMappings) */}
+        <Modal
+          visible={modalVisible && activeTab === 'routeMappings'}
+          onClose={() => setModalVisible(false)}
+          title={editingRouteMapping ? 'Edit Route Mapping' : 'Add Route Mapping'}
+        >
+          <ScrollView style={styles.modalContent}>
+            <SelectDropdown
+              label="Magnet *"
+              value={routeMappingFormData.magnet_id}
+              onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, magnet_id: value })}
+              options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
+              placeholder="Select magnet"
+            />
+
+            <SelectDropdown
+              label="Source Type *"
+              value={routeMappingFormData.source_type}
+              onValueChange={(value) => setRouteMappingFormData({
+                ...routeMappingFormData,
+                source_type: value,
+                source_godown_id: '', // Reset source IDs when type changes
+                source_bin_id: ''
+              })}
+              options={[
+                { label: 'Godown', value: 'godown' },
+                { label: 'Bin', value: 'bin' }
+              ]}
+              placeholder="Select source type"
+            />
+
+            {/* Conditionally render source godown or bin selection */}
+            {routeMappingFormData.source_type === 'godown' ? (
+              <SelectDropdown
+                label="Source Godown *"
+                value={routeMappingFormData.source_godown_id}
+                onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_godown_id: value })}
+                options={godowns.map(g => ({ label: g.name, value: String(g.id) }))}
+                placeholder="Select source godown"
+              />
+            ) : (
+              <SelectDropdown
+                label="Source Bin *"
+                value={routeMappingFormData.source_bin_id}
+                onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, source_bin_id: value })}
+                options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
+                placeholder="Select source bin"
+              />
+            )}
+
+            <SelectDropdown
+              label="Destination Bin *"
+              value={routeMappingFormData.destination_bin_id}
+              onValueChange={(value) => setRouteMappingFormData({ ...routeMappingFormData, destination_bin_id: value })}
+              options={bins.map(b => ({ label: b.bin_number, value: String(b.id) }))}
+              placeholder="Select destination bin"
+            />
+
+            <InputField
+              label="Cleaning Interval (seconds) *"
+              value={routeMappingFormData.cleaning_interval_hours}
+              onChangeText={(text) => setRouteMappingFormData({ ...routeMappingFormData, cleaning_interval_hours: text })}
+              placeholder="e.g., 300 (5 min) or 1800 (30 min)"
+              keyboardType="numeric"
+            />
+
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Cancel"
+                onPress={() => setModalVisible(false)}
+                variant="outline"
+              />
+              <Button
+                title={editingRouteMapping ? 'Update' : 'Add'}
+                onPress={handleSubmitRouteMapping}
+                variant="primary"
+              />
+            </View>
+          </ScrollView>
+        </Modal>
+
+        {/* Cleaning Record Modal (only shown when activeTab is cleaningRecords) */}
+        <Modal
+          visible={modalVisible && activeTab === 'cleaningRecords'}
+          onClose={() => setModalVisible(false)}
+          title={editingCleaningRecord ? 'Edit Cleaning Record' : 'Add Cleaning Record'}
+        >
+          <ScrollView style={styles.modalContent}>
+            <SelectDropdown
+              label="Magnet *"
+              value={cleaningRecordFormData.magnet_id}
+              onValueChange={(value) => {
+                // Automatically link to an active transfer session if one exists for the selected magnet
+                const activeSession = transferSessions.find(
+                  s => s.magnet_id === parseInt(value) && !s.stop_timestamp // Find active session
+                );
+                setCleaningRecordFormData({
+                  ...cleaningRecordFormData,
+                  magnet_id: value,
+                  transfer_session_id: activeSession ? String(activeSession.id) : '' // Set session ID if found
+                });
+              }}
+              options={magnets.map(m => ({ label: m.name, value: String(m.id) }))}
+              placeholder="Select magnet"
+            />
+
+            {/* Show transfer session dropdown only if a magnet is selected and has active sessions */}
+            {cleaningRecordFormData.magnet_id && (
+              <SelectDropdown
+                label="Transfer Session (optional)"
+                value={cleaningRecordFormData.transfer_session_id}
+                onValueChange={(value) => setCleaningRecordFormData({ ...cleaningRecordFormData, transfer_session_id: value })}
+                // Filter sessions for the selected magnet
+                options={transferSessions
+                  .filter(s => s.magnet_id === parseInt(cleaningRecordFormData.magnet_id))
+                  .map(s => ({
+                    label: `${s.source_godown?.name || 'N/A'} → ${s.destination_bin?.bin_number || 'N/A'} (${s.status})`, // Display route and status
+                    value: String(s.id)
+                  }))}
+                placeholder="Select transfer session"
+              />
+            )}
+
+            <InputField
+              label="Cleaning Timestamp (IST)"
+              placeholder="Will be set to current time when you submit"
+              value={editingCleaningRecord
+                ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp) // Display formatted time if editing
+                : '⏱️ Current time will be used automatically'} // Placeholder for new records
+              editable={false} // Timestamp is auto-generated on submit
+            />
+
+            <InputField
+              label="Before Cleaning Photo"
+              placeholder="Select photo"
+              value={cleaningRecordFormData.before_cleaning_photo?.name || 'No file selected'}
+              editable={false}
+            />
+            {/* File input for web */}
+            {Platform.OS === 'web' && (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, before_cleaning_photo: e.target.files[0] })}
+                style={{ marginBottom: 16 }}
+              />
+            )}
+
+            <InputField
+              label="After Cleaning Photo"
+              placeholder="Select photo"
+              value={cleaningRecordFormData.after_cleaning_photo?.name || 'No file selected'}
+              editable={false}
+            />
+            {/* File input for web */}
+            {Platform.OS === 'web' && (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, after_cleaning_photo: e.target.files[0] })}
+                style={{ marginBottom: 16 }}
+              />
+            )}
+
+            <InputField
+              label="Notes"
+              placeholder="Enter notes (optional)"
+              value={cleaningRecordFormData.notes}
+              onChangeText={(text) => setCleaningRecordFormData({ ...cleaningRecordFormData, notes: text })}
+              multiline
+              numberOfLines={3}
+            />
+
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Cancel"
+                onPress={() => setModalVisible(false)}
+                variant="outline"
+              />
+              <Button
+                title={editingCleaningRecord ? 'Update' : 'Add'}
+                onPress={handleSubmitCleaningRecord}
+                variant="primary"
+              />
+            </View>
           </ScrollView>
         </Modal>
 
@@ -1700,7 +1443,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap', // Ensures tab text stays on one line
   },
   tabMobile: {
     paddingHorizontal: 16,
@@ -1758,5 +1501,11 @@ const styles = StyleSheet.create({
   routeFlowMagnet: {
     fontWeight: '700',
     color: colors.primary,
+  },
+  infoText: { // Added for displaying current bin info in modals
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+    fontWeight: '600',
   },
 });
