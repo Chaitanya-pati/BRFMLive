@@ -1,4 +1,4 @@
-modules = ["python-3.11", "postgresql-16", "nodejs-22"]
+modules = ["python-3.11", "nodejs-22", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = ["python_database:1.0.0"]
@@ -108,6 +108,10 @@ externalPort = 5000
 [[ports]]
 localPort = 44949
 externalPort = 3000
+
+[[ports]]
+localPort = 45665
+externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"
