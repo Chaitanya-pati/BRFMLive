@@ -305,24 +305,6 @@ export default function SupplierMasterScreen({ navigation }) {
             autoCapitalize="characters"
           />
 
-          <Text style={styles.label}>Address</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={formData.address}
-            onChangeText={(text) => setFormData({ ...formData, address: text })}
-            placeholder="Enter address"
-            multiline
-            numberOfLines={3}
-          />
-
-          <Text style={styles.label}>Street</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.street}
-            onChangeText={(text) => setFormData({ ...formData, street: text })}
-            placeholder="Enter street"
-          />
-
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -347,6 +329,23 @@ export default function SupplierMasterScreen({ navigation }) {
             value={formData.city || ''}
             onChangeText={(text) => setFormData({ ...formData, city: text })}
             placeholder="Enter city name"
+          />
+
+          <Text style={styles.label}>Street</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.street || ''}
+            onChangeText={(text) => setFormData({ ...formData, street: text })}
+            placeholder="Enter street"
+          />
+
+          <Text style={styles.label}>Address</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.address || ''}
+            onChangeText={(text) => setFormData({ ...formData, address: text })}
+            placeholder="Enter full address"
+            multiline
           />
 
           <Text style={styles.label}>District</Text>

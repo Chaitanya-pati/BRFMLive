@@ -227,6 +227,7 @@ export default function MasterViewScreen({ navigation }) {
         address: '',
         state: '',
         city: '',
+        street: '',
       });
       setSelectedStateId('');
       loadStatesFromApi();
@@ -1098,7 +1099,7 @@ export default function MasterViewScreen({ navigation }) {
 
                 <Text style={styles.label}>Address</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, styles.textArea]}
                   value={supplierFormData.address}
                   onChangeText={(text) => setSupplierFormData({ ...supplierFormData, address: text })}
                   placeholder="Enter full address"
