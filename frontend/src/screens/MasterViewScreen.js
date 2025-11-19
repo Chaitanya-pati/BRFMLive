@@ -16,7 +16,18 @@ import { godownApi, supplierApi, binApi, magnetApi, machineApi, stateCityApi } f
 import colors from '../theme/colors';
 import { showSuccess, showError, showWarning, showConfirm } from '../utils/customAlerts';
 
-// Intro.js for guided tours (Web only) - will be dynamically imported
+// Conditionally import intro.js only in web environment
+let introJs = null;
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  try {
+    introJs = require('intro.js').default;
+    require('intro.js/introjs.css');
+    require('./MasterViewScreen.css');
+  } catch (error) {
+    console.warn('Intro.js could not be loaded:', error);
+  }
+}
+
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
@@ -787,86 +798,56 @@ export default function MasterViewScreen({ navigation }) {
     }
   };
 
+  const startTour = () => {
+    if (!introJs) {
+      console.warn('Tour feature is not available in this environment');
+      return;
+    }
+
+    introJs()
+      .setOptions({
+        steps: [
+          {
+            element: '#godown-master',
+            intro: 'Manage your warehouse/godown information here. Add new godowns and track their capacity.',
+          },
+          {
+            element: '#supplier-master',
+            intro: 'Add and manage supplier details including contact information and addresses.',
+          },
+          {
+            element: '#bins-master',
+            intro: 'Configure bins for storing different types of materials.',
+          },
+          {
+            element: '#magnets-master',
+            intro: 'Manage magnetic separators used in the cleaning process.',
+          },
+          {
+            element: '#machines-master',
+            intro: 'Configure machines used in your production workflow.',
+          },
+          {
+            element: '#route-config',
+            intro: 'Set up complete workflow routes from godown to final bin, including all processing stages.',
+          },
+        ],
+        exitOnOverlayClick: false,
+        showStepNumbers: true,
+        showBullets: true,
+        showProgress: true,
+      })
+      .start();
+  };
+
   return (
     <Layout navigation={navigation} title="Master Data" currentRoute="MasterView">
       <View style={styles.container}>
         {/* Intro.js Tour Button */}
-        {Platform.OS === 'web' && (
+        {Platform.OS === 'web' && introJs && (
           <TouchableOpacity
             style={styles.introButton}
-            onPress={async () => {
-              console.log('Intro button clicked, loading intro.js...');
-              try {
-                // Dynamically import intro.js and related CSS (Expo web compatible)
-                const introJsModule = await import('intro.js');
-                const introJs = introJsModule.default;
-                await Promise.all([
-                  import('intro.js/introjs.css'),
-                  import('./MasterViewScreen.css')
-                ]);
-                
-                const intro = introJs();
-                intro.setOptions({
-                    steps: [
-                      {
-                        title: 'Welcome to Master Data!',
-                        intro: 'This is your hub for managing core data across the application. Let\'s take a quick tour!',
-                      },
-                      {
-                        element: '.tabContainer',
-                        title: 'Master Data Tabs',
-                        intro: 'Navigate between different master data sections like Godown, Supplier, Bins, Magnets, and Machines using these tabs. Each tab holds specific data.',
-                      },
-                      {
-                        element: '.data-table',
-                        title: 'Data Table',
-                        intro: 'Here you can view all existing records for the selected master data. You can edit or delete existing records by clicking the respective icons.',
-                      },
-                      {
-                        title: 'Adding New Records',
-                        intro: 'Click the "Add" button in the table to open a form. The fields will vary depending on the type of master data you are managing.',
-                      },
-                      {
-                        title: 'Godown Master Fields',
-                        intro: '<strong>Name:</strong> Enter the name of the godown (storage facility).<br><strong>Type:</strong> Select the type (Mill, Low Mill, HD-1, etc.). This data is used for inventory management and tracking where materials are stored.',
-                      },
-                      {
-                        title: 'Supplier Master Fields',
-                        intro: '<strong>Supplier Name:</strong> The company name.<br><strong>Contact Person:</strong> Primary contact.<br><strong>Phone:</strong> 10-digit number with +91 prefix.<br><strong>Address/Street/City/State:</strong> Full location details.<br><strong>GSTIN:</strong> Tax identification. This data is used for procurement and vendor management.',
-                      },
-                      {
-                        title: 'Bins Master Fields',
-                        intro: '<strong>Bin Number:</strong> Unique identifier.<br><strong>Capacity:</strong> Maximum storage in tons.<br><strong>Current Quantity:</strong> Current storage in tons.<br><strong>Bin Type:</strong> Raw wheat bin, 24 hours bin, or 12 hours bin.<br><strong>Status:</strong> Active, Inactive, Full, or Maintenance. Used for material flow tracking.',
-                      },
-                      {
-                        title: 'Magnets Master Fields',
-                        intro: '<strong>Magnet Name:</strong> Identifier for the magnet.<br><strong>Description:</strong> Detailed information.<br><strong>Status:</strong> Active, Inactive, Full, or Maintenance. Used for tracking magnetic separator equipment in the processing line.',
-                      },
-                      {
-                        title: 'Machines Master Fields',
-                        intro: '<strong>Machine Name:</strong> Identifier.<br><strong>Machine Type:</strong> Separator, Drum Shield, or Other.<br><strong>Make:</strong> Brand/manufacturer.<br><strong>Serial Number:</strong> Unique serial.<br><strong>Description:</strong> Additional details.<br><strong>Status:</strong> Operational state. Used for maintenance tracking and production planning.',
-                      },
-                      {
-                        title: 'Data Usage',
-                        intro: 'All data entered here is crucial:<br>• <strong>Suppliers:</strong> Used in procurement and vehicle entries<br>• <strong>Godowns & Bins:</strong> For inventory and storage management<br>• <strong>Machines & Magnets:</strong> For operational tracking and route configurations<br><br>Ensuring accuracy here is vital for the entire application.',
-                      },
-                      {
-                        title: 'End of Tour',
-                        intro: 'You\'ve now seen the Master Data screen. Click the "?" button anytime to replay this tour!',
-                      },
-                    ],
-                    showStepNumbers: true,
-                    exitOnOverlayClick: true,
-                    skipLabel: 'Skip',
-                    doneLabel: 'Done',
-                  });
-                console.log('Starting Intro.js tour...');
-                intro.start();
-              } catch (error) {
-                console.error('Error loading or starting Intro.js tour:', error);
-                showWarning('Tour feature could not be loaded. This feature is only available on web.');
-              }
-            }}
+            onPress={startTour}
           >
             <Text style={styles.introButtonText}>?</Text>
           </TouchableOpacity>
