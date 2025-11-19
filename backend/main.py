@@ -163,6 +163,8 @@ async def create_vehicle_entry(
     driver_name: Optional[str] = Form(None),
     driver_phone: Optional[str] = Form(None),
     arrival_time: Optional[str] = Form(None),
+    empty_weight: Optional[str] = Form(None),
+    gross_weight: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     supplier_bill_photo: Optional[UploadFile] = File(None),
     vehicle_photo_front: Optional[UploadFile] = File(None),
@@ -183,6 +185,8 @@ async def create_vehicle_entry(
         driver_name=driver_name,
         driver_phone=driver_phone,
         arrival_time=arrival_dt,
+        empty_weight=float(empty_weight) if empty_weight else 0.0,
+        gross_weight=float(gross_weight) if gross_weight else 0.0,
         notes=notes
     )
     
@@ -324,6 +328,8 @@ async def update_vehicle_entry(
     driver_name: Optional[str] = Form(None),
     driver_phone: Optional[str] = Form(None),
     arrival_time: Optional[str] = Form(None),
+    empty_weight: Optional[str] = Form(None),
+    gross_weight: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     supplier_bill_photo: Optional[UploadFile] = File(None),
     vehicle_photo_front: Optional[UploadFile] = File(None),
@@ -345,6 +351,8 @@ async def update_vehicle_entry(
     db_vehicle.driver_name = driver_name
     db_vehicle.driver_phone = driver_phone
     db_vehicle.notes = notes
+    db_vehicle.empty_weight = float(empty_weight) if empty_weight else 0.0
+    db_vehicle.gross_weight = float(gross_weight) if gross_weight else 0.0
 
     # Update arrival time if provided
     if arrival_time:

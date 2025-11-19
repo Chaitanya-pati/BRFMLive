@@ -99,8 +99,8 @@ export default function VehicleEntryScreen() {
       formDataToSend.append('driver_name', formData.driver_name || '');
       formDataToSend.append('driver_phone', formData.driver_phone || '');
       formDataToSend.append('arrival_time', toISTISOString(formData.arrival_time));
-      formDataToSend.append('empty_weight', formData.empty_weight || '0');
-      formDataToSend.append('gross_weight', formData.gross_weight || '0');
+      formDataToSend.append('empty_weight', formData.empty_weight ? String(formData.empty_weight) : '0');
+      formDataToSend.append('gross_weight', formData.gross_weight ? String(formData.gross_weight) : '0');
       formDataToSend.append('notes', formData.notes || '');
 
       if (formData.supplier_bill_photo) {
