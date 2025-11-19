@@ -119,51 +119,6 @@ export default function MasterViewScreen({ navigation }) {
         loadGodownTypes(), // Load godown types here
         loadStatesFromApi()
       ]);
-
-      // Start Intro.js tour if on web and introJs is available
-      if (Platform.OS === 'web' && introJs) {
-        const intro = introJs();
-        intro.setOptions({
-          steps: [
-            {
-              title: 'Welcome to Master Data!',
-              intro: 'This is your hub for managing core data across the application. Let\'s take a quick tour!',
-            },
-            {
-              element: '.tabContainer', // This targets the tab bar
-              title: 'Master Data Tabs',
-              intro: 'Navigate between different master data sections like Godown, Supplier, Bins, Magnets, and Machines using these tabs. Each tab holds specific data.',
-            },
-            {
-              element: '.addButton', // Assuming DataTable has an add button with class 'addButton'
-              title: 'Add New Record',
-              intro: 'Click this button to add a new entry to the currently selected master data table. You will be prompted with a form to fill in the details.',
-            },
-            {
-              element: '.data-table', // Assuming DataTable has a class 'data-table'
-              title: 'Data Table',
-              intro: 'Here you can view all existing records for the selected master data. You can edit or delete existing records by clicking the respective icons.',
-            },
-            {
-              title: 'Popups and Forms',
-              intro: 'When you add or edit a record, a popup or form will appear. This form is where you input or modify the data. The fields will vary depending on the type of master data you are managing.',
-            },
-            {
-              title: 'Data Capture and Usage',
-              intro: 'All data entered here is crucial for the application\'s operations. For example, Supplier data is used for procurement, Godown data for inventory management, and Machine data for operational tracking. Ensuring accuracy here is vital.',
-            },
-            {
-              title: 'End of Tour',
-              intro: 'You\'ve now seen the basics of the Master Data screen. Feel free to explore and manage your data!',
-            },
-          ],
-          showStepNumbers: true,
-          exitOnOverlayClick: true,
-          skipLabel: 'Skip',
-          doneLabel: 'Done',
-        });
-        intro.start();
-      }
     };
     loadInitialData();
   }, []);
@@ -845,7 +800,75 @@ export default function MasterViewScreen({ navigation }) {
   return (
     <Layout navigation={navigation} title="Master Data" currentRoute="MasterView">
       <View style={styles.container}>
-        <View style={styles.tabContainer}>
+        {/* Intro.js Tour Button */}
+        {Platform.OS === 'web' && (
+          <TouchableOpacity
+            style={styles.introButton}
+            onPress={() => {
+              if (introJs) {
+                const intro = introJs();
+                intro.setOptions({
+                  steps: [
+                    {
+                      title: 'Welcome to Master Data!',
+                      intro: 'This is your hub for managing core data across the application. Let\'s take a quick tour!',
+                    },
+                    {
+                      element: '.tabContainer',
+                      title: 'Master Data Tabs',
+                      intro: 'Navigate between different master data sections like Godown, Supplier, Bins, Magnets, and Machines using these tabs. Each tab holds specific data.',
+                    },
+                    {
+                      element: '.data-table',
+                      title: 'Data Table',
+                      intro: 'Here you can view all existing records for the selected master data. You can edit or delete existing records by clicking the respective icons.',
+                    },
+                    {
+                      title: 'Adding New Records',
+                      intro: 'Click the "Add" button in the table to open a form. The fields will vary depending on the type of master data you are managing.',
+                    },
+                    {
+                      title: 'Godown Master Fields',
+                      intro: '<strong>Name:</strong> Enter the name of the godown (storage facility).<br><strong>Type:</strong> Select the type (Mill, Low Mill, HD-1, etc.). This data is used for inventory management and tracking where materials are stored.',
+                    },
+                    {
+                      title: 'Supplier Master Fields',
+                      intro: '<strong>Supplier Name:</strong> The company name.<br><strong>Contact Person:</strong> Primary contact.<br><strong>Phone:</strong> 10-digit number with +91 prefix.<br><strong>Address/Street/City/State:</strong> Full location details.<br><strong>GSTIN:</strong> Tax identification. This data is used for procurement and vendor management.',
+                    },
+                    {
+                      title: 'Bins Master Fields',
+                      intro: '<strong>Bin Number:</strong> Unique identifier.<br><strong>Capacity:</strong> Maximum storage in tons.<br><strong>Current Quantity:</strong> Current storage in tons.<br><strong>Bin Type:</strong> Raw wheat bin, 24 hours bin, or 12 hours bin.<br><strong>Status:</strong> Active, Inactive, Full, or Maintenance. Used for material flow tracking.',
+                    },
+                    {
+                      title: 'Magnets Master Fields',
+                      intro: '<strong>Magnet Name:</strong> Identifier for the magnet.<br><strong>Description:</strong> Detailed information.<br><strong>Status:</strong> Active, Inactive, Full, or Maintenance. Used for tracking magnetic separator equipment in the processing line.',
+                    },
+                    {
+                      title: 'Machines Master Fields',
+                      intro: '<strong>Machine Name:</strong> Identifier.<br><strong>Machine Type:</strong> Separator, Drum Shield, or Other.<br><strong>Make:</strong> Brand/manufacturer.<br><strong>Serial Number:</strong> Unique serial.<br><strong>Description:</strong> Additional details.<br><strong>Status:</strong> Operational state. Used for maintenance tracking and production planning.',
+                    },
+                    {
+                      title: 'Data Usage',
+                      intro: 'All data entered here is crucial:<br>• <strong>Suppliers:</strong> Used in procurement and vehicle entries<br>• <strong>Godowns & Bins:</strong> For inventory and storage management<br>• <strong>Machines & Magnets:</strong> For operational tracking and route configurations<br><br>Ensuring accuracy here is vital for the entire application.',
+                    },
+                    {
+                      title: 'End of Tour',
+                      intro: 'You\'ve now seen the Master Data screen. Click the "?" button anytime to replay this tour!',
+                    },
+                  ],
+                  showStepNumbers: true,
+                  exitOnOverlayClick: true,
+                  skipLabel: 'Skip',
+                  doneLabel: 'Done',
+                });
+                intro.start();
+              }
+            }}
+          >
+            <Text style={styles.introButtonText}>?</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.tabContainer} className="tabContainer">
           {canScrollLeft && (
             <TouchableOpacity
               style={[styles.scrollButton, styles.scrollButtonLeft]}
@@ -1394,5 +1417,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.primary,
+  },
+  introButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  introButtonText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });
