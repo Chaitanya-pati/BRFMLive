@@ -3,7 +3,22 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal as RNModal } from 'react-native';
 import colors from '../theme/colors';
 
-const CleaningReminder = ({ visible, onClose, magnets, sourceName, destName, runningTime, cleaningInterval, totalMagnets }) => {
+const CleaningReminder = ({ 
+  visible = false, 
+  onClose = () => {}, 
+  magnets = [], 
+  sourceName = 'N/A', 
+  destName = 'N/A', 
+  runningTime = '0h 0m 0s', 
+  cleaningInterval = '0m 0s', 
+  totalMagnets = 0 
+}) => {
+  if (!visible) {
+    return null;
+  }
+
+  const hasMagnets = magnets && Array.isArray(magnets) && magnets.length > 0;
+
   return (
     <RNModal
       visible={visible}
@@ -29,19 +44,23 @@ const CleaningReminder = ({ visible, onClose, magnets, sourceName, destName, run
             <View style={styles.infoRow}>
               <Text style={styles.label}>Uncleaned Magnets:</Text>
               <Text style={styles.valueHighlight}>
-                {magnets.length} of {totalMagnets}
+                {hasMagnets ? magnets.length : 0} of {totalMagnets}
               </Text>
             </View>
 
             <View style={styles.magnetList}>
               <Text style={styles.label}>Magnets:</Text>
-              <View style={styles.magnetTags}>
-                {magnets.map((magnet, index) => (
-                  <View key={index} style={styles.magnetTag}>
-                    <Text style={styles.magnetTagText}>{magnet.name}</Text>
-                  </View>
-                ))}
-              </View>
+              {hasMagnets ? (
+                <View style={styles.magnetTags}>
+                  {magnets.map((magnet, index) => (
+                    <View key={index} style={styles.magnetTag}>
+                      <Text style={styles.magnetTagText}>{magnet.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noDataText}>Loading magnet data...</Text>
+              )}
             </View>
 
             <View style={styles.timeInfo}>
@@ -58,7 +77,9 @@ const CleaningReminder = ({ visible, onClose, magnets, sourceName, destName, run
             <View style={styles.urgentBox}>
               <Text style={styles.urgentIcon}>⚠️</Text>
               <Text style={styles.urgentText}>
-                Please clean the {magnets.length === 1 ? 'magnet' : 'magnets'} now!
+                {hasMagnets 
+                  ? `Please clean the ${magnets.length === 1 ? 'magnet' : 'magnets'} now!`
+                  : 'Please wait for magnet data to load...'}
               </Text>
             </View>
           </View>
@@ -216,6 +237,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });
 

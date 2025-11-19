@@ -1289,7 +1289,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         <CleaningReminder
           visible={cleaningReminderVisible}
           onClose={() => setCleaningReminderVisible(false)}
-          data={cleaningReminderData}
+          {...cleaningReminderData}
         />
 
       </View>

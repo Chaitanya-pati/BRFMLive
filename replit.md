@@ -94,6 +94,7 @@ The application is seeded with the following test users for different roles:
 - Created default admin user for testing (username: admin, password: admin123)
 - Created 5 default branches (Main, North, South, East, West) and associated all with admin user
 - Fixed login redirection issue by ensuring users have branch associations
+- Fixed Pre-Cleaning view blank screen error by adding default props and proper prop spreading in CleaningReminder component
 - Configured frontend environment with proper API URL for Replit deployment
 - Verified both Backend API (port 8000) and Frontend (Expo on port 5000) workflows are running
 - Tested and confirmed login functionality is working end-to-end with proper branch selection
