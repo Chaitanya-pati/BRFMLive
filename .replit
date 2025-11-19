@@ -5,7 +5,19 @@ integrations = ["python_database:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
+packages = [
+  "cacert",
+  "cargo",
+  "glibcLocales",
+  "libffi",
+  "libiconv",
+  "libuv",
+  "libxcrypt",
+  "libyaml",
+  "openssl",
+  "pkg-config",
+  "rustc",
+]
 
 [workflows]
 runButton = "Project"
@@ -78,8 +90,8 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
-localPort = 36257
-externalPort = 5173
+localPort = 36681
+externalPort = 3001
 
 [[ports]]
 localPort = 36719
@@ -102,6 +114,10 @@ localPort = 40105
 externalPort = 3002
 
 [[ports]]
+localPort = 43631
+externalPort = 3003
+
+[[ports]]
 localPort = 44847
 externalPort = 5000
 
@@ -111,5 +127,9 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000"]
+run = [
+  "bash",
+  "-c",
+  "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
+]
 build = ["bash", "-c", "cd frontend && npm install && cd ../backend && uv sync"]
