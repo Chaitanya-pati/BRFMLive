@@ -7,6 +7,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Platform,
+  Image,
 } from 'react-native';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -20,6 +21,7 @@ import { formatISTDateTime } from '../utils/dateUtils';
 import { calculateMagnetNotifications } from '../utils/notificationChecker';
 import { showToast, showAlert, showConfirm } from '../utils/customAlerts';
 import CleaningReminder from '../components/CleaningReminder';
+import * as ImagePicker from 'expo-image-picker'; // Import ImagePicker
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -53,6 +55,12 @@ export default function PrecleaningBinScreen({ navigation }) {
   // State for cleaning reminder popup
   const [cleaningReminderVisible, setCleaningReminderVisible] = useState(false);
   const [cleaningReminderData, setCleaningReminderData] = useState({});
+
+  // State for cleaning record modal
+  const [cleaningModalVisible, setCleaningModalVisible] = useState(false);
+  const [beforeCleaningPhoto, setBeforeCleaningPhoto] = useState(null);
+  const [afterCleaningPhoto, setAfterCleaningPhoto] = useState(null);
+
 
   const cleaningRecordsRef = React.useRef(cleaningRecords);
   const transferSessionsRef = React.useRef(transferSessions);
@@ -528,7 +536,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const handleDeleteTransferSession = async (session) => {
     try {
       const confirmDelete = await showConfirm(
-        'Confirm Delete', 
+        'Confirm Delete',
         `Are you sure you want to delete this transfer session?\n\nSource: ${session.source_godown?.name || 'N/A'}\nDestination: ${session.destination_bin?.bin_number || 'N/A'}`
       );
 
@@ -554,7 +562,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const handleDeleteRouteMapping = async (mapping) => {
     try {
       const confirmDelete = await showConfirm(
-        'Confirm Delete', 
+        'Confirm Delete',
         `Are you sure you want to delete this route mapping?\n\nMagnet: ${mapping.magnet?.name || 'N/A'}`
       );
 
@@ -662,26 +670,62 @@ export default function PrecleaningBinScreen({ navigation }) {
       before_cleaning_photo: null,
       after_cleaning_photo: null,
     });
-    setModalVisible(true);
+    setBeforeCleaningPhoto(null);
+    setAfterCleaningPhoto(null);
+    setCleaningModalVisible(true);
   };
 
-  const handleEditCleaningRecord = (record) => {
+  const openEditCleaningModal = (record) => {
     setEditingCleaningRecord(record);
-    setCleaningRecordFormData({
-      magnet_id: String(record.magnet_id),
-      transfer_session_id: record.transfer_session_id ? String(record.transfer_session_id) : '',
-      cleaning_timestamp: record.cleaning_timestamp,
+    setCleaningFormData({
+      magnet_id: record.magnet_id,
+      transfer_session_id: record.transfer_session_id || '',
+      cleaning_timestamp: record.cleaning_timestamp ? new Date(record.cleaning_timestamp) : new Date(),
       notes: record.notes || '',
-      before_cleaning_photo: null,
-      after_cleaning_photo: null,
     });
-    setModalVisible(true);
+
+    // Helper function to construct full image URL
+    const constructImageUrl = (imagePath) => {
+      if (!imagePath) return null;
+
+      let photoUrl = imagePath;
+
+      // Remove Python byte string markers if present
+      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
+        photoUrl = photoUrl.slice(2, -1);
+      }
+
+      // If already a full URL, return as is
+      if (photoUrl.startsWith('http')) {
+        return { uri: photoUrl };
+      }
+
+      // Construct full URL using window location for web compatibility
+      const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+      const baseUrl = `${protocol}//${hostname}:8000`;
+
+      const fullUrl = photoUrl.startsWith('/')
+        ? `${baseUrl}${photoUrl}`
+        : `${baseUrl}/${photoUrl}`;
+
+      console.log('Constructed image URL:', fullUrl);
+      return { uri: fullUrl };
+    };
+
+    // Load existing images if available
+    const beforePhoto = constructImageUrl(record.before_cleaning_photo);
+    const afterPhoto = constructImageUrl(record.after_cleaning_photo);
+
+    setBeforeCleaningPhoto(beforePhoto);
+    setAfterCleaningPhoto(afterPhoto);
+    setCleaningModalVisible(true);
   };
 
   const handleDeleteCleaningRecord = async (record) => {
     try {
       const confirmDelete = await showConfirm(
-        'Confirm Delete', 
+        'Confirm Delete',
         `Are you sure you want to delete this cleaning record?\n\nMagnet: ${record.magnet?.name || 'N/A'}\nCleaned: ${formatISTDateTime(record.cleaning_timestamp)}`
       );
 
@@ -700,6 +744,57 @@ export default function PrecleaningBinScreen({ navigation }) {
       showAlert('❌ Delete Failed', errorMessage, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pickCleaningImage = async (type) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        if (type === 'before') {
+          setBeforeCleaningPhoto(result.assets[0]);
+        } else {
+          setAfterCleaningPhoto(result.assets[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      showCustomAlert('Error', 'Failed to pick image');
+    }
+  };
+
+  const captureCleaningImage = async (type) => {
+    try {
+      // Request camera permission if not already granted
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== 'granted') {
+        showCustomAlert('Error', 'Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        if (type === 'before') {
+          setBeforeCleaningPhoto(result.assets[0]);
+        } else {
+          setAfterCleaningPhoto(result.assets[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      showCustomAlert('Error', 'Failed to capture image');
     }
   };
 
@@ -722,12 +817,33 @@ export default function PrecleaningBinScreen({ navigation }) {
         formDataToSend.append('notes', cleaningRecordFormData.notes);
       }
 
-      if (cleaningRecordFormData.before_cleaning_photo) {
-        formDataToSend.append('before_cleaning_photo', cleaningRecordFormData.before_cleaning_photo);
+      // Append image files if they exist
+      if (beforeCleaningPhoto && beforeCleaningPhoto.uri) {
+        // Extract file name and type if available from URI
+        let uriParts = beforeCleaningPhoto.uri.split('/');
+        let filename = uriParts[uriParts.length - 1];
+        // Infer type from filename extension, default to 'image'
+        let fileType = filename.includes('.') ? `image/${filename.split('.').pop()}` : 'image';
+
+        formDataToSend.append('before_cleaning_photo', {
+          uri: Platform.OS === 'android' ? beforeCleaningPhoto.uri : beforeCleaningPhoto.uri.replace('file://', ''),
+          name: filename,
+          type: fileType,
+        });
       }
 
-      if (cleaningRecordFormData.after_cleaning_photo) {
-        formDataToSend.append('after_cleaning_photo', cleaningRecordFormData.after_cleaning_photo);
+      if (afterCleaningPhoto && afterCleaningPhoto.uri) {
+        // Extract file name and type if available from URI
+        let uriParts = afterCleaningPhoto.uri.split('/');
+        let filename = uriParts[uriParts.length - 1];
+        // Infer type from filename extension, default to 'image'
+        let fileType = filename.includes('.') ? `image/${filename.split('.').pop()}` : 'image';
+
+        formDataToSend.append('after_cleaning_photo', {
+          uri: Platform.OS === 'android' ? afterCleaningPhoto.uri : afterCleaningPhoto.uri.replace('file://', ''),
+          name: filename,
+          type: fileType,
+        });
       }
 
       if (editingCleaningRecord) {
@@ -738,7 +854,7 @@ export default function PrecleaningBinScreen({ navigation }) {
         showToast('Cleaning record added successfully');
       }
 
-      setModalVisible(false);
+      setCleaningModalVisible(false);
       await fetchCleaningRecords();
     } catch (error) {
       console.error('Error saving cleaning record:', error);
@@ -903,7 +1019,7 @@ export default function PrecleaningBinScreen({ navigation }) {
             <DataTable
               columns={cleaningRecordColumns}
               data={cleaningRecords}
-              onEdit={handleEditCleaningRecord}
+              onEdit={openEditCleaningModal}
               onDelete={handleDeleteCleaningRecord}
               loading={loading}
               emptyMessage="No cleaning records found"
@@ -1202,8 +1318,19 @@ export default function PrecleaningBinScreen({ navigation }) {
 
         {/* Cleaning Record Modal */}
         <Modal
-          visible={modalVisible && activeTab === 'cleaningRecords'}
-          onClose={() => setModalVisible(false)}
+          visible={cleaningModalVisible}
+          onClose={() => {
+            setCleaningModalVisible(false);
+            setEditingCleaningRecord(null); // Reset editing state
+            setCleaningRecordFormData({ // Reset form data
+              magnet_id: '',
+              transfer_session_id: '',
+              cleaning_timestamp: new Date().toISOString(),
+              notes: '',
+            });
+            setBeforeCleaningPhoto(null); // Clear photo states
+            setAfterCleaningPhoto(null);
+          }}
           title={editingCleaningRecord ? 'Edit Cleaning Record' : 'Add Cleaning Record'}
           width={isMobile ? '95%' : isTablet ? '75%' : '50%'}
         >
@@ -1249,35 +1376,103 @@ export default function PrecleaningBinScreen({ navigation }) {
               editable={false}
             />
 
-            <InputField
-              label="Before Cleaning Photo"
-              placeholder="Select photo"
-              value={cleaningRecordFormData.before_cleaning_photo?.name || 'No file selected'}
-              editable={false}
-            />
-            {Platform.OS === 'web' && (
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, before_cleaning_photo: e.target.files[0] })}
-                style={{ marginBottom: 16 }}
-              />
-            )}
+            {/* Before Cleaning Photo Section */}
+            <View style={styles.imageSection}>
+              <Text style={styles.label}>Before Cleaning Photo</Text>
+              {beforeCleaningPhoto ? (
+                <View>
+                  <Image
+                    source={{ uri: beforeCleaningPhoto.uri }}
+                    style={styles.imagePreview}
+                    resizeMode="contain"
+                    onError={(error) => {
+                      console.error('Failed to load before cleaning photo:', error);
+                      showCustomAlert('Error', 'Failed to load image');
+                    }}
+                    onLoad={() => console.log('Before cleaning photo loaded successfully')}
+                  />
+                  <Text style={styles.imageUrlDebug}>URL: {beforeCleaningPhoto.uri}</Text>
+                  <View style={styles.imageButtonRow}>
+                    <TouchableOpacity
+                      onPress={() => captureCleaningImage('before')}
+                      style={[styles.imageActionButton, styles.cameraButton]}
+                    >
+                      <Text style={styles.imageActionText}>📷 Capture</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => pickCleaningImage('before')}
+                      style={[styles.imageActionButton, styles.galleryButton]}
+                    >
+                      <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureCleaningImage('before')}
+                    style={[styles.uploadButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickCleaningImage('before')}
+                    style={[styles.uploadButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
-            <InputField
-              label="After Cleaning Photo"
-              placeholder="Select photo"
-              value={cleaningRecordFormData.after_cleaning_photo?.name || 'No file selected'}
-              editable={false}
-            />
-            {Platform.OS === 'web' && (
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setCleaningRecordFormData({ ...cleaningRecordFormData, after_cleaning_photo: e.target.files[0] })}
-                style={{ marginBottom: 16 }}
-              />
-            )}
+            {/* After Cleaning Photo Section */}
+            <View style={styles.imageSection}>
+              <Text style={styles.label}>After Cleaning Photo</Text>
+              {afterCleaningPhoto ? (
+                <View>
+                  <Image
+                    source={{ uri: afterCleaningPhoto.uri }}
+                    style={styles.imagePreview}
+                    resizeMode="contain"
+                    onError={(error) => {
+                      console.error('Failed to load after cleaning photo:', error);
+                      showCustomAlert('Error', 'Failed to load image');
+                    }}
+                    onLoad={() => console.log('After cleaning photo loaded successfully')}
+                  />
+                  <Text style={styles.imageUrlDebug}>URL: {afterCleaningPhoto.uri}</Text>
+                  <View style={styles.imageButtonRow}>
+                    <TouchableOpacity
+                      onPress={() => captureCleaningImage('after')}
+                      style={[styles.imageActionButton, styles.cameraButton]}
+                    >
+                      <Text style={styles.imageActionText}>📷 Capture</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => pickCleaningImage('after')}
+                      style={[styles.imageActionButton, styles.galleryButton]}
+                    >
+                      <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureCleaningImage('after')}
+                    style={[styles.uploadButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickCleaningImage('after')}
+                    style={[styles.uploadButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
             <InputField
               label="Notes"
@@ -1291,7 +1486,18 @@ export default function PrecleaningBinScreen({ navigation }) {
             <View style={styles.buttonContainer}>
               <Button
                 title="Cancel"
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  setCleaningModalVisible(false);
+                  setEditingCleaningRecord(null);
+                  setCleaningRecordFormData({
+                    magnet_id: '',
+                    transfer_session_id: '',
+                    cleaning_timestamp: new Date().toISOString(),
+                    notes: '',
+                  });
+                  setBeforeCleaningPhoto(null);
+                  setAfterCleaningPhoto(null);
+                }}
                 variant="outline"
               />
               <Button
@@ -1551,5 +1757,80 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
     fontSize: 14,
     fontWeight: '700',
+  },
+  // Styles for image upload and preview
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  imageUploadButton: {
+    backgroundColor: colors.primary,
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  imageUploadButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  imageSection: {
+    marginBottom: 12,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: 8,
+  },
+  imageButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  imageActionButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  cameraButton: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  galleryButton: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  imageActionText: {
+    color: colors.onPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  uploadButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  imageUrlDebug: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 4,
   },
 });
