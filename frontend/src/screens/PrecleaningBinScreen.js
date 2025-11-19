@@ -386,7 +386,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       const sourceName = godowns.find(g => g.id === parseInt(transferSessionFormData.source_godown_id))?.name || 'Unknown';
       const destBin = bins.find(b => b.id === parseInt(transferSessionFormData.destination_bin_id))?.bin_number || 'Unknown';
 
-      let successMessage = `✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destName}`;
+      let successMessage = `✅ Transfer Started Successfully!\n\n📍 Route: ${sourceName} → Bin ${destBin}`;
 
       if (data.magnet_id) {
         const magnetName = magnets.find(m => m.id === data.magnet_id)?.name || 'Unknown';
@@ -736,7 +736,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'magnet',
       label: 'Magnet',
       flex: 1.2,
-      render: (val, item) => item?.magnet?.name || 'N/A'
+      render: (val, item) => (item?.magnet?.name || 'N/A')
     },
     {
       field: 'route_flow',
@@ -757,7 +757,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'magnet_status',
       label: 'Magnet Status',
       flex: 0.8,
-      render: (val, item) => item?.magnet?.status || 'N/A'
+      render: (val, item) => (item?.magnet?.status || 'N/A')
     },
     {
       field: 'cleaning_interval_hours',
@@ -771,7 +771,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'magnet',
       label: 'Magnet',
       flex: 1.5,
-      render: (val) => val?.name || '-'
+      render: (val) => (val?.name || '-')
     },
     {
       field: 'cleaning_timestamp',
@@ -783,13 +783,13 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'before_cleaning_photo',
       label: 'Before Photo',
       flex: 1,
-      render: (val) => val ? '✓' : '-'
+      render: (val) => (val ? '✓' : '-')
     },
     {
       field: 'after_cleaning_photo',
       label: 'After Photo',
       flex: 1,
-      render: (val) => val ? '✓' : '-'
+      render: (val) => (val ? '✓' : '-')
     },
     { field: 'notes', label: 'Notes', flex: 2 },
   ];
@@ -799,7 +799,7 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'source_godown',
       label: 'Source Godown',
       flex: 1.2,
-      render: (val) => val?.name || '-'
+      render: (val) => (val?.name || '-')
     },
     {
       field: 'current_bin',
@@ -807,14 +807,14 @@ export default function PrecleaningBinScreen({ navigation }) {
       flex: 1.2,
       render: (val, item) => {
         if (item.current_bin) return item.current_bin.bin_number;
-        return item.destination_bin?.bin_number || '-';
+        return (item.destination_bin?.bin_number || '-');
       }
     },
     {
       field: 'magnet',
       label: 'Magnet',
       flex: 1.2,
-      render: (val) => val?.name || '-'
+      render: (val) => (val?.name || '-')
     },
     {
       field: 'start_timestamp',
@@ -832,13 +832,13 @@ export default function PrecleaningBinScreen({ navigation }) {
       field: 'transferred_quantity',
       label: 'Quantity (tons)',
       flex: 1,
-      render: (val) => val ? val.toFixed(2) : '-'
+      render: (val) => (val ? val.toFixed(2) : '-')
     },
     {
       field: 'status',
       label: 'Status',
       flex: 0.8,
-      render: (val) => val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-'
+      render: (val) => (val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : '-')
     },
   ];
 
