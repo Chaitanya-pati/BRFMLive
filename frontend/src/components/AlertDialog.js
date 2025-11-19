@@ -55,9 +55,8 @@ const AlertDialog = ({ visible, onClose, title, message, type = 'info', buttons 
                   button.style === 'primary' && styles.buttonPrimary,
                 ]}
                 onPress={() => {
-                  button.onPress?.();
-                  if (button.style !== 'cancel') {
-                    onClose?.();
+                  if (button.onPress) {
+                    button.onPress();
                   }
                 }}
               >

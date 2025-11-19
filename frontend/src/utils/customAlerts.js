@@ -39,23 +39,35 @@ export const showAlert = (title, message, type = 'info', buttons = []) => {
   });
 };
 
-export const showConfirm = (title, message, onConfirm, onCancel) => {
-  return showAlert(title, message, 'warning', [
-    {
-      text: 'Cancel',
-      style: 'cancel',
-      onPress: () => {
-        onCancel?.();
-      },
-    },
-    {
-      text: 'Confirm',
-      style: 'destructive',
-      onPress: () => {
-        onConfirm?.();
-      },
-    },
-  ]);
+export const showConfirm = (title, message) => {
+  return new Promise((resolve) => {
+    if (alertContainer) {
+      alertContainer.show(title, message, 'warning', [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            resolve(false);
+          },
+        },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: () => {
+            resolve(true);
+          },
+        },
+      ]);
+    } else {
+      console.warn('⚠️ Alert container not initialized');
+      // Fallback to browser confirm in web environment
+      if (typeof window !== 'undefined' && window.confirm) {
+        resolve(window.confirm(`${title}\n\n${message}`));
+      } else {
+        resolve(false);
+      }
+    }
+  });
 };
 
 export const showSuccess = (message) => {

@@ -526,39 +526,51 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteTransferSession = async (session) => {
-    const confirmDelete = await showConfirm('Confirm Delete', `Are you sure you want to delete this transfer session?`);
-
-    if (!confirmDelete) return;
-
     try {
+      const confirmDelete = await showConfirm(
+        'Confirm Delete', 
+        `Are you sure you want to delete this transfer session?\n\nSource: ${session.source_godown?.name || 'N/A'}\nDestination: ${session.destination_bin?.bin_number || 'N/A'}`
+      );
+
+      if (!confirmDelete) {
+        console.log('Delete cancelled by user');
+        return;
+      }
+
       setLoading(true);
       await transferSessionApi.delete(session.id);
       stopNotificationCheck(session.id);
       await fetchTransferSessions();
-      showToast('Transfer session deleted successfully');
+      showToast('✅ Transfer session deleted successfully', 'success');
     } catch (error) {
-      console.error('Error deleting transfer session:', error);
+      console.error('❌ Error deleting transfer session:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete transfer session';
-      showAlert('Error', errorMessage);
+      showAlert('❌ Delete Failed', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteRouteMapping = async (mapping) => {
-    const confirmDelete = await showConfirm('Confirm Delete', `Are you sure you want to delete this route mapping?`);
-
-    if (!confirmDelete) return;
-
     try {
+      const confirmDelete = await showConfirm(
+        'Confirm Delete', 
+        `Are you sure you want to delete this route mapping?\n\nMagnet: ${mapping.magnet?.name || 'N/A'}`
+      );
+
+      if (!confirmDelete) {
+        console.log('Delete cancelled by user');
+        return;
+      }
+
       setLoading(true);
       await routeMagnetMappingApi.delete(mapping.id);
       await fetchRouteMappings();
-      showToast('Route mapping deleted successfully');
+      showToast('✅ Route mapping deleted successfully', 'success');
     } catch (error) {
-      console.error('Error deleting route mapping:', error);
+      console.error('❌ Error deleting route mapping:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete route mapping';
-      showAlert('Error', errorMessage);
+      showAlert('❌ Delete Failed', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -667,19 +679,25 @@ export default function PrecleaningBinScreen({ navigation }) {
   };
 
   const handleDeleteCleaningRecord = async (record) => {
-    const confirmDelete = await showConfirm('Confirm Delete', `Are you sure you want to delete this cleaning record?`);
-
-    if (!confirmDelete) return;
-
     try {
+      const confirmDelete = await showConfirm(
+        'Confirm Delete', 
+        `Are you sure you want to delete this cleaning record?\n\nMagnet: ${record.magnet?.name || 'N/A'}\nCleaned: ${formatISTDateTime(record.cleaning_timestamp)}`
+      );
+
+      if (!confirmDelete) {
+        console.log('Delete cancelled by user');
+        return;
+      }
+
       setLoading(true);
       await magnetCleaningRecordApi.delete(record.id);
       await fetchCleaningRecords();
-      showToast('Cleaning record deleted successfully');
+      showToast('✅ Cleaning record deleted successfully', 'success');
     } catch (error) {
-      console.error('Error deleting cleaning record:', error);
+      console.error('❌ Error deleting cleaning record:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete cleaning record';
-      showAlert('Error', errorMessage);
+      showAlert('❌ Delete Failed', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
