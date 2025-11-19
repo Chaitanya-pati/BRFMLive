@@ -1183,29 +1183,7 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Quality Category (Wheat Variety) *</Text>
-                <View style={styles.rowField}>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={formData.wheat_variety}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, wheat_variety: value })
-                      }
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select Quality Category" value="" />
-                      {qualityCategories.map((cat, index) => (
-                        <Picker.Item
-                          key={index}
-                          label={cat.label}
-                          value={cat.value}
-                        />
-                      ))}
-                    </Picker>
-                  </View>
-                </View>
-              </View>
+            
 
               <View style={styles.formRow}>
                 <Text style={styles.rowLabel}>Test Date *</Text>
@@ -1228,20 +1206,7 @@ export default function LabTestScreen({ navigation }) {
                 />
               )}
 
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Tested By</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.tested_by}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, tested_by: text })
-                    }
-                    placeholder="Name of lab chemist"
-                  />
-                </View>
-              </View>
-            </View>
+             
 
             {/* Raise Claim Toggle */}
             <View style={styles.section}>
@@ -1563,7 +1528,43 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
             </View>
-
+            <View style={styles.formRow}>
+              <Text style={styles.rowLabel}>Quality Category (Wheat Variety) *</Text>
+              <View style={styles.rowField}>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={formData.wheat_variety}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, wheat_variety: value })
+                    }
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Quality Category" value="" />
+                    {qualityCategories.map((cat, index) => (
+                      <Picker.Item
+                        key={index}
+                        label={cat.label}
+                        value={cat.value}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+              <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Tested By</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.tested_by}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, tested_by: text })
+                      }
+                      placeholder="Name of lab chemist"
+                    />
+                  </View>
+                </View>
+              </View>
             {/* Comments & Final Approval */}
             <View style={styles.section}>
               <View style={styles.formRow}>
