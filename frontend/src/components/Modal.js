@@ -39,7 +39,7 @@ export default function Modal({ visible, onClose, title, children, width = '80%'
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView 
+          <ScrollView
             ref={scrollViewRef}
             style={[styles.content, isMobile && styles.contentMobile]}
           >
@@ -100,9 +100,10 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   content: {
-    padding: 20,
+    flex: 1,
+    padding: 16,
   },
   contentMobile: {
-    padding: 16,
+    padding: 10,
   },
 });

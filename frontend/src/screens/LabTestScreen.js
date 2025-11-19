@@ -1081,7 +1081,7 @@ export default function LabTestScreen({ navigation }) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
-        width={isMobile ? "100%" : isTablet ? "85%" : "90%"}
+        width={isMobile ? "100%" : isTablet ? "75%" : "800px"}
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
@@ -1747,17 +1747,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   form: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: colors.textPrimary,
-    marginBottom: 12,
-    paddingBottom: 8,
+    marginBottom: 8,
+    paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
   },
@@ -1766,27 +1766,27 @@ const styles = StyleSheet.create({
       web: "row", 
       default: "column" 
     }),
-    marginBottom: 16,
+    marginBottom: 10,
     alignItems: Platform.select({ 
       web: "center", 
       default: "stretch" 
     }),
-    gap: Platform.select({ web: 16, default: 6 }),
+    gap: Platform.select({ web: 12, default: 4 }),
   },
   rowLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.textPrimary,
     width: Platform.select({ 
-      web: "35%", 
+      web: "38%", 
       default: "100%" 
     }),
-    minWidth: Platform.select({ web: 200, default: "auto" }),
+    minWidth: Platform.select({ web: 160, default: "auto" }),
   },
   rowField: {
     flex: 1,
     width: Platform.select({ 
-      web: "65%", 
+      web: "62%", 
       default: "100%" 
     }),
   },
@@ -1801,35 +1801,35 @@ const styles = StyleSheet.create({
     minWidth: Platform.select({ web: 200, default: "100%" }),
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
     borderColor: colors.outline,
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 14,
+    borderRadius: 4,
+    padding: 8,
+    fontSize: 13,
     backgroundColor: colors.surface,
     color: colors.textPrimary,
-    minHeight: 44,
+    minHeight: 38,
   },
   inputDisabled: {
     backgroundColor: "#f5f5f5",
     color: colors.textSecondary,
   },
   textArea: {
-    height: 80,
+    height: 70,
     textAlignVertical: "top",
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: colors.outline,
-    borderRadius: 6,
+    borderRadius: 4,
     backgroundColor: colors.surface,
-    minHeight: 44,
+    minHeight: 38,
   },
   picker: {
     height: Platform.OS === "ios" ? 150 : 50,
@@ -1860,27 +1860,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#d4edda",
     borderColor: "#28a745",
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 12,
-    marginTop: 16,
+    borderRadius: 4,
+    padding: 10,
+    marginTop: 12,
   },
   approvalTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     color: "#155724",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderWidth: 2,
     borderColor: "#28a745",
-    borderRadius: 4,
-    marginRight: 12,
+    borderRadius: 3,
+    marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
@@ -1890,34 +1890,34 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
   },
   checkboxLabel: {
     flex: 1,
   },
   checkboxText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#155724",
   },
   checkboxSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6c757d",
-    marginTop: 2,
+    marginTop: 1,
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 20,
+    gap: 10,
+    marginTop: 16,
     flexWrap: "wrap",
   },
   button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-    minWidth: Platform.select({ web: 100, default: "48%" }),
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 4,
+    minWidth: Platform.select({ web: 90, default: "48%" }),
     alignItems: "center",
   },
   cancelButton: {
@@ -2000,18 +2000,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   filterTypeContainer: {
     flexDirection: "row",
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 6,
+    gap: 6,
   },
   filterTypeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.outline,
     backgroundColor: colors.surface,
@@ -2030,9 +2030,9 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
   },
   noResultsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     fontStyle: "italic",
-    marginTop: 4,
+    marginTop: 3,
   },
 });
