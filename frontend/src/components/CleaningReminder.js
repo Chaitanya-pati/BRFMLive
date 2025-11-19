@@ -89,8 +89,10 @@ const CleaningReminder = ({
             <TouchableOpacity 
               style={[styles.button, styles.addRecordButton]} 
               onPress={() => {
+                if (onAddCleaningRecord && typeof onAddCleaningRecord === 'function') {
+                  onAddCleaningRecord();
+                }
                 onClose();
-                onAddCleaningRecord();
               }}
             >
               <Text style={styles.buttonText}>Add Cleaning Record</Text>

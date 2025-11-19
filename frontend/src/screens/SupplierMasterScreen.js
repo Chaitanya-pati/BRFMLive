@@ -284,16 +284,6 @@ export default function SupplierMasterScreen({ navigation }) {
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>GSTIN</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.gstin}
-            onChangeText={(text) => setFormData({ ...formData, gstin: text })}
-            placeholder="Enter GSTIN (15 characters)"
-            maxLength={15}
-            autoCapitalize="characters"
-          />
-
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -320,6 +310,14 @@ export default function SupplierMasterScreen({ navigation }) {
             placeholder="Enter city name"
           />
 
+          <Text style={styles.label}>District</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.district || ''}
+            onChangeText={(text) => setFormData({ ...formData, district: text })}
+            placeholder="Enter district name"
+          />
+
           <Text style={styles.label}>Street</Text>
           <TextInput
             style={styles.input}
@@ -337,14 +335,6 @@ export default function SupplierMasterScreen({ navigation }) {
             multiline
           />
 
-          <Text style={styles.label}>District</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.district || ''}
-            onChangeText={(text) => setFormData({ ...formData, district: text })}
-            placeholder="Enter district name"
-          />
-
           <Text style={styles.label}>Zip Code</Text>
           <TextInput
             style={styles.input}
@@ -352,6 +342,16 @@ export default function SupplierMasterScreen({ navigation }) {
             onChangeText={(text) => setFormData({ ...formData, zip_code: text })}
             placeholder="Enter zip code"
             keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>GSTIN</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.gstin}
+            onChangeText={(text) => setFormData({ ...formData, gstin: text })}
+            placeholder="Enter GSTIN (15 characters)"
+            maxLength={15}
+            autoCapitalize="characters"
           />
 
           <View style={styles.buttonContainer}>

@@ -515,6 +515,19 @@ export default function VehicleEntryScreen() {
             keyboardType="numeric"
           />
 
+          <View>
+            <Text style={styles.label}>Net Weight (kg)</Text>
+            <TextInput
+              style={[styles.input, styles.inputDisabled]}
+              value={
+                formData.empty_weight && formData.gross_weight
+                  ? (parseFloat(formData.gross_weight) - parseFloat(formData.empty_weight)).toFixed(2)
+                  : '0.00'
+              }
+              editable={false}
+            />
+          </View>
+
           <InputField
             label="Notes"
             value={formData.notes}

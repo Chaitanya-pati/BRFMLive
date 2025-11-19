@@ -82,3 +82,12 @@
                 [session.id]: intervalsPassed
               }));
             }
+// Added logic for showing add cleaning record modal from reminder
+            const showAddCleaningRecordModal = () => {
+              // Close the cleaning reminder first
+              setCleaningReminderVisible(false);
+              // Then open the add cleaning record modal
+              setTimeout(() => {
+                setIsAddCleaningModalVisible(true);
+              }, 100);
+            };
