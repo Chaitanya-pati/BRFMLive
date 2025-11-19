@@ -5,8 +5,8 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
@@ -15,6 +15,18 @@ import Modal from '../components/Modal';
 import { godownApi, supplierApi, binApi, magnetApi, machineApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
 import { showSuccess, showError, showWarning, showConfirm } from '../utils/customAlerts';
+
+// Import Intro.js for guided tours (Web only)
+let introJs = null;
+if (Platform.OS === 'web') {
+  try {
+    introJs = require('intro.js').default;
+    require('intro.js/introjs.css');
+    require('./MasterViewScreen.css');
+  } catch (e) {
+    console.warn('Intro.js not available on this platform');
+  }
+}
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
@@ -107,6 +119,51 @@ export default function MasterViewScreen({ navigation }) {
         loadGodownTypes(), // Load godown types here
         loadStatesFromApi()
       ]);
+
+      // Start Intro.js tour if on web and introJs is available
+      if (Platform.OS === 'web' && introJs) {
+        const intro = introJs();
+        intro.setOptions({
+          steps: [
+            {
+              title: 'Welcome to Master Data!',
+              intro: 'This is your hub for managing core data across the application. Let\'s take a quick tour!',
+            },
+            {
+              element: '.tabContainer', // This targets the tab bar
+              title: 'Master Data Tabs',
+              intro: 'Navigate between different master data sections like Godown, Supplier, Bins, Magnets, and Machines using these tabs. Each tab holds specific data.',
+            },
+            {
+              element: '.addButton', // Assuming DataTable has an add button with class 'addButton'
+              title: 'Add New Record',
+              intro: 'Click this button to add a new entry to the currently selected master data table. You will be prompted with a form to fill in the details.',
+            },
+            {
+              element: '.data-table', // Assuming DataTable has a class 'data-table'
+              title: 'Data Table',
+              intro: 'Here you can view all existing records for the selected master data. You can edit or delete existing records by clicking the respective icons.',
+            },
+            {
+              title: 'Popups and Forms',
+              intro: 'When you add or edit a record, a popup or form will appear. This form is where you input or modify the data. The fields will vary depending on the type of master data you are managing.',
+            },
+            {
+              title: 'Data Capture and Usage',
+              intro: 'All data entered here is crucial for the application\'s operations. For example, Supplier data is used for procurement, Godown data for inventory management, and Machine data for operational tracking. Ensuring accuracy here is vital.',
+            },
+            {
+              title: 'End of Tour',
+              intro: 'You\'ve now seen the basics of the Master Data screen. Feel free to explore and manage your data!',
+            },
+          ],
+          showStepNumbers: true,
+          exitOnOverlayClick: true,
+          skipLabel: 'Skip',
+          doneLabel: 'Done',
+        });
+        intro.start();
+      }
     };
     loadInitialData();
   }, []);
@@ -819,6 +876,9 @@ export default function MasterViewScreen({ navigation }) {
                 key={tab.key}
                 style={[styles.tab, activeTab === tab.key && styles.activeTab]}
                 onPress={() => setActiveTab(tab.key)}
+                className="tabButton" // Added for Intro.js targeting
+                data-intro={`Navigate to ${tab.label}`} // Intro.js tooltip
+                data-step="2" // Intro.js step number
               >
                 <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
                   {tab.label}
@@ -843,6 +903,7 @@ export default function MasterViewScreen({ navigation }) {
             onAdd={openGodownModal}
             onEdit={openEditGodownModal}
             onDelete={handleGodownDelete}
+            className="data-table" // Added for Intro.js targeting
           />
         )}
         {activeTab === 'supplier' && (
@@ -852,6 +913,7 @@ export default function MasterViewScreen({ navigation }) {
             onAdd={openAddModal}
             onEdit={openEditModal}
             onDelete={handleSupplierDelete}
+            className="data-table" // Added for Intro.js targeting
           />
         )}
         {activeTab === 'bins' && (
@@ -861,6 +923,7 @@ export default function MasterViewScreen({ navigation }) {
             onAdd={openBinModal}
             onEdit={openEditBinModal}
             onDelete={handleBinDelete}
+            className="data-table" // Added for Intro.js targeting
           />
         )}
         {activeTab === 'magnets' && (
@@ -870,6 +933,7 @@ export default function MasterViewScreen({ navigation }) {
             onAdd={openMagnetModal}
             onEdit={openEditMagnetModal}
             onDelete={handleMagnetDelete}
+            className="data-table" // Added for Intro.js targeting
           />
         )}
         {activeTab === 'machines' && (
@@ -879,6 +943,7 @@ export default function MasterViewScreen({ navigation }) {
             onAdd={openMachineModal}
             onEdit={openEditMachineModal}
             onDelete={handleMachineDelete}
+            className="data-table" // Added for Intro.js targeting
           />
         )}
 
@@ -890,7 +955,7 @@ export default function MasterViewScreen({ navigation }) {
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={true}>
             {activeTab === 'godown' && (
               <>
-                <Text style={styles.label}>Name *</Text>
+                <Text style={styles.label} data-intro="Enter the name for your godown." data-step="4">Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={godownFormData.name}
@@ -898,7 +963,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter godown name"
                 />
 
-                <Text style={styles.label}>Type *</Text>
+                <Text style={styles.label} data-intro="Select the type of godown from the list." data-step="5">Type *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={godownFormData.type}
@@ -915,7 +980,7 @@ export default function MasterViewScreen({ navigation }) {
             )}
             {activeTab === 'bins' && (
               <>
-                <Text style={styles.label}>Bin Number *</Text>
+                <Text style={styles.label} data-intro="Unique identifier for the bin." data-step="4">Bin Number *</Text>
                 <TextInput
                   style={styles.input}
                   value={binFormData.bin_number}
@@ -923,7 +988,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter bin number"
                 />
 
-                <Text style={styles.label}>Capacity (in tons) *</Text>
+                <Text style={styles.label} data-intro="Maximum storage capacity of the bin in tons." data-step="5">Capacity (in tons) *</Text>
                 <TextInput
                   style={styles.input}
                   value={binFormData.capacity}
@@ -932,7 +997,7 @@ export default function MasterViewScreen({ navigation }) {
                   keyboardType="numeric"
                 />
 
-                <Text style={styles.label}>Current Quantity (in tons)</Text>
+                <Text style={styles.label} data-intro="Current quantity stored in the bin in tons." data-step="6">Current Quantity (in tons)</Text>
                 <TextInput
                   style={styles.input}
                   value={binFormData.current_quantity}
@@ -941,7 +1006,7 @@ export default function MasterViewScreen({ navigation }) {
                   keyboardType="numeric"
                 />
 
-                <Text style={styles.label}>Bin Type</Text>
+                <Text style={styles.label} data-intro="Select the type of bin." data-step="7">Bin Type</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={binFormData.bin_type}
@@ -955,7 +1020,7 @@ export default function MasterViewScreen({ navigation }) {
                   </Picker>
                 </View>
 
-                <Text style={styles.label}>Status *</Text>
+                <Text style={styles.label} data-intro="Current status of the bin (Active, Inactive, etc.)." data-step="8">Status *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={binFormData.status}
@@ -971,7 +1036,7 @@ export default function MasterViewScreen({ navigation }) {
             )}
             {activeTab === 'magnets' && (
               <>
-                <Text style={styles.label}>Magnet Name *</Text>
+                <Text style={styles.label} data-intro="Name of the magnet." data-step="4">Magnet Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={magnetFormData.name}
@@ -979,7 +1044,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter magnet name"
                 />
 
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label} data-intro="Detailed description of the magnet." data-step="5">Description</Text>
                 <TextInput
                   style={styles.input}
                   value={magnetFormData.description}
@@ -988,7 +1053,7 @@ export default function MasterViewScreen({ navigation }) {
                   multiline
                 />
 
-                <Text style={styles.label}>Status *</Text>
+                <Text style={styles.label} data-intro="Current status of the magnet (Active, Inactive, etc.)." data-step="6">Status *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={magnetFormData.status}
@@ -1004,7 +1069,7 @@ export default function MasterViewScreen({ navigation }) {
             )}
             {activeTab === 'machines' && (
               <>
-                <Text style={styles.label}>Machine Name *</Text>
+                <Text style={styles.label} data-intro="Name of the machine." data-step="4">Machine Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={machineFormData.name}
@@ -1012,7 +1077,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter machine name"
                 />
 
-                <Text style={styles.label}>Machine Type *</Text>
+                <Text style={styles.label} data-intro="Type of the machine (e.g., Separator)." data-step="5">Machine Type *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={machineFormData.machine_type}
@@ -1025,7 +1090,7 @@ export default function MasterViewScreen({ navigation }) {
                   </Picker>
                 </View>
 
-                <Text style={styles.label}>Make (Brand)</Text>
+                <Text style={styles.label} data-intro="Brand or make of the machine." data-step="6">Make (Brand)</Text>
                 <TextInput
                   style={styles.input}
                   value={machineFormData.make}
@@ -1033,7 +1098,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter machine make/brand"
                 />
 
-                <Text style={styles.label}>Serial Number</Text>
+                <Text style={styles.label} data-intro="Unique serial number of the machine." data-step="7">Serial Number</Text>
                 <TextInput
                   style={styles.input}
                   value={machineFormData.serial_number}
@@ -1041,7 +1106,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter serial number"
                 />
 
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label} data-intro="Detailed description of the machine." data-step="8">Description</Text>
                 <TextInput
                   style={styles.input}
                   value={machineFormData.description}
@@ -1050,7 +1115,7 @@ export default function MasterViewScreen({ navigation }) {
                   multiline
                 />
 
-                <Text style={styles.label}>Status *</Text>
+                <Text style={styles.label} data-intro="Current status of the machine (Active, Maintenance, etc.)." data-step="9">Status *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={machineFormData.status}
@@ -1066,7 +1131,7 @@ export default function MasterViewScreen({ navigation }) {
             )}
             {activeTab === 'supplier' && (
               <>
-                <Text style={styles.label}>Supplier Name *</Text>
+                <Text style={styles.label} data-intro="Name of the supplier." data-step="4">Supplier Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.supplier_name}
@@ -1074,7 +1139,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter supplier name"
                 />
 
-                <Text style={styles.label}>Contact Person</Text>
+                <Text style={styles.label} data-intro="Contact person at the supplier's company." data-step="5">Contact Person</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.contact_person}
@@ -1082,7 +1147,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter contact person"
                 />
 
-                <Text style={styles.label}>Phone</Text>
+                <Text style={styles.label} data-intro="Supplier's phone number." data-step="6">Phone</Text>
                 <View style={styles.phoneInputContainer}>
                   <View style={styles.countryCodeBox}>
                     <Text style={styles.countryCodeText}>+91</Text>
@@ -1097,7 +1162,7 @@ export default function MasterViewScreen({ navigation }) {
                   />
                 </View>
 
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label} data-intro="Full address of the supplier." data-step="7">Address</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={supplierFormData.address}
@@ -1106,7 +1171,7 @@ export default function MasterViewScreen({ navigation }) {
                   multiline
                 />
 
-                <Text style={styles.label}>Street</Text>
+                <Text style={styles.label} data-intro="Street name or number for the supplier's address." data-step="8">Street</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.street}
@@ -1114,7 +1179,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter street"
                 />
 
-                <Text style={styles.label}>City *</Text>
+                <Text style={styles.label} data-intro="City where the supplier is located." data-step="9">City *</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.city || ''}
@@ -1122,7 +1187,7 @@ export default function MasterViewScreen({ navigation }) {
                   placeholder="Enter city name"
                 />
 
-                <Text style={styles.label}>State *</Text>
+                <Text style={styles.label} data-intro="State where the supplier is located." data-step="10">State *</Text>
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={selectedStateId || ''}
@@ -1140,7 +1205,7 @@ export default function MasterViewScreen({ navigation }) {
                   </Picker>
                 </View>
 
-                <Text style={styles.label}>ZIP Code</Text>
+                <Text style={styles.label} data-intro="ZIP code for the supplier's location." data-step="11">ZIP Code</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.zip_code}
@@ -1149,7 +1214,7 @@ export default function MasterViewScreen({ navigation }) {
                   keyboardType="numeric"
                 />
 
-                <Text style={styles.label}>GSTIN</Text>
+                <Text style={styles.label} data-intro="Supplier's GST identification number." data-step="12">GSTIN</Text>
                 <TextInput
                   style={styles.input}
                   value={supplierFormData.gstin}
@@ -1171,6 +1236,8 @@ export default function MasterViewScreen({ navigation }) {
                 style={[styles.button, styles.submitButton, loading && { opacity: 0.5 }]}
                 onPress={handleSubmit}
                 disabled={loading}
+                data-intro="Click to save your changes or add a new record."
+                data-step="13"
               >
                 <Text style={styles.buttonText}>
                   {loading ? 'Saving...' : editMode ? 'Update' : 'Save'}
