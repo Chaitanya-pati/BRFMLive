@@ -329,6 +329,8 @@ export default function PrecleaningBinScreen({ navigation }) {
             runningTime: timeString,
             cleaningInterval: intervalString,
             totalMagnets: totalMagnetsOnRoute,
+            sessionId: session.id,
+            magnetId: magnet.id,
           });
           setCleaningReminderVisible(true);
         }
@@ -410,7 +412,12 @@ export default function PrecleaningBinScreen({ navigation }) {
       showAlert('✅ Transfer Started', successMessage);
 
       setStartTransferModal(false);
-      await fetchTransferSessions();
+      // Optimize: Fetch data in parallel instead of sequentially
+      await Promise.all([
+        fetchTransferSessions(),
+        fetchBins(),
+        fetchGodowns()
+      ]);
     } catch (error) {
       console.error('❌ Error starting transfer:', error);
 
@@ -466,9 +473,12 @@ export default function PrecleaningBinScreen({ navigation }) {
       setActiveTransferSession(null);
       setDivertTransferFormData({ new_bin_id: '', quantity_transferred: '' });
 
-      await fetchTransferSessions();
-      await fetchBins();
-      await fetchGodowns();
+      // Optimize: Fetch data in parallel instead of sequentially
+      await Promise.all([
+        fetchTransferSessions(),
+        fetchBins(),
+        fetchGodowns()
+      ]);
     } catch (error) {
       console.error('Error diverting transfer:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to divert transfer';
@@ -505,9 +515,12 @@ export default function PrecleaningBinScreen({ navigation }) {
       setActiveTransferSession(null);
       setStopTransferFormData({ transferred_quantity: '' });
 
-      await fetchTransferSessions();
-      await fetchBins();
-      await fetchGodowns();
+      // Optimize: Fetch data in parallel instead of sequentially
+      await Promise.all([
+        fetchTransferSessions(),
+        fetchBins(),
+        fetchGodowns()
+      ]);
     } catch (error) {
       console.error('Error stopping transfer:', error);
 
@@ -1522,8 +1535,16 @@ export default function PrecleaningBinScreen({ navigation }) {
             cleaningInterval={cleaningReminderData.cleaningInterval || '0m 0s'}
             totalMagnets={cleaningReminderData.totalMagnets || 0}
             onAddCleaningRecord={() => {
+              // Pre-populate only the magnet and session fields, preserve other form data
+              if (cleaningReminderData.magnetId && cleaningReminderData.sessionId) {
+                setCleaningRecordFormData(prev => ({
+                  ...prev,
+                  magnet_id: String(cleaningReminderData.magnetId),
+                  transfer_session_id: String(cleaningReminderData.sessionId),
+                }));
+              }
               setCleaningModalVisible(true);  // Set to show cleaning record modal
-              setCleaningReminderVisible(false); // Optionally close the reminder
+              setCleaningReminderVisible(false); // Close the reminder
             }}
           />
         />

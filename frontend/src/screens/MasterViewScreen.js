@@ -16,17 +16,7 @@ import { godownApi, supplierApi, binApi, magnetApi, machineApi, stateCityApi } f
 import colors from '../theme/colors';
 import { showSuccess, showError, showWarning, showConfirm } from '../utils/customAlerts';
 
-// Import Intro.js for guided tours (Web only)
-let introJs = null;
-if (Platform.OS === 'web') {
-  try {
-    introJs = require('intro.js').default;
-    require('intro.js/introjs.css');
-    require('./MasterViewScreen.css');
-  } catch (e) {
-    console.warn('Intro.js not available on this platform');
-  }
-}
+// Intro.js for guided tours (Web only) - will be dynamically imported
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
@@ -804,12 +794,19 @@ export default function MasterViewScreen({ navigation }) {
         {Platform.OS === 'web' && (
           <TouchableOpacity
             style={styles.introButton}
-            onPress={() => {
-              console.log('Intro button clicked, introJs available:', !!introJs);
-              if (introJs) {
-                try {
-                  const intro = introJs();
-                  intro.setOptions({
+            onPress={async () => {
+              console.log('Intro button clicked, loading intro.js...');
+              try {
+                // Dynamically import intro.js and related CSS (Expo web compatible)
+                const introJsModule = await import('intro.js');
+                const introJs = introJsModule.default;
+                await Promise.all([
+                  import('intro.js/introjs.css'),
+                  import('./MasterViewScreen.css')
+                ]);
+                
+                const intro = introJs();
+                intro.setOptions({
                     steps: [
                       {
                         title: 'Welcome to Master Data!',
@@ -863,15 +860,11 @@ export default function MasterViewScreen({ navigation }) {
                     skipLabel: 'Skip',
                     doneLabel: 'Done',
                   });
-                  console.log('Starting Intro.js tour...');
-                  intro.start();
-                } catch (error) {
-                  console.error('Error starting Intro.js tour:', error);
-                  showWarning('Tour feature is not available. Please refresh the page.');
-                }
-              } else {
-                console.warn('Intro.js not loaded');
-                showWarning('Tour feature is not available on this platform or failed to load.');
+                console.log('Starting Intro.js tour...');
+                intro.start();
+              } catch (error) {
+                console.error('Error loading or starting Intro.js tour:', error);
+                showWarning('Tour feature could not be loaded. This feature is only available on web.');
               }
             }}
           >
