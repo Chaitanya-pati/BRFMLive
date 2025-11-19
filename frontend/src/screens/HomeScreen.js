@@ -3,16 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
 import { supplierApi, vehicleApi, labTestApi } from '../api/client';
-import { 
-  FaBuilding, 
-  FaTruck, 
-  FaFlask, 
-  FaClock, 
-  FaStore, 
-  FaUsers, 
-  FaUserPlus, 
-  FaCar 
+import {
+  FaBuilding,
+  FaTruck,
+  FaFlask,
+  FaClock,
+  FaStore,
+  FaUsers,
+  FaUserPlus,
+  FaCar
 } from 'react-icons/fa';
+import { useBranch } from '../context/BranchContext';
+import { storage } from '../utils/storage';
+
 
 // Icon component using Font Awesome icons
 const Icon = ({ name, size = 36, color }) => {
@@ -40,6 +43,7 @@ export default function HomeScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
+  const { activeBranch, setActiveBranch } = useBranch();
 
   const [stats, setStats] = useState([
     { title: 'Total Suppliers', value: '-', color: '#3b82f6', icon: 'building', gradient: ['#3b82f6', '#2563eb'] },
@@ -48,6 +52,28 @@ export default function HomeScreen({ navigation }) {
     { title: 'Pending Tests', value: '-', color: '#f59e0b', icon: 'clock', gradient: ['#f59e0b', '#d97706'] },
   ]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkBranch = async () => {
+      if (!activeBranch) {
+        const storedBranch = await storage.getActiveBranch();
+        const userData = await storage.getUserData();
+
+        if (storedBranch) {
+          await setActiveBranch(storedBranch);
+        } else if (userData?.branches?.length > 1) {
+          navigation.replace('BranchSelection');
+        } else if (userData?.branches?.length === 1) {
+          await setActiveBranch(userData.branches[0]);
+        } else {
+          navigation.replace('Login');
+        }
+      }
+    };
+
+    checkBranch();
+  }, [activeBranch]);
+
 
   useEffect(() => {
     fetchStatistics();

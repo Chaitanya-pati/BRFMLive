@@ -48,33 +48,25 @@ export default function App() {
 
   const checkAuthStatus = async () => {
     try {
-      console.log('🔍 Checking authentication status...');
       const userData = await storage.getUserData();
       const activeBranch = await storage.getActiveBranch();
 
       if (userData && userData.user_id) {
-        console.log('✅ User data found:', { userId: userData.user_id, username: userData.username });
-
         if (activeBranch && activeBranch.id) {
-          console.log('✅ Active branch found:', activeBranch.name);
           setInitialRoute('Home');
         } else if (userData.branches && userData.branches.length > 1) {
-          console.log('📋 Multiple branches found, redirecting to branch selection');
           setInitialRoute('BranchSelection');
         } else if (userData.branches && userData.branches.length === 1) {
-          console.log('✅ Single branch found, auto-selecting');
           await storage.setActiveBranch(userData.branches[0]);
           setInitialRoute('Home');
         } else {
-          console.log('⚠️ No branches found');
           setInitialRoute('Login');
         }
       } else {
-        console.log('❌ No user data found, redirecting to login');
         setInitialRoute('Login');
       }
     } catch (error) {
-      console.error('❌ Error checking auth status:', error);
+      console.error('Error checking auth status:', error);
       setInitialRoute('Login');
     } finally {
       setIsLoading(false);
