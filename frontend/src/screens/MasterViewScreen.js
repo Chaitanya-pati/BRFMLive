@@ -8,14 +8,13 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import notify from '../utils/notifications';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import SelectDropdown from '../components/SelectDropdown';
 import { godownApi, supplierApi, binApi, magnetApi, machineApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
+import { showSuccess, showError, showWarning, showConfirm } from '../utils/customAlerts';
 
 export default function MasterViewScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('godown');
@@ -125,7 +124,7 @@ export default function MasterViewScreen({ navigation }) {
       const fallbackTypes = ['Mill', 'Low Mill', 'HD-1', 'HD-2', 'HD-3', 'Warehouse', 'Silo', 'Storage', 'Cold Storage'];
       console.log('📋 Using fallback godown types:', fallbackTypes);
       setGodownTypes(fallbackTypes);
-      notify.showWarning('Using default godown types. Backend may be unavailable.');
+      showWarning('Using default godown types. Backend may be unavailable.');
     }
   };
 
@@ -308,7 +307,8 @@ export default function MasterViewScreen({ navigation }) {
         });
 
         if (!trimmedSupplierName || !trimmedState || !trimmedCity) {
-          notify.showWarning('Please fill all required fields: Supplier Name, State, and City are mandatory.');
+          showWarning('Please fill all required fields: Supplier Name, State, and City are mandatory');
+          setLoading(false);
           return;
         }
 
@@ -330,11 +330,11 @@ export default function MasterViewScreen({ navigation }) {
         if (editMode && currentItem?.id) {
           const response = await supplierApi.update(currentItem.id, payload);
           console.log('✅ Update response:', response);
-          notify.showSuccess('Supplier updated successfully');
+          showSuccess('Supplier updated successfully');
         } else {
           const response = await supplierApi.create(payload);
           console.log('✅ Create response:', response);
-          notify.showSuccess('Supplier added successfully');
+          showSuccess('Supplier added successfully');
         }
 
         await loadSuppliers();
@@ -345,12 +345,12 @@ export default function MasterViewScreen({ navigation }) {
       console.error('❌ Error saving data:', error);
       console.error('Error details:', error.response?.data);
       setLoading(false);
-      notify.showError(error.response?.data?.detail || error.message || 'Failed to save data. Please try again.');
+      showError(error.response?.data?.detail || error.message || 'Failed to save supplier');
     }
   };
 
   const handleDelete = (item) => {
-    notify.showConfirm(
+    showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete this ${activeTab === 'godown' ? 'godown' : activeTab === 'supplier' ? 'supplier' : activeTab === 'bins' ? 'bin' : 'magnet'}?`,
       async () => {
@@ -368,10 +368,10 @@ export default function MasterViewScreen({ navigation }) {
             await magnetApi.delete(item.id);
             loadMagnets();
           }
-          notify.showSuccess('Deleted successfully');
+          showSuccess('Deleted successfully');
         } catch (error) {
           console.error('Error deleting:', error);
-          notify.showError('Failed to delete. Please try again.');
+          showError('Failed to delete. Please try again.');
         }
       }
     );
@@ -467,7 +467,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const handleGodownSubmit = async () => {
     if (!godownFormData.name || !godownFormData.type) {
-      notify.showWarning('Please fill all required fields');
+      showWarning('Please fill all required fields');
       return;
     }
 
@@ -481,16 +481,16 @@ export default function MasterViewScreen({ navigation }) {
 
       if (editMode && currentGodown) {
         await godownApi.update(currentGodown.id, payload);
-        notify.showSuccess('Godown updated successfully');
+        showSuccess('Godown updated successfully');
       } else {
         await godownApi.create(payload);
-        notify.showSuccess('Godown created successfully');
+        showSuccess('Godown created successfully');
       }
 
       setModalVisible(false);
       loadGodowns();
     } catch (error) {
-      notify.showError(editMode ? 'Failed to update godown' : 'Failed to create godown');
+      showError(editMode ? 'Failed to update godown' : 'Failed to create godown');
     } finally {
       setLoading(false);
     }
@@ -526,7 +526,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const handleBinSubmit = async () => {
     if (!binFormData.bin_number || !binFormData.capacity) {
-      notify.showWarning('Please fill all required fields');
+      showWarning('Please fill all required fields');
       return;
     }
 
@@ -542,32 +542,32 @@ export default function MasterViewScreen({ navigation }) {
 
       if (editMode && currentBin) {
         await binApi.update(currentBin.id, payload);
-        notify.showSuccess('Bin updated successfully');
+        showSuccess('Bin updated successfully');
       } else {
         await binApi.create(payload);
-        notify.showSuccess('Bin created successfully');
+        showSuccess('Bin created successfully');
       }
 
       setModalVisible(false);
       loadBins();
     } catch (error) {
-      notify.showError(editMode ? 'Failed to update bin' : 'Failed to create bin');
+      showError(editMode ? 'Failed to update bin' : 'Failed to create bin');
     } finally {
       setLoading(false);
     }
   };
 
   const handleBinDelete = (bin) => {
-    notify.showConfirm(
+    showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete bin ${bin.bin_number}?`,
       async () => {
         try {
           await binApi.delete(bin.id);
-          notify.showSuccess('Bin deleted successfully');
+          showSuccess('Bin deleted successfully');
           loadBins();
         } catch (error) {
-          notify.showError('Failed to delete bin');
+          showError('Failed to delete bin');
         }
       }
     );
@@ -599,7 +599,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const handleMagnetSubmit = async () => {
     if (!magnetFormData.name) {
-      notify.showWarning('Please fill all required fields');
+      showWarning('Please fill all required fields');
       return;
     }
 
@@ -613,32 +613,32 @@ export default function MasterViewScreen({ navigation }) {
 
       if (editMode && currentMagnet) {
         await magnetApi.update(currentMagnet.id, payload);
-        notify.showSuccess('Magnet updated successfully');
+        showSuccess('Magnet updated successfully');
       } else {
         await magnetApi.create(payload);
-        notify.showSuccess('Magnet created successfully');
+        showSuccess('Magnet created successfully');
       }
 
       setModalVisible(false);
       loadMagnets();
     } catch (error) {
-      notify.showError(editMode ? 'Failed to update magnet' : 'Failed to create magnet');
+      showError(editMode ? 'Failed to update magnet' : 'Failed to create magnet');
     } finally {
       setLoading(false);
     }
   };
 
   const handleMagnetDelete = (magnet) => {
-    notify.showConfirm(
+    showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete magnet ${magnet.name}?`,
       async () => {
         try {
           await magnetApi.delete(magnet.id);
-          notify.showSuccess('Magnet deleted successfully');
+          showSuccess('Magnet deleted successfully');
           loadMagnets();
         } catch (error) {
-          notify.showError('Failed to delete magnet');
+          showError('Failed to delete magnet');
         }
       }
     );
@@ -676,7 +676,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const handleMachineSubmit = async () => {
     if (!machineFormData.name || !machineFormData.machine_type) {
-      notify.showWarning('Please fill all required fields');
+      showWarning('Please fill all required fields');
       return;
     }
 
@@ -693,32 +693,32 @@ export default function MasterViewScreen({ navigation }) {
 
       if (editMode && currentItem) {
         await machineApi.update(currentItem.id, payload);
-        notify.showSuccess('Machine updated successfully');
+        showSuccess('Machine updated successfully');
       } else {
         await machineApi.create(payload);
-        notify.showSuccess('Machine created successfully');
+        showSuccess('Machine created successfully');
       }
 
       setModalVisible(false);
       loadMachines();
     } catch (error) {
-      notify.showError(editMode ? 'Failed to update machine' : 'Failed to create machine');
+      showError(editMode ? 'Failed to update machine' : 'Failed to create machine');
     } finally {
       setLoading(false);
     }
   };
 
   const handleMachineDelete = (machine) => {
-    notify.showConfirm(
+    showConfirm(
       'Confirm Delete',
       `Are you sure you want to delete machine ${machine.name}?`,
       async () => {
         try {
           await machineApi.delete(machine.id);
-          notify.showSuccess('Machine deleted successfully');
+          showSuccess('Machine deleted successfully');
           loadMachines();
         } catch (error) {
-          notify.showError('Failed to delete machine');
+          showError('Failed to delete machine');
         }
       }
     );
@@ -779,7 +779,7 @@ export default function MasterViewScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      notify.showError('Failed to load data. Please try again.');
+      showError('Failed to load data. Please try again.');
     } finally {
       setLoading(false);
     }

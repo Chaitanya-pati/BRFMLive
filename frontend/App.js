@@ -34,12 +34,19 @@ export default function App() {
   const [initialRoute, setInitialRoute] = useState('Login');
 
   useEffect(() => {
-    if (toastRef.current && alertRef.current) {
-      setToastContainer(toastRef.current);
-      setAlertContainer(alertRef.current);
-      setContainersReady(true);
-      console.log('✅ Toast and Alert containers initialized');
-    }
+    // Ensure containers are mounted before registering them
+    const timer = setTimeout(() => {
+      if (toastRef.current && alertRef.current) {
+        setToastContainer(toastRef.current);
+        setAlertContainer(alertRef.current);
+        setContainersReady(true);
+        console.log('✅ Toast and Alert containers initialized');
+      } else {
+        console.warn('⚠️ Toast or Alert container refs not available');
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

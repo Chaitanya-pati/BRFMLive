@@ -5,16 +5,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const getCurrentAPIUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
 
     // For local development, use localhost with port 8000
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return `http://${hostname}:8000/api`;
     }
 
-    // For Replit deployment, use relative /api path
-    // The Replit webview will proxy requests to the correct service
+    // For Replit deployment, construct full URL with protocol and port 8000
     if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      return '/api';
+      return `${protocol}//${hostname}:8000/api`;
     }
   }
 

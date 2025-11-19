@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -14,6 +13,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { supplierApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
+import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 
 export default function SupplierMasterScreen({ navigation }) {
   const [suppliers, setSuppliers] = useState([]);
@@ -37,27 +37,6 @@ export default function SupplierMasterScreen({ navigation }) {
     zip_code: '',
     gstin: '',
   });
-
-  const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onConfirm }
-      ]);
-    }
-  };
 
   useEffect(() => {
     loadSuppliers();
@@ -161,8 +140,10 @@ export default function SupplierMasterScreen({ navigation }) {
     const trimmedState = formData.state?.trim();
     const trimmedCity = formData.city?.trim();
 
+    console.log('📝 Submitting supplier:', { trimmedName, trimmedState, trimmedCity, editMode });
+
     if (!trimmedName || !trimmedState || !trimmedCity) {
-      showAlert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
+      await showAlert('Validation Error', 'Please fill in all required fields (Supplier Name, State, City)', 'error');
       return;
     }
 
@@ -182,41 +163,49 @@ export default function SupplierMasterScreen({ navigation }) {
         gstin: formData.gstin?.trim() || '',
       };
 
+      console.log('📤 Sending payload:', payload);
+
       if (editMode && currentSupplier) {
-        await supplierApi.update(currentSupplier.id, payload);
-        showAlert('Success', 'Supplier updated successfully');
+        const response = await supplierApi.update(currentSupplier.id, payload);
+        console.log('✅ Update response:', response.data);
+        showSuccess('Supplier updated successfully');
       } else {
-        await supplierApi.create(payload);
-        showAlert('Success', 'Supplier created successfully');
+        const response = await supplierApi.create(payload);
+        console.log('✅ Create response:', response.data);
+        showSuccess('Supplier created successfully');
       }
 
       setModalVisible(false);
       await loadSuppliers();
     } catch (error) {
+      console.error('❌ Save error:', error);
+      console.error('Error response:', error.response?.data);
       const errorMessage = error.response?.data?.detail 
         || error.response?.data?.message 
         || error.message 
         || 'Unknown error occurred';
-      showAlert('Error', 'Failed to save supplier: ' + errorMessage);
+      showError('Failed to save supplier: ' + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (supplier) => {
-    showConfirm(
+    const confirmed = await showConfirm(
       'Confirm Delete',
-      `Are you sure you want to delete ${supplier.supplier_name}?`,
-      async () => {
-        try {
-          await supplierApi.delete(supplier.id);
-          showAlert('Success', 'Supplier deleted successfully');
-          loadSuppliers();
-        } catch (error) {
-          showAlert('Error', 'Failed to delete supplier');
-        }
-      }
+      `Are you sure you want to delete ${supplier.supplier_name}?`
     );
+
+    if (confirmed) {
+      try {
+        await supplierApi.delete(supplier.id);
+        showSuccess('Supplier deleted successfully');
+        loadSuppliers();
+      } catch (error) {
+        console.error('❌ Delete error:', error);
+        showError('Failed to delete supplier');
+      }
+    }
   };
 
   const columns = [
