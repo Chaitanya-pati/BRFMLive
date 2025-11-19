@@ -1762,33 +1762,16 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   formRow: {
-    flexDirection: Platform.select({ 
-      web: "row", 
-      default: "column" 
-    }),
-    marginBottom: 10,
-    alignItems: Platform.select({ 
-      web: "center", 
-      default: "stretch" 
-    }),
-    gap: Platform.select({ web: 12, default: 4 }),
+    marginBottom: 14,
   },
   rowLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: colors.textPrimary,
-    width: Platform.select({ 
-      web: "38%", 
-      default: "100%" 
-    }),
-    minWidth: Platform.select({ web: 160, default: "auto" }),
+    marginBottom: 6,
   },
   rowField: {
-    flex: 1,
-    width: Platform.select({ 
-      web: "62%", 
-      default: "100%" 
-    }),
+    width: "100%",
   },
   row: {
     flexDirection: "row",
@@ -1797,14 +1780,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   field: {
-    flex: 1,
-    minWidth: Platform.select({ web: 200, default: "100%" }),
+    width: "100%",
+    marginBottom: 14,
   },
   label: {
     fontSize: 13,
     fontWeight: "600",
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
