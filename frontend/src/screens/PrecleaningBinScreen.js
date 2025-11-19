@@ -1512,18 +1512,20 @@ export default function PrecleaningBinScreen({ navigation }) {
         </Modal>
 
         {/* Cleaning Reminder Popup */}
-        <CleaningReminder
-          visible={cleaningReminderVisible}
-          onClose={() => setCleaningReminderVisible(false)}
-          magnets={cleaningReminderData.magnets || []}
-          sourceName={cleaningReminderData.sourceName || 'N/A'}
-          destName={cleaningReminderData.destName || 'N/A'}
-          runningTime={cleaningReminderData.runningTime || '0h 0m 0s'}
-          cleaningInterval={cleaningReminderData.cleaningInterval || '0m 0s'}
-          totalMagnets={cleaningReminderData.totalMagnets || 0}
-          onAddCleaningRecord={() => {
-            handleAddCleaningRecord();
-          }}
+          <CleaningReminder
+            visible={cleaningReminderVisible}
+            onClose={() => setCleaningReminderVisible(false)}
+            magnets={cleaningReminderData.magnets || []}
+            sourceName={cleaningReminderData.sourceName || 'N/A'}
+            destName={cleaningReminderData.destName || 'N/A'}
+            runningTime={cleaningReminderData.runningTime || '0h 0m 0s'}
+            cleaningInterval={cleaningReminderData.cleaningInterval || '0m 0s'}
+            totalMagnets={cleaningReminderData.totalMagnets || 0}
+            onAddCleaningRecord={() => {
+              setCleaningModalVisible(true);  // Set to show cleaning record modal
+              setCleaningReminderVisible(false); // Optionally close the reminder
+            }}
+          />
         />
       </View>
     </Layout>
