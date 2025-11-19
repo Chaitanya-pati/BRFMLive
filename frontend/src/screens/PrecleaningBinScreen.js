@@ -1515,6 +1515,24 @@ export default function PrecleaningBinScreen({ navigation }) {
         <CleaningReminder
           visible={cleaningReminderVisible}
           onClose={() => setCleaningReminderVisible(false)}
+          magnets={cleaningReminderData.magnets || []}
+          sourceName={cleaningReminderData.sourceName || 'N/A'}
+          destName={cleaningReminderData.destName || 'N/A'}
+          runningTime={cleaningReminderData.runningTime || '0h 0m 0s'}
+          cleaningInterval={cleaningReminderData.cleaningInterval || '0m 0s'}
+          totalMagnets={cleaningReminderData.totalMagnets || 0}
+          onAddCleaningRecord={() => {
+            handleAddCleaningRecord();
+          }}
+        />
+
+        {/* Transfer Sessions Tab */}
+        {activeTab === 'transferSessions' && (
+          <View>
+            <View style={styles.headerActions}>
+              <Button
+                title="Start Transfer"
+                onPress={() => setCleaningReminderVisible(false)}
           {...cleaningReminderData}
         />
 

@@ -11,7 +11,8 @@ const CleaningReminder = ({
   destName = 'N/A', 
   runningTime = '0h 0m 0s', 
   cleaningInterval = '0m 0s', 
-  totalMagnets = 0 
+  totalMagnets = 0,
+  onAddCleaningRecord = () => {} 
 }) => {
   if (!visible) {
     return null;
@@ -84,9 +85,23 @@ const CleaningReminder = ({
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Acknowledge</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.button, styles.addRecordButton]} 
+              onPress={() => {
+                onClose();
+                onAddCleaningRecord();
+              }}
+            >
+              <Text style={styles.buttonText}>Add Cleaning Record</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.acknowledgeButton]} 
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>Acknowledge</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </RNModal>
@@ -226,12 +241,22 @@ const styles = StyleSheet.create({
     color: '#92400e',
     fontWeight: '600',
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    margin: 20,
+  },
   button: {
-    backgroundColor: '#3b82f6',
+    flex: 1,
     padding: 16,
     alignItems: 'center',
-    margin: 20,
     borderRadius: 8,
+  },
+  addRecordButton: {
+    backgroundColor: '#10b981',
+  },
+  acknowledgeButton: {
+    backgroundColor: '#6b7280',
   },
   buttonText: {
     fontSize: 16,
