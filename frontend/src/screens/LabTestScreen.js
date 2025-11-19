@@ -949,20 +949,21 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleDelete = async (labTest) => {
-    notify.showConfirm(
+    const confirmed = await notify.showConfirm(
       'Confirm Delete',
-      'Are you sure you want to delete this lab test?',
-      async () => {
-        try {
-          await labTestApi.delete(labTest.id);
-          notify.showSuccess('Lab test deleted successfully');
-          loadLabTests();
-        } catch (error) {
-          notify.showError('Failed to delete lab test');
-          console.error(error);
-        }
-      }
+      'Are you sure you want to delete this lab test?'
     );
+    
+    if (confirmed) {
+      try {
+        await labTestApi.delete(labTest.id);
+        notify.showSuccess('Lab test deleted successfully');
+        loadLabTests();
+      } catch (error) {
+        notify.showError('Failed to delete lab test');
+        console.error(error);
+      }
+    }
   };
 
   const openRaiseClaimModal = (labTest) => {
@@ -1207,25 +1208,6 @@ export default function LabTestScreen({ navigation }) {
               )}
 
              
-
-            {/* Raise Claim Toggle */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Raise Claim</Text>
-              <View style={styles.checkboxContainer}>
-                <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={() =>
-                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
-                  }
-                >
-                  {formData.raise_claim && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-                <Text style={styles.checkboxText}>Yes/No</Text>
-              </View>
-            </View>
-
 
             {/* Test Parameters */}
             <View style={styles.section}>
@@ -1583,6 +1565,29 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
+              {/* Raise Claim Section */}
+              <View style={styles.raiseClaimSection}>
+                <Text style={styles.sectionTitle}>Raise Claim</Text>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() =>
+                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
+                  }
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      formData.raise_claim && styles.checkboxChecked,
+                    ]}
+                  >
+                    {formData.raise_claim && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </View>
+                  <Text style={styles.checkboxText}>Yes/No</Text>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.approvalBox}>
                 <Text style={styles.approvalTitle}>Final Approval</Text>
                 <TouchableOpacity
@@ -1839,6 +1844,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.primary,
     padding: 12,
+  },
+  raiseClaimSection: {
+    backgroundColor: "#fff3cd",
+    borderColor: "#ffc107",
+    borderWidth: 1,
+    borderRadius: 4,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 12,
   },
   approvalBox: {
     backgroundColor: "#d4edda",

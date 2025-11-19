@@ -8,16 +8,13 @@ const AlertContainer = forwardRef((props, ref) => {
     show: (title, message, type = 'info', buttons = [], resolve) => {
       const id = Date.now();
 
-      // Wrap button callbacks to close dialog and resolve promise
+      // Wrap button callbacks to close dialog
       const wrappedButtons = buttons.map(button => ({
         ...button,
         onPress: () => {
+          handleClose(id);
           if (button.onPress) {
             button.onPress();
-          }
-          handleClose(id);
-          if (resolve) {
-            resolve();
           }
         }
       }));
@@ -33,7 +30,7 @@ const AlertContainer = forwardRef((props, ref) => {
           onPress: () => {
             handleClose(id);
             if (resolve) {
-              resolve();
+              resolve(true);
             }
           }
         }]

@@ -42,22 +42,19 @@ export const showAlert = (title, message, type = 'info', buttons = []) => {
 export const showConfirm = (title, message) => {
   return new Promise((resolve) => {
     if (alertContainer) {
-      alertContainer.show(title, message, 'warning', [
+      const buttons = [
         {
           text: 'Cancel',
           style: 'cancel',
-          onPress: () => {
-            resolve(false);
-          },
+          onPress: () => resolve(false),
         },
         {
           text: 'Confirm',
-          style: 'destructive',
-          onPress: () => {
-            resolve(true);
-          },
+          style: 'primary',
+          onPress: () => resolve(true),
         },
-      ]);
+      ];
+      alertContainer.show(title, message, 'warning', buttons, resolve);
     } else {
       console.warn('⚠️ Alert container not initialized');
       // Fallback to browser confirm in web environment
