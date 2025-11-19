@@ -1089,10 +1089,9 @@ export default function LabTestScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Select Vehicle *</Text>
-
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Select Vehicle *</Text>
+                <View style={styles.rowField}>
                   {/* Filter Type Selection */}
                   <View style={styles.filterTypeContainer}>
                     <TouchableOpacity
@@ -1171,9 +1170,11 @@ export default function LabTestScreen({ navigation }) {
                     </Text>
                   )}
                 </View>
+              </View>
 
-                <View style={styles.field}>
-                  <Text style={styles.label}>Bill Number</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Bill Number</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={[styles.input, styles.inputDisabled]}
                     value={formData.bill_number}
@@ -1182,11 +1183,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>
-                    Quality Category (Wheat Variety) *
-                  </Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Quality Category (Wheat Variety) *</Text>
+                <View style={styles.rowField}>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.wheat_variety}
@@ -1206,9 +1205,11 @@ export default function LabTestScreen({ navigation }) {
                     </Picker>
                   </View>
                 </View>
+              </View>
 
-                <View style={styles.field}>
-                  <Text style={styles.label}>Test Date *</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Test Date *</Text>
+                <View style={styles.rowField}>
                   <TouchableOpacity
                     style={styles.input}
                     onPress={() => setShowDatePicker(true)}
@@ -1227,16 +1228,18 @@ export default function LabTestScreen({ navigation }) {
                 />
               )}
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Tested By</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.tested_by}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, tested_by: text })
-                  }
-                  placeholder="Name of lab chemist"
-                />
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Tested By</Text>
+                <View style={styles.rowField}>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.tested_by}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, tested_by: text })
+                    }
+                    placeholder="Name of lab chemist"
+                  />
+                </View>
               </View>
             </View>
 
@@ -1263,9 +1266,9 @@ export default function LabTestScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Test Parameters</Text>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Moisture (%)</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Moisture (%)</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.moisture}
@@ -1276,8 +1279,11 @@ export default function LabTestScreen({ navigation }) {
                     placeholder="8-10.5"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Hectoliter Weight (Kg/hl)</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Hectoliter Weight (Kg/hl)</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.hectoliter_weight}
@@ -1290,9 +1296,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Wet Gluten (%)</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Wet Gluten (%)</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.wet_gluten}
@@ -1303,8 +1309,11 @@ export default function LabTestScreen({ navigation }) {
                     placeholder="32-33"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Dry Gluten</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Dry Gluten</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.dry_gluten}
@@ -1317,17 +1326,19 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Sedimentation Value (ml)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.sedimentation_value}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, sedimentation_value: text })
-                  }
-                  keyboardType="decimal-pad"
-                  placeholder="24-25"
-                />
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Sedimentation Value (ml)</Text>
+                <View style={styles.rowField}>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.sedimentation_value}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, sedimentation_value: text })
+                    }
+                    keyboardType="decimal-pad"
+                    placeholder="24-25"
+                  />
+                </View>
               </View>
             </View>
 
@@ -1335,9 +1346,9 @@ export default function LabTestScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Refractions / Impurities</Text>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Chaff/Husk</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Chaff/Husk</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.chaff_husk}
@@ -1347,8 +1358,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Straws/Sticks</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Straws/Sticks</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.straws_sticks}
@@ -1360,9 +1374,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Other Foreign Matter</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Other Foreign Matter</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.other_foreign_matter}
@@ -1372,8 +1386,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Mudballs (%, &lt;3)</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Mudballs (%, &lt;3)</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.mudballs}
@@ -1385,9 +1402,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Stones</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Stones</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.stones}
@@ -1397,8 +1414,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Dust/Sand</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Dust/Sand</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.dust_sand}
@@ -1410,11 +1430,13 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.totalField}>
-                <Text style={styles.totalLabel}>Total Impurities (%)</Text>
-                <Text style={styles.totalValue}>
-                  {formData.total_impurities}
-                </Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Total Impurities (%)</Text>
+                <View style={styles.rowField}>
+                  <Text style={styles.totalValue}>
+                    {formData.total_impurities}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -1422,9 +1444,9 @@ export default function LabTestScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Grain Dockage</Text>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Shriveled Wheat</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Shriveled Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.shriveled_wheat}
@@ -1434,8 +1456,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Insect Bored Damage</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Insect Bored Damage</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.insect_damage}
@@ -1447,9 +1472,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Blackened Wheat</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Blackened Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.blackened_wheat}
@@ -1459,8 +1484,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Other Grains (%)</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Other Grains (%)</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.other_grains}
@@ -1472,9 +1500,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Soft Wheat</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Soft Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.soft_wheat}
@@ -1484,8 +1512,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Heat Damaged Wheat</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Heat Damaged Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.heat_damaged}
@@ -1497,9 +1528,9 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Immature Wheat</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Immature Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.immature_wheat}
@@ -1509,8 +1540,11 @@ export default function LabTestScreen({ navigation }) {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Broken Wheat</Text>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Broken Wheat</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
                     value={formData.broken_wheat}
@@ -1522,25 +1556,31 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.totalField}>
-                <Text style={styles.totalLabel}>Total Dockage (%)</Text>
-                <Text style={styles.totalValue}>{formData.total_dockage}</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Total Dockage (%)</Text>
+                <View style={styles.rowField}>
+                  <Text style={styles.totalValue}>{formData.total_dockage}</Text>
+                </View>
               </View>
             </View>
 
             {/* Comments & Final Approval */}
             <View style={styles.section}>
-              <Text style={styles.label}>Comments & Action</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.comments_action}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, comments_action: text })
-                }
-                placeholder="Enter comments and actions here..."
-                multiline
-                numberOfLines={4}
-              />
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Comments & Action</Text>
+                <View style={styles.rowField}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={formData.comments_action}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, comments_action: text })
+                    }
+                    placeholder="Enter comments and actions here..."
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+              </View>
 
               <View style={styles.approvalBox}>
                 <Text style={styles.approvalTitle}>Final Approval</Text>
@@ -1721,6 +1761,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
   },
+  formRow: {
+    flexDirection: Platform.select({ 
+      web: "row", 
+      default: "column" 
+    }),
+    marginBottom: 16,
+    alignItems: Platform.select({ 
+      web: "center", 
+      default: "stretch" 
+    }),
+    gap: Platform.select({ web: 16, default: 6 }),
+  },
+  rowLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    width: Platform.select({ 
+      web: "35%", 
+      default: "100%" 
+    }),
+    minWidth: Platform.select({ web: 200, default: "auto" }),
+  },
+  rowField: {
+    flex: 1,
+    width: Platform.select({ 
+      web: "65%", 
+      default: "100%" 
+    }),
+  },
   row: {
     flexDirection: "row",
     gap: 12,
@@ -1785,6 +1854,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: colors.primary,
+    padding: 12,
   },
   approvalBox: {
     backgroundColor: "#d4edda",
