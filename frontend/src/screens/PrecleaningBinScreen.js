@@ -1525,17 +1525,6 @@ export default function PrecleaningBinScreen({ navigation }) {
             handleAddCleaningRecord();
           }}
         />
-
-        {/* Transfer Sessions Tab */}
-        {activeTab === 'transferSessions' && (
-          <View>
-            <View style={styles.headerActions}>
-              <Button
-                title="Start Transfer"
-                onPress={() => setCleaningReminderVisible(false)}
-          {...cleaningReminderData}
-        />
-
       </View>
     </Layout>
   );
