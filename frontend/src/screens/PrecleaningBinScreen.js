@@ -677,11 +677,13 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   const openEditCleaningModal = (record) => {
     setEditingCleaningRecord(record);
-    setCleaningFormData({
-      magnet_id: record.magnet_id,
-      transfer_session_id: record.transfer_session_id || '',
+    setCleaningRecordFormData({
+      magnet_id: String(record.magnet_id),
+      transfer_session_id: record.transfer_session_id ? String(record.transfer_session_id) : '',
       cleaning_timestamp: record.cleaning_timestamp ? new Date(record.cleaning_timestamp) : new Date(),
       notes: record.notes || '',
+      before_cleaning_photo: null,
+      after_cleaning_photo: null,
     });
 
     // Helper function to construct full image URL
