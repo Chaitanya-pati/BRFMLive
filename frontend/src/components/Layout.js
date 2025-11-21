@@ -179,6 +179,12 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
+      name: "Precleaning Timeline",
+      route: "PrecleaningTimeline",
+      icon: SvgBinIcon, // Assuming same icon as PrecleaningProcess for now
+      section: "Operations",
+    },
+    {
       name: "Claim Tracking",
       route: "ClaimTracking",
       icon: SvgFileTextIcon,

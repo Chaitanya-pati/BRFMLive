@@ -913,12 +913,6 @@ export default function MasterViewScreen({ navigation }) {
       currentRoute="MasterView"
     >
       <View style={styles.container}>
-        {/* Intro.js Tour Button */}
-        {Platform.OS === "web" && introJs && (
-          <TouchableOpacity style={styles.introButton} onPress={startTour}>
-            <Text style={styles.introButtonText}>?</Text>
-          </TouchableOpacity>
-        )}
         <View style={styles.tabContainer} className="tabContainer">
           {canScrollLeft && (
             <TouchableOpacity

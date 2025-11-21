@@ -11,7 +11,8 @@ import {
   FaStore,
   FaUsers,
   FaUserPlus,
-  FaCar
+  FaCar,
+  FaChartBar
 } from 'react-icons/fa';
 import { useBranch } from '../context/BranchContext';
 import { storage } from '../utils/storage';
@@ -28,6 +29,7 @@ const Icon = ({ name, size = 36, color }) => {
     'people': FaUsers,
     'person-add': FaUserPlus,
     'car': FaCar,
+    'chart-bar': FaChartBar,
   };
 
   const IconComponent = iconMap[name] || FaBuilding;
@@ -52,6 +54,7 @@ export default function HomeScreen({ navigation }) {
     { title: 'Pending Tests', value: '-', color: '#f59e0b', icon: 'clock', gradient: ['#f59e0b', '#d97706'] },
   ]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     const checkBranch = async () => {
@@ -74,6 +77,13 @@ export default function HomeScreen({ navigation }) {
     checkBranch();
   }, [activeBranch]);
 
+  useEffect(() => {
+    const loadUserRole = async () => {
+      const userData = await storage.getUserData();
+      setUserRole(userData?.role);
+    };
+    loadUserRole();
+  }, []);
 
   useEffect(() => {
     fetchStatistics();
@@ -102,13 +112,18 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const quickActions = [
-    { title: 'Branch Master', route: 'BranchMaster', icon: 'storefront', color: '#3b82f6' }, // Changed icon
-    { title: 'User Management', route: 'UserManagement', icon: 'people', color: '#6366f1' }, // Changed icon
-    { title: 'Add Supplier', route: 'SupplierMaster', icon: 'person-add', color: '#06b6d4' }, // Changed icon
-    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: 'car', color: '#f43f5e' }, // Changed icon
-    { title: 'New Lab Test', route: 'LabTest', icon: 'flask', color: '#10b981' }, // Changed icon
+  const allQuickActions = [
+    { title: 'Branch Master', route: 'BranchMaster', icon: 'storefront', color: '#3b82f6', adminOnly: true },
+    { title: 'User Management', route: 'UserManagement', icon: 'people', color: '#6366f1', adminOnly: true },
+    { title: 'Add Supplier', route: 'SupplierMaster', icon: 'person-add', color: '#06b6d4', adminOnly: false },
+    { title: 'Vehicle Entry', route: 'VehicleEntry', icon: 'car', color: '#f43f5e', adminOnly: false },
+    { title: 'New Lab Test', route: 'LabTest', icon: 'flask', color: '#10b981', adminOnly: false },
+    { title: 'Daily Report', route: 'DailyReport', icon: 'chart-bar', color: '#8b5cf6', adminOnly: false },
   ];
+
+  const quickActions = allQuickActions.filter(action => 
+    !action.adminOnly || userRole === 'admin'
+  );
 
   return (
     <Layout title="Dashboard" navigation={navigation} currentRoute="Home">
@@ -152,22 +167,10 @@ export default function HomeScreen({ navigation }) {
               ]}
               onPress={() => navigation.navigate(action.route)}
             >
-              <Icon name={action.icon} size={isMobile ? 28 : 32} />
+              <Icon name={action.icon} size={isMobile ? 28 : 32} color="#fff" />
               <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>{action.title}</Text>
             </TouchableOpacity>
           ))}
-          {/* Daily Report Card */}
-          <TouchableOpacity
-            style={[
-              styles.actionCard,
-              { backgroundColor: colors.primary }, // Example color, adjust as needed
-              isMobile && styles.actionCardMobile,
-            ]}
-            onPress={() => navigation.navigate('DailyReport')}
-          >
-            <Icon name="chart-bar" size={isMobile ? 28 : 32} color={colors.onPrimary} />
-            <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>Daily Report</Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>Recent Activity</Text>
@@ -200,15 +203,17 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 200,
-    backgroundColor: colors.surface,
-    padding: 20,
-    borderRadius: 12,
-    borderLeftWidth: 4, // Kept for emphasis, can be removed or styled differently
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 16,
+    borderLeftWidth: 5,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0,
-    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)', // Softer shadow
-    overflow: 'hidden', // To ensure gradient clipping if used
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+    overflow: 'hidden',
+    transition: 'all 0.3s ease',
   },
   statCardMobile: {
     minWidth: '100%',
@@ -227,24 +232,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statTitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: '#6b7280',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   statTitleMobile: {
     fontSize: 11,
     marginBottom: 6,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1f2937',
   },
   statValueMobile: {
-    fontSize: 24,
+    fontSize: 26,
   },
   sectionTitle: {
     fontSize: 20, // Increased font size for better hierarchy
