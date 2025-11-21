@@ -925,41 +925,33 @@ export default function PrecleaningBinScreen({ navigation }) {
 
       // Append image files if they exist
       if (beforeCleaningPhoto && beforeCleaningPhoto.uri) {
-        // Extract file name and type if available from URI
-        let uriParts = beforeCleaningPhoto.uri.split("/");
-        let filename = uriParts[uriParts.length - 1];
-        // Infer type from filename extension, default to 'image'
-        let fileType = filename.includes(".")
-          ? `image/${filename.split(".").pop()}`
-          : "image";
-
-        formDataToSend.append("before_cleaning_photo", {
-          uri:
-            Platform.OS === "android"
-              ? beforeCleaningPhoto.uri
-              : beforeCleaningPhoto.uri.replace("file://", ""),
-          name: filename,
-          type: fileType,
-        });
+        const photoUri = beforeCleaningPhoto.uri;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('before_cleaning_photo', blob, 'before_cleaning.jpg');
+        } else {
+          formDataToSend.append('before_cleaning_photo', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'before_cleaning.jpg',
+          });
+        }
       }
 
       if (afterCleaningPhoto && afterCleaningPhoto.uri) {
-        // Extract file name and type if available from URI
-        let uriParts = afterCleaningPhoto.uri.split("/");
-        let filename = uriParts[uriParts.length - 1];
-        // Infer type from filename extension, default to 'image'
-        let fileType = filename.includes(".")
-          ? `image/${filename.split(".").pop()}`
-          : "image";
-
-        formDataToSend.append("after_cleaning_photo", {
-          uri:
-            Platform.OS === "android"
-              ? afterCleaningPhoto.uri
-              : afterCleaningPhoto.uri.replace("file://", ""),
-          name: filename,
-          type: fileType,
-        });
+        const photoUri = afterCleaningPhoto.uri;
+        if (Platform.OS === 'web') {
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          formDataToSend.append('after_cleaning_photo', blob, 'after_cleaning.jpg');
+        } else {
+          formDataToSend.append('after_cleaning_photo', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'after_cleaning.jpg',
+          });
+        }
       }
 
       if (editingCleaningRecord) {
