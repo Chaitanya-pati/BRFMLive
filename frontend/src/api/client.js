@@ -1,33 +1,33 @@
 import axios from "axios";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
 
     // For local development, use localhost with port 8000
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
       return `http://${hostname}:8000/api`;
     }
 
     // For Replit deployment, construct full URL with protocol and port 8000
-    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+    if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
       return `${protocol}//${hostname}:8000/api`;
     }
   }
 
   // Final fallback
-  return 'http://localhost:8000/api';
+  return "http://localhost:8000/api";
 };
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-
+//const API_URL = "https://brfmlive.onrender.com/api";
 console.log("API Base URL:", API_URL);
 
 // Export API_BASE_URL for components that need direct fetch calls (without /api suffix)
-export const API_BASE_URL = API_URL.replace('/api', '');
+export const API_BASE_URL = API_URL.replace("/api", "");
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -40,58 +40,67 @@ export const api = axios.create({
 // Add request interceptor for authentication and branch filtering
 api.interceptors.request.use(
   async (config) => {
-    console.log('📤 API Request:', config.method?.toUpperCase(), config.baseURL + config.url);
+    console.log(
+      "📤 API Request:",
+      config.method?.toUpperCase(),
+      config.baseURL + config.url,
+    );
     if (config.data) {
-      console.log('📦 Request Data:', config.data);
+      console.log("📦 Request Data:", config.data);
     }
 
     // Add active branch ID to request header
     try {
-      const activeBranchJson = await AsyncStorage.getItem('@active_branch');
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
         if (activeBranch && activeBranch.id) {
-          config.headers['X-Branch-ID'] = activeBranch.id.toString();
-          console.log('🏢 Branch ID:', activeBranch.id, 'Branch Name:', activeBranch.name);
+          config.headers["X-Branch-ID"] = activeBranch.id.toString();
+          console.log(
+            "🏢 Branch ID:",
+            activeBranch.id,
+            "Branch Name:",
+            activeBranch.name,
+          );
         }
       }
     } catch (error) {
-      console.error('Error retrieving active branch:', error);
+      console.error("Error retrieving active branch:", error);
     }
 
     // Add authentication token if available
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Error retrieving auth token:', error);
+      console.error("Error retrieving auth token:", error);
     }
 
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    console.error("❌ Request Error:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add response interceptor for logging
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.status, response.config.url);
+    console.log("✅ API Response:", response.status, response.config.url);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', {
+    console.error("❌ API Error:", {
       message: error.message,
       url: error.config?.url,
       status: error.response?.status,
-      data: error.response?.data
+      data: error.response?.data,
     });
     return Promise.reject(error);
-  }
+  },
 );
 
 export const supplierApi = {
@@ -202,23 +211,32 @@ export const routeConfigurationApi = {
 };
 
 export const magnetCleaningRecordApi = {
-  getAll: (magnetId) => api.get("/magnet-cleaning-records", { params: magnetId ? { magnet_id: magnetId } : {} }),
+  getAll: (magnetId) =>
+    api.get("/magnet-cleaning-records", {
+      params: magnetId ? { magnet_id: magnetId } : {},
+    }),
   getById: (id) => api.get(`/magnet-cleaning-records/${id}`),
-  create: (formData) => api.post("/magnet-cleaning-records", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }),
-  update: (id, formData) => api.put(`/magnet-cleaning-records/${id}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }),
+  create: (formData) =>
+    api.post("/magnet-cleaning-records", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  update: (id, formData) =>
+    api.put(`/magnet-cleaning-records/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
   delete: (id) => api.delete(`/magnet-cleaning-records/${id}`),
 };
 
 export const transferSessionApi = {
-  getAll: (status) => api.get("/transfer-sessions", { params: status ? { status } : {} }),
+  getAll: (status) =>
+    api.get("/transfer-sessions", { params: status ? { status } : {} }),
   getById: (id) => api.get(`/transfer-sessions/${id}`),
   start: (data) => api.post("/transfer-sessions/start", data),
   divert: (id, data) => api.post(`/transfer-sessions/${id}/divert`, data),
-  stop: (id, transferred_quantity) => api.post(`/transfer-sessions/${id}/stop`, null, { params: { transferred_quantity } }),
+  stop: (id, transferred_quantity) =>
+    api.post(`/transfer-sessions/${id}/stop`, null, {
+      params: { transferred_quantity },
+    }),
   update: (id, data) => api.put(`/transfer-sessions/${id}`, data),
   delete: (id) => api.delete(`/transfer-sessions/${id}`),
 };

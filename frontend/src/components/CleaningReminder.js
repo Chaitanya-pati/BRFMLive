@@ -14,6 +14,14 @@ const CleaningReminder = ({
   totalMagnets = 0,
   onAddCleaningRecord = () => {} 
 }) => {
+  const [selectedMagnet, setSelectedMagnet] = React.useState(null);
+
+  React.useEffect(() => {
+    if (magnets && magnets.length > 0 && !selectedMagnet) {
+      setSelectedMagnet(magnets[0]);
+    }
+  }, [magnets]);
+
   if (!visible) {
     return null;
   }
@@ -50,17 +58,32 @@ const CleaningReminder = ({
             </View>
 
             <View style={styles.magnetList}>
-              <Text style={styles.label}>Magnets:</Text>
+              <Text style={styles.label}>Magnets Needing Cleaning:</Text>
               {hasMagnets ? (
                 <View style={styles.magnetTags}>
                   {magnets.map((magnet, index) => (
-                    <View key={index} style={styles.magnetTag}>
-                      <Text style={styles.magnetTagText}>{magnet.name}</Text>
-                    </View>
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.magnetTag,
+                        selectedMagnet?.id === magnet.id && styles.magnetTagSelected
+                      ]}
+                      onPress={() => setSelectedMagnet(magnet)}
+                    >
+                      <Text style={[
+                        styles.magnetTagText,
+                        selectedMagnet?.id === magnet.id && styles.magnetTagTextSelected
+                      ]}>
+                        {magnet.name}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
                 </View>
               ) : (
                 <Text style={styles.noDataText}>Loading magnet data...</Text>
+              )}
+              {hasMagnets && magnets.length > 1 && (
+                <Text style={styles.hintText}>Tap a magnet to select it for cleaning record</Text>
               )}
             </View>
 
@@ -87,19 +110,30 @@ const CleaningReminder = ({
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
-              style={[styles.button, styles.addRecordButton]} 
+              style={[
+                styles.button, 
+                styles.addRecordButton,
+                !selectedMagnet && styles.buttonDisabled
+              ]} 
               onPress={() => {
-                if (onAddCleaningRecord && typeof onAddCleaningRecord === 'function') {
-                  onAddCleaningRecord();
+                if (onAddCleaningRecord && typeof onAddCleaningRecord === 'function' && selectedMagnet) {
+                  onAddCleaningRecord(selectedMagnet);
                 }
                 onClose();
+                setSelectedMagnet(null);
               }}
+              disabled={!selectedMagnet}
             >
-              <Text style={styles.buttonText}>Add Cleaning Record</Text>
+              <Text style={styles.buttonText}>
+                {selectedMagnet ? `Add Record for ${selectedMagnet.name}` : 'Add Cleaning Record'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.button, styles.acknowledgeButton]} 
-              onPress={onClose}
+              onPress={() => {
+                onClose();
+                setSelectedMagnet(null);
+              }}
             >
               <Text style={styles.buttonText}>Acknowledge</Text>
             </TouchableOpacity>
@@ -194,10 +228,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#3b82f6',
   },
+  magnetTagSelected: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#1d4ed8',
+  },
   magnetTagText: {
     fontSize: 12,
     color: '#1e40af',
     fontWeight: '600',
+  },
+  magnetTagTextSelected: {
+    color: '#ffffff',
+  },
+  hintText: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginTop: 6,
   },
   timeInfo: {
     flexDirection: 'row',
@@ -259,6 +306,10 @@ const styles = StyleSheet.create({
   },
   acknowledgeButton: {
     backgroundColor: '#6b7280',
+  },
+  buttonDisabled: {
+    backgroundColor: '#9ca3af',
+    opacity: 0.5,
   },
   buttonText: {
     fontSize: 16,

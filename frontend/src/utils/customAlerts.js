@@ -13,26 +13,62 @@ export const setAlertContainer = (container) => {
   alertContainer = container;
 };
 
+export const formatErrorMessage = (error) => {
+  if (!error) return 'An unknown error occurred';
+  
+  if (typeof error === 'string') return error;
+  
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail;
+    
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    
+    if (Array.isArray(detail)) {
+      return detail.map((err, index) => {
+        if (typeof err === 'string') return err;
+        if (typeof err === 'object' && err.msg) {
+          const field = err.loc && err.loc.length > 0 ? err.loc.join(' -> ') : 'field';
+          return `${field}: ${err.msg}`;
+        }
+        return `Error ${index + 1}: ${JSON.stringify(err)}`;
+      }).join('\n');
+    }
+    
+    if (typeof detail === 'object') {
+      return JSON.stringify(detail, null, 2);
+    }
+  }
+  
+  if (error.message) return error.message;
+  
+  return 'An unknown error occurred';
+};
+
 export const showToast = (message, type = 'info', duration = 3000) => {
+  const formattedMessage = typeof message === 'string' ? message : formatErrorMessage(message);
+  
   if (toastContainer) {
-    toastContainer.show(message, type, duration);
+    toastContainer.show(formattedMessage, type, duration);
   } else {
-    console.warn('⚠️ Toast container not initialized. Message:', message);
-    // Fallback to console for debugging
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    console.warn('⚠️ Toast container not initialized. Message:', formattedMessage);
+    console.log(`[${type.toUpperCase()}] ${formattedMessage}`);
   }
 };
 
 export const showAlert = (title, message, type = 'info', buttons = []) => {
   return new Promise((resolve) => {
+    const formattedMessage = typeof message === 'string' ? message : formatErrorMessage(message);
+    
     if (alertContainer) {
-      alertContainer.show(title, message, type, buttons, resolve);
+      alertContainer.show(title, formattedMessage, type, buttons, resolve);
     } else {
       console.warn('⚠️ Alert container not initialized');
-      console.log(`[ALERT] ${title}: ${message}`);
+      console.log(`[ALERT] ${title}: ${formattedMessage}`);
       // Fallback to browser alert in web environment
       if (typeof window !== 'undefined' && window.alert) {
-        window.alert(`${title}\n\n${message}`);
+        window.alert(`${title}\n\n${formattedMessage}`);
       }
       resolve();
     }
