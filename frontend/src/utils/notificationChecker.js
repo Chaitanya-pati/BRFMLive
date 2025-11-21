@@ -26,8 +26,14 @@ export function calculateMagnetNotifications(
 
   // Process each active transfer session
   transferSessions.forEach((session) => {
-    // Match original logic: case-insensitive status check AND must not have stop_timestamp
-    if (session.status?.toLowerCase() !== 'active' || session.stop_timestamp) return;
+    // CRITICAL FIX: Check both status AND stop_timestamp
+    // If session is not active OR has been stopped, skip it
+    if (
+      session.status?.toLowerCase() !== 'active' || 
+      session.stop_timestamp !== null && session.stop_timestamp !== undefined
+    ) {
+      return;
+    }
 
     const now = currentTime;
     const startTime = new Date(session.start_timestamp);
@@ -143,8 +149,13 @@ export function shouldShowNotificationForSession(
   cleaningRecords,
   currentTime = new Date()
 ) {
-  // Match original logic: case-insensitive status check AND must not have stop_timestamp
-  if (session.status?.toLowerCase() !== 'active' || session.stop_timestamp) return false;
+  // CRITICAL FIX: Check both status AND stop_timestamp
+  if (
+    session.status?.toLowerCase() !== 'active' || 
+    session.stop_timestamp !== null && session.stop_timestamp !== undefined
+  ) {
+    return false;
+  }
 
   const startTime = new Date(session.start_timestamp);
   const elapsedSeconds = (currentTime - startTime) / 1000;
