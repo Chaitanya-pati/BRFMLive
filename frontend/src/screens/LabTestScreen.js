@@ -9,7 +9,7 @@ import {
   ScrollView,
   useWindowDimensions,
 } from "react-native";
-import notify from '../utils/notifications';
+import notify from "../utils/notifications";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Layout from "../components/Layout";
@@ -134,7 +134,9 @@ export default function LabTestScreen({ navigation }) {
       return vehicle.vehicle_number?.toLowerCase().includes(searchLower);
     } else {
       // Search by supplier name
-      return vehicle.supplier?.supplier_name?.toLowerCase().includes(searchLower);
+      return vehicle.supplier?.supplier_name
+        ?.toLowerCase()
+        .includes(searchLower);
     }
   });
 
@@ -311,14 +313,18 @@ export default function LabTestScreen({ navigation }) {
 
       // Show download/print options after modal closes
       setTimeout(() => {
-        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.');
+        const shouldPrint = window.confirm(
+          "Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.",
+        );
 
         if (shouldPrint) {
           generatePDF();
         }
       }, 100);
     } catch (error) {
-      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(
+        editMode ? "Failed to update lab test" : "Failed to create lab test",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -380,27 +386,33 @@ export default function LabTestScreen({ navigation }) {
 
       // Ask if user wants to print before opening claim modal
       setTimeout(() => {
-        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.');
+        const shouldPrint = window.confirm(
+          "Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.",
+        );
 
         if (shouldPrint) {
           generatePDF();
         }
 
         // Open raise claim modal with the saved lab test after print dialog
-        setTimeout(() => {
-          setSelectedLabTestForClaim(savedLabTest);
-          setClaimFormData({
-            description: "", // Ensure description is empty for new claim
-            claim_type: "",
-            claim_amount: "",
-            claim_date: new Date(),
-          });
-          setRaiseClaimModalVisible(true);
-        }, shouldPrint ? 500 : 0);
+        setTimeout(
+          () => {
+            setSelectedLabTestForClaim(savedLabTest);
+            setClaimFormData({
+              description: "", // Ensure description is empty for new claim
+              claim_type: "",
+              claim_amount: "",
+              claim_date: new Date(),
+            });
+            setRaiseClaimModalVisible(true);
+          },
+          shouldPrint ? 500 : 0,
+        );
       }, 100);
-
     } catch (error) {
-      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(
+        editMode ? "Failed to update lab test" : "Failed to create lab test",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -655,7 +667,7 @@ export default function LabTestScreen({ navigation }) {
   <div class="header">
     <div class="header-row">
       <div class="logo-box">
-        <img src="${window.location.origin}/assets/new-logo.png" alt="Logo" onerror="this.style.display='none'" />
+        <img src="assets/new-logo.png" alt="Logo" onerror="this.style.display='none'" />
       </div>
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>
@@ -897,7 +909,9 @@ export default function LabTestScreen({ navigation }) {
       setVehicles(response.data);
 
       // Find the vehicle for this lab test
-      const vehicle = response.data.find(v => v.id === labTest.vehicle_entry_id);
+      const vehicle = response.data.find(
+        (v) => v.id === labTest.vehicle_entry_id,
+      );
       setSelectedVehicle(vehicle);
     } catch (error) {
       console.error("Error loading vehicles:", error);
@@ -950,17 +964,17 @@ export default function LabTestScreen({ navigation }) {
 
   const handleDelete = async (labTest) => {
     const confirmed = await notify.showConfirm(
-      'Confirm Delete',
-      'Are you sure you want to delete this lab test?'
+      "Confirm Delete",
+      "Are you sure you want to delete this lab test?",
     );
-    
+
     if (confirmed) {
       try {
         await labTestApi.delete(labTest.id);
-        notify.showSuccess('Lab test deleted successfully');
+        notify.showSuccess("Lab test deleted successfully");
         loadLabTests();
       } catch (error) {
-        notify.showError('Failed to delete lab test');
+        notify.showError("Failed to delete lab test");
         console.error(error);
       }
     }
@@ -989,7 +1003,9 @@ export default function LabTestScreen({ navigation }) {
         lab_test_id: selectedLabTestForClaim.id,
         description: claimFormData.description,
         claim_type: claimFormData.claim_type || null,
-        claim_amount: claimFormData.claim_amount ? parseFloat(claimFormData.claim_amount) : null,
+        claim_amount: claimFormData.claim_amount
+          ? parseFloat(claimFormData.claim_amount)
+          : null,
         claim_date: claimFormData.claim_date.toISOString(),
       });
 
@@ -1081,7 +1097,11 @@ export default function LabTestScreen({ navigation }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
+        title={
+          editMode
+            ? "Edit Raw Wheat Quality Report"
+            : "Raw Wheat Quality Report"
+        }
         width={isMobile ? "100%" : isTablet ? "75%" : "800px"}
       >
         <ScrollView style={styles.scrollContainer}>
@@ -1098,7 +1118,8 @@ export default function LabTestScreen({ navigation }) {
                     <TouchableOpacity
                       style={[
                         styles.filterTypeButton,
-                        vehicleFilterType === "vehicle" && styles.filterTypeButtonActive,
+                        vehicleFilterType === "vehicle" &&
+                          styles.filterTypeButtonActive,
                       ]}
                       onPress={() => {
                         setVehicleFilterType("vehicle");
@@ -1108,7 +1129,8 @@ export default function LabTestScreen({ navigation }) {
                       <Text
                         style={[
                           styles.filterTypeText,
-                          vehicleFilterType === "vehicle" && styles.filterTypeTextActive,
+                          vehicleFilterType === "vehicle" &&
+                            styles.filterTypeTextActive,
                         ]}
                       >
                         By Vehicle Number
@@ -1117,7 +1139,8 @@ export default function LabTestScreen({ navigation }) {
                     <TouchableOpacity
                       style={[
                         styles.filterTypeButton,
-                        vehicleFilterType === "supplier" && styles.filterTypeButtonActive,
+                        vehicleFilterType === "supplier" &&
+                          styles.filterTypeButtonActive,
                       ]}
                       onPress={() => {
                         setVehicleFilterType("supplier");
@@ -1127,7 +1150,8 @@ export default function LabTestScreen({ navigation }) {
                       <Text
                         style={[
                           styles.filterTypeText,
-                          vehicleFilterType === "supplier" && styles.filterTypeTextActive,
+                          vehicleFilterType === "supplier" &&
+                            styles.filterTypeTextActive,
                         ]}
                       >
                         By Supplier Name
@@ -1150,7 +1174,9 @@ export default function LabTestScreen({ navigation }) {
                   {/* Vehicle Picker with Filtered Results */}
                   <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={formData.vehicle_entry_id?.toString() || ""}
+                      selectedValue={
+                        formData.vehicle_entry_id?.toString() || ""
+                      }
                       onValueChange={handleVehicleChange}
                       style={styles.picker}
                     >
@@ -1184,8 +1210,6 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-            
-
               <View style={styles.formRow}>
                 <Text style={styles.rowLabel}>Test Date *</Text>
                 <View style={styles.rowField}>
@@ -1207,346 +1231,350 @@ export default function LabTestScreen({ navigation }) {
                 />
               )}
 
-             
+              {/* Test Parameters */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Test Parameters</Text>
 
-            {/* Test Parameters */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Test Parameters</Text>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Moisture (%)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.moisture}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, moisture: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="8-10.5"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Hectoliter Weight (Kg/hl)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.hectoliter_weight}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, hectoliter_weight: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder=">75"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Wet Gluten (%)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.wet_gluten}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, wet_gluten: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="32-33"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Dry Gluten</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dry_gluten}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, dry_gluten: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="10.5-11.5"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Sedimentation Value (ml)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.sedimentation_value}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, sedimentation_value: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="24-25"
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Impurities */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Refractions / Impurities</Text>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Chaff/Husk</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.chaff_husk}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, chaff_husk: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Straws/Sticks</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.straws_sticks}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, straws_sticks: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Other Foreign Matter</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.other_foreign_matter}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, other_foreign_matter: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Mudballs (%, &lt;3)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.mudballs}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, mudballs: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Stones</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.stones}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, stones: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Dust/Sand</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dust_sand}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, dust_sand: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Total Impurities (%)</Text>
-                <View style={styles.rowField}>
-                  <Text style={styles.totalValue}>
-                    {formData.total_impurities}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Grain Dockage */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Grain Dockage</Text>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Shriveled Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.shriveled_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, shriveled_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Insect Bored Damage</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.insect_damage}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, insect_damage: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Blackened Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.blackened_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, blackened_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Other Grains (%)</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.other_grains}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, other_grains: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Soft Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.soft_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, soft_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Heat Damaged Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.heat_damaged}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, heat_damaged: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Immature Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.immature_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, immature_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Broken Wheat</Text>
-                <View style={styles.rowField}>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.broken_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, broken_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Total Dockage (%)</Text>
-                <View style={styles.rowField}>
-                  <Text style={styles.totalValue}>{formData.total_dockage}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.formRow}>
-              <Text style={styles.rowLabel}>Quality Category (Wheat Variety) *</Text>
-              <View style={styles.rowField}>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={formData.wheat_variety}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, wheat_variety: value })
-                    }
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Select Quality Category" value="" />
-                    {qualityCategories.map((cat, index) => (
-                      <Picker.Item
-                        key={index}
-                        label={cat.label}
-                        value={cat.value}
-                      />
-                    ))}
-                  </Picker>
-                </View>
-              </View>
-            </View>
-              <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Tested By</Text>
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Moisture (%)</Text>
                   <View style={styles.rowField}>
                     <TextInput
                       style={styles.input}
-                      value={formData.tested_by}
+                      value={formData.moisture}
                       onChangeText={(text) =>
-                        setFormData({ ...formData, tested_by: text })
+                        setFormData({ ...formData, moisture: text })
                       }
-                      placeholder="Name of lab chemist"
+                      keyboardType="decimal-pad"
+                      placeholder="8-10.5"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Hectoliter Weight (Kg/hl)</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.hectoliter_weight}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, hectoliter_weight: text })
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder=">75"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Wet Gluten (%)</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.wet_gluten}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, wet_gluten: text })
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder="32-33"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Dry Gluten</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.dry_gluten}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, dry_gluten: text })
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder="10.5-11.5"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Sedimentation Value (ml)</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.sedimentation_value}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, sedimentation_value: text })
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder="24-25"
                     />
                   </View>
                 </View>
               </View>
+
+              {/* Impurities */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Refractions / Impurities
+                </Text>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Chaff/Husk</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.chaff_husk}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, chaff_husk: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Straws/Sticks</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.straws_sticks}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, straws_sticks: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Other Foreign Matter</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.other_foreign_matter}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, other_foreign_matter: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Mudballs (%, &lt;3)</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.mudballs}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, mudballs: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Stones</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.stones}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, stones: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Dust/Sand</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.dust_sand}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, dust_sand: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Total Impurities (%)</Text>
+                  <View style={styles.rowField}>
+                    <Text style={styles.totalValue}>
+                      {formData.total_impurities}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Grain Dockage */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Grain Dockage</Text>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Shriveled Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.shriveled_wheat}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, shriveled_wheat: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Insect Bored Damage</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.insect_damage}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, insect_damage: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Blackened Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.blackened_wheat}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, blackened_wheat: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Other Grains (%)</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.other_grains}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, other_grains: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Soft Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.soft_wheat}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, soft_wheat: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Heat Damaged Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.heat_damaged}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, heat_damaged: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Immature Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.immature_wheat}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, immature_wheat: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Broken Wheat</Text>
+                  <View style={styles.rowField}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.broken_wheat}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, broken_wheat: text })
+                      }
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <Text style={styles.rowLabel}>Total Dockage (%)</Text>
+                  <View style={styles.rowField}>
+                    <Text style={styles.totalValue}>
+                      {formData.total_dockage}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>
+                  Quality Category (Wheat Variety) *
+                </Text>
+                <View style={styles.rowField}>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={formData.wheat_variety}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, wheat_variety: value })
+                      }
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select Quality Category" value="" />
+                      {qualityCategories.map((cat, index) => (
+                        <Picker.Item
+                          key={index}
+                          label={cat.label}
+                          value={cat.value}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Tested By</Text>
+                <View style={styles.rowField}>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.tested_by}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, tested_by: text })
+                    }
+                    placeholder="Name of lab chemist"
+                  />
+                </View>
+              </View>
+            </View>
             {/* Comments & Final Approval */}
             <View style={styles.section}>
               <View style={styles.formRow}>
@@ -1571,7 +1599,10 @@ export default function LabTestScreen({ navigation }) {
                 <TouchableOpacity
                   style={styles.checkboxContainer}
                   onPress={() =>
-                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
+                    setFormData({
+                      ...formData,
+                      raise_claim: !formData.raise_claim,
+                    })
                   }
                 >
                   <View
@@ -1636,7 +1667,11 @@ export default function LabTestScreen({ navigation }) {
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? "Saving..." : editMode ? "Update Test" : "Save Test"}
+                  {loading
+                    ? "Saving..."
+                    : editMode
+                      ? "Update Test"
+                      : "Save Test"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1669,7 +1704,8 @@ export default function LabTestScreen({ navigation }) {
             Lab Test: {selectedLabTestForClaim?.document_no || "N/A"}
           </Text>
           <Text style={styles.claimSubLabel}>
-            Vehicle: {selectedLabTestForClaim?.vehicle_entry?.vehicle_number || "N/A"}
+            Vehicle:{" "}
+            {selectedLabTestForClaim?.vehicle_entry?.vehicle_number || "N/A"}
           </Text>
 
           <View style={styles.formGroup}>
@@ -1699,7 +1735,10 @@ export default function LabTestScreen({ navigation }) {
               >
                 <Picker.Item label="Select Claim Type" value="" />
                 <Picker.Item label="Percentage (%)" value="percentage" />
-                <Picker.Item label="Rupees per Kilogram (₹/kg)" value="per_kg" />
+                <Picker.Item
+                  label="Rupees per Kilogram (₹/kg)"
+                  value="per_kg"
+                />
               </Picker>
             </View>
           </View>
@@ -1707,7 +1746,8 @@ export default function LabTestScreen({ navigation }) {
           {claimFormData.claim_type && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>
-                Claim Amount {claimFormData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
+                Claim Amount{" "}
+                {claimFormData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
               </Text>
               <TextInput
                 style={styles.input}
@@ -1715,7 +1755,11 @@ export default function LabTestScreen({ navigation }) {
                 onChangeText={(text) =>
                   setClaimFormData({ ...claimFormData, claim_amount: text })
                 }
-                placeholder={claimFormData.claim_type === "percentage" ? "Enter percentage" : "Enter amount per kg"}
+                placeholder={
+                  claimFormData.claim_type === "percentage"
+                    ? "Enter percentage"
+                    : "Enter amount per kg"
+                }
                 keyboardType="numeric"
               />
             </View>
