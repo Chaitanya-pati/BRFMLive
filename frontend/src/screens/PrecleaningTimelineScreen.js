@@ -128,18 +128,21 @@ export default function PrecleaningTimelineScreen({ navigation }) {
   };
 
   const getGodownName = (id) => {
-    const godown = godowns.find(g => g.id === id);
-    return godown ? godown.name : 'Unknown';
+    if (!id) return 'Unknown';
+    const godown = godowns.find(g => g.id === parseInt(id));
+    return godown ? godown.name : `Godown #${id}`;
   };
 
   const getBinName = (id) => {
-    const bin = bins.find(b => b.id === id);
-    return bin ? bin.bin_number : 'Unknown';
+    if (!id) return 'Unknown';
+    const bin = bins.find(b => b.id === parseInt(id));
+    return bin ? bin.bin_number : `Bin #${id}`;
   };
 
   const getMagnetName = (id) => {
-    const magnet = magnets.find(m => m.id === id);
-    return magnet ? magnet.name : 'Unknown';
+    if (!id) return 'Unknown';
+    const magnet = magnets.find(m => m.id === parseInt(id));
+    return magnet ? magnet.name : `Magnet #${id}`;
   };
 
   const getEventIcon = (type) => {
@@ -294,10 +297,10 @@ const styles = StyleSheet.create({
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   refreshButton: {
     backgroundColor: colors.primary,
@@ -350,8 +353,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sessionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   statusBadge: {

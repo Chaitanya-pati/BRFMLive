@@ -166,24 +166,26 @@ export default function DailyReportScreen({ navigation }) {
       {reportData.vehicleEntries.length === 0 ? (
         <Text style={styles.noData}>No vehicles arrived on this date</Text>
       ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Vehicle #</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Supplier</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Bill No</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Time</Text>
-          </View>
-          {reportData.vehicleEntries.map((vehicle, index) => (
-            <View key={vehicle.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{vehicle.vehicle_number}</Text>
-              <Text style={[styles.tableCell, { flex: 1.5 }]}>{getSupplierName(vehicle.supplier_id)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{vehicle.bill_no}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>
-                {new Date(vehicle.arrival_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: 120 }]}>Vehicle #</Text>
+              <Text style={[styles.tableHeaderCell, { width: 200 }]}>Supplier</Text>
+              <Text style={[styles.tableHeaderCell, { width: 120 }]}>Bill No</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Time</Text>
             </View>
-          ))}
-        </View>
+            {reportData.vehicleEntries.map((vehicle, index) => (
+              <View key={vehicle.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
+                <Text style={[styles.tableCell, { width: 120 }]}>{vehicle.vehicle_number}</Text>
+                <Text style={[styles.tableCell, { width: 200 }]}>{getSupplierName(vehicle.supplier_id)}</Text>
+                <Text style={[styles.tableCell, { width: 120 }]}>{vehicle.bill_no}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>
+                  {new Date(vehicle.arrival_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -194,26 +196,28 @@ export default function DailyReportScreen({ navigation }) {
       {reportData.labTests.length === 0 ? (
         <Text style={styles.noData}>No lab tests conducted on this date</Text>
       ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Bill No</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Moisture %</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Protein %</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Category</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Status</Text>
-          </View>
-          {reportData.labTests.map((test, index) => (
-            <View key={test.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.bill_number || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.moisture?.toFixed(1) || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.protein_percent?.toFixed(1) || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.category || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1, color: test.raise_claim ? colors.error : colors.success }]}>
-                {test.raise_claim ? 'Failed' : 'Passed'}
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: 120 }]}>Bill No</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Moisture %</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Protein %</Text>
+              <Text style={[styles.tableHeaderCell, { width: 120 }]}>Category</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Status</Text>
             </View>
-          ))}
-        </View>
+            {reportData.labTests.map((test, index) => (
+              <View key={test.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
+                <Text style={[styles.tableCell, { width: 120 }]}>{test.bill_number || '-'}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>{test.moisture?.toFixed(1) || '-'}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>{test.protein_percent?.toFixed(1) || '-'}</Text>
+                <Text style={[styles.tableCell, { width: 120 }]}>{test.category || '-'}</Text>
+                <Text style={[styles.tableCell, { width: 100, color: test.raise_claim ? colors.error : colors.success }]}>
+                  {test.raise_claim ? 'Failed' : 'Passed'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -224,22 +228,24 @@ export default function DailyReportScreen({ navigation }) {
       {reportData.unloadingEntries.length === 0 ? (
         <Text style={styles.noData}>No unloading activities on this date</Text>
       ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Godown</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Gross (kg)</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Empty (kg)</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Net (tons)</Text>
-          </View>
-          {reportData.unloadingEntries.map((unloading, index) => (
-            <View key={unloading.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1.5 }]}>{getGodownName(unloading.godown_id)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{unloading.gross_weight?.toFixed(0)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{unloading.empty_vehicle_weight?.toFixed(0)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{(unloading.net_weight / 1000)?.toFixed(2)}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderCell, { width: 180 }]}>Godown</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Gross (kg)</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Empty (kg)</Text>
+              <Text style={[styles.tableHeaderCell, { width: 100 }]}>Net (tons)</Text>
             </View>
-          ))}
-        </View>
+            {reportData.unloadingEntries.map((unloading, index) => (
+              <View key={unloading.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
+                <Text style={[styles.tableCell, { width: 180 }]}>{getGodownName(unloading.godown_id)}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>{unloading.gross_weight?.toFixed(0)}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>{unloading.empty_vehicle_weight?.toFixed(0)}</Text>
+                <Text style={[styles.tableCell, { width: 100 }]}>{(unloading.net_weight / 1000)?.toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -275,20 +281,22 @@ export default function DailyReportScreen({ navigation }) {
         {suppliers.length === 0 ? (
           <Text style={styles.noData}>No supplier data available</Text>
         ) : (
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Supplier Name</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Vehicles</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Total (tons)</Text>
-            </View>
-            {suppliers.map((supplier, index) => (
-              <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{supplier.name}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{supplier.vehicles}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{supplier.totalQuantity.toFixed(2)}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, { width: 250 }]}>Supplier Name</Text>
+                <Text style={[styles.tableHeaderCell, { width: 100 }]}>Vehicles</Text>
+                <Text style={[styles.tableHeaderCell, { width: 120 }]}>Total (tons)</Text>
               </View>
-            ))}
-          </View>
+              {suppliers.map((supplier, index) => (
+                <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
+                  <Text style={[styles.tableCell, { width: 250 }]}>{supplier.name}</Text>
+                  <Text style={[styles.tableCell, { width: 100 }]}>{supplier.vehicles}</Text>
+                  <Text style={[styles.tableCell, { width: 120 }]}>{supplier.totalQuantity.toFixed(2)}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         )}
       </View>
     );
@@ -347,10 +355,10 @@ const styles = StyleSheet.create({
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   refreshButton: {
     backgroundColor: colors.primary,
@@ -443,10 +451,10 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   noData: {
     fontSize: 14,

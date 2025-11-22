@@ -273,9 +273,11 @@ export default function LabTestScreen({ navigation }) {
     setLoading(true);
     try {
       const submitData = {
-        ...formData,
-        wheat_variety: formData.wheat_variety,
-        bill_number: formData.bill_number,
+        vehicle_entry_id: parseInt(formData.vehicle_entry_id),
+        wheat_variety: formData.wheat_variety || null,
+        bill_number: formData.bill_number || null,
+        test_date: formData.test_date ? formData.test_date.toISOString() : new Date().toISOString(),
+        department: formData.department || "QA",
         moisture: parseFloat(formData.moisture) || null,
         test_weight: parseFloat(formData.hectoliter_weight) || null,
         protein_percent: parseFloat(formData.protein_percent) || null,
@@ -295,8 +297,10 @@ export default function LabTestScreen({ navigation }) {
         sprouted_grains: parseFloat(formData.other_grains) || null,
         other_grain_damage: parseFloat(formData.soft_wheat) || null,
         total_dockage: parseFloat(formData.total_dockage) || null,
-        test_date: formData.test_date.toISOString(),
-        raise_claim: formData.raise_claim, // Include raise_claim flag
+        category: formData.category || null,
+        remarks: formData.comments_action || null,
+        tested_by: formData.tested_by || null,
+        raise_claim: formData.raise_claim ? 1 : 0,
       };
 
       if (editMode && currentLabTest) {
@@ -308,8 +312,8 @@ export default function LabTestScreen({ navigation }) {
       }
 
       setModalVisible(false);
-      loadLabTests();
-      loadVehicles();
+      await loadLabTests();
+      await loadVehicles();
 
       // Show download/print options after modal closes
       setTimeout(() => {
