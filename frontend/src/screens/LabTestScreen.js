@@ -667,7 +667,9 @@ export default function LabTestScreen({ navigation }) {
   <div class="header">
     <div class="header-row">
       <div class="logo-box">
-        <img src="${window.location.origin}/assets/?unstable_path=./assets/new-logo.png" alt="Logo" onerror="this.style.display='none'" />
+        <img src="./assets/?unstable_path=./assets/new-logo.png" 
+  onerror="this.onerror=null; this.src='assets/new-logo.png'" 
+  alt="Logo" onerror="this.style.display='none'" />
       </div>
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>

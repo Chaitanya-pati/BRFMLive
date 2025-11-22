@@ -185,7 +185,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20, // Added padding for better spacing
+    padding: 12, // Reduced padding
   },
   statsContainer: {
     flexDirection: 'row',
@@ -252,15 +252,15 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   sectionTitle: {
-    fontSize: 20, // Increased font size for better hierarchy
+    fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 16,
-    marginTop: 12, // Increased margin top
+    marginBottom: 12,
+    marginTop: 8,
   },
   sectionTitleMobile: {
-    fontSize: 18,
-    marginBottom: 12,
+    fontSize: 15,
+    marginBottom: 10,
   },
   quickActions: {
     flexDirection: 'row',

@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 16,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   summaryTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.primary,
     marginBottom: 4,
@@ -405,9 +405,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryItem: {
-    width: '23%',
-    minWidth: 120,
-    padding: 16,
+    flex: 1,
+    minWidth: 110,
+    padding: 12,
     alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderRadius: 12,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   sectionTitle: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 16,
