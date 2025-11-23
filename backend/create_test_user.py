@@ -1,4 +1,3 @@
-import bcrypt
 from database import SessionLocal
 from models import User, Branch, UserBranch
 
@@ -12,9 +11,9 @@ try:
     db.refresh(branch)
     print(f"✅ Created branch: {branch.name} (ID: {branch.id})")
 
-    # Create a test user with hashed password
+    # Create a test user with plain text password
     password = "admin123"
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    hashed_password = password
     
     user = User(
         username="admin",

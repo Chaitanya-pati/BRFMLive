@@ -3,10 +3,7 @@
 alembic==1.16.5
 annotated-types==0.7.0
 anyio==4.11.0
-bcrypt==4.3.0
-cffi==2.0.0
 click==8.3.0
-cryptography==46.0.2
 dnspython==2.8.0
 ecdsa==0.19.1
 email-validator==2.3.0

@@ -1,7 +1,6 @@
 
 from database import SessionLocal
 import models
-import bcrypt
 
 def seed_default_user():
     db = SessionLocal()
@@ -14,8 +13,8 @@ def seed_default_user():
             print(f"   Password: admin123")
             return
         
-        # Hash the password
-        hashed_password = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # Plain text password
+        hashed_password = "admin123"
         
         # Create default admin user
         admin_user = models.User(

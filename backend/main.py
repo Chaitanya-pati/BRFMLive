@@ -2141,20 +2141,15 @@ def delete_branch(branch_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/users", response_model=schemas.UserWithBranches)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    import bcrypt
-
     db_user = db.query(
         models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already exists")
 
-    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'),
-                                    bcrypt.gensalt()).decode('utf-8')
-
     db_user = models.User(username=user.username,
                           email=user.email,
                           full_name=user.full_name,
-                          hashed_password=hashed_password,
+                          hashed_password=user.password,
                           role=user.role or "user",
                           is_active=True)
 
@@ -2204,9 +2199,7 @@ def update_user(user_id: int,
         db_user.username = user.username
 
     if user.password is not None and user.password != "":
-        import bcrypt
-        db_user.hashed_password = bcrypt.hashpw(
-            user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        db_user.hashed_password = user.password
 
     if user.email is not None:
         db_user.email = user.email
@@ -2258,18 +2251,9 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401,
                             detail="Invalid username or password")
 
-    import bcrypt
-    try:
-        password_match = bcrypt.checkpw(
-            credentials.password.encode('utf-8'),
-            user.hashed_password.encode('utf-8')
-        )
-        if not password_match:
-            print(f"❌ Invalid password for user: {credentials.username}")
-            raise HTTPException(status_code=401,
-                                detail="Invalid username or password")
-    except Exception as e:
-        print(f"❌ Password check error: {str(e)}")
+    # Plain text password comparison
+    if user.hashed_password != credentials.password:
+        print(f"❌ Invalid password for user: {credentials.username}")
         raise HTTPException(status_code=401,
                             detail="Invalid username or password")
 
