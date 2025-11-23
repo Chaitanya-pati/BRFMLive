@@ -22,8 +22,10 @@ const getCurrentAPIUrl = () => {
   return "http://localhost:8000/api";
 };
 
-//const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-const API_URL = "https://brfmlive.onrender.com/api";
+// Use getCurrentAPIUrl() for Replit, or fallback to render.com
+const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
+// Uncomment below line for production deployment on render.com
+// const API_URL = "https://brfmlive.onrender.com/api";
 console.log("API Base URL:", API_URL);
 
 // Export API_BASE_URL for components that need direct fetch calls (without /api suffix)

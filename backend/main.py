@@ -101,6 +101,17 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_cache_control_headers(request, call_next):
+    # Handle OPTIONS requests for CORS preflight
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+    
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -115,6 +126,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")
+@app.head("/")
 def read_root():
     return {"message": "Gate Entry & Lab Testing API", "status": "running"}
 
@@ -2231,19 +2243,37 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
+    print(f"🔐 Login attempt for username: {credentials.username}")
+    
     user = db.query(models.User).filter(
         models.User.username == credentials.username).first()
 
-    if not user or not user.is_active:
+    if not user:
+        print(f"❌ User not found: {credentials.username}")
+        raise HTTPException(status_code=401,
+                            detail="Invalid username or password")
+    
+    if not user.is_active:
+        print(f"❌ User inactive: {credentials.username}")
         raise HTTPException(status_code=401,
                             detail="Invalid username or password")
 
     import bcrypt
-    if not bcrypt.checkpw(credentials.password.encode('utf-8'),
-                          user.hashed_password.encode('utf-8')):
+    try:
+        password_match = bcrypt.checkpw(
+            credentials.password.encode('utf-8'),
+            user.hashed_password.encode('utf-8')
+        )
+        if not password_match:
+            print(f"❌ Invalid password for user: {credentials.username}")
+            raise HTTPException(status_code=401,
+                                detail="Invalid username or password")
+    except Exception as e:
+        print(f"❌ Password check error: {str(e)}")
         raise HTTPException(status_code=401,
                             detail="Invalid username or password")
 
+    print(f"✅ Login successful for user: {credentials.username}")
     return schemas.LoginResponse(user_id=user.id,
                                  username=user.username,
                                  full_name=user.full_name,
