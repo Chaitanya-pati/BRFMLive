@@ -23,8 +23,11 @@ import {
   FaClipboardList,
   FaWarehouse,
   FaCog,
-  FaRoute
+  FaRoute,
+  FaUserShield, // For User Management Admin Icon
+  FaUserCog // For Branch Master Admin Icon
 } from "react-icons/fa";
+import { Checkbox } from 'react-native-web'; // Assuming a checkbox component for web
 
 const colors = {
   background: "#f5f6fa",
@@ -121,6 +124,26 @@ const SvgRouteIcon = ({ active }) => {
   );
 };
 
+// Admin Icons
+const SvgUserShieldIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaUserShield color={color} size={18} />
+    </View>
+  );
+};
+
+const SvgUserCogIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaUserCog color={color} size={18} />
+    </View>
+  );
+};
+
+
 export default function Layout({ children, title, currentRoute }) {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
@@ -130,6 +153,21 @@ export default function Layout({ children, title, currentRoute }) {
   const [branchModalVisible, setBranchModalVisible] = useState(false);
   const [userMenuVisible, setUserMenuVisible] = useState(false);
   const { activeBranch, userBranches, setActiveBranch } = useBranch();
+
+  // Assuming user role is stored in storage and retrieved here
+  const [userRole, setUserRole] = useState('user'); // Default to 'user'
+  const [userName, setUserName] = useState('User'); // Default to 'User'
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const storedRole = await storage.get('userRole');
+      const storedName = await storage.get('userName');
+      if (storedRole) setUserRole(storedRole);
+      if (storedName) setUserName(storedName);
+    };
+    fetchUserData();
+  }, []);
+
 
   useEffect(() => {
     if (isMobile) {
@@ -173,13 +211,13 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
-      name: "Precleaning Process",
+      name: "Raw Wheat Bin Process", // Renamed from Precleaning Process
       route: "PrecleaningBin",
       icon: SvgBinIcon,
       section: "Operations",
     },
     {
-      name: "Precleaning Timeline",
+      name: "Raw Wheat Bin Timeline", // Renamed from Precleaning Timeline
       route: "PrecleaningTimeline",
       icon: SvgBinIcon, // Assuming same icon as PrecleaningProcess for now
       section: "Operations",
@@ -189,6 +227,21 @@ export default function Layout({ children, title, currentRoute }) {
       route: "ClaimTracking",
       icon: SvgFileTextIcon,
       section: "Operations",
+    },
+    // Admin only menu items
+    {
+      name: "User Management",
+      route: "UserManagement",
+      icon: SvgUserShieldIcon,
+      section: "Admin",
+      isAdminOnly: true,
+    },
+    {
+      name: "Branch Master",
+      route: "BranchMaster",
+      icon: SvgUserCogIcon,
+      section: "Admin",
+      isAdminOnly: true,
     },
   ];
 
@@ -213,7 +266,6 @@ export default function Layout({ children, title, currentRoute }) {
       if (success) {
         setBranchModalVisible(false);
         Alert.alert('Success', `Switched to ${branch.name}`);
-        // Reload the page to fetch new branch data
         if (typeof window !== 'undefined') {
           window.location.reload();
         }
@@ -232,6 +284,10 @@ export default function Layout({ children, title, currentRoute }) {
   };
 
   const renderMenuItem = (item, index) => {
+    if (item.isAdminOnly && userRole !== 'admin') {
+      return null; // Skip rendering if not admin and it's an admin-only item
+    }
+
     const IconComponent = item.icon;
     const isActive = currentRoute === item.route;
 
@@ -251,6 +307,13 @@ export default function Layout({ children, title, currentRoute }) {
         )}
       </TouchableOpacity>
     );
+  };
+
+  const handleBranchSelectionChange = (branchId, isSelected) => {
+    // This function would handle updating the selected branches for user management
+    // For now, it's a placeholder to demonstrate the new UI.
+    console.log(`Branch ${branchId} selection changed to: ${isSelected}`);
+    // In a real scenario, you'd update a state variable here.
   };
 
   return (
@@ -303,7 +366,10 @@ export default function Layout({ children, title, currentRoute }) {
               />
               <View style={[styles.userDropdown, isMobile && styles.userDropdownMobile]}>
                 <View style={styles.userDropdownHeader}>
-                  <Text style={styles.userDropdownName}>Admin</Text>
+                  <Text style={styles.userDropdownName}>{userName}</Text>
+                  {userRole && (
+                    <Text style={styles.userDropdownRole}>{userRole.toUpperCase()}</Text>
+                  )}
                 </View>
                 {activeBranch && (
                   <>
@@ -360,6 +426,7 @@ export default function Layout({ children, title, currentRoute }) {
           <ScrollView style={styles.menuContainer}>
             {renderMenuItem(menuItems[0], 0)}
 
+            {/* Section Divider for Operations, only show if sidebar is not collapsed or menu is open */}
             {(!sidebarCollapsed || mobileMenuOpen) && (
               <View style={styles.sectionDivider}>
                 <View style={styles.dividerLine} />
@@ -370,7 +437,23 @@ export default function Layout({ children, title, currentRoute }) {
 
             {menuItems
               .slice(1)
+              // Filter out admin-only items from the main loop if they are not intended for regular display
+              .filter(item => !item.isAdminOnly || userRole === 'admin')
               .map((item, index) => renderMenuItem(item, index + 1))}
+
+            {/* Admin Section Divider */}
+            {userRole === 'admin' && (!sidebarCollapsed || mobileMenuOpen) && (
+              <View style={styles.sectionDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.sectionLabel}>ADMINISTRATION</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            )}
+
+            {/* Render Admin Menu Items if user is admin */}
+            {userRole === 'admin' && menuItems
+              .filter(item => item.isAdminOnly)
+              .map((item, index) => renderMenuItem(item, index + menuItems.length))}
           </ScrollView>
         </View>
 
@@ -446,6 +529,53 @@ export default function Layout({ children, title, currentRoute }) {
               onPress={() => setBranchModalVisible(false)}
             >
               <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </RNModal>
+
+      {/* Branch Selection UI for User Management (Example) */}
+      {/* This part is illustrative and would be rendered within the UserManagement screen */}
+      {/* To demonstrate the checkbox concept */}
+      <RNModal
+        visible={false} // Set to true when needed in UserManagement screen
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => { /* Close modal logic */ }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => { /* Close modal logic */ }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={styles.modalTitle}>Select Branches</Text>
+            <ScrollView style={styles.branchList}>
+              {userBranches.map((branch) => (
+                <View key={branch.id} style={styles.branchCheckboxContainer}>
+                  <Checkbox
+                    value={false} // This would be managed by state
+                    onValueChange={(isSelected) => handleBranchSelectionChange(branch.id, isSelected)}
+                    style={styles.checkbox}
+                  />
+                  <View style={styles.branchOptionContent}>
+                    <Text style={styles.branchOptionName}>{branch.name}</Text>
+                    {branch.description && (
+                      <Text style={styles.branchOptionDescription}>{branch.description}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => { /* Close modal logic */ }}
+            >
+              <Text style={styles.modalCloseText}>Done</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -577,6 +707,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#1f2937",
+  },
+  userDropdownRole: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+    marginTop: 2,
   },
   userDropdownDivider: {
     height: 1,
@@ -853,5 +989,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#64748b",
+  },
+  // Styles for the new branch selection UI
+  branchCheckboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  checkbox: {
+    marginRight: 12,
+    width: 20,
+    height: 20,
   },
 });

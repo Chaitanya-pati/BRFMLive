@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { API_BASE_URL } from '../api/client';
 import Layout from '../components/Layout';
 import colors from '../theme/colors';
@@ -258,19 +259,30 @@ export default function UserManagementScreen({ navigation }) {
           secureTextEntry
         />
 
-        <Text style={styles.branchLabel}>Select Branches</Text>
-        <View style={styles.branchList}>
+        <Text style={styles.branchLabel}>Assign Branches</Text>
+        <View style={styles.branchCheckboxContainer}>
           {branches.length === 0 ? (
             <Text style={styles.noBranches}>No branches available. Create branches first.</Text>
           ) : (
             branches.map(branch => (
-              <Button
+              <TouchableOpacity
                 key={branch.id}
-                title={branch.name}
+                style={styles.checkboxRow}
                 onPress={() => toggleBranch(branch.id)}
-                variant={selectedBranches.includes(branch.id) ? 'primary' : 'secondary'}
-                style={styles.branchButton}
-              />
+                activeOpacity={0.7}
+              >
+                <View style={styles.checkbox}>
+                  {selectedBranches.includes(branch.id) && (
+                    <View style={styles.checkboxChecked} />
+                  )}
+                </View>
+                <View style={styles.branchInfo}>
+                  <Text style={styles.branchName}>{branch.name}</Text>
+                  {branch.description && (
+                    <Text style={styles.branchDescription}>{branch.description}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -315,20 +327,57 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginTop: 15,
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  branchList: {
+  branchCheckboxContainer: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    maxHeight: 300,
+  },
+  checkboxRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  branchButton: {
-    marginRight: 10,
-    marginBottom: 10,
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#3b82f6',
+  },
+  branchInfo: {
+    flex: 1,
+  },
+  branchName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  branchDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
   },
   noBranches: {
     color: '#999',
     fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
   modalButtons: {
     flexDirection: 'row',

@@ -1091,7 +1091,7 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   return (
     <Layout
-      title="Precleaning Process"
+      title="Raw Wheat Bin Process"
       navigation={navigation}
       currentRoute="PrecleaningBin"
     >

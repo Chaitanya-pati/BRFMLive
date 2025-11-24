@@ -37,10 +37,10 @@ export default function App() {
     // Retry mechanism to ensure refs are captured even on slower devices
     let attempts = 0;
     const maxAttempts = 20; // Try for up to 1 second (20 * 50ms)
-    
+
     const interval = setInterval(() => {
       attempts++;
-      
+
       if (toastRef.current && alertRef.current) {
         setToastContainer(toastRef.current);
         setAlertContainer(alertRef.current);

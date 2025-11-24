@@ -245,10 +245,10 @@ export default function PrecleaningTimelineScreen({ navigation }) {
   );
 
   return (
-    <Layout navigation={navigation} title="Precleaning Timeline" currentRoute="PrecleaningTimeline">
+    <Layout navigation={navigation} title="Raw Wheat Timeline" currentRoute="PrecleaningTimeline">
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Precleaning Process Timeline</Text>
+          <Text style={styles.title}>Raw Wheat Bin Process Timeline</Text>
           <DatePicker
             label="Select Date"
             value={selectedDate}
