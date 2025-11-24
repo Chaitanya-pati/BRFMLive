@@ -22,7 +22,7 @@ export default function UserManagementScreen({ navigation }) {
     email: '',
     full_name: '',
     password: '', 
-    role: 'user',
+    role: 'admin',
     branch_ids: [] 
   });
   const [selectedBranches, setSelectedBranches] = useState([]);
@@ -51,7 +51,7 @@ export default function UserManagementScreen({ navigation }) {
   };
 
   const handleAdd = () => {
-    setCurrentUser({ username: '', email: '', full_name: '', password: '', role: 'user', branch_ids: [] });
+    setCurrentUser({ username: '', email: '', full_name: '', password: '', role: 'admin', branch_ids: [] });
     setSelectedBranches([]);
     setEditMode(false);
     setModalVisible(true);
@@ -100,7 +100,7 @@ export default function UserManagementScreen({ navigation }) {
         username: currentUser.username,
         email: currentUser.email,
         full_name: currentUser.full_name,
-        role: currentUser.role || 'user',
+        role: currentUser.role || 'admin',
         branch_ids: selectedBranches,
       };
 
@@ -243,11 +243,9 @@ export default function UserManagementScreen({ navigation }) {
           label="Role"
           value={currentUser.role}
           onValueChange={(value) => setCurrentUser({ ...currentUser, role: value })}
-          items={[
-            { label: 'User', value: 'user' },
-            { label: 'Operator', value: 'operator' },
-            { label: 'Manager', value: 'manager' },
+          options={[
             { label: 'Admin', value: 'admin' },
+            { label: 'Data Entry Operator', value: 'data_entry_operator' },
           ]}
         />
 
