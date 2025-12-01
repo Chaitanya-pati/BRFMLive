@@ -18,6 +18,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { unloadingApi, godownApi } from '../api/client';
 import { getFullImageUrl } from '../utils/imageUtils';
+import { useFormSubmission } from '../utils/useFormSubmission';
 import colors from '../theme/colors';
 
 export default function UnloadingEntryScreen({ navigation }) {
@@ -39,6 +40,62 @@ export default function UnloadingEntryScreen({ navigation }) {
     notes: '',
   });
 
+  const { isSubmitting, handleSubmit: submitForm } = useFormSubmission(
+    async (data) => {
+      const submitFormData = new FormData();
+      submitFormData.append('vehicle_entry_id', data.vehicle_entry_id);
+      submitFormData.append('godown_id', data.godown_id);
+      submitFormData.append('unloading_start_time', data.unloading_start_time);
+      submitFormData.append('unloading_end_time', data.unloading_end_time);
+      if (data.notes) {
+        submitFormData.append('notes', data.notes);
+      }
+
+      // Only append new images (not existing URLs)
+      if (data.beforeImage && !data.beforeImage.uri.startsWith('http')) {
+        if (Platform.OS === 'web') {
+          const beforeBlob = await fetch(data.beforeImage.uri).then(r => r.blob());
+          submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
+        } else {
+          submitFormData.append('before_unloading_image', {
+            uri: data.beforeImage.uri,
+            type: 'image/jpeg',
+            name: 'before.jpg',
+          });
+        }
+      }
+
+      if (data.afterImage && !data.afterImage.uri.startsWith('http')) {
+        if (Platform.OS === 'web') {
+          const afterBlob = await fetch(data.afterImage.uri).then(r => r.blob());
+          submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
+        } else {
+          submitFormData.append('after_unloading_image', {
+            uri: data.afterImage.uri,
+            type: 'image/jpeg',
+            name: 'after.jpg',
+          });
+        }
+      }
+
+      if (data.id) {
+        await unloadingApi.update(data.id, submitFormData);
+        notify.showSuccess('Unloading entry updated successfully');
+      } else {
+        await unloadingApi.create(submitFormData);
+        notify.showSuccess('Unloading entry added successfully');
+      }
+
+      setModalVisible(false);
+      loadEntries();
+      loadGodowns();
+    },
+    {
+      onValidationFail: () => {
+        notify.showError('Please select both vehicle and godown');
+      },
+    }
+  );
 
 
   useEffect(() => {
@@ -221,63 +278,11 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    try {
-      if (!formData.vehicle_entry_id || !formData.godown_id) {
-        notify.showWarning('Please fill all required fields');
-        return;
-      }
-
-      const submitFormData = new FormData();
-      submitFormData.append('vehicle_entry_id', formData.vehicle_entry_id);
-      submitFormData.append('godown_id', formData.godown_id);
-      submitFormData.append('unloading_start_time', formData.unloading_start_time);
-      submitFormData.append('unloading_end_time', formData.unloading_end_time);
-      if (formData.notes) {
-        submitFormData.append('notes', formData.notes);
-      }
-
-      // Only append new images (not existing URLs)
-      if (beforeImage && !beforeImage.uri.startsWith('http')) {
-        if (Platform.OS === 'web') {
-          const beforeBlob = await fetch(beforeImage.uri).then(r => r.blob());
-          submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
-        } else {
-          submitFormData.append('before_unloading_image', {
-            uri: beforeImage.uri,
-            type: 'image/jpeg',
-            name: 'before.jpg',
-          });
-        }
-      }
-
-      if (afterImage && !afterImage.uri.startsWith('http')) {
-        if (Platform.OS === 'web') {
-          const afterBlob = await fetch(afterImage.uri).then(r => r.blob());
-          submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
-        } else {
-          submitFormData.append('after_unloading_image', {
-            uri: afterImage.uri,
-            type: 'image/jpeg',
-            name: 'after.jpg',
-          });
-        }
-      }
-
-      if (formData.id) {
-        await unloadingApi.update(formData.id, submitFormData);
-        notify.showSuccess('Unloading entry updated successfully');
-      } else {
-        await unloadingApi.create(submitFormData);
-        notify.showSuccess('Unloading entry added successfully');
-      }
-
-      setModalVisible(false);
-      loadEntries();
-      loadGodowns();
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      notify.showError('Failed to save unloading entry. Please try again.');
-    }
+    submitForm({
+      ...formData,
+      beforeImage,
+      afterImage,
+    });
   };
 
   const handleDelete = (entry) => {
@@ -480,8 +485,9 @@ export default function UnloadingEntryScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.buttonText}>Save</Text>
+              <Text style={styles.buttonText}>{isSubmitting ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

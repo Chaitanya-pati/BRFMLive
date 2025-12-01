@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
@@ -14,6 +15,7 @@ import Modal from '../components/Modal';
 import { supplierApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
+import { useFormSubmission } from '../utils/useFormSubmission';
 
 export default function SupplierMasterScreen({ navigation }) {
   const [suppliers, setSuppliers] = useState([]);
@@ -22,7 +24,7 @@ export default function SupplierMasterScreen({ navigation }) {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
   const [selectedStateId, setSelectedStateId] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Removed local loading state as it's now managed by useFormSubmission
 
   const [formData, setFormData] = useState({
     supplier_name: '',
@@ -37,6 +39,9 @@ export default function SupplierMasterScreen({ navigation }) {
     zip_code: '',
     gstin: '',
   });
+
+  // Initialize the useFormSubmission hook
+  const { isSubmitting, handleFormSubmission } = useFormSubmission();
 
   useEffect(() => {
     loadSuppliers();
@@ -60,9 +65,9 @@ export default function SupplierMasterScreen({ navigation }) {
   const handleStateChange = (stateId) => {
     if (!stateId || stateId === '') {
       setSelectedStateId('');
-      setFormData({ 
-        ...formData, 
-        state: ''
+      setFormData({
+        ...formData,
+        state: '',
       });
       return;
     }
@@ -75,15 +80,15 @@ export default function SupplierMasterScreen({ navigation }) {
 
     if (state) {
       setSelectedStateId(numericStateId);
-      setFormData({ 
-        ...formData, 
-        state: state.state_name
+      setFormData({
+        ...formData,
+        state: state.state_name,
       });
     } else {
       setSelectedStateId('');
-      setFormData({ 
-        ...formData, 
-        state: ''
+      setFormData({
+        ...formData,
+        state: '',
       });
     }
   };
@@ -147,8 +152,8 @@ export default function SupplierMasterScreen({ navigation }) {
       return;
     }
 
-    setLoading(true);
-    try {
+    // Use handleFormSubmission for the actual submission logic
+    await handleFormSubmission(async () => {
       const payload = {
         supplier_name: trimmedName,
         contact_person: formData.contact_person?.trim() || '',
@@ -177,17 +182,7 @@ export default function SupplierMasterScreen({ navigation }) {
 
       setModalVisible(false);
       await loadSuppliers();
-    } catch (error) {
-      console.error('❌ Save error:', error);
-      console.error('Error response:', error.response?.data);
-      const errorMessage = error.response?.data?.detail 
-        || error.response?.data?.message 
-        || error.message 
-        || 'Unknown error occurred';
-      showError('Failed to save supplier: ' + errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    }, 'supplier'); // Pass a unique identifier for this form submission
   };
 
   const handleDelete = async (supplier) => {
@@ -218,9 +213,9 @@ export default function SupplierMasterScreen({ navigation }) {
     { label: 'State', field: 'state', width: 130 },
     { label: 'City', field: 'city', width: 130 },
     { label: 'District', field: 'district', width: 130 },
-    { 
-      label: 'Created', 
-      field: 'created_at', 
+    {
+      label: 'Created',
+      field: 'created_at',
       width: 150,
       render: (value) => new Date(value).toLocaleDateString()
     },
@@ -358,16 +353,17 @@ export default function SupplierMasterScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={() => setModalVisible(false)}
+              disabled={isSubmitting}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+              style={[styles.button, styles.saveButton, isSubmitting && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={isSubmitting}
             >
               <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : editMode ? 'Update' : 'Save'}
+                {isSubmitting ? 'Saving...' : editMode ? 'Update' : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>

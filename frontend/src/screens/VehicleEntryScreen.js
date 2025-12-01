@@ -1,29 +1,20 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  useWindowDimensions,
-  Platform,
-} from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import Layout from "../components/Layout";
-import InputField from "../components/InputField";
-import SelectDropdown from "../components/SelectDropdown";
-import DatePicker from "../components/DatePicker";
-import Button from "../components/Button";
-import DataTable from "../components/DataTable";
-import Modal from "../components/Modal";
-import { vehicleApi, supplierApi } from "../api/client";
-import { getFullImageUrl } from "../utils/imageUtils";
-import colors from "../theme/colors";
-import { showNotification } from "../utils/notifications";
-import { formatISTDate, toISTISOString } from "../utils/timeUtils";
-import ImagePreview from "../components/ImagePreview";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import Layout from '../components/Layout';
+import InputField from '../components/InputField';
+import SelectDropdown from '../components/SelectDropdown';
+import Button from '../components/Button';
+import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
+import DatePicker from '../components/DatePicker';
+import ImagePreview from '../components/ImagePreview';
+import { vehicleApi, supplierApi } from '../api/client';
+import { showNotification } from '../utils/notifications';
+import { getFullImageUrl } from '../utils/imageUtils';
+import { useFormSubmission } from '../utils/useFormSubmission';
+import colors from '../theme/colors';
+import { toISTISOString } from '../utils/timeUtils';
 
 export default function VehicleEntryScreen() {
   const [vehicles, setVehicles] = useState([]);
@@ -59,6 +50,88 @@ export default function VehicleEntryScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  const { isSubmitting, handleSubmitForm } = useFormSubmission(
+    async (data) => {
+      const formDataToSend = new FormData();
+      const vehicleNumber = `${data.vehicle_state_code}-${data.vehicle_second_part}-${data.vehicle_third_part}`;
+      formDataToSend.append("vehicle_number", vehicleNumber);
+      formDataToSend.append("supplier_id", String(data.supplier_id));
+      formDataToSend.append("bill_no", data.bill_no);
+      formDataToSend.append("driver_name", data.driver_name || "");
+      formDataToSend.append("driver_phone", data.driver_phone || "");
+      formDataToSend.append(
+        "arrival_time",
+        toISTISOString(data.arrival_time),
+      );
+      formDataToSend.append(
+        "empty_weight",
+        data.empty_weight ? String(data.empty_weight) : "0",
+      );
+      formDataToSend.append(
+        "gross_weight",
+        data.gross_weight ? String(data.gross_weight) : "0",
+      );
+      formDataToSend.append("notes", data.notes || "");
+
+      // Append photos if they exist
+      const appendPhoto = async (field, fileName) => {
+        const photoUri = data[field]?.uri || data[field];
+        if (photoUri) {
+          if (Platform.OS === "web") {
+            const response = await fetch(photoUri);
+            const blob = await response.blob();
+            formDataToSend.append(field, blob, fileName);
+          } else {
+            formDataToSend.append(field, {
+              uri: photoUri,
+              type: "image/jpeg",
+              name: fileName,
+            });
+          }
+        }
+      };
+
+      await appendPhoto("supplier_bill_photo", "supplier_bill.jpg");
+      await appendPhoto("vehicle_photo_front", "vehicle_front.jpg");
+      await appendPhoto("vehicle_photo_back", "vehicle_back.jpg");
+      await appendPhoto("vehicle_photo_side", "vehicle_side.jpg");
+      await appendPhoto("internal_weighment_slip", "internal_weighment.jpg");
+      await appendPhoto("client_weighment_slip", "client_weighment.jpg");
+      await appendPhoto("transportation_copy", "transportation.jpg");
+
+
+      if (editingVehicle) {
+        await vehicleApi.update(editingVehicle.id, formDataToSend);
+        showNotification("Vehicle entry updated successfully!", "success");
+      } else {
+        await vehicleApi.create(formDataToSend);
+        showNotification("Vehicle entry created successfully!", "success");
+      }
+
+      fetchVehicles();
+      resetForm();
+    },
+    () => {
+      // Validation logic
+      if (
+        !formData.vehicle_state_code ||
+        !formData.vehicle_second_part ||
+        !formData.vehicle_third_part ||
+        !formData.supplier_id ||
+        !formData.bill_no ||
+        !formData.arrival_time
+      ) {
+        showNotification(
+          "Please fill in all required fields (Vehicle Number, Supplier, Bill Number, Arrival Time)",
+          "error",
+        );
+        return false;
+      }
+      return true;
+    }
+  );
+
+
   useEffect(() => {
     fetchVehicles();
     fetchSuppliers();
@@ -84,198 +157,6 @@ export default function VehicleEntryScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (
-        !formData.vehicle_state_code ||
-        !formData.vehicle_second_part ||
-        !formData.vehicle_third_part ||
-        !formData.supplier_id ||
-        !formData.bill_no ||
-        !formData.arrival_time
-      ) {
-        showNotification(
-          "Please fill in all required fields (Vehicle Number, Supplier, Bill Number, Arrival Time)",
-          "error",
-        );
-        return;
-      }
-
-      const formDataToSend = new FormData();
-      const vehicleNumber = `${formData.vehicle_state_code}-${formData.vehicle_second_part}-${formData.vehicle_third_part}`;
-      formDataToSend.append("vehicle_number", vehicleNumber);
-      formDataToSend.append("supplier_id", String(formData.supplier_id));
-      formDataToSend.append("bill_no", formData.bill_no);
-      formDataToSend.append("driver_name", formData.driver_name || "");
-      formDataToSend.append("driver_phone", formData.driver_phone || "");
-      formDataToSend.append(
-        "arrival_time",
-        toISTISOString(formData.arrival_time),
-      );
-      formDataToSend.append(
-        "empty_weight",
-        formData.empty_weight ? String(formData.empty_weight) : "0",
-      );
-      formDataToSend.append(
-        "gross_weight",
-        formData.gross_weight ? String(formData.gross_weight) : "0",
-      );
-      formDataToSend.append("notes", formData.notes || "");
-
-      if (formData.supplier_bill_photo) {
-        const photoUri =
-          formData.supplier_bill_photo.uri || formData.supplier_bill_photo;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append(
-            "supplier_bill_photo",
-            blob,
-            "supplier_bill.jpg",
-          );
-        } else {
-          formDataToSend.append("supplier_bill_photo", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "supplier_bill.jpg",
-          });
-        }
-      }
-
-      if (formData.vehicle_photo_front) {
-        const photoUri =
-          formData.vehicle_photo_front.uri || formData.vehicle_photo_front;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append(
-            "vehicle_photo_front",
-            blob,
-            "vehicle_front.jpg",
-          );
-        } else {
-          formDataToSend.append("vehicle_photo_front", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "vehicle_front.jpg",
-          });
-        }
-      }
-
-      if (formData.vehicle_photo_back) {
-        const photoUri =
-          formData.vehicle_photo_back.uri || formData.vehicle_photo_back;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append("vehicle_photo_back", blob, "vehicle_back.jpg");
-        } else {
-          formDataToSend.append("vehicle_photo_back", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "vehicle_back.jpg",
-          });
-        }
-      }
-
-      if (formData.vehicle_photo_side) {
-        const photoUri =
-          formData.vehicle_photo_side.uri || formData.vehicle_photo_side;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append("vehicle_photo_side", blob, "vehicle_side.jpg");
-        } else {
-          formDataToSend.append("vehicle_photo_side", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "vehicle_side.jpg",
-          });
-        }
-      }
-
-      if (formData.internal_weighment_slip) {
-        const photoUri =
-          formData.internal_weighment_slip.uri ||
-          formData.internal_weighment_slip;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append(
-            "internal_weighment_slip",
-            blob,
-            "internal_weighment.jpg",
-          );
-        } else {
-          formDataToSend.append("internal_weighment_slip", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "internal_weighment.jpg",
-          });
-        }
-      }
-
-      if (formData.client_weighment_slip) {
-        const photoUri =
-          formData.client_weighment_slip.uri || formData.client_weighment_slip;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append(
-            "client_weighment_slip",
-            blob,
-            "client_weighment.jpg",
-          );
-        } else {
-          formDataToSend.append("client_weighment_slip", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "client_weighment.jpg",
-          });
-        }
-      }
-
-      if (formData.transportation_copy) {
-        const photoUri =
-          formData.transportation_copy.uri || formData.transportation_copy;
-        if (Platform.OS === "web") {
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          formDataToSend.append(
-            "transportation_copy",
-            blob,
-            "transportation.jpg",
-          );
-        } else {
-          formDataToSend.append("transportation_copy", {
-            uri: photoUri,
-            type: "image/jpeg",
-            name: "transportation.jpg",
-          });
-        }
-      }
-
-      if (editingVehicle) {
-        await vehicleApi.update(editingVehicle.id, formDataToSend);
-        showNotification("Vehicle entry updated successfully!", "success");
-      } else {
-        await vehicleApi.create(formDataToSend);
-        showNotification("Vehicle entry created successfully!", "success");
-      }
-
-      fetchVehicles();
-      resetForm();
-    } catch (error) {
-      console.error("Submit error:", error);
-      showNotification(
-        error.response?.data?.detail ||
-          error.message ||
-          "Failed to save vehicle entry",
-        "error",
-      );
-    }
-  };
-
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
 
@@ -288,7 +169,7 @@ export default function VehicleEntryScreen() {
     const thirdPart = vehicleNumberParts.slice(2).join("-") || "";
 
     // Load existing images if available (convert relative paths to full URLs)
-    const supplierBillPhoto = vehicle.supplier_bill_photo 
+    const supplierBillPhoto = vehicle.supplier_bill_photo
       ? { uri: getFullImageUrl(vehicle.supplier_bill_photo) }
       : null;
     const vehiclePhotoFront = vehicle.vehicle_photo_front
@@ -1003,11 +884,15 @@ export default function VehicleEntryScreen() {
               variant="secondary"
               style={[styles.button, isMobile && styles.buttonMobile]}
             />
-            <Button
-              title={editingVehicle ? "Update" : "Save"}
-              onPress={handleSubmit}
-              style={[styles.button, isMobile && styles.buttonMobile]}
-            />
+            {isSubmitting ? (
+              <ActivityIndicator size="large" color={colors.primary} />
+            ) : (
+              <Button
+                title={editingVehicle ? "Update" : "Save"}
+                onPress={() => handleSubmitForm(formData)}
+                style={[styles.button, isMobile && styles.buttonMobile]}
+              />
+            )}
           </View>
         </ScrollView>
       </Modal>
@@ -1061,12 +946,6 @@ const styles = StyleSheet.create({
   },
   buttonMobile: {
     width: "100%",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
