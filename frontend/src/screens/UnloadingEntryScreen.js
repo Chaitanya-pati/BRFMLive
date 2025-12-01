@@ -345,14 +345,13 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'id', label: 'ID', field: 'id', width: 80, flex: 0.5 },
+    { key: 'id', label: 'ID', field: 'id', flex: 0.5 },
     { 
       key: 'vehicle_number', 
       label: 'Vehicle Number', 
       field: 'vehicle_number',
       flex: 1,
       render: (value, row) => {
-        console.log('🚗 Row data:', row);
         return row.vehicle_entry?.vehicle_number || 'N/A';
       }
     },
@@ -374,27 +373,6 @@ export default function UnloadingEntryScreen({ navigation }) {
         const godown = row.godown;
         return godown ? `${godown.name} (${godown.type || 'N/A'})` : 'N/A';
       }
-    },
-    { 
-      key: 'gross_weight', 
-      label: 'Gross Weight (kg)', 
-      field: 'gross_weight', 
-      flex: 1,
-      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
-    },
-    { 
-      key: 'empty_weight', 
-      label: 'Empty Weight (kg)', 
-      field: 'empty_vehicle_weight', 
-      flex: 1,
-      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
-    },
-    { 
-      key: 'net_weight', 
-      label: 'Net Weight (kg)', 
-      field: 'net_weight', 
-      flex: 1,
-      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
     },
     { 
       key: 'images', 
@@ -470,77 +448,99 @@ export default function UnloadingEntryScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Before Unloading Photo</Text>
-          {beforeImage ? (
-            <View>
-              <Image source={{ uri: beforeImage.uri }} style={styles.imagePreview} />
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Before Unloading Photo</Text>
+            {beforeImage ? (
+              <View>
+                <Image
+                  source={{ uri: beforeImage.uri }}
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load before unloading image:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Before unloading image loaded successfully')}
+                />
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureImage('before')}
+                    style={[styles.imageActionButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickImage('before')}
+                    style={[styles.imageActionButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
               <View style={styles.imageButtonRow}>
                 <TouchableOpacity
                   onPress={() => captureImage('before')}
-                  style={[styles.imageActionButton, styles.cameraButton]}
+                  style={[styles.uploadButton, styles.cameraButton]}
                 >
-                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => pickImage('before')}
-                  style={[styles.imageActionButton, styles.galleryButton]}
+                  style={[styles.uploadButton, styles.galleryButton]}
                 >
-                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            <View style={styles.imageButtonRow}>
-              <TouchableOpacity
-                onPress={() => captureImage('before')}
-                style={[styles.uploadButton, styles.cameraButton]}
-              >
-                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => pickImage('before')}
-                style={[styles.uploadButton, styles.galleryButton]}
-              >
-                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
 
-          <Text style={styles.label}>After Unloading Photo</Text>
-          {afterImage ? (
-            <View>
-              <Image source={{ uri: afterImage.uri }} style={styles.imagePreview} />
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>After Unloading Photo</Text>
+            {afterImage ? (
+              <View>
+                <Image
+                  source={{ uri: afterImage.uri }}
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load after unloading image:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('After unloading image loaded successfully')}
+                />
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureImage('after')}
+                    style={[styles.imageActionButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickImage('after')}
+                    style={[styles.imageActionButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
               <View style={styles.imageButtonRow}>
                 <TouchableOpacity
                   onPress={() => captureImage('after')}
-                  style={[styles.imageActionButton, styles.cameraButton]}
+                  style={[styles.uploadButton, styles.cameraButton]}
                 >
-                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => pickImage('after')}
-                  style={[styles.imageActionButton, styles.galleryButton]}
+                  style={[styles.uploadButton, styles.galleryButton]}
                 >
-                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            <View style={styles.imageButtonRow}>
-              <TouchableOpacity
-                onPress={() => captureImage('after')}
-                style={[styles.uploadButton, styles.cameraButton]}
-              >
-                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => pickImage('after')}
-                style={[styles.uploadButton, styles.galleryButton]}
-              >
-                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
 
           <Text style={styles.label}>Notes</Text>
           <TextInput
@@ -610,45 +610,15 @@ const styles = StyleSheet.create({
     height: 50,
   },
   imageSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   imagePreview: {
     width: '100%',
     height: 200,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: 200,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    backgroundColor: '#f9fafb',
-  },
-  placeholderText: {
-    color: '#9ca3af',
-    fontSize: 14,
-  },
-  imageButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  imageButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   buttonContainer: {
     flexDirection: 'row',
