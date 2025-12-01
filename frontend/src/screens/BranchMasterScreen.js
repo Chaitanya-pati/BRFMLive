@@ -16,6 +16,12 @@ export default function BranchMasterScreen({ navigation }) {
   const [editMode, setEditMode] = useState(false);
   const [currentBranch, setCurrentBranch] = useState({ name: '', description: '' });
 
+  // Placeholder for a notification function, assuming it exists elsewhere or will be implemented
+  const showNotification = (message, type) => {
+    // In a real app, this would trigger a toast or notification component
+    Alert.alert(type === 'success' ? 'Success' : 'Error', message);
+  };
+
   useEffect(() => {
     fetchBranches();
   }, []);
@@ -26,7 +32,7 @@ export default function BranchMasterScreen({ navigation }) {
       const data = await response.json();
       setBranches(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch branches');
+      showNotification('Failed to fetch branches', 'error');
     } finally {
       setLoading(false);
     }
@@ -46,12 +52,12 @@ export default function BranchMasterScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!currentBranch.name) {
-      Alert.alert('Error', 'Branch name is required');
+      showNotification('Branch name is required', 'error');
       return;
     }
 
     try {
-      const url = editMode 
+      const url = editMode
         ? `${API_BASE_URL}/api/branches/${currentBranch.id}`
         : `${API_BASE_URL}/api/branches`;
 
@@ -70,14 +76,14 @@ export default function BranchMasterScreen({ navigation }) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Failed to save branch');
+        throw new Error(error.detail || `Failed to ${editMode ? 'update' : 'create'} branch`);
       }
 
-      Alert.alert('Success', `Branch ${editMode ? 'updated' : 'created'} successfully`);
+      showNotification(`Branch ${editMode ? 'updated' : 'created'} successfully`, 'success');
       setModalVisible(false);
       fetchBranches();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      showNotification(error.message, 'error');
     }
   };
 
@@ -97,13 +103,14 @@ export default function BranchMasterScreen({ navigation }) {
               });
 
               if (!response.ok) {
-                throw new Error('Failed to delete branch');
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete branch');
               }
 
-              Alert.alert('Success', 'Branch deleted successfully');
+              showNotification('Branch deleted successfully', 'success');
               fetchBranches();
             } catch (error) {
-              Alert.alert('Error', error.message);
+              showNotification(error.message, 'error');
             }
           },
         },
@@ -116,7 +123,6 @@ export default function BranchMasterScreen({ navigation }) {
     { label: 'Description', field: 'description' },
   ];
 
-  // Removed 'actions' prop from DataTable and passed individual handlers
   if (loading) {
     return (
       <Layout navigation={navigation} title="Branch Master">

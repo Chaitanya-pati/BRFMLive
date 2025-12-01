@@ -40,6 +40,18 @@ export default function UnloadingEntryScreen({ navigation }) {
     notes: '',
   });
 
+  // Define showNotification function locally or import it if it's a utility
+  const showNotification = (message, type) => {
+    if (type === "success") {
+      notify.showSuccess(message);
+    } else if (type === "error") {
+      notify.showError(message);
+    } else if (type === "warning") {
+      notify.showWarning(message);
+    }
+  };
+
+
   const { isSubmitting, handleSubmit: submitForm } = useFormSubmission(
     async (data) => {
       const submitFormData = new FormData();
@@ -80,10 +92,10 @@ export default function UnloadingEntryScreen({ navigation }) {
 
       if (data.id) {
         await unloadingApi.update(data.id, submitFormData);
-        notify.showSuccess('Unloading entry updated successfully');
+        showNotification("Unloading Entry updated successfully!", "success");
       } else {
         await unloadingApi.create(submitFormData);
-        notify.showSuccess('Unloading entry added successfully');
+        showNotification("Unloading Entry created successfully!", "success");
       }
 
       setModalVisible(false);
@@ -92,7 +104,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     },
     {
       onValidationFail: () => {
-        notify.showError('Please select both vehicle and godown');
+        showNotification('Please select both vehicle and godown', 'error');
       },
     }
   );
@@ -113,7 +125,7 @@ export default function UnloadingEntryScreen({ navigation }) {
     const { status } = await Camera.requestCameraPermissionsAsync();
     setCameraPermission(status === 'granted');
     if (status !== 'granted') {
-      notify.showWarning('Camera permission is required to take photos');
+      showNotification('Camera permission is required to take photos', 'warning');
     }
   };
 
@@ -123,6 +135,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setEntries(response.data);
     } catch (error) {
       console.error('Error loading entries:', error);
+      showNotification('Failed to load unloading entries', 'error');
     }
   };
 
@@ -132,6 +145,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setVehicles(response.data);
     } catch (error) {
       console.error('Error loading vehicles:', error);
+      showNotification('Failed to load vehicles', 'error');
     }
   };
 
@@ -141,6 +155,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setGodowns(response.data);
     } catch (error) {
       console.error('Error loading godowns:', error);
+      showNotification('Failed to load godowns', 'error');
     }
   };
 
@@ -185,7 +200,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      notify.showError('Failed to pick image');
+      showNotification('Failed to pick image', 'error');
     }
   };
 
@@ -193,7 +208,8 @@ export default function UnloadingEntryScreen({ navigation }) {
     try {
       if (!cameraPermission) {
         await requestCameraPermission();
-        return;
+        // Re-check permission after requesting
+        if (!cameraPermission) return; 
       }
 
       const result = await ImagePicker.launchCameraAsync({
@@ -211,7 +227,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error capturing image:', error);
-      notify.showError('Failed to capture image');
+      showNotification('Failed to capture image', 'error');
     }
   };
 
@@ -293,10 +309,10 @@ export default function UnloadingEntryScreen({ navigation }) {
         try {
           await unloadingApi.delete(entry.id);
           loadEntries();
-          notify.showSuccess('Unloading entry deleted successfully');
+          showNotification('Unloading Entry deleted successfully!', 'success');
         } catch (error) {
           console.error('Error deleting:', error);
-          notify.showError('Failed to delete unloading entry');
+          showNotification('Failed to delete unloading entry', 'error');
         }
       }
     );

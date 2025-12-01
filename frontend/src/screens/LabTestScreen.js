@@ -146,6 +146,7 @@ export default function LabTestScreen({ navigation }) {
       setVehicles(response.data);
     } catch (error) {
       console.error("Error loading vehicles:", error);
+      notify.showError("Failed to load vehicles");
     }
   };
 
@@ -155,6 +156,7 @@ export default function LabTestScreen({ navigation }) {
       setLabTests(response.data);
     } catch (error) {
       console.error("Error loading lab tests:", error);
+      notify.showError("Failed to load Lab Tests");
     }
   };
 
@@ -305,10 +307,10 @@ export default function LabTestScreen({ navigation }) {
 
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
-        notify.showSuccess("Lab test updated successfully");
+        notify.showSuccess("Lab Test updated successfully!");
       } else {
         await labTestApi.create(submitData);
-        notify.showSuccess("Lab test created successfully");
+        notify.showSuccess("Lab Test created successfully!");
       }
 
       setModalVisible(false);
@@ -374,11 +376,11 @@ export default function LabTestScreen({ navigation }) {
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
         savedLabTest = currentLabTest;
-        notify.showSuccess("Lab test updated successfully");
+        notify.showSuccess("Lab Test updated successfully!");
       } else {
         const response = await labTestApi.create(submitData);
         savedLabTest = response.data;
-        notify.showSuccess("Lab test created successfully");
+        notify.showSuccess("Lab Test created successfully!");
       }
 
       // Close the lab test modal
@@ -798,7 +800,7 @@ export default function LabTestScreen({ navigation }) {
         <td class="test-col"><strong>Total Impurities (%)</strong></td>
         <td class="uom-col"></td>
         <td class="standard-col"></td>
-        <td class="actual-col"></td>
+        <td class="actual-col">${formData.total_impurities}</td>
       </tr>
       <tr class="section-header">
         <td class="sr-col"></td>
@@ -868,7 +870,7 @@ export default function LabTestScreen({ navigation }) {
         <td class="test-col"><strong>Total Dockage</strong></td>
         <td class="uom-col">%</td>
         <td class="standard-col"></td>
-        <td class="actual-col"></td>
+        <td class="actual-col">${formData.total_dockage}</td>
       </tr>
     </tbody>
   </table>
@@ -921,6 +923,7 @@ export default function LabTestScreen({ navigation }) {
       setSelectedVehicle(vehicle);
     } catch (error) {
       console.error("Error loading vehicles:", error);
+      notify.showError("Failed to load vehicles for editing");
     }
 
     setEditMode(true);
@@ -954,13 +957,13 @@ export default function LabTestScreen({ navigation }) {
       blackened_wheat: labTest.blackened_wheat?.toString() || "",
       other_grains: labTest.sprouted_grains?.toString() || "",
       soft_wheat: labTest.other_grain_damage?.toString() || "",
-      heat_damaged: "",
-      immature_wheat: "",
-      broken_wheat: "",
+      heat_damaged: labTest.heat_damaged?.toString() || "",
+      immature_wheat: labTest.immature_wheat?.toString() || "",
+      broken_wheat: labTest.broken_wheat?.toString() || "",
       total_dockage: labTest.total_dockage?.toString() || "0.00",
       category: labTest.category || "",
       comments_action: labTest.remarks || "",
-      approved: false,
+      approved: false, // Reset approved status on edit
       tested_by: labTest.tested_by || "",
       raise_claim: labTest.raise_claim || false, // Load existing raise_claim state
     });
@@ -977,7 +980,7 @@ export default function LabTestScreen({ navigation }) {
     if (confirmed) {
       try {
         await labTestApi.delete(labTest.id);
-        notify.showSuccess("Lab test deleted successfully");
+        notify.showSuccess("Lab Test deleted successfully!");
         loadLabTests();
       } catch (error) {
         notify.showError("Failed to delete lab test");

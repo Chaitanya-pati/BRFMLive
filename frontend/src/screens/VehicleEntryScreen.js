@@ -102,10 +102,10 @@ export default function VehicleEntryScreen() {
 
       if (editingVehicle) {
         await vehicleApi.update(editingVehicle.id, formDataToSend);
-        showNotification("Vehicle entry updated successfully!", "success");
+        showNotification("Gate Entry updated successfully!", "success");
       } else {
         await vehicleApi.create(formDataToSend);
-        showNotification("Vehicle entry created successfully!", "success");
+        showNotification("Gate Entry created successfully!", "success");
       }
 
       fetchVehicles();
@@ -122,7 +122,7 @@ export default function VehicleEntryScreen() {
         !formData.arrival_time
       ) {
         showNotification(
-          "Please fill in all required fields (Vehicle Number, Supplier, Bill Number, Arrival Time)",
+          "Please fill all required fields: Vehicle Number, Supplier, Bill Number, and Arrival Time",
           "error",
         );
         return false;
@@ -142,7 +142,7 @@ export default function VehicleEntryScreen() {
       const response = await vehicleApi.getAll();
       setVehicles(response.data || []);
     } catch (error) {
-      showNotification(error.message || "Failed to fetch vehicles", "error");
+      showNotification(error.message || "Failed to load gate entries", "error");
       setVehicles([]);
     }
   };
@@ -152,7 +152,7 @@ export default function VehicleEntryScreen() {
       const response = await supplierApi.getAll();
       setSuppliers(response.data || []);
     } catch (error) {
-      showNotification(error.message || "Failed to fetch suppliers", "error");
+      showNotification(error.message || "Failed to load suppliers", "error");
       setSuppliers([]);
     }
   };
@@ -220,10 +220,10 @@ export default function VehicleEntryScreen() {
     if (confirm("Are you sure you want to delete this vehicle entry?")) {
       try {
         await vehicleApi.delete(vehicle.id);
-        showNotification("Vehicle entry deleted successfully!", "success");
+        showNotification("Gate Entry deleted successfully!", "success");
         fetchVehicles();
       } catch (error) {
-        showNotification("Failed to delete vehicle entry", "error");
+        showNotification("Failed to delete Gate Entry", "error");
       }
     }
   };

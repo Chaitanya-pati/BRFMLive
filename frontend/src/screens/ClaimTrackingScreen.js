@@ -405,7 +405,7 @@ export default function ClaimTrackingScreen({ navigation }) {
               {labTests.map((test) => (
                 <Picker.Item
                   key={test.id}
-                  label={`Test #${test.id} - ${test.vehicle_entry?.vehicle_number || 'N/A'} - ${test.vehicle_entry?.supplier?.supplier_name || 'N/A'}`}
+                  label={`Test #${test.id} - ${test.vehicle_entry?.vehicle_number || 'N/A'}`}
                   value={test.id.toString()}
                 />
               ))}

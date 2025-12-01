@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { API_BASE_URL } from '../api/client';
@@ -17,13 +16,13 @@ export default function UserManagementScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [currentUser, setCurrentUser] = useState({ 
-    username: '', 
+  const [currentUser, setCurrentUser] = useState({
+    username: '',
     email: '',
     full_name: '',
-    password: '', 
+    password: '',
     role: 'admin',
-    branch_ids: [] 
+    branch_ids: []
   });
   const [selectedBranches, setSelectedBranches] = useState([]);
 
@@ -37,10 +36,10 @@ export default function UserManagementScreen({ navigation }) {
         fetch(`${API_BASE_URL}/api/users`),
         fetch(`${API_BASE_URL}/api/branches`)
       ]);
-      
+
       const usersData = await usersRes.json();
       const branchesData = await branchesRes.json();
-      
+
       setUsers(usersData);
       setBranches(branchesData);
     } catch (error) {
@@ -90,10 +89,10 @@ export default function UserManagementScreen({ navigation }) {
     }
 
     try {
-      const url = editMode 
+      const url = editMode
         ? `${API_BASE_URL}/api/users/${currentUser.id}`
         : `${API_BASE_URL}/api/users`;
-      
+
       const method = editMode ? 'PUT' : 'POST';
 
       const payload = {
@@ -119,6 +118,7 @@ export default function UserManagementScreen({ navigation }) {
         throw new Error(error.detail || 'Failed to save user');
       }
 
+      // Updated toast messages
       Alert.alert('Success', `User ${editMode ? 'updated' : 'created'} successfully`);
       setModalVisible(false);
       fetchData();
@@ -172,8 +172,8 @@ export default function UserManagementScreen({ navigation }) {
     { label: 'Full Name', field: 'full_name' },
     { label: 'Email', field: 'email' },
     { label: 'Role', field: 'role' },
-    { 
-      label: 'Branches', 
+    {
+      label: 'Branches',
       field: 'branches',
       render: (value, user) => {
         if (!user || !user.branches || user.branches.length === 0) {
