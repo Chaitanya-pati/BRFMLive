@@ -12,19 +12,17 @@ const getCurrentAPIUrl = () => {
       return `http://${hostname}:8000/api`;
     }
 
-    // For Replit deployment, construct full URL with protocol and port 8000
-    if (hostname.includes("replit.dev") || hostname.includes("repl.co")) {
-      return `${protocol}//${hostname}:8000/api`;
-    }
+    // For production deployment (Netlify, Replit, etc.), use the same hostname without port
+    // The backend should be served on standard ports (80/443)
+    return `${protocol}//${hostname}/api`;
   }
 
   // Final fallback
   return "http://localhost:8000/api";
 };
 
-// Use getCurrentAPIUrl() for Replit, or fallback to render.com
+// Use getCurrentAPIUrl() for dynamic URL, or fallback to environment variable
 const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-//const API_URL = "https://brfmlive.onrender.com/api";
 console.log("API Base URL:", API_URL);
 
 // Export API_BASE_URL for components that need direct fetch calls (without /api suffix)
