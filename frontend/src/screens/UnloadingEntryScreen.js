@@ -183,29 +183,17 @@ export default function UnloadingEntryScreen({ navigation }) {
       notes: entry.notes || '',
     });
 
-    // Load existing images if available
+    // Load existing images if available (backend now returns full URLs)
     if (entry.before_unloading_image) {
-      let beforeImageUrl = entry.before_unloading_image;
-      if (!beforeImageUrl.startsWith('http')) {
-        beforeImageUrl = beforeImageUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${beforeImageUrl}`
-          : `https://brfmlive.onrender.com/${beforeImageUrl}`;
-      }
-      console.log('Loading before image from:', beforeImageUrl);
-      setBeforeImage({ uri: beforeImageUrl });
+      console.log('Loading before image from:', entry.before_unloading_image);
+      setBeforeImage({ uri: entry.before_unloading_image });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      let afterImageUrl = entry.after_unloading_image;
-      if (!afterImageUrl.startsWith('http')) {
-        afterImageUrl = afterImageUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${afterImageUrl}`
-          : `https://brfmlive.onrender.com/${afterImageUrl}`;
-      }
-      console.log('Loading after image from:', afterImageUrl);
-      setAfterImage({ uri: afterImageUrl });
+      console.log('Loading after image from:', entry.after_unloading_image);
+      setAfterImage({ uri: entry.after_unloading_image });
     } else {
       setAfterImage(null);
     }

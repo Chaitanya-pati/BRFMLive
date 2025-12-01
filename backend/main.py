@@ -16,6 +16,7 @@ import pytz
 from database import engine, get_db, Base
 import models
 import schemas
+from utils.image_utils import get_image_url, save_image_path
 
 
 def get_branch_id(x_branch_id: Optional[str] = Header(None)) -> Optional[int]:
@@ -328,36 +329,36 @@ def get_vehicle_entries(skip: int = 0,
         query = query.filter(models.VehicleEntry.branch_id == branch_id)
     vehicles = query.offset(skip).limit(limit).all()
 
-    # Convert binary image paths to strings
+    # Convert binary image paths to strings and full URLs
     for vehicle in vehicles:
         if vehicle.supplier_bill_photo and isinstance(
                 vehicle.supplier_bill_photo, bytes):
-            vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode(
-                'utf-8')
+            path = vehicle.supplier_bill_photo.decode('utf-8')
+            vehicle.supplier_bill_photo = get_image_url(path)
         if vehicle.vehicle_photo_front and isinstance(
                 vehicle.vehicle_photo_front, bytes):
-            vehicle.vehicle_photo_front = vehicle.vehicle_photo_front.decode(
-                'utf-8')
+            path = vehicle.vehicle_photo_front.decode('utf-8')
+            vehicle.vehicle_photo_front = get_image_url(path)
         if vehicle.vehicle_photo_back and isinstance(
                 vehicle.vehicle_photo_back, bytes):
-            vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode(
-                'utf-8')
+            path = vehicle.vehicle_photo_back.decode('utf-8')
+            vehicle.vehicle_photo_back = get_image_url(path)
         if vehicle.vehicle_photo_side and isinstance(
                 vehicle.vehicle_photo_side, bytes):
-            vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode(
-                'utf-8')
+            path = vehicle.vehicle_photo_side.decode('utf-8')
+            vehicle.vehicle_photo_side = get_image_url(path)
         if vehicle.internal_weighment_slip and isinstance(
                 vehicle.internal_weighment_slip, bytes):
-            vehicle.internal_weighment_slip = vehicle.internal_weighment_slip.decode(
-                'utf-8')
+            path = vehicle.internal_weighment_slip.decode('utf-8')
+            vehicle.internal_weighment_slip = get_image_url(path)
         if vehicle.client_weighment_slip and isinstance(
                 vehicle.client_weighment_slip, bytes):
-            vehicle.client_weighment_slip = vehicle.client_weighment_slip.decode(
-                'utf-8')
+            path = vehicle.client_weighment_slip.decode('utf-8')
+            vehicle.client_weighment_slip = get_image_url(path)
         if vehicle.transportation_copy and isinstance(
                 vehicle.transportation_copy, bytes):
-            vehicle.transportation_copy = vehicle.transportation_copy.decode(
-                'utf-8')
+            path = vehicle.transportation_copy.decode('utf-8')
+            vehicle.transportation_copy = get_image_url(path)
 
     return vehicles
 
@@ -370,33 +371,35 @@ def get_vehicle_entry(vehicle_id: int, db: Session = Depends(get_db)):
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle entry not found")
 
-    # Convert binary image paths to strings
+    # Convert binary image paths to strings and full URLs
     if vehicle.supplier_bill_photo and isinstance(vehicle.supplier_bill_photo,
                                                   bytes):
-        vehicle.supplier_bill_photo = vehicle.supplier_bill_photo.decode(
-            'utf-8')
+        path = vehicle.supplier_bill_photo.decode('utf-8')
+        vehicle.supplier_bill_photo = get_image_url(path)
     if vehicle.vehicle_photo_front and isinstance(vehicle.vehicle_photo_front,
                                                   bytes):
-        vehicle.vehicle_photo_front = vehicle.vehicle_photo_front.decode(
-            'utf-8')
+        path = vehicle.vehicle_photo_front.decode('utf-8')
+        vehicle.vehicle_photo_front = get_image_url(path)
     if vehicle.vehicle_photo_back and isinstance(vehicle.vehicle_photo_back,
                                                  bytes):
-        vehicle.vehicle_photo_back = vehicle.vehicle_photo_back.decode('utf-8')
+        path = vehicle.vehicle_photo_back.decode('utf-8')
+        vehicle.vehicle_photo_back = get_image_url(path)
     if vehicle.vehicle_photo_side and isinstance(vehicle.vehicle_photo_side,
                                                  bytes):
-        vehicle.vehicle_photo_side = vehicle.vehicle_photo_side.decode('utf-8')
+        path = vehicle.vehicle_photo_side.decode('utf-8')
+        vehicle.vehicle_photo_side = get_image_url(path)
     if vehicle.internal_weighment_slip and isinstance(
             vehicle.internal_weighment_slip, bytes):
-        vehicle.internal_weighment_slip = vehicle.internal_weighment_slip.decode(
-            'utf-8')
+        path = vehicle.internal_weighment_slip.decode('utf-8')
+        vehicle.internal_weighment_slip = get_image_url(path)
     if vehicle.client_weighment_slip and isinstance(
             vehicle.client_weighment_slip, bytes):
-        vehicle.client_weighment_slip = vehicle.client_weighment_slip.decode(
-            'utf-8')
+        path = vehicle.client_weighment_slip.decode('utf-8')
+        vehicle.client_weighment_slip = get_image_url(path)
     if vehicle.transportation_copy and isinstance(vehicle.transportation_copy,
                                                   bytes):
-        vehicle.transportation_copy = vehicle.transportation_copy.decode(
-            'utf-8')
+        path = vehicle.transportation_copy.decode('utf-8')
+        vehicle.transportation_copy = get_image_url(path)
 
     return vehicle
 
@@ -829,7 +832,13 @@ def get_unloading_entries(skip: int = 0,
         query = query.filter(models.UnloadingEntry.branch_id == branch_id)
     entries = query.offset(skip).limit(limit).all()
 
-    # Images are already stored as strings in UnloadingEntry, no conversion needed
+    # Convert image paths to full URLs
+    for entry in entries:
+        if entry.before_unloading_image:
+            entry.before_unloading_image = get_image_url(entry.before_unloading_image)
+        if entry.after_unloading_image:
+            entry.after_unloading_image = get_image_url(entry.after_unloading_image)
+
     return entries
 
 
@@ -841,6 +850,13 @@ def get_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404,
                             detail="Unloading entry not found")
+    
+    # Convert image paths to full URLs
+    if entry.before_unloading_image:
+        entry.before_unloading_image = get_image_url(entry.before_unloading_image)
+    if entry.after_unloading_image:
+        entry.after_unloading_image = get_image_url(entry.after_unloading_image)
+    
     return entry
 
 
@@ -1520,6 +1536,14 @@ def get_magnet_cleaning_records(magnet_id: Optional[int] = None,
     records = query.order_by(
         models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(
             skip).limit(limit).all()
+    
+    # Convert image paths to full URLs
+    for record in records:
+        if record.before_cleaning_photo:
+            record.before_cleaning_photo = get_image_url(record.before_cleaning_photo)
+        if record.after_cleaning_photo:
+            record.after_cleaning_photo = get_image_url(record.after_cleaning_photo)
+    
     return records
 
 
@@ -1531,6 +1555,13 @@ def get_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404,
                             detail="Magnet cleaning record not found")
+    
+    # Convert image paths to full URLs
+    if record.before_cleaning_photo:
+        record.before_cleaning_photo = get_image_url(record.before_cleaning_photo)
+    if record.after_cleaning_photo:
+        record.after_cleaning_photo = get_image_url(record.after_cleaning_photo)
+    
     return record
 
 
