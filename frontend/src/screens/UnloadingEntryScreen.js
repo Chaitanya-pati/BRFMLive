@@ -17,6 +17,7 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { unloadingApi, godownApi } from '../api/client';
+import { getFullImageUrl } from '../utils/imageUtils';
 import colors from '../theme/colors';
 
 export default function UnloadingEntryScreen({ navigation }) {
@@ -183,17 +184,19 @@ export default function UnloadingEntryScreen({ navigation }) {
       notes: entry.notes || '',
     });
 
-    // Load existing images if available (backend now returns full URLs)
+    // Load existing images if available (convert relative paths to full URLs)
     if (entry.before_unloading_image) {
-      console.log('Loading before image from:', entry.before_unloading_image);
-      setBeforeImage({ uri: entry.before_unloading_image });
+      const fullUrl = getFullImageUrl(entry.before_unloading_image);
+      console.log('Loading before image from:', fullUrl);
+      setBeforeImage({ uri: fullUrl });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      console.log('Loading after image from:', entry.after_unloading_image);
-      setAfterImage({ uri: entry.after_unloading_image });
+      const fullUrl = getFullImageUrl(entry.after_unloading_image);
+      console.log('Loading after image from:', fullUrl);
+      setAfterImage({ uri: fullUrl });
     } else {
       setAfterImage(null);
     }
