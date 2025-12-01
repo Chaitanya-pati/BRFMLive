@@ -50,7 +50,7 @@ export default function VehicleEntryScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  const { isSubmitting, handleSubmitForm } = useFormSubmission(
+  const { isSubmitting, handleSubmit } = useFormSubmission(
     async (data) => {
       const formDataToSend = new FormData();
       const vehicleNumber = `${data.vehicle_state_code}-${data.vehicle_second_part}-${data.vehicle_third_part}`;
@@ -887,7 +887,7 @@ export default function VehicleEntryScreen() {
             ) : (
               <Button
                 title={editingVehicle ? "Update" : "Save"}
-                onPress={() => handleSubmitForm(formData)}
+                onPress={() => handleSubmit(formData)}
                 style={[styles.button, isMobile && styles.buttonMobile]}
               />
             )}
