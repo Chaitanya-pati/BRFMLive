@@ -151,23 +151,48 @@ export const godownApi = {
 };
 
 export const unloadingApi = {
-  getAll: () => api.get("/unloading-entries"),
-  getLabTestedVehicles: () => api.get("/vehicles/lab-tested"),
-  create: (formData) => {
-    return axios.post(`${API_URL}/unloading-entries`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  getAll: () => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get('/unloading-entries', {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
     });
   },
-  update: (id, formData) => {
-    return axios.put(`${API_URL}/unloading-entries/${id}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  getById: (id) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get(`/unloading-entries/${id}`, {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
     });
   },
-  delete: (id) => api.delete(`/unloading-entries/${id}`),
+  create: (data) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.post('/unloading-entries', data, {
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+        ...(branchId ? { 'X-Branch-Id': branchId } : {})
+      }
+    });
+  },
+  update: (id, data) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.put(`/unloading-entries/${id}`, data, {
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+        ...(branchId ? { 'X-Branch-Id': branchId } : {})
+      }
+    });
+  },
+  delete: (id) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.delete(`/unloading-entries/${id}`, {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    });
+  },
+  getLabTestedVehicles: () => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get('/vehicles/lab-tested', {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    });
+  },
 };
 
 export const binApi = {
