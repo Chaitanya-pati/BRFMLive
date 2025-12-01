@@ -830,7 +830,7 @@ def get_unloading_entries(skip: int = 0,
     query = db.query(models.UnloadingEntry)
     if branch_id:
         query = query.filter(models.UnloadingEntry.branch_id == branch_id)
-    entries = query.offset(skip).limit(limit).all()
+    entries = query.order_by(models.UnloadingEntry.created_at.desc()).offset(skip).limit(limit).all()
 
     # Convert image paths to full URLs
     for entry in entries:

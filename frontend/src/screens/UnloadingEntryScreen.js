@@ -54,6 +54,8 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const { isSubmitting, handleSubmit: submitForm } = useFormSubmission(
     async (data) => {
+      console.log('📝 Submitting unloading entry:', data);
+      
       const submitFormData = new FormData();
       submitFormData.append('vehicle_entry_id', data.vehicle_entry_id);
       submitFormData.append('godown_id', data.godown_id);
@@ -65,6 +67,7 @@ export default function UnloadingEntryScreen({ navigation }) {
 
       // Only append new images (not existing URLs)
       if (data.beforeImage && !data.beforeImage.uri.startsWith('http')) {
+        console.log('📷 Adding before image');
         if (Platform.OS === 'web') {
           const beforeBlob = await fetch(data.beforeImage.uri).then(r => r.blob());
           submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
@@ -78,6 +81,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
 
       if (data.afterImage && !data.afterImage.uri.startsWith('http')) {
+        console.log('📷 Adding after image');
         if (Platform.OS === 'web') {
           const afterBlob = await fetch(data.afterImage.uri).then(r => r.blob());
           submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
@@ -91,16 +95,25 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
 
       if (data.id) {
+        console.log('🔄 Updating entry ID:', data.id);
         await unloadingApi.update(data.id, submitFormData);
         showNotification("Unloading Entry updated successfully!", "success");
       } else {
+        console.log('➕ Creating new entry');
         await unloadingApi.create(submitFormData);
         showNotification("Unloading Entry created successfully!", "success");
       }
 
       setModalVisible(false);
-      loadEntries();
-      loadGodowns();
+      
+      // Refresh all data
+      console.log('🔄 Refreshing data...');
+      await Promise.all([
+        loadEntries(),
+        loadGodowns(),
+        loadVehicles()
+      ]);
+      console.log('✅ Data refreshed');
     },
     {
       onValidationFail: () => {
@@ -131,11 +144,16 @@ export default function UnloadingEntryScreen({ navigation }) {
 
   const loadEntries = async () => {
     try {
+      console.log('📊 Loading unloading entries...');
       const response = await unloadingApi.getAll();
-      setEntries(response.data);
+      console.log('📊 Unloading entries received:', response.data);
+      console.log('📊 Total entries:', response.data?.length || 0);
+      setEntries(response.data || []);
     } catch (error) {
-      console.error('Error loading entries:', error);
+      console.error('❌ Error loading entries:', error);
+      console.error('❌ Error details:', error.response?.data);
       showNotification('Failed to load unloading entries', 'error');
+      setEntries([]);
     }
   };
 
@@ -321,25 +339,60 @@ export default function UnloadingEntryScreen({ navigation }) {
   const columns = [
     { key: 'id', label: 'ID', field: 'id', width: 80 },
     { 
-      key: 'vehicle_entry', 
-      label: 'Vehicle', 
+      key: 'vehicle_number', 
+      label: 'Vehicle Number', 
+      field: 'vehicle_entry',
+      width: 150,
+      render: (value, row) => {
+        console.log('Vehicle entry data:', value);
+        return value?.vehicle_number || 'N/A';
+      }
+    },
+    { 
+      key: 'supplier', 
+      label: 'Supplier', 
       field: 'vehicle_entry',
       width: 180,
-      render: (value) => value?.vehicle_number || 'N/A'
+      render: (value, row) => {
+        return value?.supplier?.supplier_name || 'N/A';
+      }
     },
     { 
       key: 'godown', 
       label: 'Godown', 
       field: 'godown',
-      width: 200,
-      render: (value) => value?.name || 'N/A'
+      width: 180,
+      render: (value, row) => {
+        console.log('Godown data:', value);
+        return value?.name ? `${value.name} (${value.type || 'N/A'})` : 'N/A';
+      }
     },
-    { key: 'net_weight', label: 'Net Weight (kg)', field: 'net_weight', width: 150 },
+    { 
+      key: 'gross_weight', 
+      label: 'Gross Weight (kg)', 
+      field: 'gross_weight', 
+      width: 140,
+      render: (value) => value ? value.toFixed(2) : '0.00'
+    },
+    { 
+      key: 'empty_weight', 
+      label: 'Empty Weight (kg)', 
+      field: 'empty_vehicle_weight', 
+      width: 140,
+      render: (value) => value ? value.toFixed(2) : '0.00'
+    },
+    { 
+      key: 'net_weight', 
+      label: 'Net Weight (kg)', 
+      field: 'net_weight', 
+      width: 140,
+      render: (value) => value ? value.toFixed(2) : '0.00'
+    },
     { 
       key: 'images', 
       label: 'Images', 
       field: 'before_unloading_image',
-      width: 150,
+      width: 120,
       render: (value, row) => {
         const hasBeforeImage = row.before_unloading_image;
         const hasAfterImage = row.after_unloading_image;
@@ -347,11 +400,11 @@ export default function UnloadingEntryScreen({ navigation }) {
         if (hasBeforeImage && hasAfterImage) {
           return '✅ Complete';
         } else if (!hasBeforeImage && !hasAfterImage) {
-          return '⚠️ Missing Both';
+          return '⚠️ None';
         } else if (!hasBeforeImage) {
-          return '⚠️ Missing Before';
+          return '⚠️ Before';
         } else {
-          return '⚠️ Missing After';
+          return '⚠️ After';
         }
       }
     },
