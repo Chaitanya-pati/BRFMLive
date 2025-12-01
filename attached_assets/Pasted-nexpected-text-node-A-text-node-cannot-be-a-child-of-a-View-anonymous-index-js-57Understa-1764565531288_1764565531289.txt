@@ -1,0 +1,37 @@
+nexpected text node:  . A text node cannot be a child of a <View>.
+(anonymous) @ index.js:57Understand this error
+Layout.js:163 Uncaught (in promise) TypeError: _utilsStorage.storage.get is not a function
+    at fetchUserData (Layout.js:163:40)
+    at Layout.js:168:5
+    at react-stack-bottom-frame (react-dom-client.development.js:23949:20)
+    at runWithFiberInDEV (react-dom-client.development.js:1519:30)
+    at commitHookEffectListMount (react-dom-client.development.js:11905:29)
+    at commitHookPassiveMountEffects (react-dom-client.development.js:12026:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:13841:13)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:13815:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:13834:11)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:13815:11)Understand this error
+11index.js:57 Unexpected text node:  . A text node cannot be a child of a <View>.
+(anonymous) @ index.js:57Understand this error
+3Layout.js:163 Uncaught (in promise) TypeError: _utilsStorage.storage.get is not a function
+    at fetchUserData (Layout.js:163:40)
+    at Layout.js:168:5
+    at react-stack-bottom-frame (react-dom-client.development.js:23949:20)
+    at runWithFiberInDEV (react-dom-client.development.js:1519:30)
+    at commitHookEffectListMount (react-dom-client.development.js:11905:29)
+    at commitHookPassiveMountEffects (react-dom-client.development.js:12026:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:13841:13)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:13815:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:13834:11)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:13815:11)Understand this error
+VehicleEntryScreen.js:339 Uncaught ReferenceError: TextInput is not defined
+    at VehicleEntryScreen (VehicleEntryScreen.js:339:14)
+    at react-stack-bottom-frame (react-dom-client.development.js:23863:20)
+    at renderWithHooks (react-dom-client.development.js:5529:22)
+    at updateFunctionComponent (react-dom-client.development.js:8897:19)
+    at beginWork (react-dom-client.development.js:10522:18)
+    at runWithFiberInDEV (react-dom-client.development.js:1519:30)
+    at performUnitOfWork (react-dom-client.development.js:15132:22)
+    at workLoopSync (react-dom-client.development.js:14956:41)
+    at renderRootSync (react-dom-client.development.js:14936:11)
+    at performWorkOnRoot (react-dom-client.development.js:14462:44)
