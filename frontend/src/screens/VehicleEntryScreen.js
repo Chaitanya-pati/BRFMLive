@@ -19,6 +19,7 @@ import Button from "../components/Button";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import { vehicleApi, supplierApi } from "../api/client";
+import { getFullImageUrl } from "../utils/imageUtils";
 import colors from "../theme/colors";
 import { showNotification } from "../utils/notifications";
 import { formatISTDate, toISTISOString } from "../utils/timeUtils";
@@ -278,37 +279,6 @@ export default function VehicleEntryScreen() {
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle);
 
-    // Helper function to construct full image URL
-    const constructImageUrl = (imagePath) => {
-      if (!imagePath) return null;
-
-      let photoUrl = imagePath;
-
-      // Remove Python byte string markers if present
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-
-      // If already a full URL, return as is
-      if (photoUrl.startsWith("http")) {
-        return { uri: photoUrl };
-      }
-
-      // Construct full URL using window location for web compatibility
-      const protocol =
-        typeof window !== "undefined" ? window.location.protocol : "http:";
-      const hostname =
-        typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const baseUrl = `${protocol}//${hostname}`;
-
-      const fullUrl = photoUrl.startsWith("/")
-        ? `${baseUrl}${photoUrl}`
-        : `${baseUrl}/${photoUrl}`;
-
-      console.log("Constructed image URL:", fullUrl);
-      return { uri: fullUrl };
-    };
-
     // Split vehicle number into parts (e.g., "KA-01-AB-1234" -> ["KA", "01", "AB-1234"])
     const vehicleNumberParts = vehicle.vehicle_number
       ? vehicle.vehicle_number.split("-")
@@ -317,18 +287,28 @@ export default function VehicleEntryScreen() {
     const secondPart = vehicleNumberParts[1] || "";
     const thirdPart = vehicleNumberParts.slice(2).join("-") || "";
 
-    // Load existing images if available
-    const supplierBillPhoto = constructImageUrl(vehicle.supplier_bill_photo);
-    const vehiclePhotoFront = constructImageUrl(vehicle.vehicle_photo_front);
-    const vehiclePhotoBack = constructImageUrl(vehicle.vehicle_photo_back);
-    const vehiclePhotoSide = constructImageUrl(vehicle.vehicle_photo_side);
-    const internalWeighmentSlip = constructImageUrl(
-      vehicle.internal_weighment_slip,
-    );
-    const clientWeighmentSlip = constructImageUrl(
-      vehicle.client_weighment_slip,
-    );
-    const transportationCopy = constructImageUrl(vehicle.transportation_copy);
+    // Load existing images if available (convert relative paths to full URLs)
+    const supplierBillPhoto = vehicle.supplier_bill_photo 
+      ? { uri: getFullImageUrl(vehicle.supplier_bill_photo) }
+      : null;
+    const vehiclePhotoFront = vehicle.vehicle_photo_front
+      ? { uri: getFullImageUrl(vehicle.vehicle_photo_front) }
+      : null;
+    const vehiclePhotoBack = vehicle.vehicle_photo_back
+      ? { uri: getFullImageUrl(vehicle.vehicle_photo_back) }
+      : null;
+    const vehiclePhotoSide = vehicle.vehicle_photo_side
+      ? { uri: getFullImageUrl(vehicle.vehicle_photo_side) }
+      : null;
+    const internalWeighmentSlip = vehicle.internal_weighment_slip
+      ? { uri: getFullImageUrl(vehicle.internal_weighment_slip) }
+      : null;
+    const clientWeighmentSlip = vehicle.client_weighment_slip
+      ? { uri: getFullImageUrl(vehicle.client_weighment_slip) }
+      : null;
+    const transportationCopy = vehicle.transportation_copy
+      ? { uri: getFullImageUrl(vehicle.transportation_copy) }
+      : null;
 
     setFormData({
       vehicle_state_code: stateCode,

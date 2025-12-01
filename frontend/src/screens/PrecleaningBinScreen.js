@@ -29,6 +29,7 @@ import { calculateMagnetNotifications } from "../utils/notificationChecker";
 import { showToast, showAlert, showConfirm, formatErrorMessage } from "../utils/customAlerts";
 import CleaningReminder from "../components/CleaningReminder";
 import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
+import { getFullImageUrl } from "../utils/imageUtils";
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -779,40 +780,13 @@ export default function PrecleaningBinScreen({ navigation }) {
       after_cleaning_photo: null,
     });
 
-    // Helper function to construct full image URL
-    const constructImageUrl = (imagePath) => {
-      if (!imagePath) return null;
-
-      let photoUrl = imagePath;
-
-      // Remove Python byte string markers if present
-      if (photoUrl.startsWith("b'") || photoUrl.startsWith('b"')) {
-        photoUrl = photoUrl.slice(2, -1);
-      }
-
-      // If already a full URL, return as is
-      if (photoUrl.startsWith("http")) {
-        return { uri: photoUrl };
-      }
-
-      // Construct full URL using window location for web compatibility
-      const protocol =
-        typeof window !== "undefined" ? window.location.protocol : "http:";
-      const hostname =
-        typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const baseUrl = `${protocol}//${hostname}:8000`;
-
-      const fullUrl = photoUrl.startsWith("/")
-        ? `${baseUrl}${photoUrl}`
-        : `${baseUrl}/${photoUrl}`;
-
-      console.log("Constructed image URL:", fullUrl);
-      return { uri: fullUrl };
-    };
-
-    // Load existing images if available
-    const beforePhoto = constructImageUrl(record.before_cleaning_photo);
-    const afterPhoto = constructImageUrl(record.after_cleaning_photo);
+    // Load existing images if available (convert relative paths to full URLs)
+    const beforePhoto = record.before_cleaning_photo
+      ? { uri: getFullImageUrl(record.before_cleaning_photo) }
+      : null;
+    const afterPhoto = record.after_cleaning_photo
+      ? { uri: getFullImageUrl(record.after_cleaning_photo) }
+      : null;
 
     setBeforeCleaningPhoto(beforePhoto);
     setAfterCleaningPhoto(afterPhoto);
