@@ -10,6 +10,7 @@ import {
   Image,
   Modal as RNModal,
   Alert,
+  TextInput // Import TextInput
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useBranch } from "../context/BranchContext";
@@ -157,13 +158,21 @@ export default function Layout({ children, title, currentRoute }) {
   // Assuming user role is stored in storage and retrieved here
   const [userRole, setUserRole] = useState('user'); // Default to 'user'
   const [userName, setUserName] = useState('User'); // Default to 'User'
+  const [userData, setUserData] = useState(null); // State to hold user data
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const storedRole = await storage.get('userRole');
-      const storedName = await storage.get('userName');
-      if (storedRole) setUserRole(storedRole);
-      if (storedName) setUserName(storedName);
+      try {
+        const userData = await storage.getUserData();
+        if (userData) {
+          setUserData(userData);
+          // Assuming userData contains role and name
+          if (userData.role) setUserRole(userData.role);
+          if (userData.name) setUserName(userData.name);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
     };
     fetchUserData();
   }, []);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Layout from '../components/Layout';
 import InputField from '../components/InputField';
@@ -504,9 +504,7 @@ export default function VehicleEntryScreen() {
                     console.log("Supplier bill photo loaded successfully")
                   }
                 />
-                <Text style={styles.imageUrlDebug}>
-                  URL: {formData.supplier_bill_photo.uri}
-                </Text>
+                <Text style={styles.imageUrlDebug}>URL: {formData.supplier_bill_photo.uri}</Text>
                 <View style={styles.imageButtonRow}>
                   <TouchableOpacity
                     onPress={() => captureImage("supplier_bill_photo")}
