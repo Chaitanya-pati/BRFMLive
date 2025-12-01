@@ -146,8 +146,16 @@ export default function UnloadingEntryScreen({ navigation }) {
     try {
       console.log('📊 Loading unloading entries...');
       const response = await unloadingApi.getAll();
-      console.log('📊 Unloading entries received:', response.data);
+      console.log('📊 Raw API Response:', response);
+      console.log('📊 Response Data:', response.data);
       console.log('📊 Total entries:', response.data?.length || 0);
+      
+      if (response.data && response.data.length > 0) {
+        console.log('📊 First entry sample:', JSON.stringify(response.data[0], null, 2));
+        console.log('📊 First entry vehicle_entry:', response.data[0].vehicle_entry);
+        console.log('📊 First entry godown:', response.data[0].godown);
+      }
+      
       setEntries(response.data || []);
     } catch (error) {
       console.error('❌ Error loading entries:', error);
@@ -337,62 +345,62 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'id', label: 'ID', field: 'id', width: 80 },
+    { key: 'id', label: 'ID', field: 'id', width: 80, flex: 0.5 },
     { 
       key: 'vehicle_number', 
       label: 'Vehicle Number', 
-      field: 'vehicle_entry',
-      width: 150,
+      field: 'vehicle_number',
+      flex: 1,
       render: (value, row) => {
-        console.log('Vehicle entry data:', value);
-        return value?.vehicle_number || 'N/A';
+        console.log('🚗 Row data:', row);
+        return row.vehicle_entry?.vehicle_number || 'N/A';
       }
     },
     { 
       key: 'supplier', 
       label: 'Supplier', 
-      field: 'vehicle_entry',
-      width: 180,
+      field: 'supplier',
+      flex: 1.5,
       render: (value, row) => {
-        return value?.supplier?.supplier_name || 'N/A';
+        return row.vehicle_entry?.supplier?.supplier_name || 'N/A';
       }
     },
     { 
       key: 'godown', 
       label: 'Godown', 
       field: 'godown',
-      width: 180,
+      flex: 1.5,
       render: (value, row) => {
-        console.log('Godown data:', value);
-        return value?.name ? `${value.name} (${value.type || 'N/A'})` : 'N/A';
+        const godown = row.godown;
+        return godown ? `${godown.name} (${godown.type || 'N/A'})` : 'N/A';
       }
     },
     { 
       key: 'gross_weight', 
       label: 'Gross Weight (kg)', 
       field: 'gross_weight', 
-      width: 140,
-      render: (value) => value ? value.toFixed(2) : '0.00'
+      flex: 1,
+      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
     },
     { 
       key: 'empty_weight', 
       label: 'Empty Weight (kg)', 
       field: 'empty_vehicle_weight', 
-      width: 140,
-      render: (value) => value ? value.toFixed(2) : '0.00'
+      flex: 1,
+      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
     },
     { 
       key: 'net_weight', 
       label: 'Net Weight (kg)', 
       field: 'net_weight', 
-      width: 140,
-      render: (value) => value ? value.toFixed(2) : '0.00'
+      flex: 1,
+      render: (value) => value != null ? Number(value).toFixed(2) : '0.00'
     },
     { 
       key: 'images', 
       label: 'Images', 
-      field: 'before_unloading_image',
-      width: 120,
+      field: 'images',
+      flex: 0.8,
       render: (value, row) => {
         const hasBeforeImage = row.before_unloading_image;
         const hasAfterImage = row.after_unloading_image;
