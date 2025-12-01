@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Layout from '../components/Layout';
 import InputField from '../components/InputField';
@@ -881,16 +881,14 @@ export default function VehicleEntryScreen() {
               onPress={resetForm}
               variant="secondary"
               style={[styles.button, isMobile && styles.buttonMobile]}
+              disabled={isSubmitting}
             />
-            {isSubmitting ? (
-              <ActivityIndicator size="large" color={colors.primary} />
-            ) : (
-              <Button
-                title={editingVehicle ? "Update" : "Save"}
-                onPress={() => handleSubmit(formData)}
-                style={[styles.button, isMobile && styles.buttonMobile]}
-              />
-            )}
+            <Button
+              title={isSubmitting ? "Saving..." : editingVehicle ? "Update" : "Save"}
+              onPress={() => handleSubmit(formData)}
+              style={[styles.button, isMobile && styles.buttonMobile]}
+              disabled={isSubmitting}
+            />
           </View>
         </ScrollView>
       </Modal>
