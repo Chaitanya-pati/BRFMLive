@@ -318,6 +318,7 @@ def get_lab_tested_vehicles(db: Session = Depends(get_db),
     return lab_tested_vehicles
 
 
+@app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
 @app.get("/api/vehicle-entries", response_model=List[schemas.VehicleEntryWithSupplier])
 def get_all_vehicle_entries(
         skip: int = 0,
