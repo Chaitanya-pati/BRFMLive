@@ -112,7 +112,7 @@ async def add_cache_control_headers(request, call_next):
                 "Access-Control-Allow-Headers": "*",
             }
         )
-    
+
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -147,14 +147,14 @@ def create_supplier(supplier: schemas.SupplierCreate,
 
 
 @app.get("/api/suppliers", response_model=List[schemas.Supplier])
-def get_suppliers(skip: int = 0,
-                  limit: int = 100,
-                  db: Session = Depends(get_db),
-                  branch_id: Optional[int] = Depends(get_branch_id)):
+def get_all_suppliers(skip: int = 0,
+                      limit: int = 100,
+                      branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+                      db: Session = Depends(get_db)):
     query = db.query(models.Supplier)
     if branch_id:
         query = query.filter(models.Supplier.branch_id == branch_id)
-    suppliers = query.offset(skip).limit(limit).all()
+    suppliers = query.order_by(models.Supplier.id.desc()).offset(skip).limit(limit).all()
     return suppliers
 
 
@@ -318,19 +318,19 @@ def get_lab_tested_vehicles(db: Session = Depends(get_db),
     return lab_tested_vehicles
 
 
-@app.get("/api/vehicles",
-         response_model=List[schemas.VehicleEntryWithSupplier])
-def get_vehicle_entries(skip: int = 0,
-                        limit: int = 100,
-                        db: Session = Depends(get_db),
-                        branch_id: Optional[int] = Depends(get_branch_id)):
+@app.get("/api/vehicle-entries", response_model=List[schemas.VehicleEntryWithSupplier])
+def get_all_vehicle_entries(
+        skip: int = 0,
+        limit: int = 100,
+        branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+        db: Session = Depends(get_db)):
     query = db.query(models.VehicleEntry)
     if branch_id:
         query = query.filter(models.VehicleEntry.branch_id == branch_id)
-    vehicles = query.offset(skip).limit(limit).all()
+    entries = query.order_by(models.VehicleEntry.arrival_time.desc()).offset(skip).limit(limit).all()
 
     # Convert binary image paths to strings and full URLs
-    for vehicle in vehicles:
+    for vehicle in entries:
         if vehicle.supplier_bill_photo and isinstance(
                 vehicle.supplier_bill_photo, bytes):
             path = vehicle.supplier_bill_photo.decode('utf-8')
@@ -360,7 +360,7 @@ def get_vehicle_entries(skip: int = 0,
             path = vehicle.transportation_copy.decode('utf-8')
             vehicle.transportation_copy = get_image_url(path)
 
-    return vehicles
+    return entries
 
 
 @app.get("/api/vehicles/{vehicle_id}",
@@ -565,18 +565,18 @@ def create_lab_test(lab_test: schemas.LabTestCreate,
 
 
 @app.get("/api/lab-tests", response_model=List[schemas.LabTestWithVehicle])
-def get_lab_tests(skip: int = 0,
-                  limit: int = 100,
-                  db: Session = Depends(get_db),
-                  branch_id: Optional[int] = Depends(get_branch_id)):
+def get_all_lab_tests(skip: int = 0,
+                      limit: int = 100,
+                      branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+                      db: Session = Depends(get_db)):
     query = db.query(models.LabTest)
     if branch_id:
         query = query.filter(models.LabTest.branch_id == branch_id)
-    lab_tests = query.offset(skip).limit(limit).all()
+    tests = query.order_by(models.LabTest.test_date.desc()).offset(skip).limit(limit).all()
 
     # Add has_claim flag to each lab test
     result = []
-    for lab_test in lab_tests:
+    for lab_test in tests:
         lab_test_dict = schemas.LabTestWithVehicle.model_validate(
             lab_test).model_dump()
         claim_exists = db.query(models.Claim).filter(
@@ -823,13 +823,18 @@ async def create_unloading_entry(
 
 @app.get("/api/unloading-entries",
          response_model=List[schemas.UnloadingEntryWithDetails])
-def get_unloading_entries(skip: int = 0,
-                          limit: int = 100,
-                          db: Session = Depends(get_db),
-                          branch_id: Optional[int] = Depends(get_branch_id)):
+def get_all_unloading_entries(
+        skip: int = 0,
+        limit: int = 100,
+        branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+        db: Session = Depends(get_db)):
+    print(f"📊 GET /api/unloading-entries called")
+    print(f"   Branch ID from header: {branch_id}")
+
     query = db.query(models.UnloadingEntry)
     if branch_id:
         query = query.filter(models.UnloadingEntry.branch_id == branch_id)
+
     entries = query.order_by(models.UnloadingEntry.created_at.desc()).offset(skip).limit(limit).all()
 
     # Convert image paths to full URLs
@@ -850,13 +855,13 @@ def get_unloading_entry(entry_id: int, db: Session = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404,
                             detail="Unloading entry not found")
-    
+
     # Convert image paths to full URLs
     if entry.before_unloading_image:
         entry.before_unloading_image = get_image_url(entry.before_unloading_image)
     if entry.after_unloading_image:
         entry.after_unloading_image = get_image_url(entry.after_unloading_image)
-    
+
     return entry
 
 
@@ -1536,14 +1541,14 @@ def get_magnet_cleaning_records(magnet_id: Optional[int] = None,
     records = query.order_by(
         models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(
             skip).limit(limit).all()
-    
+
     # Convert image paths to full URLs
     for record in records:
         if record.before_cleaning_photo:
             record.before_cleaning_photo = get_image_url(record.before_cleaning_photo)
         if record.after_cleaning_photo:
             record.after_cleaning_photo = get_image_url(record.after_cleaning_photo)
-    
+
     return records
 
 
@@ -1555,13 +1560,13 @@ def get_magnet_cleaning_record(record_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404,
                             detail="Magnet cleaning record not found")
-    
+
     # Convert image paths to full URLs
     if record.before_cleaning_photo:
         record.before_cleaning_photo = get_image_url(record.before_cleaning_photo)
     if record.after_cleaning_photo:
         record.after_cleaning_photo = get_image_url(record.after_cleaning_photo)
-    
+
     return record
 
 
@@ -2268,7 +2273,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")
-    
+
     user = db.query(models.User).filter(
         models.User.username == credentials.username).first()
 
@@ -2276,7 +2281,7 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
         print(f"❌ User not found: {credentials.username}")
         raise HTTPException(status_code=401,
                             detail="Invalid username or password")
-    
+
     if not user.is_active:
         print(f"❌ User inactive: {credentials.username}")
         raise HTTPException(status_code=401,
