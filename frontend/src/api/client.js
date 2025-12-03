@@ -34,7 +34,6 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
 });
 
 // Add request interceptor for authentication and branch filtering
