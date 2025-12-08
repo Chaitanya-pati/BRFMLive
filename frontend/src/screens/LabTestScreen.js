@@ -1944,6 +1944,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     marginTop: 8,
+    width: '100%',
   },
   tableHeader: {
     flexDirection: 'row',
@@ -1990,28 +1991,29 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
   srNoCol: {
-    width: '8%',
-    minWidth: 40,
+    width: '6%',
+    minWidth: 35,
+    maxWidth: 50,
     textAlign: 'center',
   },
   testCol: {
-    width: '35%',
-    minWidth: 120,
+    flex: 2,
+    minWidth: 100,
   },
   uomCol: {
-    width: '12%',
-    minWidth: 50,
+    width: '10%',
+    minWidth: 45,
+    maxWidth: 60,
     textAlign: 'center',
   },
   standardCol: {
-    width: '18%',
-    minWidth: 70,
+    flex: 1,
+    minWidth: 60,
     textAlign: 'center',
   },
   actualCol: {
-    width: '27%',
-    minWidth: 90,
-    flex: 1,
+    flex: 1.5,
+    minWidth: 80,
   },
   boldText: {
     fontWeight: '700',
