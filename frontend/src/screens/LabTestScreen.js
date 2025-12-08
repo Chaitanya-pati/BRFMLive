@@ -1240,308 +1240,348 @@ export default function LabTestScreen({ navigation }) {
                 />
               )}
 
-              {/* Test Parameters */}
+              {/* Test Parameters Table */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Test Parameters</Text>
+                
+                <View style={styles.tableContainer}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderCell, styles.srNoCol]}>Sr.</Text>
+                    <Text style={[styles.tableHeaderCell, styles.testCol]}>TEST</Text>
+                    <Text style={[styles.tableHeaderCell, styles.uomCol]}>UOM</Text>
+                    <Text style={[styles.tableHeaderCell, styles.standardCol]}>STANDARD</Text>
+                    <Text style={[styles.tableHeaderCell, styles.actualCol]}>ACTUAL REPORT</Text>
+                  </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Moisture (%)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 1: Moisture */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>1</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Moisture</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>8-10.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.moisture}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, moisture: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, moisture: text })}
                       keyboardType="decimal-pad"
-                      placeholder="8-10.5"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Hectoliter Weight (Kg/hl)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 2: Hectoliter Weight */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>2</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Hectoliter weight</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>Kg/hl</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>&gt;75</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.hectoliter_weight}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, hectoliter_weight: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, hectoliter_weight: text })}
                       keyboardType="decimal-pad"
-                      placeholder=">75"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Wet Gluten (%)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 3: Gluten Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>3</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
+
+                  {/* Row 3a: Wet Gluten */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>a</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Wet Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>32-33</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.wet_gluten}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, wet_gluten: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, wet_gluten: text })}
                       keyboardType="decimal-pad"
-                      placeholder="32-33"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Dry Gluten</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 3b: Dry Gluten */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>b</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Dry Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>10.5-11.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.dry_gluten}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, dry_gluten: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, dry_gluten: text })}
                       keyboardType="decimal-pad"
-                      placeholder="10.5-11.5"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Sedimentation Value (ml)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 4: Sedimentation Value */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>4</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Sedimentation Value</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>ml</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>24-25 ml</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.sedimentation_value}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, sedimentation_value: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, sedimentation_value: text })}
                       keyboardType="decimal-pad"
-                      placeholder="24-25"
+                      placeholder=""
                     />
                   </View>
-                </View>
-              </View>
 
-              {/* Impurities */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Refractions / Impurities
-                </Text>
+                  {/* Row 5: Refractions Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>5</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Refractions</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Chaff/Husk</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5a: Chaff/Husk */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>a</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>chaff/Husk</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.chaff_husk}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, chaff_husk: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, chaff_husk: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Straws/Sticks</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5b: Straws/Sticks */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>b</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>straws/sticks</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.straws_sticks}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, straws_sticks: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, straws_sticks: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Other Foreign Matter</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5c: Other Foreign Matter */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>c</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Other Foreign Matter (OFM)</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.other_foreign_matter}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, other_foreign_matter: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, other_foreign_matter: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Mudballs (%, &lt;3)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5d: Mudballs */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>d</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Mudballs</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>&lt;3</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.mudballs}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, mudballs: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, mudballs: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Stones</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5e: Stones */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>e</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Stones</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.stones}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, stones: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, stones: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Dust/Sand</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5f: Dust/Sand */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>f</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Dust/Sand</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.dust_sand}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, dust_sand: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, dust_sand: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Total Impurities (%)</Text>
-                  <View style={styles.rowField}>
-                    <Text style={styles.totalValue}>
-                      {formData.total_impurities}
-                    </Text>
+                  {/* Total Impurities Row */}
+                  <View style={[styles.tableRow, styles.totalRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Total Impurities (%)</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol, styles.boldText]}>{formData.total_impurities}</Text>
                   </View>
-                </View>
-              </View>
 
-              {/* Grain Dockage */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Grain Dockage</Text>
+                  {/* Grain Dockage Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Grain dockage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Shriveled Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 1: Shriveled Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>1</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Shriveled wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.shriveled_wheat}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, shriveled_wheat: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, shriveled_wheat: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Insect Bored Damage</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 2: Insect Bored Damage */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>2</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Insect Bored damage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.insect_damage}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, insect_damage: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, insect_damage: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Blackened Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 3: Blackened Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>3</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Blackened wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.blackened_wheat}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, blackened_wheat: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, blackened_wheat: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Other Grains (%)</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 4: Other Grains */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>4</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Other Grains</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.other_grains}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, other_grains: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, other_grains: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Soft Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 5: Soft Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>5</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Soft Wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.soft_wheat}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, soft_wheat: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, soft_wheat: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Heat Damaged Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 6: Heat Damaged Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>6</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Heat Damaged wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.heat_damaged}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, heat_damaged: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, heat_damaged: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Immature Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 7: Immature Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>7</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Immature wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.immature_wheat}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, immature_wheat: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, immature_wheat: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Broken Wheat</Text>
-                  <View style={styles.rowField}>
+                  {/* Row 8: Broken Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>8</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Broken wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.tableInput, styles.actualCol]}
                       value={formData.broken_wheat}
-                      onChangeText={(text) =>
-                        setFormData({ ...formData, broken_wheat: text })
-                      }
+                      onChangeText={(text) => setFormData({ ...formData, broken_wheat: text })}
                       keyboardType="decimal-pad"
+                      placeholder=""
                     />
                   </View>
-                </View>
 
-                <View style={styles.formRow}>
-                  <Text style={styles.rowLabel}>Total Dockage (%)</Text>
-                  <View style={styles.rowField}>
-                    <Text style={styles.totalValue}>
-                      {formData.total_dockage}
-                    </Text>
+                  {/* Total Dockage Row */}
+                  <View style={[styles.tableRow, styles.totalRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Total Dockage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol, styles.boldText]}>{formData.total_dockage}</Text>
                   </View>
                 </View>
               </View>
@@ -1897,6 +1937,87 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.primary,
     padding: 12,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: colors.outline,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.outline,
+  },
+  tableHeaderCell: {
+    padding: 8,
+    fontWeight: '700',
+    fontSize: 11,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
+    minHeight: 36,
+  },
+  sectionRow: {
+    backgroundColor: '#f9f9f9',
+  },
+  totalRow: {
+    backgroundColor: '#e8f5e9',
+  },
+  tableCell: {
+    padding: 8,
+    fontSize: 12,
+    color: colors.textPrimary,
+    textAlignVertical: 'center',
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+  },
+  tableInput: {
+    padding: 6,
+    fontSize: 12,
+    color: colors.textPrimary,
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+    backgroundColor: colors.surface,
+    minHeight: 36,
+  },
+  srNoCol: {
+    width: '8%',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  testCol: {
+    width: '35%',
+    minWidth: 120,
+  },
+  uomCol: {
+    width: '12%',
+    minWidth: 50,
+    textAlign: 'center',
+  },
+  standardCol: {
+    width: '18%',
+    minWidth: 70,
+    textAlign: 'center',
+  },
+  actualCol: {
+    width: '27%',
+    minWidth: 90,
+    flex: 1,
+  },
+  boldText: {
+    fontWeight: '700',
+  },
+  indentedText: {
+    paddingLeft: 16,
   },
   raiseClaimSection: {
     backgroundColor: "#fff3cd",
