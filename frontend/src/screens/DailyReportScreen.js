@@ -8,16 +8,20 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Dimensions,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Layout from '../components/Layout';
-import DatePicker from '../components/DatePicker';
 import { vehicleApi, supplierApi, labTestApi, godownApi, binApi, unloadingApi } from '../api/client';
 import colors from '../theme/colors';
 import notify from '../utils/notifications';
 import { formatISTDateTime, formatISTDate, formatISTTime } from '../utils/dateUtils';
 
+const { width } = Dimensions.get('window');
+
 export default function DailyReportScreen({ navigation }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState({
     vehicleEntries: [],
@@ -42,6 +46,13 @@ export default function DailyReportScreen({ navigation }) {
   useEffect(() => {
     loadDailyReport();
   }, [selectedDate]);
+
+  const handleDateChange = (event, date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
 
   const loadDailyReport = async () => {
     setLoading(true);
@@ -307,11 +318,29 @@ export default function DailyReportScreen({ navigation }) {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Daily Operations Report</Text>
-          <DatePicker
-            label="Select Date"
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
+          
+          <View style={styles.datePickerContainer}>
+            <Text style={styles.dateLabel}>Select Date</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.dateButtonText}>
+                {formatISTDate(selectedDate)}
+              </Text>
+              <Text style={styles.calendarIcon}>📅</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+            />
+          )}
+
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={loadDailyReport}
@@ -349,23 +378,50 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#fff',
-    padding: 20,
+    padding: width < 768 ? 16 : 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
   title: {
-    fontSize: 16,
+    fontSize: width < 768 ? 18 : 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  datePickerContainer: {
+    marginBottom: 16,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  dateButton: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  calendarIcon: {
+    fontSize: 20,
   },
   refreshButton: {
     backgroundColor: colors.primary,
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
     boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
   },
   refreshButtonText: {
@@ -374,18 +430,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   loadingContainer: {
-    padding: 40,
+    padding: width < 768 ? 30 : 40,
     alignItems: 'center',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: width < 768 ? 14 : 16,
     color: colors.textSecondary,
   },
   summaryCard: {
     backgroundColor: '#fff',
-    margin: 16,
-    padding: 24,
+    margin: width < 768 ? 12 : 16,
+    padding: width < 768 ? 16 : 24,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -396,26 +452,26 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   summaryTitle: {
-    fontSize: 18,
+    fontSize: width < 768 ? 16 : 18,
     fontWeight: '800',
     color: colors.primary,
     marginBottom: 4,
   },
   summaryDate: {
-    fontSize: 15,
+    fontSize: width < 768 ? 14 : 15,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 16,
     fontWeight: '500',
   },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: width < 768 ? 6 : 8,
   },
   summaryItem: {
     flex: 1,
-    minWidth: 110,
-    padding: 12,
+    minWidth: width < 768 ? 90 : 110,
+    padding: width < 768 ? 10 : 12,
     alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderRadius: 12,
@@ -423,12 +479,12 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   summaryValue: {
-    fontSize: 28,
+    fontSize: width < 768 ? 22 : 28,
     fontWeight: '800',
     color: colors.primary,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: width < 768 ? 10 : 11,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 6,
@@ -438,9 +494,9 @@ const styles = StyleSheet.create({
   },
   reportSection: {
     backgroundColor: '#fff',
-    margin: 16,
+    margin: width < 768 ? 12 : 16,
     marginTop: 0,
-    padding: 20,
+    padding: width < 768 ? 14 : 20,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -451,7 +507,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: width < 768 ? 15 : 16,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 12,
@@ -468,20 +524,21 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 8,
     overflow: 'hidden',
+    minWidth: width < 768 ? 600 : 'auto',
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
-    padding: 12,
+    padding: width < 768 ? 10 : 12,
   },
   tableHeaderCell: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: width < 768 ? 11 : 12,
   },
   tableRow: {
     flexDirection: 'row',
-    padding: 12,
+    padding: width < 768 ? 10 : 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -489,7 +546,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   tableCell: {
-    fontSize: 12,
+    fontSize: width < 768 ? 11 : 12,
     color: colors.textPrimary,
   },
 });
