@@ -1067,7 +1067,7 @@ export default function LabTestScreen({ navigation }) {
       label: "Test Date",
       field: "test_date",
       width: 180,
-      render: (value) => new Date(value).toLocaleDateString(),
+      type: "date",
     },
     {
       label: "Actions",

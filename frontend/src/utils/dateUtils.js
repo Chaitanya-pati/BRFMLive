@@ -6,7 +6,7 @@ export const toIST = (date) => {
   return new Date(date);
 };
 
-// Format: 08-Dec-2025, 04:28pm IST (DateTime with time)
+// Format: 08-Dec-2025, 04:28pm (DateTime with time)
 export const formatISTDateTime = (date) => {
   if (!date) return '-';
   try {
@@ -35,7 +35,7 @@ export const formatISTDateTime = (date) => {
     const minute = parts.find(p => p.type === 'minute')?.value;
     const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toLowerCase();
     
-    return `${day}-${month}-${year}, ${hour}:${minute}${dayPeriod} IST`;
+    return `${day}-${month}-${year}, ${hour}:${minute}${dayPeriod}`;
   } catch (error) {
     console.error('Date formatting error:', error, 'for date:', date);
     return '-';
@@ -70,7 +70,7 @@ export const formatISTDate = (date) => {
   }
 };
 
-// Format: 04:28pm IST (Time only, without seconds)
+// Format: 04:28pm (Time only, without seconds)
 export const formatISTTime = (date) => {
   if (!date) return '-';
   try {
@@ -91,7 +91,7 @@ export const formatISTTime = (date) => {
     const minute = parts.find(p => p.type === 'minute')?.value;
     const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toLowerCase();
     
-    return `${hour}:${minute}${dayPeriod} IST`;
+    return `${hour}:${minute}${dayPeriod}`;
   } catch (error) {
     return '-';
   }
