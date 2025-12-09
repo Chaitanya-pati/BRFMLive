@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
-import DatePicker from '../components/DatePicker';
 import Modal from '../components/Modal';
 import { 
   transferSessionApi, 
@@ -251,11 +250,22 @@ export default function ReportsScreen({ navigation }) {
     <View style={styles.tabContent}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Raw Wheat Bin Process Timeline</Text>
-        <DatePicker
-          label="Select Date"
-          value={selectedDate}
-          onChange={setSelectedDate}
-        />
+        <View style={styles.dateInputContainer}>
+          <Text style={styles.label}>Select Date</Text>
+          <input
+            type="date"
+            value={selectedDate.toISOString().split('T')[0]}
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px',
+              backgroundColor: '#fff',
+            }}
+          />
+        </View>
         <TouchableOpacity 
           style={styles.refreshButton}
           onPress={loadTimelineData}
@@ -356,17 +366,35 @@ export default function ReportsScreen({ navigation }) {
         
         <View style={styles.dateRangeContainer}>
           <View style={styles.datePickerWrapper}>
-            <DatePicker
-              label="Start Date"
-              value={startDate}
-              onChange={setStartDate}
+            <Text style={styles.label}>Start Date</Text>
+            <input
+              type="date"
+              value={startDate.toISOString().split('T')[0]}
+              onChange={(e) => setStartDate(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                fontSize: '14px',
+                backgroundColor: '#fff',
+              }}
             />
           </View>
           <View style={styles.datePickerWrapper}>
-            <DatePicker
-              label="End Date"
-              value={endDate}
-              onChange={setEndDate}
+            <Text style={styles.label}>End Date</Text>
+            <input
+              type="date"
+              value={endDate.toISOString().split('T')[0]}
+              onChange={(e) => setEndDate(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                fontSize: '14px',
+                backgroundColor: '#fff',
+              }}
             />
           </View>
         </View>
@@ -662,6 +690,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  dateInputContainer: {
+    marginBottom: 16,
   },
   dateRangeContainer: {
     flexDirection: 'row',
