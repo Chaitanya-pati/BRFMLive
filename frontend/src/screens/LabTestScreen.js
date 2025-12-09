@@ -1193,7 +1193,7 @@ export default function LabTestScreen({ navigation }) {
                       {filteredVehicles.map((vehicle) => (
                         <Picker.Item
                           key={vehicle.id}
-                          label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || "N/A"}`}
+                          label={`${vehicle.vehicle_number} - ${vehicle.bill_no || "N/A"} - ${vehicle.supplier?.supplier_name || "N/A"}`}
                           value={vehicle.id.toString()}
                         />
                       ))}
