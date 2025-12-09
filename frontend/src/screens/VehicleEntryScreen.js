@@ -313,7 +313,7 @@ export default function VehicleEntryScreen() {
     {
       label: "Arrival Time",
       field: "arrival_time",
-      flex: 1.5,
+      flex: 1.8,
       type: "datetime",
     },
   ];

@@ -14,7 +14,7 @@ import DatePicker from '../components/DatePicker';
 import { vehicleApi, supplierApi, labTestApi, godownApi, binApi, unloadingApi } from '../api/client';
 import colors from '../theme/colors';
 import notify from '../utils/notifications';
-import { formatISTDate } from '../utils/timeUtils';
+import { formatISTDateTime, formatISTDate, formatISTTime } from '../utils/dateUtils';
 
 export default function DailyReportScreen({ navigation }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -179,8 +179,8 @@ export default function DailyReportScreen({ navigation }) {
                 <Text style={[styles.tableCell, { width: 120 }]}>{vehicle.vehicle_number}</Text>
                 <Text style={[styles.tableCell, { width: 200 }]}>{getSupplierName(vehicle.supplier_id)}</Text>
                 <Text style={[styles.tableCell, { width: 120 }]}>{vehicle.bill_no}</Text>
-                <Text style={[styles.tableCell, { width: 100 }]}>
-                  {new Date(vehicle.arrival_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                <Text style={[styles.tableCell, { width: 120 }]}>
+                  {formatISTTime(vehicle.arrival_time)}
                 </Text>
               </View>
             ))}

@@ -16,6 +16,7 @@ import { supplierApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { useFormSubmission } from '../utils/useFormSubmission';
+import { formatISTDate } from '../utils/dateUtils';
 
 export default function SupplierMasterScreen({ navigation }) {
   const [suppliers, setSuppliers] = useState([]);
@@ -217,7 +218,7 @@ export default function SupplierMasterScreen({ navigation }) {
       label: 'Created',
       field: 'created_at',
       width: 150,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => formatISTDate(value)
     },
   ];
 

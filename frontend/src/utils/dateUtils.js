@@ -6,76 +6,97 @@ export const toIST = (date) => {
   return new Date(date);
 };
 
-// Format: DD/MM/YYYY hh:mm:ss AM/PM IST
+// Format: 08-Dec-2025, 04:28pm IST (DateTime with time)
 export const formatISTDateTime = (date) => {
   if (!date) return '-';
   try {
-    // Parse the UTC date string from backend
     const d = new Date(date);
     
     // Ensure it's a valid date
     if (isNaN(d.getTime())) return '-';
     
-    // Convert UTC to IST for display
-    const formatted = d.toLocaleString('en-IN', {
+    // Get IST date parts
+    const options = {
       timeZone: 'Asia/Kolkata',
       day: '2-digit',
-      month: '2-digit',
+      month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: true
-    });
+    };
     
-    return formatted + ' IST';
+    const parts = new Intl.DateTimeFormat('en-IN', options).formatToParts(d);
+    
+    const day = parts.find(p => p.type === 'day')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const year = parts.find(p => p.type === 'year')?.value;
+    const hour = parts.find(p => p.type === 'hour')?.value;
+    const minute = parts.find(p => p.type === 'minute')?.value;
+    const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toLowerCase();
+    
+    return `${day}-${month}-${year}, ${hour}:${minute}${dayPeriod} IST`;
   } catch (error) {
     console.error('Date formatting error:', error, 'for date:', date);
     return '-';
   }
 };
 
-// Format: DD/MM/YYYY
+// Format: 08-Dec-2025 (Date only)
 export const formatISTDate = (date) => {
   if (!date) return '-';
   try {
     const d = new Date(date);
-    return d.toLocaleDateString('en-IN', {
+    
+    if (isNaN(d.getTime())) return '-';
+    
+    const options = {
       timeZone: 'Asia/Kolkata',
       day: '2-digit',
-      month: '2-digit',
+      month: 'short',
       year: 'numeric'
-    });
+    };
+    
+    const parts = new Intl.DateTimeFormat('en-IN', options).formatToParts(d);
+    
+    const day = parts.find(p => p.type === 'day')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const year = parts.find(p => p.type === 'year')?.value;
+    
+    return `${day}-${month}-${year}`;
   } catch (error) {
+    console.error('Date formatting error:', error);
     return '-';
   }
 };
 
-// Format: hh:mm:ss AM/PM IST
+// Format: 04:28pm IST (Time only, without seconds)
 export const formatISTTime = (date) => {
   if (!date) return '-';
   try {
     const d = new Date(date);
-    return d.toLocaleTimeString('en-IN', {
+    
+    if (isNaN(d.getTime())) return '-';
+    
+    const options = {
       timeZone: 'Asia/Kolkata',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: true
-    }) + ' IST';
+    };
+    
+    const parts = new Intl.DateTimeFormat('en-IN', options).formatToParts(d);
+    
+    const hour = parts.find(p => p.type === 'hour')?.value;
+    const minute = parts.find(p => p.type === 'minute')?.value;
+    const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toLowerCase();
+    
+    return `${hour}:${minute}${dayPeriod} IST`;
   } catch (error) {
     return '-';
   }
 };
 
 export const getCurrentISTTimestamp = () => {
-  return new Date().toLocaleString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  }) + ' IST';
+  return formatISTDateTime(new Date());
 };

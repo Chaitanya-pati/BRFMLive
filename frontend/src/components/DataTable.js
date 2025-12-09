@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import colors from '../theme/colors';
-import { formatISTDateTime } from '../utils/dateUtils';
+import { formatISTDateTime, formatISTDate } from '../utils/dateUtils';
 
 export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onView, viewLabel, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,6 +72,8 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
               cellContent = col.render(row[col.field], row);
             } else if (col.type === 'datetime' && row[col.field]) {
               cellContent = formatISTDateTime(row[col.field]);
+            } else if (col.type === 'date' && row[col.field]) {
+              cellContent = formatISTDate(row[col.field]);
             } else if (row[col.field] !== undefined && row[col.field] !== null) {
               cellContent = row[col.field];
             }
@@ -167,6 +169,8 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
                     cellContent = col.render(row[col.field], row);
                   } else if (col.type === 'datetime' && row[col.field]) {
                     cellContent = formatISTDateTime(row[col.field]);
+                  } else if (col.type === 'date' && row[col.field]) {
+                    cellContent = formatISTDate(row[col.field]);
                   } else if (row[col.field] !== undefined && row[col.field] !== null) {
                     cellContent = row[col.field];
                   }
