@@ -23,6 +23,7 @@ import MachineManagementScreen from './src/screens/MachineManagementScreen';
 import RouteConfigurationScreen from './src/screens/RouteConfigurationScreen';
 import DailyReportScreen from './src/screens/DailyReportScreen';
 import PrecleaningTimelineScreen from './src/screens/PrecleaningTimelineScreen';
+import ReportsScreen from './src/screens/ReportsScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -122,7 +123,8 @@ export default function App() {
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
           <Stack.Screen name="DailyReport" component={DailyReportScreen} />
           <Stack.Screen name="PrecleaningTimeline" component={PrecleaningTimelineScreen} />
-            </Stack.Navigator>
+          <Stack.Screen name="Reports" component={ReportsScreen} />
+        </Stack.Navigator>
           </BranchProvider>
         )}
       </NavigationContainer>

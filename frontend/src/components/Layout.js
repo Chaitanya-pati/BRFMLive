@@ -237,6 +237,12 @@ export default function Layout({ children, title, currentRoute }) {
       icon: SvgFileTextIcon,
       section: "Operations",
     },
+    {
+      name: "Reports",
+      route: "Reports",
+      icon: SvgFileTextIcon,
+      section: "Operations",
+    },
     // Admin only menu items
     {
       name: "User Management",
