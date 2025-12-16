@@ -411,3 +411,51 @@ class User(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     branches = relationship("Branch", secondary="user_branches", back_populates="users")
+
+class RawProduct(Base):
+    __tablename__ = "raw_products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(255), nullable=False)
+    product_initial = Column(String(10), nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+    production_orders = relationship("ProductionOrder", back_populates="raw_product")
+
+class FinishedGood(Base):
+    __tablename__ = "finished_goods"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(255), nullable=False)
+    product_initial = Column(String(10), nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+
+class ProductionOrderStatus(str, enum.Enum):
+    CREATED = "CREATED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+class ProductionOrder(Base):
+    __tablename__ = "production_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_number = Column(String(100), nullable=False, unique=True)
+    raw_product_id = Column(Integer, ForeignKey("raw_products.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    order_date = Column(DateTime, default=get_utc_now)
+    target_finish_date = Column(DateTime, nullable=False)
+    status = Column(Enum(ProductionOrderStatus), default=ProductionOrderStatus.CREATED, nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+    raw_product = relationship("RawProduct", back_populates="production_orders")

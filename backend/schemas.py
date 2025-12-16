@@ -551,6 +551,78 @@ class LoginResponse(ISTModel):
     role: str | None = None
     branches: list[Branch] = []
 
+class ProductionOrderStatusEnum(str, Enum):
+    CREATED = "CREATED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+class RawProductBase(ISTModel):
+    product_name: str
+    product_initial: str
+
+class RawProductCreate(RawProductBase):
+    branch_id: Optional[int] = None
+
+class RawProductUpdate(RawProductBase):
+    pass
+
+class RawProduct(RawProductBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+class FinishedGoodBase(ISTModel):
+    product_name: str
+    product_initial: str
+
+class FinishedGoodCreate(FinishedGoodBase):
+    branch_id: Optional[int] = None
+
+class FinishedGoodUpdate(FinishedGoodBase):
+    pass
+
+class FinishedGood(FinishedGoodBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+class ProductionOrderBase(ISTModel):
+    order_number: str
+    raw_product_id: int
+    quantity: float
+    order_date: Optional[datetime] = None
+    target_finish_date: datetime
+    status: Optional[ProductionOrderStatusEnum] = ProductionOrderStatusEnum.CREATED
+
+    @validator('order_date', 'target_finish_date', pre=True)
+    def _parse_dates(cls, v):
+        return parse_datetime(v)
+
+class ProductionOrderCreate(ProductionOrderBase):
+    branch_id: Optional[int] = None
+
+class ProductionOrderUpdate(BaseModel):
+    order_number: Optional[str] = None
+    quantity: Optional[float] = None
+    target_finish_date: Optional[datetime] = None
+    status: Optional[ProductionOrderStatusEnum] = None
+
+class ProductionOrderWithProduct(ProductionOrderBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    raw_product: RawProduct
+
+class ProductionOrder(ProductionOrderBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
 BinTransferWithBin.model_rebuild()

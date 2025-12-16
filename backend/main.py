@@ -2271,6 +2271,137 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return {"message": "User deleted successfully"}
 
 
+@app.post("/api/raw-products", response_model=schemas.RawProduct)
+def create_raw_product(product: schemas.RawProductCreate, branch_id: Optional[int] = Header(None), db: Session = Depends(get_db)):
+    db_product = models.RawProduct(product_name=product.product_name, product_initial=product.product_initial, branch_id=branch_id or product.branch_id)
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.get("/api/raw-products", response_model=List[schemas.RawProduct])
+def get_raw_products(db: Session = Depends(get_db)):
+    return db.query(models.RawProduct).all()
+
+@app.get("/api/raw-products/{product_id}", response_model=schemas.RawProduct)
+def get_raw_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(models.RawProduct).filter(models.RawProduct.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Raw product not found")
+    return db_product
+
+@app.put("/api/raw-products/{product_id}", response_model=schemas.RawProduct)
+def update_raw_product(product_id: int, product: schemas.RawProductUpdate, db: Session = Depends(get_db)):
+    db_product = db.query(models.RawProduct).filter(models.RawProduct.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Raw product not found")
+    db_product.product_name = product.product_name
+    db_product.product_initial = product.product_initial
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.delete("/api/raw-products/{product_id}")
+def delete_raw_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(models.RawProduct).filter(models.RawProduct.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Raw product not found")
+    db.delete(db_product)
+    db.commit()
+    return {"message": "Raw product deleted successfully"}
+
+@app.post("/api/finished-goods", response_model=schemas.FinishedGood)
+def create_finished_good(product: schemas.FinishedGoodCreate, branch_id: Optional[int] = Header(None), db: Session = Depends(get_db)):
+    db_product = models.FinishedGood(product_name=product.product_name, product_initial=product.product_initial, branch_id=branch_id or product.branch_id)
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.get("/api/finished-goods", response_model=List[schemas.FinishedGood])
+def get_finished_goods(db: Session = Depends(get_db)):
+    return db.query(models.FinishedGood).all()
+
+@app.get("/api/finished-goods/{product_id}", response_model=schemas.FinishedGood)
+def get_finished_good(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(models.FinishedGood).filter(models.FinishedGood.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Finished good not found")
+    return db_product
+
+@app.put("/api/finished-goods/{product_id}", response_model=schemas.FinishedGood)
+def update_finished_good(product_id: int, product: schemas.FinishedGoodUpdate, db: Session = Depends(get_db)):
+    db_product = db.query(models.FinishedGood).filter(models.FinishedGood.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Finished good not found")
+    db_product.product_name = product.product_name
+    db_product.product_initial = product.product_initial
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.delete("/api/finished-goods/{product_id}")
+def delete_finished_good(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(models.FinishedGood).filter(models.FinishedGood.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Finished good not found")
+    db.delete(db_product)
+    db.commit()
+    return {"message": "Finished good deleted successfully"}
+
+@app.post("/api/production-orders", response_model=schemas.ProductionOrder)
+def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Optional[int] = Header(None), db: Session = Depends(get_db)):
+    db_order = models.ProductionOrder(
+        order_number=order.order_number,
+        raw_product_id=order.raw_product_id,
+        quantity=order.quantity,
+        order_date=order.order_date or get_utc_now(),
+        target_finish_date=order.target_finish_date,
+        status=order.status or models.ProductionOrderStatus.CREATED,
+        branch_id=branch_id or order.branch_id
+    )
+    db.add(db_order)
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+@app.get("/api/production-orders", response_model=List[schemas.ProductionOrderWithProduct])
+def get_production_orders(db: Session = Depends(get_db)):
+    return db.query(models.ProductionOrder).all()
+
+@app.get("/api/production-orders/{order_id}", response_model=schemas.ProductionOrderWithProduct)
+def get_production_order(order_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    return db_order
+
+@app.put("/api/production-orders/{order_id}", response_model=schemas.ProductionOrder)
+def update_production_order(order_id: int, order_update: schemas.ProductionOrderUpdate, db: Session = Depends(get_db)):
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    if order_update.order_number:
+        db_order.order_number = order_update.order_number
+    if order_update.quantity:
+        db_order.quantity = order_update.quantity
+    if order_update.target_finish_date:
+        db_order.target_finish_date = order_update.target_finish_date
+    if order_update.status:
+        db_order.status = order_update.status
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+@app.delete("/api/production-orders/{order_id}")
+def delete_production_order(order_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    db.delete(db_order)
+    db.commit()
+    return {"message": "Production order deleted successfully"}
+
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")
