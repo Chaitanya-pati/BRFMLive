@@ -405,6 +405,30 @@ const STATIC_CITIES = {
   ],
 };
 
+export const rawProductApi = {
+  getAll: () => api.get("/raw-products"),
+  getById: (id) => api.get(`/raw-products/${id}`),
+  create: (data) => api.post("/raw-products", data),
+  update: (id, data) => api.put(`/raw-products/${id}`, data),
+  delete: (id) => api.delete(`/raw-products/${id}`),
+};
+
+export const finishedGoodApi = {
+  getAll: () => api.get("/finished-goods"),
+  getById: (id) => api.get(`/finished-goods/${id}`),
+  create: (data) => api.post("/finished-goods", data),
+  update: (id, data) => api.put(`/finished-goods/${id}`, data),
+  delete: (id) => api.delete(`/finished-goods/${id}`),
+};
+
+export const productionOrderApi = {
+  getAll: () => api.get("/production-orders"),
+  getById: (id) => api.get(`/production-orders/${id}`),
+  create: (data) => api.post("/production-orders", data),
+  update: (id, data) => api.put(`/production-orders/${id}`, data),
+  delete: (id) => api.delete(`/production-orders/${id}`),
+};
+
 export const stateCityApi = {
   getStates: async () => {
     try {
