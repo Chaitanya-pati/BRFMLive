@@ -138,7 +138,7 @@ export default function HomeScreen({ navigation }) {
     { title: 'Raw Products', route: 'RawProductMaster', icon: 'tasks', color: '#84cc16', adminOnly: false },
     { title: 'Finished Goods', route: 'FinishedGoodsMaster', icon: 'box', color: '#a855f7', adminOnly: false },
     { title: 'Production Orders', route: 'ProductionOrder', icon: 'cogs', color: '#ef4444', adminOnly: false },
-    { title: 'Order Planning', route: 'ProductionOrder', icon: 'cogs', color: '#f59e0b', adminOnly: false },
+    { title: 'Order Planning', route: 'ProductionOrder', icon: 'cogs', color: '#f59e0b', adminOnly: false, params: { planningMode: true } },
     { title: 'Precleaning Timeline', route: 'PrecleaningTimeline', icon: 'clock', color: '#6366f1', adminOnly: false },
   ];
 
@@ -186,7 +186,7 @@ export default function HomeScreen({ navigation }) {
                 { backgroundColor: action.color },
                 isMobile && styles.actionCardMobile,
               ]}
-              onPress={() => navigation.navigate(action.route)}
+              onPress={() => navigation.navigate(action.route, action.params)}
             >
               <Icon name={action.icon} size={isMobile ? 28 : 32} color="#fff" />
               <Text style={[styles.actionTitle, isMobile && styles.actionTitleMobile]}>{action.title}</Text>
