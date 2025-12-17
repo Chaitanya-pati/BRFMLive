@@ -1,12 +1,20 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Get the current hostname and construct the API URL
+// API URL configuration for Replit environment
 const getCurrentAPIUrl = () => {
   if (typeof window !== "undefined") {
-    // For both development and Replit deployment, use localhost:8000
-    // because the backend runs locally on port 8000 in the Replit VM
-    return "http://localhost:8000/api";
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // For local development, use localhost with port 8000
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `http://${hostname}:8000/api`;
+    }
+
+    // For Replit deployment: backend runs on port 8000, which is externally accessible
+    // Must explicitly specify port 8000 to reach the FastAPI backend
+    return `${protocol}//${hostname}:8000/api`;
   }
 
   // Final fallback
@@ -16,9 +24,7 @@ const getCurrentAPIUrl = () => {
 // Use getCurrentAPIUrl() for dynamic URL, or fallback to environment variable
 //const API_URL = "https://brfmlive.onrender.com/api";
 const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-console.log("API Base URL:", API_URL);
 
-// Export API_BASE_URL for components that need direct fetch calls (without /api suffix)
 export const API_BASE_URL = API_URL.replace("/api", "");
 
 export const api = axios.create({
@@ -28,7 +34,9 @@ export const api = axios.create({
   },
 });
 
-// Add request interceptor for authentication and branch filtering
+// =======================
+// REQUEST INTERCEPTOR
+// =======================
 api.interceptors.request.use(
   async (config) => {
     console.log(
@@ -40,28 +48,22 @@ api.interceptors.request.use(
       console.log("📦 Request Data:", config.data);
     }
 
-    // Add active branch ID to request header
+    // Branch header (unchanged)
     try {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
         if (activeBranch && activeBranch.id) {
           config.headers["X-Branch-ID"] = activeBranch.id.toString();
-          console.log(
-            "🏢 Branch ID:",
-            activeBranch.id,
-            "Branch Name:",
-            activeBranch.name,
-          );
         }
       }
     } catch (error) {
       console.error("Error retrieving active branch:", error);
     }
 
-    // Add authentication token if available
+    // ✅ FIXED: Auth token (AsyncStorage instead of localStorage)
     try {
-      const token = localStorage.getItem("auth_token");
+      const token = await AsyncStorage.getItem("auth_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -71,13 +73,12 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    console.error("❌ Request Error:", error);
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// Add response interceptor for logging
+// =======================
+// RESPONSE INTERCEPTOR
+// =======================
 api.interceptors.response.use(
   (response) => {
     console.log("✅ API Response:", response.status, response.config.url);
@@ -93,7 +94,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
 export const supplierApi = {
   getAll: () => api.get("/suppliers"),
   getById: (id) => api.get(`/suppliers/${id}`),
@@ -143,45 +143,45 @@ export const godownApi = {
 
 export const unloadingApi = {
   getAll: () => {
-    const branchId = localStorage.getItem('selectedBranchId');
-    return api.get('/unloading-entries', {
-      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    const branchId = localStorage.getItem("selectedBranchId");
+    return api.get("/unloading-entries", {
+      headers: branchId ? { "X-Branch-Id": branchId } : {},
     });
   },
   getById: (id) => {
-    const branchId = localStorage.getItem('selectedBranchId');
+    const branchId = localStorage.getItem("selectedBranchId");
     return api.get(`/unloading-entries/${id}`, {
-      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+      headers: branchId ? { "X-Branch-Id": branchId } : {},
     });
   },
   create: (data) => {
-    const branchId = localStorage.getItem('selectedBranchId');
-    return api.post('/unloading-entries', data, {
-      headers: { 
-        'Content-Type': 'multipart/form-data',
-        ...(branchId ? { 'X-Branch-Id': branchId } : {})
-      }
+    const branchId = localStorage.getItem("selectedBranchId");
+    return api.post("/unloading-entries", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...(branchId ? { "X-Branch-Id": branchId } : {}),
+      },
     });
   },
   update: (id, data) => {
-    const branchId = localStorage.getItem('selectedBranchId');
+    const branchId = localStorage.getItem("selectedBranchId");
     return api.put(`/unloading-entries/${id}`, data, {
-      headers: { 
-        'Content-Type': 'multipart/form-data',
-        ...(branchId ? { 'X-Branch-Id': branchId } : {})
-      }
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...(branchId ? { "X-Branch-Id": branchId } : {}),
+      },
     });
   },
   delete: (id) => {
-    const branchId = localStorage.getItem('selectedBranchId');
+    const branchId = localStorage.getItem("selectedBranchId");
     return api.delete(`/unloading-entries/${id}`, {
-      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+      headers: branchId ? { "X-Branch-Id": branchId } : {},
     });
   },
   getLabTestedVehicles: () => {
-    const branchId = localStorage.getItem('selectedBranchId');
-    return api.get('/vehicles/lab-tested', {
-      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    const branchId = localStorage.getItem("selectedBranchId");
+    return api.get("/vehicles/lab-tested", {
+      headers: branchId ? { "X-Branch-Id": branchId } : {},
     });
   },
 };
