@@ -20,6 +20,7 @@ import { formatISTDate } from '../utils/dateUtils';
 
 const ORDER_STATUSES = [
   { value: 'CREATED', label: 'Created' },
+  { value: 'PLANNED', label: 'Planned' },
   { value: 'IN_PROGRESS', label: 'In Progress' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
@@ -165,6 +166,7 @@ export default function ProductionOrderScreen({ navigation }) {
   const getStatusColor = (status) => {
     switch (status) {
       case 'CREATED': return colors.info;
+      case 'PLANNED': return colors.primary;
       case 'IN_PROGRESS': return colors.warning;
       case 'COMPLETED': return colors.success;
       case 'CANCELLED': return colors.danger;
@@ -195,8 +197,15 @@ export default function ProductionOrderScreen({ navigation }) {
     },
   ];
 
+  const handlePlan = (order) => {
+    navigation.navigate('ProductionOrderPlanning', { orderId: order.id });
+  };
+
   const renderActions = (item) => (
     <View style={styles.actionButtons}>
+      <TouchableOpacity style={styles.planButton} onPress={() => handlePlan(item)}>
+        <Text style={styles.buttonText}>Plan</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
         <Text style={styles.buttonText}>Edit</Text>
       </TouchableOpacity>
@@ -351,6 +360,12 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  planButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
   },
   editButton: {
     backgroundColor: colors.info,

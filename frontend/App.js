@@ -27,6 +27,7 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import RawProductMasterScreen from './src/screens/RawProductMasterScreen';
 import FinishedGoodsMasterScreen from './src/screens/FinishedGoodsMasterScreen';
 import ProductionOrderScreen from './src/screens/ProductionOrderScreen';
+import ProductionOrderPlanningScreen from './src/screens/ProductionOrderPlanningScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -130,6 +131,7 @@ export default function App() {
           <Stack.Screen name="RawProductMaster" component={RawProductMasterScreen} />
           <Stack.Screen name="FinishedGoodsMaster" component={FinishedGoodsMasterScreen} />
           <Stack.Screen name="ProductionOrder" component={ProductionOrderScreen} />
+          <Stack.Screen name="ProductionOrderPlanning" component={ProductionOrderPlanningScreen} />
           <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
         </Stack.Navigator>
           </BranchProvider>

@@ -419,6 +419,14 @@ export const productionOrderApi = {
   create: (data) => api.post("/production-orders", data),
   update: (id, data) => api.put(`/production-orders/${id}`, data),
   delete: (id) => api.delete(`/production-orders/${id}`),
+  getPlanning: (id) => api.get(`/production-orders/${id}/planning`),
+  savePlanning: (id, data) => api.post(`/production-orders/${id}/planning`, data),
+  validatePlanning: (id, data) => api.post(`/production-orders/${id}/planning/validate`, data),
+};
+
+export const planningBinsApi = {
+  getSourceBins: () => api.get("/bins/source"),
+  getDestinationBins: () => api.get("/bins/destination"),
 };
 
 export const stateCityApi = {
