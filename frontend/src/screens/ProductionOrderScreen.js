@@ -304,25 +304,36 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             <Text style={styles.label}>Target Finish Date *</Text>
-            <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-              <Text style={{ color: formData.target_finish_date ? colors.textDark : colors.textLight }}>
-                {formData.target_finish_date ? formData.target_finish_date : 'Select date'}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
+            {Platform.OS === 'web' ? (
+              <TextInput
+                style={styles.input}
+                value={formData.target_finish_date}
+                onChangeText={(text) => setFormData({ ...formData, target_finish_date: text })}
+                placeholder="YYYY-MM-DD"
               />
-            )}
-            {Platform.OS === 'ios' && showDatePicker && (
-              <View style={styles.datePickerFooter}>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.datePickerButton}>Done</Text>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+                  <Text style={{ color: formData.target_finish_date ? colors.textDark : colors.textLight }}>
+                    {formData.target_finish_date ? formData.target_finish_date : 'Select date'}
+                  </Text>
                 </TouchableOpacity>
-              </View>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                  />
+                )}
+                {Platform.OS === 'ios' && showDatePicker && (
+                  <View style={styles.datePickerFooter}>
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text style={styles.datePickerButton}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
 
             {editMode && (
