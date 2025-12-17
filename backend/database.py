@@ -3,9 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Use PostgreSQL only
-#DATABASE_URL = os.getenv('DATABASE_URL')
-DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-still-math-afmw2sjv-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+# Use PostgreSQL from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
 if not DATABASE_URL:
     raise ValueError(
         "DATABASE_URL environment variable is not set. Please configure PostgreSQL database in Replit."
