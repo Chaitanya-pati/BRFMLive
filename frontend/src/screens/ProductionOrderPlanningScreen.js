@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  FlatList,
 } from 'react-native';
 import Layout from '../components/Layout';
 import { productionOrderApi, planningBinsApi } from '../api/client';
@@ -15,7 +16,9 @@ import { showAlert, showConfirm, showSuccess, showError } from '../utils/customA
 import { formatISTDate } from '../utils/dateUtils';
 
 export default function ProductionOrderPlanningScreen({ route, navigation }) {
-  const { orderId } = route.params;
+  const initialOrderId = route.params?.orderId;
+  const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId);
+  const [orders, setOrders] = useState([]);
   const [order, setOrder] = useState(null);
   const [sourceBins, setSourceBins] = useState([]);
   const [destinationBins, setDestinationBins] = useState([]);
@@ -27,14 +30,35 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
   const [validationResult, setValidationResult] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, [orderId]);
+    if (selectedOrderId) {
+      loadData();
+    } else {
+      loadOrdersList();
+    }
+  }, [selectedOrderId]);
+
+  const loadOrdersList = async () => {
+    try {
+      setLoading(true);
+      const response = await productionOrderApi.getAll();
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      showError('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectOrder = (orderId) => {
+    setSelectedOrderId(orderId);
+  };
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [orderRes, sourceRes, destRes] = await Promise.all([
-        productionOrderApi.getPlanning(orderId),
+        productionOrderApi.getPlanning(selectedOrderId),
         planningBinsApi.getSourceBins(),
         planningBinsApi.getDestinationBins(),
       ]);
@@ -64,6 +88,47 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       showError('Failed to load planning data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBackToOrderList = () => {
+    setSelectedOrderId(null);
+    setOrder(null);
+    setSelectedSources([]);
+    setSelectedDestinations([]);
+    setValidationResult(null);
+  };
+
+  const renderOrderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.orderCard}
+      onPress={() => handleSelectOrder(item.id)}
+    >
+      <View style={styles.orderCardHeader}>
+        <Text style={styles.orderNumber}>{item.order_number}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <Text style={styles.statusText}>{item.status}</Text>
+        </View>
+      </View>
+      <View style={styles.orderCardDetails}>
+        <Text style={styles.orderDetail}>Product: {item.raw_product?.product_name || 'N/A'}</Text>
+        <Text style={styles.orderDetail}>Quantity: {item.quantity} kg</Text>
+        <Text style={styles.orderDetail}>Target: {item.target_finish_date ? formatISTDate(item.target_finish_date) : 'N/A'}</Text>
+      </View>
+      <TouchableOpacity style={styles.planButtonCard}>
+        <Text style={styles.planButtonText}>Plan This Order</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'CREATED': return '#6b7280';
+      case 'PLANNED': return '#3b82f6';
+      case 'IN_PROGRESS': return '#f59e0b';
+      case 'COMPLETED': return '#10b981';
+      case 'CANCELLED': return '#ef4444';
+      default: return '#6b7280';
     }
   };
 
@@ -167,7 +232,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         })),
       };
 
-      const response = await productionOrderApi.validatePlanning(orderId, payload);
+      const response = await productionOrderApi.validatePlanning(selectedOrderId, payload);
       setValidationResult(response.data);
       
       if (response.data.valid) {
@@ -215,7 +280,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         })),
       };
 
-      await productionOrderApi.savePlanning(orderId, payload);
+      await productionOrderApi.savePlanning(selectedOrderId, payload);
       showSuccess('Planning saved successfully');
       navigation.goBack();
     } catch (error) {
@@ -238,9 +303,43 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     );
   }
 
+  if (!selectedOrderId) {
+    return (
+      <Layout title="Order Planning" navigation={navigation}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.pageTitle}>Select an Order to Plan</Text>
+            <Text style={styles.pageSubtitle}>Choose a production order to configure source bins and distribution</Text>
+          </View>
+          {orders.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No production orders found</Text>
+              <TouchableOpacity
+                style={styles.createOrderButton}
+                onPress={() => navigation.navigate('ProductionOrder')}
+              >
+                <Text style={styles.createOrderButtonText}>Create New Order</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={orders}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderOrderItem}
+              contentContainerStyle={styles.ordersList}
+            />
+          )}
+        </View>
+      </Layout>
+    );
+  }
+
   return (
     <Layout title="Production Order Planning" navigation={navigation}>
       <ScrollView style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackToOrderList}>
+          <Text style={styles.backButtonText}>← Back to Order List</Text>
+        </TouchableOpacity>
         <View style={styles.orderInfo}>
           <Text style={styles.orderTitle}>Order: {order?.order_number}</Text>
           <View style={styles.orderDetails}>
@@ -652,5 +751,95 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  header: {
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: colors.textLight,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.textLight,
+    marginBottom: 20,
+  },
+  createOrderButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  createOrderButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  ordersList: {
+    paddingBottom: 20,
+  },
+  orderCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+  },
+  orderCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  orderCardDetails: {
+    marginBottom: 12,
+  },
+  orderDetail: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginBottom: 4,
+  },
+  planButtonCard: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  planButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    marginBottom: 16,
+  },
+  backButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
