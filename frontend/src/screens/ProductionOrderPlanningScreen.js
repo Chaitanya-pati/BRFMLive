@@ -27,7 +27,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
 
   const [selectedSources, setSelectedSources] = useState([]);
   const [selectedDestinations, setSelectedDestinations] = useState([]);
-  const [validationResult, setValidationResult] = useState(null);
 
   useEffect(() => {
     if (selectedOrderId) {
@@ -96,7 +95,17 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     setOrder(null);
     setSelectedSources([]);
     setSelectedDestinations([]);
-    setValidationResult(null);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'CREATED': return '#6b7280';
+      case 'PLANNED': return '#3b82f6';
+      case 'IN_PROGRESS': return '#f59e0b';
+      case 'COMPLETED': return '#10b981';
+      case 'CANCELLED': return '#ef4444';
+      default: return '#6b7280';
+    }
   };
 
   const renderOrderItem = ({ item }) => (
@@ -106,8 +115,8 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     >
       <View style={styles.orderCardHeader}>
         <Text style={styles.orderNumber}>{item.order_number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+        <View style={[styles.statusBadgeSmall, { backgroundColor: getStatusColor(item.status) }]}>
+          <Text style={styles.statusTextSmall}>{item.status}</Text>
         </View>
       </View>
       <View style={styles.orderCardDetails}>
@@ -120,17 +129,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       </TouchableOpacity>
     </TouchableOpacity>
   );
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'CREATED': return '#6b7280';
-      case 'PLANNED': return '#3b82f6';
-      case 'IN_PROGRESS': return '#f59e0b';
-      case 'COMPLETED': return '#10b981';
-      case 'CANCELLED': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
 
   const addSourceBin = (binId) => {
     const bin = sourceBins.find(b => b.id === binId);
@@ -147,12 +145,10 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       quantity: 0,
       bin: bin,
     }]);
-    setValidationResult(null);
   };
 
   const removeSourceBin = (binId) => {
     setSelectedSources(selectedSources.filter(s => s.bin_id !== binId));
-    setValidationResult(null);
   };
 
   const updateSourceBin = (binId, field, value) => {
@@ -167,7 +163,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       }
       return s;
     }));
-    setValidationResult(null);
   };
 
   const addDestinationBin = (binId) => {
@@ -184,12 +179,10 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       quantity: 0,
       bin: bin,
     }]);
-    setValidationResult(null);
   };
 
   const removeDestinationBin = (binId) => {
     setSelectedDestinations(selectedDestinations.filter(d => d.bin_id !== binId));
-    setValidationResult(null);
   };
 
   const updateDestinationBin = (binId, value) => {
@@ -199,7 +192,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       }
       return d;
     }));
-    setValidationResult(null);
   };
 
   const calculateTotals = () => {
@@ -209,53 +201,29 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     return { totalPercentage, totalSourceQty, totalDistribution };
   };
 
-  const handleValidate = async () => {
-    if (selectedSources.length === 0) {
-      showError('Please add at least one source bin');
-      return;
-    }
-    if (selectedDestinations.length === 0) {
-      showError('Please add at least one destination bin');
-      return;
-    }
-
-    try {
-      const payload = {
-        source_bins: selectedSources.map(s => ({
-          bin_id: s.bin_id,
-          blend_percentage: s.blend_percentage,
-          quantity: s.quantity,
-        })),
-        destination_bins: selectedDestinations.map(d => ({
-          bin_id: d.bin_id,
-          quantity: d.quantity,
-        })),
-      };
-
-      const response = await productionOrderApi.validatePlanning(selectedOrderId, payload);
-      setValidationResult(response.data);
-      
-      if (response.data.valid) {
-        showSuccess('Configuration is valid');
-      }
-    } catch (error) {
-      console.error('Validation error:', error);
-      showError(error.response?.data?.detail || 'Validation failed');
-    }
-  };
+  const { totalPercentage, totalSourceQty, totalDistribution } = calculateTotals();
+  
+  const isBlendValid = Math.abs(totalPercentage - 100) < 0.01;
+  const isDistributionValid = Math.abs(totalDistribution - (order?.quantity || 0)) < 0.01;
+  const hasSourceBins = selectedSources.length > 0;
+  const hasDestinationBins = selectedDestinations.length > 0;
+  const isConfigValid = isBlendValid && isDistributionValid && hasSourceBins && hasDestinationBins;
 
   const handleSave = async () => {
-    if (selectedSources.length === 0) {
+    if (!hasSourceBins) {
       showError('Please add at least one source bin');
       return;
     }
-    if (selectedDestinations.length === 0) {
+    if (!hasDestinationBins) {
       showError('Please add at least one destination bin');
       return;
     }
-
-    if (!validationResult || !validationResult.valid) {
-      showError('Please validate the configuration first');
+    if (!isBlendValid) {
+      showError('Blend percentages must total 100%');
+      return;
+    }
+    if (!isDistributionValid) {
+      showError(`Distribution must equal ${order?.quantity} kg`);
       return;
     }
 
@@ -291,7 +259,13 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     }
   };
 
-  const { totalPercentage, totalSourceQty, totalDistribution } = calculateTotals();
+  const getAvailableSourceBins = () => {
+    return sourceBins.filter(b => !selectedSources.find(s => s.bin_id === b.id));
+  };
+
+  const getAvailableDestinationBins = () => {
+    return destinationBins.filter(b => !selectedDestinations.find(d => d.bin_id === b.id));
+  };
 
   if (loading) {
     return (
@@ -340,160 +314,258 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         <TouchableOpacity style={styles.backButton} onPress={handleBackToOrderList}>
           <Text style={styles.backButtonText}>← Back to Order List</Text>
         </TouchableOpacity>
-        <View style={styles.orderInfo}>
-          <Text style={styles.orderTitle}>Order: {order?.order_number}</Text>
-          <View style={styles.orderDetails}>
-            <Text style={styles.detailText}>Product: {order?.raw_product?.product_name}</Text>
-            <Text style={styles.detailText}>Quantity: {order?.quantity} kg</Text>
-            <Text style={styles.detailText}>Target Date: {formatISTDate(order?.target_finish_date)}</Text>
-            <Text style={[styles.statusBadge, { backgroundColor: getStatusColor(order?.status) }]}>
-              {order?.status}
-            </Text>
+
+        <View style={styles.orderInfoCard}>
+          <View style={styles.orderInfoHeader}>
+            <Text style={styles.orderTitle}>Order: {order?.order_number}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order?.status) }]}>
+              <Text style={styles.statusText}>{order?.status}</Text>
+            </View>
+          </View>
+          <View style={styles.orderInfoDetails}>
+            <View style={styles.orderInfoItem}>
+              <Text style={styles.orderInfoLabel}>Product</Text>
+              <Text style={styles.orderInfoValue}>{order?.raw_product?.product_name}</Text>
+            </View>
+            <View style={styles.orderInfoItem}>
+              <Text style={styles.orderInfoLabel}>Order Quantity</Text>
+              <Text style={styles.orderInfoValueLarge}>{order?.quantity} kg</Text>
+            </View>
+            <View style={styles.orderInfoItem}>
+              <Text style={styles.orderInfoLabel}>Target Date</Text>
+              <Text style={styles.orderInfoValue}>{formatISTDate(order?.target_finish_date)}</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Blend Sources (Raw Wheat Bins)</Text>
-          <Text style={styles.sectionSubtitle}>Configure the wheat blend percentages from source bins</Text>
-          
-          <View style={styles.binSelector}>
-            <Text style={styles.label}>Add Source Bin:</Text>
-            <View style={styles.binOptions}>
-              {sourceBins.filter(b => !selectedSources.find(s => s.bin_id === b.id)).map(bin => (
-                <TouchableOpacity
-                  key={bin.id}
-                  style={styles.binOption}
-                  onPress={() => addSourceBin(bin.id)}
-                >
-                  <Text style={styles.binOptionText}>{bin.bin_number}</Text>
-                  <Text style={styles.binOptionSubtext}>{bin.current_quantity} kg available</Text>
-                </TouchableOpacity>
-              ))}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Blend Sources (Raw Wheat Bins)</Text>
+              <Text style={styles.sectionSubtitle}>Configure the wheat blend percentages from source bins</Text>
+            </View>
+            <View style={[styles.validationBadge, isBlendValid ? styles.validBadge : styles.invalidBadge]}>
+              <Text style={[styles.validationBadgeText, isBlendValid ? styles.validText : styles.invalidText]}>
+                {isBlendValid ? '✓ Valid' : '✗ Invalid'}
+              </Text>
             </View>
           </View>
 
-          {selectedSources.map((source, index) => (
-            <View key={source.bin_id} style={styles.selectedBinRow}>
-              <View style={styles.binInfo}>
-                <Text style={styles.binName}>{source.bin?.bin_number}</Text>
-                <Text style={styles.binAvailable}>Available: {source.bin?.current_quantity} kg</Text>
+          {getAvailableSourceBins().length > 0 && (
+            <View style={styles.addBinSection}>
+              <Text style={styles.addBinLabel}>Add Source Bin:</Text>
+              <View style={styles.binChips}>
+                {getAvailableSourceBins().map(bin => (
+                  <TouchableOpacity
+                    key={bin.id}
+                    style={styles.addBinChip}
+                    onPress={() => addSourceBin(bin.id)}
+                  >
+                    <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
+                    <Text style={styles.addBinChipSubtext}>{bin.current_quantity} kg</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Blend %</Text>
-                <TextInput
-                  style={styles.input}
-                  value={source.blend_percentage.toString()}
-                  onChangeText={(v) => updateSourceBin(source.bin_id, 'blend_percentage', v)}
-                  keyboardType="numeric"
-                  placeholder="0"
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Quantity (kg)</Text>
-                <TextInput
-                  style={[styles.input, styles.readonlyInput]}
-                  value={source.quantity.toFixed(2)}
-                  editable={false}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeSourceBin(source.bin_id)}
-              >
-                <Text style={styles.removeButtonText}>×</Text>
-              </TouchableOpacity>
             </View>
-          ))}
+          )}
 
-          <View style={styles.totalsRow}>
-            <Text style={[styles.totalText, totalPercentage !== 100 && styles.errorText]}>
-              Total Blend: {totalPercentage.toFixed(1)}% {totalPercentage !== 100 && '(must be 100%)'}
-            </Text>
-            <Text style={styles.totalText}>Total Quantity: {totalSourceQty.toFixed(2)} kg</Text>
+          {selectedSources.length === 0 ? (
+            <View style={styles.emptyBinMessage}>
+              <Text style={styles.emptyBinText}>No source bins selected. Click on a bin above to add it.</Text>
+            </View>
+          ) : (
+            <View style={styles.binTable}>
+              <View style={styles.binTableHeader}>
+                <Text style={[styles.binTableHeaderCell, { flex: 2 }]}>Source Bin</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Available</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Blend %</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (kg)</Text>
+                <Text style={[styles.binTableHeaderCell, { width: 50 }]}>Action</Text>
+              </View>
+              {selectedSources.map((source) => (
+                <View key={source.bin_id} style={styles.binTableRow}>
+                  <View style={[styles.binTableCell, { flex: 2 }]}>
+                    <Text style={styles.binName}>{source.bin?.bin_number}</Text>
+                  </View>
+                  <View style={[styles.binTableCell, { flex: 1 }]}>
+                    <Text style={styles.binAvailable}>{source.bin?.current_quantity} kg</Text>
+                  </View>
+                  <View style={[styles.binTableCell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.tableInput}
+                      value={source.blend_percentage.toString()}
+                      onChangeText={(v) => updateSourceBin(source.bin_id, 'blend_percentage', v)}
+                      keyboardType="numeric"
+                      placeholder="0"
+                    />
+                  </View>
+                  <View style={[styles.binTableCell, { flex: 1 }]}>
+                    <Text style={styles.calculatedQty}>{source.quantity.toFixed(2)}</Text>
+                  </View>
+                  <View style={[styles.binTableCell, { width: 50, alignItems: 'center' }]}>
+                    <TouchableOpacity
+                      style={styles.removeBtn}
+                      onPress={() => removeSourceBin(source.bin_id)}
+                    >
+                      <Text style={styles.removeBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.totalRow}>
+            <View style={styles.totalItem}>
+              <Text style={styles.totalLabel}>Total Blend:</Text>
+              <Text style={[styles.totalValue, !isBlendValid && styles.errorValue]}>
+                {totalPercentage.toFixed(1)}%
+              </Text>
+              {!isBlendValid && <Text style={styles.errorHint}>(must be 100%)</Text>}
+            </View>
+            <View style={styles.totalItem}>
+              <Text style={styles.totalLabel}>Total Quantity:</Text>
+              <Text style={styles.totalValue}>{totalSourceQty.toFixed(2)} kg</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Distribution Destinations (24 Hours Bins)</Text>
-          <Text style={styles.sectionSubtitle}>Distribute the order quantity to destination bins</Text>
-          
-          <View style={styles.binSelector}>
-            <Text style={styles.label}>Add Destination Bin:</Text>
-            <View style={styles.binOptions}>
-              {destinationBins.filter(b => !selectedDestinations.find(d => d.bin_id === b.id)).map(bin => (
-                <TouchableOpacity
-                  key={bin.id}
-                  style={styles.binOption}
-                  onPress={() => addDestinationBin(bin.id)}
-                >
-                  <Text style={styles.binOptionText}>{bin.bin_number}</Text>
-                  <Text style={styles.binOptionSubtext}>{(bin.capacity - bin.current_quantity).toFixed(0)} kg capacity</Text>
-                </TouchableOpacity>
-              ))}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Distribution Destinations (24 Hours Bins)</Text>
+              <Text style={styles.sectionSubtitle}>Distribute the order quantity to destination bins</Text>
+            </View>
+            <View style={[styles.validationBadge, isDistributionValid ? styles.validBadge : styles.invalidBadge]}>
+              <Text style={[styles.validationBadgeText, isDistributionValid ? styles.validText : styles.invalidText]}>
+                {isDistributionValid ? '✓ Valid' : '✗ Invalid'}
+              </Text>
             </View>
           </View>
 
-          {selectedDestinations.map((dest, index) => (
-            <View key={dest.bin_id} style={styles.selectedBinRow}>
-              <View style={styles.binInfo}>
-                <Text style={styles.binName}>{dest.bin?.bin_number}</Text>
-                <Text style={styles.binAvailable}>
-                  Capacity: {((dest.bin?.capacity || 0) - (dest.bin?.current_quantity || 0)).toFixed(0)} kg
+          {getAvailableDestinationBins().length > 0 && (
+            <View style={styles.addBinSection}>
+              <Text style={styles.addBinLabel}>Add Destination Bin:</Text>
+              <View style={styles.binChips}>
+                {getAvailableDestinationBins().map(bin => (
+                  <TouchableOpacity
+                    key={bin.id}
+                    style={[styles.addBinChip, styles.addBinChipDest]}
+                    onPress={() => addDestinationBin(bin.id)}
+                  >
+                    <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
+                    <Text style={styles.addBinChipSubtext}>{((bin.capacity || 0) - (bin.current_quantity || 0)).toFixed(0)} kg free</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {selectedDestinations.length === 0 ? (
+            <View style={styles.emptyBinMessage}>
+              <Text style={styles.emptyBinText}>No destination bins selected. Click on a bin above to add it.</Text>
+            </View>
+          ) : (
+            <View style={styles.binTable}>
+              <View style={styles.binTableHeader}>
+                <Text style={[styles.binTableHeaderCell, { flex: 2 }]}>Destination Bin</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Capacity Free</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (kg)</Text>
+                <Text style={[styles.binTableHeaderCell, { width: 50 }]}>Action</Text>
+              </View>
+              {selectedDestinations.map((dest) => (
+                <View key={dest.bin_id} style={styles.binTableRow}>
+                  <View style={[styles.binTableCell, { flex: 2 }]}>
+                    <Text style={styles.binName}>{dest.bin?.bin_number}</Text>
+                  </View>
+                  <View style={[styles.binTableCell, { flex: 1 }]}>
+                    <Text style={styles.binAvailable}>
+                      {((dest.bin?.capacity || 0) - (dest.bin?.current_quantity || 0)).toFixed(0)} kg
+                    </Text>
+                  </View>
+                  <View style={[styles.binTableCell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.tableInput}
+                      value={dest.quantity.toString()}
+                      onChangeText={(v) => updateDestinationBin(dest.bin_id, v)}
+                      keyboardType="numeric"
+                      placeholder="0"
+                    />
+                  </View>
+                  <View style={[styles.binTableCell, { width: 50, alignItems: 'center' }]}>
+                    <TouchableOpacity
+                      style={styles.removeBtn}
+                      onPress={() => removeDestinationBin(dest.bin_id)}
+                    >
+                      <Text style={styles.removeBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.totalRow}>
+            <View style={styles.totalItem}>
+              <Text style={styles.totalLabel}>Total Distribution:</Text>
+              <Text style={[styles.totalValue, !isDistributionValid && styles.errorValue]}>
+                {totalDistribution.toFixed(2)} kg
+              </Text>
+            </View>
+            <View style={styles.totalItem}>
+              <Text style={styles.totalLabel}>Required:</Text>
+              <Text style={styles.totalValue}>{order?.quantity} kg</Text>
+              {!isDistributionValid && (
+                <Text style={styles.errorHint}>
+                  ({totalDistribution > (order?.quantity || 0) ? 'over' : 'under'} by {Math.abs(totalDistribution - (order?.quantity || 0)).toFixed(2)} kg)
                 </Text>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Quantity (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={dest.quantity.toString()}
-                  onChangeText={(v) => updateDestinationBin(dest.bin_id, v)}
-                  keyboardType="numeric"
-                  placeholder="0"
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeDestinationBin(dest.bin_id)}
-              >
-                <Text style={styles.removeButtonText}>×</Text>
-              </TouchableOpacity>
+              )}
             </View>
-          ))}
-
-          <View style={styles.totalsRow}>
-            <Text style={[styles.totalText, Math.abs(totalDistribution - (order?.quantity || 0)) > 0.01 && styles.errorText]}>
-              Total Distribution: {totalDistribution.toFixed(2)} kg / {order?.quantity} kg required
-            </Text>
           </View>
         </View>
 
-        {validationResult && (
-          <View style={[styles.validationResult, validationResult.valid ? styles.validResult : styles.invalidResult]}>
-            <Text style={styles.validationTitle}>
-              {validationResult.valid ? '✓ Configuration Valid' : '✗ Validation Failed'}
-            </Text>
-            {validationResult.errors?.map((error, i) => (
-              <Text key={i} style={styles.errorMessage}>• {error}</Text>
-            ))}
-            {validationResult.warnings?.map((warning, i) => (
-              <Text key={i} style={styles.warningMessage}>⚠ {warning}</Text>
-            ))}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Configuration Summary</Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Source Bins</Text>
+              <View style={[styles.summaryStatus, hasSourceBins ? styles.summaryValid : styles.summaryInvalid]}>
+                <Text style={styles.summaryStatusText}>{selectedSources.length} selected</Text>
+              </View>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Blend Total</Text>
+              <View style={[styles.summaryStatus, isBlendValid ? styles.summaryValid : styles.summaryInvalid]}>
+                <Text style={styles.summaryStatusText}>{totalPercentage.toFixed(1)}%</Text>
+              </View>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Destination Bins</Text>
+              <View style={[styles.summaryStatus, hasDestinationBins ? styles.summaryValid : styles.summaryInvalid]}>
+                <Text style={styles.summaryStatusText}>{selectedDestinations.length} selected</Text>
+              </View>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Distribution</Text>
+              <View style={[styles.summaryStatus, isDistributionValid ? styles.summaryValid : styles.summaryInvalid]}>
+                <Text style={styles.summaryStatusText}>{totalDistribution.toFixed(0)} / {order?.quantity} kg</Text>
+              </View>
+            </View>
           </View>
-        )}
+        </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.validateButton} onPress={handleValidate}>
-            <Text style={styles.buttonText}>Validate</Text>
-          </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.saveButton, (saving || !validationResult?.valid) && styles.disabledButton]}
+            style={[styles.saveButton, !isConfigValid && styles.disabledButton]}
             onPress={handleSave}
-            disabled={saving || !validationResult?.valid}
+            disabled={saving || !isConfigValid}
           >
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Save Planning</Text>
+              <Text style={styles.saveButtonText}>
+                {isConfigValid ? 'Save Planning' : 'Complete Configuration to Save'}
+              </Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
@@ -505,252 +577,16 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
   );
 }
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'CREATED': return colors.info;
-    case 'PLANNED': return colors.primary;
-    case 'IN_PROGRESS': return colors.warning;
-    case 'COMPLETED': return colors.success;
-    case 'CANCELLED': return colors.danger;
-    default: return colors.textLight;
-  }
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  orderInfo: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  orderTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  orderDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    alignItems: 'center',
-  },
-  detailText: {
-    fontSize: 14,
-    color: colors.textLight,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    overflow: 'hidden',
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: colors.textLight,
-    marginBottom: 16,
-  },
-  binSelector: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  binOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  binOption: {
-    backgroundColor: colors.lightBg,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 120,
-  },
-  binOptionText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  binOptionSubtext: {
-    fontSize: 11,
-    color: colors.textLight,
-  },
-  selectedBinRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.lightBg,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    gap: 12,
-  },
-  binInfo: {
-    flex: 1,
-    minWidth: 120,
-  },
-  binName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  binAvailable: {
-    fontSize: 11,
-    color: colors.textLight,
-  },
-  inputGroup: {
-    minWidth: 100,
-  },
-  inputLabel: {
-    fontSize: 11,
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 14,
-    minWidth: 80,
-  },
-  readonlyInput: {
-    backgroundColor: colors.lightBg,
-    color: colors.textLight,
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.danger,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    lineHeight: 22,
-  },
-  totalsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: 8,
-  },
-  totalText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  errorText: {
-    color: colors.danger,
-  },
-  validationResult: {
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  validResult: {
-    backgroundColor: '#d4edda',
-    borderColor: '#28a745',
-    borderWidth: 1,
-  },
-  invalidResult: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#dc3545',
-    borderWidth: 1,
-  },
-  validationTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  errorMessage: {
-    color: colors.danger,
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  warningMessage: {
-    color: colors.warning,
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 32,
-  },
-  validateButton: {
-    flex: 1,
-    backgroundColor: colors.info,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: colors.success,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   header: {
     marginBottom: 20,
@@ -759,11 +595,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 8,
   },
   pageSubtitle: {
     fontSize: 14,
     color: colors.textLight,
+    marginTop: 4,
   },
   emptyContainer: {
     flex: 1,
@@ -774,18 +610,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: colors.textLight,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   createOrderButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 12,
     paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
   },
   createOrderButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   ordersList: {
     paddingBottom: 20,
@@ -796,8 +631,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+    borderColor: '#e2e8f0',
   },
   orderCardHeader: {
     flexDirection: 'row',
@@ -810,10 +644,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text,
   },
-  statusText: {
+  statusBadgeSmall: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusTextSmall: {
     color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '600',
   },
   orderCardDetails: {
     marginBottom: 12,
@@ -831,14 +670,340 @@ const styles = StyleSheet.create({
   },
   planButtonText: {
     color: '#fff',
+    fontWeight: '600',
     fontSize: 14,
-    fontWeight: 'bold',
   },
   backButton: {
     marginBottom: 16,
   },
   backButtonText: {
     color: colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  orderInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  orderInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  orderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  orderInfoDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 24,
+  },
+  orderInfoItem: {},
+  orderInfoLabel: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginBottom: 4,
+  },
+  orderInfoValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  orderInfoValueLarge: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 4,
+  },
+  validationBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  validBadge: {
+    backgroundColor: '#dcfce7',
+  },
+  invalidBadge: {
+    backgroundColor: '#fee2e2',
+  },
+  validationBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  validText: {
+    color: '#16a34a',
+  },
+  invalidText: {
+    color: '#dc2626',
+  },
+  addBinSection: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  addBinLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  binChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  addBinChip: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderStyle: 'dashed',
+  },
+  addBinChipDest: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  addBinChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  addBinChipSubtext: {
+    fontSize: 11,
+    color: colors.textLight,
+  },
+  emptyBinMessage: {
+    backgroundColor: '#f8fafc',
+    padding: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyBinText: {
+    color: colors.textLight,
+    fontSize: 14,
+  },
+  binTable: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  binTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  binTableHeaderCell: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textLight,
+    textTransform: 'uppercase',
+  },
+  binTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    alignItems: 'center',
+  },
+  binTableCell: {
+    justifyContent: 'center',
+  },
+  binName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  binAvailable: {
+    fontSize: 13,
+    color: colors.textLight,
+  },
+  tableInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    width: 80,
+  },
+  calculatedQty: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  removeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fee2e2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeBtnText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  totalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: colors.textLight,
+  },
+  totalValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  errorValue: {
+    color: '#dc2626',
+  },
+  errorHint: {
+    fontSize: 12,
+    color: '#dc2626',
+  },
+  summaryCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: 120,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginBottom: 4,
+  },
+  summaryStatus: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  summaryValid: {
+    backgroundColor: '#dcfce7',
+  },
+  summaryInvalid: {
+    backgroundColor: '#fee2e2',
+  },
+  summaryStatusText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 40,
+  },
+  saveButton: {
+    flex: 2,
+    backgroundColor: '#16a34a',
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#9ca3af',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  cancelButtonText: {
+    color: colors.textLight,
     fontSize: 16,
     fontWeight: '500',
   },
