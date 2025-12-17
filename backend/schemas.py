@@ -1,6 +1,6 @@
 from pydantic import BaseModel, validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from utils.datetime_utils import format_ist_iso, parse_datetime
 
@@ -692,9 +692,6 @@ class ProductionOrderWithPlanning(ProductionOrderBase):
     raw_product: RawProduct
     source_bins: List[ProductionOrderSourceBinWithDetails] = []
     destination_bins: List[ProductionOrderDestinationBinWithDetails] = []
-
-    class Config:
-        from_attributes = True
 
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
