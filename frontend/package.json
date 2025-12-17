@@ -34,6 +34,6 @@
   "private": true,
   "devDependencies": {
     "@expo/cli": "^0.24.22",
-    "babel-preset-expo": "^54.0.6"
+    "babel-preset-expo": "^54.0.8"
   }
 }
