@@ -2402,6 +2402,174 @@ def delete_production_order(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Production order deleted successfully"}
 
+
+# Production Order Planning Endpoints
+@app.get("/api/production-orders/{order_id}/planning", response_model=schemas.ProductionOrderWithPlanning)
+def get_production_order_planning(order_id: int, db: Session = Depends(get_db)):
+    """Get production order with planning details (source and destination bins)"""
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    return db_order
+
+
+@app.get("/api/bins/source", response_model=List[schemas.Bin])
+def get_source_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
+    """Get all Raw Wheat bins available as blend sources"""
+    query = db.query(models.Bin).filter(models.Bin.bin_type == "Raw wheat bin")
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    return query.all()
+
+
+@app.get("/api/bins/destination", response_model=List[schemas.Bin])
+def get_destination_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
+    """Get all 24 Hours bins available as distribution destinations"""
+    query = db.query(models.Bin).filter(models.Bin.bin_type == "24 hours bin")
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    return query.all()
+
+
+@app.post("/api/production-orders/{order_id}/planning", response_model=schemas.ProductionOrderWithPlanning)
+def save_production_order_planning(
+    order_id: int,
+    planning: schemas.ProductionOrderPlanningCreate,
+    db: Session = Depends(get_db)
+):
+    """Save planning configuration for a production order with validations"""
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    
+    # Validation 1: Blend percentages must total 100%
+    total_percentage = sum(sb.blend_percentage for sb in planning.source_bins)
+    if abs(total_percentage - 100.0) > 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Blend percentages must total 100%. Current total: {total_percentage}%"
+        )
+    
+    # Validation 2: Check sufficient quantity in source bins
+    for source in planning.source_bins:
+        bin_obj = db.query(models.Bin).filter(models.Bin.id == source.bin_id).first()
+        if not bin_obj:
+            raise HTTPException(status_code=400, detail=f"Source bin {source.bin_id} not found")
+        if bin_obj.current_quantity < source.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient quantity in bin {bin_obj.bin_number}. Available: {bin_obj.current_quantity}, Requested: {source.quantity}"
+            )
+    
+    # Validation 3: Check destination bins capacity
+    for dest in planning.destination_bins:
+        bin_obj = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
+        if not bin_obj:
+            raise HTTPException(status_code=400, detail=f"Destination bin {dest.bin_id} not found")
+        available_capacity = bin_obj.capacity - bin_obj.current_quantity
+        if available_capacity < dest.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient capacity in bin {bin_obj.bin_number}. Available: {available_capacity}, Requested: {dest.quantity}"
+            )
+    
+    # Validation 4: Total distribution must equal order quantity
+    total_distribution = sum(d.quantity for d in planning.destination_bins)
+    if abs(total_distribution - db_order.quantity) > 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Total distribution ({total_distribution}) must equal order quantity ({db_order.quantity})"
+        )
+    
+    # Clear existing planning data
+    db.query(models.ProductionOrderSourceBin).filter(
+        models.ProductionOrderSourceBin.production_order_id == order_id
+    ).delete()
+    db.query(models.ProductionOrderDestinationBin).filter(
+        models.ProductionOrderDestinationBin.production_order_id == order_id
+    ).delete()
+    
+    # Add new source bins
+    for source in planning.source_bins:
+        db_source = models.ProductionOrderSourceBin(
+            production_order_id=order_id,
+            bin_id=source.bin_id,
+            blend_percentage=source.blend_percentage,
+            quantity=source.quantity
+        )
+        db.add(db_source)
+    
+    # Add new destination bins
+    for dest in planning.destination_bins:
+        db_dest = models.ProductionOrderDestinationBin(
+            production_order_id=order_id,
+            bin_id=dest.bin_id,
+            quantity=dest.quantity
+        )
+        db.add(db_dest)
+    
+    # Update order status to PLANNED
+    db_order.status = models.ProductionOrderStatus.PLANNED
+    
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+
+@app.post("/api/production-orders/{order_id}/planning/validate")
+def validate_production_order_planning(
+    order_id: int,
+    planning: schemas.ProductionOrderPlanningCreate,
+    db: Session = Depends(get_db)
+):
+    """Validate planning configuration without saving"""
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    
+    errors = []
+    warnings = []
+    
+    # Validation 1: Blend percentages must total 100%
+    total_percentage = sum(sb.blend_percentage for sb in planning.source_bins)
+    if abs(total_percentage - 100.0) > 0.01:
+        errors.append(f"Blend percentages must total 100%. Current total: {total_percentage}%")
+    
+    # Validation 2: Check sufficient quantity in source bins
+    for source in planning.source_bins:
+        bin_obj = db.query(models.Bin).filter(models.Bin.id == source.bin_id).first()
+        if not bin_obj:
+            errors.append(f"Source bin {source.bin_id} not found")
+        elif bin_obj.current_quantity < source.quantity:
+            errors.append(f"Insufficient quantity in bin {bin_obj.bin_number}. Available: {bin_obj.current_quantity}, Requested: {source.quantity}")
+        elif bin_obj.current_quantity < source.quantity * 1.1:
+            warnings.append(f"Low quantity warning for bin {bin_obj.bin_number}")
+    
+    # Validation 3: Check destination bins capacity
+    for dest in planning.destination_bins:
+        bin_obj = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
+        if not bin_obj:
+            errors.append(f"Destination bin {dest.bin_id} not found")
+        else:
+            available_capacity = bin_obj.capacity - bin_obj.current_quantity
+            if available_capacity < dest.quantity:
+                errors.append(f"Insufficient capacity in bin {bin_obj.bin_number}. Available: {available_capacity}, Requested: {dest.quantity}")
+    
+    # Validation 4: Total distribution must equal order quantity
+    total_distribution = sum(d.quantity for d in planning.destination_bins)
+    if abs(total_distribution - db_order.quantity) > 0.01:
+        errors.append(f"Total distribution ({total_distribution}) must equal order quantity ({db_order.quantity})")
+    
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "order_quantity": db_order.quantity,
+        "total_source_percentage": total_percentage,
+        "total_distribution": total_distribution
+    }
+
+
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")
