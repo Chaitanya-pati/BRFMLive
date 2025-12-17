@@ -138,6 +138,7 @@ export default function HomeScreen({ navigation }) {
     { title: 'Raw Products', route: 'RawProductMaster', icon: 'tasks', color: '#84cc16', adminOnly: false },
     { title: 'Finished Goods', route: 'FinishedGoodsMaster', icon: 'box', color: '#a855f7', adminOnly: false },
     { title: 'Production Orders', route: 'ProductionOrder', icon: 'cogs', color: '#ef4444', adminOnly: false },
+    { title: 'Order Planning', route: 'ProductionOrder', icon: 'cogs', color: '#f59e0b', adminOnly: false },
     { title: 'Precleaning Timeline', route: 'PrecleaningTimeline', icon: 'clock', color: '#6366f1', adminOnly: false },
   ];
 
