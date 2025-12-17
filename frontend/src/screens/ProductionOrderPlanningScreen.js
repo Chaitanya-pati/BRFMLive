@@ -189,6 +189,11 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       return;
     }
 
+    if (!validationResult || !validationResult.valid) {
+      showError('Please validate the configuration first');
+      return;
+    }
+
     const confirmed = await showConfirm(
       'Save Planning',
       'Are you sure you want to save this planning configuration? The order status will be updated to PLANNED.'
@@ -382,9 +387,9 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
             <Text style={styles.buttonText}>Validate</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.saveButton, saving && styles.disabledButton]}
+            style={[styles.saveButton, (saving || !validationResult?.valid) && styles.disabledButton]}
             onPress={handleSave}
-            disabled={saving}
+            disabled={saving || !validationResult?.valid}
           >
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
