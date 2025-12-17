@@ -115,7 +115,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         <Text style={styles.orderDetail}>Quantity: {item.quantity} kg</Text>
         <Text style={styles.orderDetail}>Target: {item.target_finish_date ? formatISTDate(item.target_finish_date) : 'N/A'}</Text>
       </View>
-      <TouchableOpacity style={styles.planButtonCard}>
+      <TouchableOpacity style={styles.planButtonCard} onPress={() => handleSelectOrder(item.id)}>
         <Text style={styles.planButtonText}>Plan This Order</Text>
       </TouchableOpacity>
     </TouchableOpacity>
