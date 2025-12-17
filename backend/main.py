@@ -990,6 +990,24 @@ def get_bins(skip: int = 0,
     return bins
 
 
+@app.get("/api/bins/source", response_model=List[schemas.Bin])
+def get_source_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
+    """Get all Raw Wheat bins available as blend sources"""
+    query = db.query(models.Bin).filter(models.Bin.bin_type == "Raw wheat bin")
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    return query.all()
+
+
+@app.get("/api/bins/destination", response_model=List[schemas.Bin])
+def get_destination_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
+    """Get all 24 Hours bins available as distribution destinations"""
+    query = db.query(models.Bin).filter(models.Bin.bin_type == "24 hours bin")
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    return query.all()
+
+
 @app.get("/api/bins/{bin_id}", response_model=schemas.Bin)
 def get_bin(bin_id: int, db: Session = Depends(get_db)):
     bin_data = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
@@ -2420,24 +2438,6 @@ def get_production_order_planning(order_id: int, db: Session = Depends(get_db)):
     if not db_order:
         raise HTTPException(status_code=404, detail="Production order not found")
     return db_order
-
-
-@app.get("/api/bins/source", response_model=List[schemas.Bin])
-def get_source_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
-    """Get all Raw Wheat bins available as blend sources"""
-    query = db.query(models.Bin).filter(models.Bin.bin_type == "Raw wheat bin")
-    if branch_id:
-        query = query.filter(models.Bin.branch_id == branch_id)
-    return query.all()
-
-
-@app.get("/api/bins/destination", response_model=List[schemas.Bin])
-def get_destination_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
-    """Get all 24 Hours bins available as distribution destinations"""
-    query = db.query(models.Bin).filter(models.Bin.bin_type == "24 hours bin")
-    if branch_id:
-        query = query.filter(models.Bin.branch_id == branch_id)
-    return query.all()
 
 
 @app.post("/api/production-orders/{order_id}/planning", response_model=schemas.ProductionOrderWithPlanning)
