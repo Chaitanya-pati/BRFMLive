@@ -439,6 +439,7 @@ class FinishedGood(Base):
 
 class ProductionOrderStatus(str, enum.Enum):
     CREATED = "CREATED"
+    PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
@@ -459,3 +460,32 @@ class ProductionOrder(Base):
 
     branch = relationship("Branch")
     raw_product = relationship("RawProduct", back_populates="production_orders")
+    source_bins = relationship("ProductionOrderSourceBin", back_populates="production_order", cascade="all, delete-orphan")
+    destination_bins = relationship("ProductionOrderDestinationBin", back_populates="production_order", cascade="all, delete-orphan")
+
+class ProductionOrderSourceBin(Base):
+    __tablename__ = "production_order_source_bins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    blend_percentage = Column(Float, nullable=False)
+    quantity = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    production_order = relationship("ProductionOrder", back_populates="source_bins")
+    bin = relationship("Bin")
+
+class ProductionOrderDestinationBin(Base):
+    __tablename__ = "production_order_destination_bins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    production_order = relationship("ProductionOrder", back_populates="destination_bins")
+    bin = relationship("Bin")

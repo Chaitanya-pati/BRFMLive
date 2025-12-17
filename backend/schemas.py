@@ -553,6 +553,7 @@ class LoginResponse(ISTModel):
 
 class ProductionOrderStatusEnum(str, Enum):
     CREATED = "CREATED"
+    PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
@@ -622,6 +623,78 @@ class ProductionOrder(ProductionOrderBase):
     branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+
+# Production Order Source Bin Schemas (Blend Configuration)
+class ProductionOrderSourceBinBase(BaseModel):
+    bin_id: int
+    blend_percentage: float
+    quantity: float
+
+class ProductionOrderSourceBinCreate(ProductionOrderSourceBinBase):
+    pass
+
+class ProductionOrderSourceBin(ProductionOrderSourceBinBase):
+    id: int
+    production_order_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProductionOrderSourceBinWithDetails(ProductionOrderSourceBinBase):
+    id: int
+    production_order_id: int
+    bin: Bin
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Production Order Destination Bin Schemas (Distribution Configuration)
+class ProductionOrderDestinationBinBase(BaseModel):
+    bin_id: int
+    quantity: float
+
+class ProductionOrderDestinationBinCreate(ProductionOrderDestinationBinBase):
+    pass
+
+class ProductionOrderDestinationBin(ProductionOrderDestinationBinBase):
+    id: int
+    production_order_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProductionOrderDestinationBinWithDetails(ProductionOrderDestinationBinBase):
+    id: int
+    production_order_id: int
+    bin: Bin
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Planning Configuration Schema
+class ProductionOrderPlanningCreate(BaseModel):
+    source_bins: List[ProductionOrderSourceBinCreate]
+    destination_bins: List[ProductionOrderDestinationBinCreate]
+
+class ProductionOrderWithPlanning(ProductionOrderBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    raw_product: RawProduct
+    source_bins: List[ProductionOrderSourceBinWithDetails] = []
+    destination_bins: List[ProductionOrderDestinationBinWithDetails] = []
+
+    class Config:
+        from_attributes = True
 
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
