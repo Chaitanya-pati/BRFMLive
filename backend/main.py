@@ -2280,8 +2280,11 @@ def create_raw_product(product: schemas.RawProductCreate, branch_id: Optional[in
     return db_product
 
 @app.get("/api/raw-products", response_model=List[schemas.RawProduct])
-def get_raw_products(db: Session = Depends(get_db)):
-    return db.query(models.RawProduct).all()
+def get_raw_products(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
+    query = db.query(models.RawProduct)
+    if branch_id:
+        query = query.filter(models.RawProduct.branch_id == branch_id)
+    return query.all()
 
 @app.get("/api/raw-products/{product_id}", response_model=schemas.RawProduct)
 def get_raw_product(product_id: int, db: Session = Depends(get_db)):
@@ -2319,8 +2322,11 @@ def create_finished_good(product: schemas.FinishedGoodCreate, branch_id: Optiona
     return db_product
 
 @app.get("/api/finished-goods", response_model=List[schemas.FinishedGood])
-def get_finished_goods(db: Session = Depends(get_db)):
-    return db.query(models.FinishedGood).all()
+def get_finished_goods(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
+    query = db.query(models.FinishedGood)
+    if branch_id:
+        query = query.filter(models.FinishedGood.branch_id == branch_id)
+    return query.all()
 
 @app.get("/api/finished-goods/{product_id}", response_model=schemas.FinishedGood)
 def get_finished_good(product_id: int, db: Session = Depends(get_db)):
@@ -2366,8 +2372,11 @@ def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Opt
     return db_order
 
 @app.get("/api/production-orders", response_model=List[schemas.ProductionOrderWithProduct])
-def get_production_orders(db: Session = Depends(get_db)):
-    return db.query(models.ProductionOrder).all()
+def get_production_orders(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
+    query = db.query(models.ProductionOrder)
+    if branch_id:
+        query = query.filter(models.ProductionOrder.branch_id == branch_id)
+    return query.all()
 
 @app.get("/api/production-orders/{order_id}", response_model=schemas.ProductionOrderWithProduct)
 def get_production_order(order_id: int, db: Session = Depends(get_db)):

@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Modal as RNModal,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
@@ -17,6 +19,7 @@ import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { useFormSubmission } from '../utils/useFormSubmission';
 import { formatISTDate } from '../utils/dateUtils';
+import { useBranch } from '../context/BranchContext';
 
 const ORDER_STATUSES = [
   { value: 'CREATED', label: 'Created' },
@@ -27,12 +30,15 @@ const ORDER_STATUSES = [
 ];
 
 export default function ProductionOrderScreen({ navigation }) {
+  const { activeBranch } = useBranch();
   const [orders, setOrders] = useState([]);
   const [rawProducts, setRawProducts] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState('date');
 
   const [formData, setFormData] = useState({
     order_number: '',
@@ -125,6 +131,7 @@ export default function ProductionOrderScreen({ navigation }) {
         order_date: formData.order_date ? new Date(formData.order_date).toISOString() : new Date().toISOString(),
         target_finish_date: new Date(formData.target_finish_date).toISOString(),
         status: formData.status,
+        branch_id: activeBranch?.id,
       };
 
       if (editMode && currentOrder) {
@@ -199,6 +206,16 @@ export default function ProductionOrderScreen({ navigation }) {
 
   const handlePlan = (order) => {
     navigation.navigate('ProductionOrderPlanning', { orderId: order.id });
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString().split('T')[0];
+      setFormData({ ...formData, target_finish_date: dateString });
+    }
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
   };
 
   const renderActions = (item) => (
@@ -287,12 +304,26 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             <Text style={styles.label}>Target Finish Date *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.target_finish_date}
-              onChangeText={(text) => setFormData({ ...formData, target_finish_date: text })}
-              placeholder="YYYY-MM-DD"
-            />
+            <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+              <Text style={{ color: formData.target_finish_date ? colors.textDark : colors.textLight }}>
+                {formData.target_finish_date ? formData.target_finish_date : 'Select date'}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
+            {Platform.OS === 'ios' && showDatePicker && (
+              <View style={styles.datePickerFooter}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.datePickerButton}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {editMode && (
               <>

@@ -15,8 +15,10 @@ import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { useFormSubmission } from '../utils/useFormSubmission';
 import { formatISTDate } from '../utils/dateUtils';
+import { useBranch } from '../context/BranchContext';
 
 export default function RawProductMasterScreen({ navigation }) {
+  const { activeBranch } = useBranch();
   const [products, setProducts] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -80,6 +82,7 @@ export default function RawProductMasterScreen({ navigation }) {
       const payload = {
         product_name: trimmedName,
         product_initial: trimmedInitial.toUpperCase(),
+        branch_id: activeBranch?.id,
       };
 
       if (editMode && currentProduct) {
