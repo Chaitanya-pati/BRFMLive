@@ -12,7 +12,13 @@ import {
   FaUsers,
   FaUserPlus,
   FaCar,
-  FaChartBar
+  FaChartBar,
+  FaBox,
+  FaCogs,
+  FaRoute,
+  FaFilePdf,
+  FaTasks,
+  FaWarehouse
 } from 'react-icons/fa';
 import { useBranch } from '../context/BranchContext';
 import { storage } from '../utils/storage';
@@ -30,6 +36,12 @@ const Icon = ({ name, size = 36, color }) => {
     'person-add': FaUserPlus,
     'car': FaCar,
     'chart-bar': FaChartBar,
+    'box': FaBox,
+    'cogs': FaCogs,
+    'route': FaRoute,
+    'file-pdf': FaFilePdf,
+    'tasks': FaTasks,
+    'warehouse': FaWarehouse,
   };
 
   const IconComponent = iconMap[name] || FaBuilding;
@@ -119,6 +131,14 @@ export default function HomeScreen({ navigation }) {
     { title: 'Vehicle Entry', route: 'VehicleEntry', icon: 'car', color: '#f43f5e', adminOnly: false },
     { title: 'New Lab Test', route: 'LabTest', icon: 'flask', color: '#10b981', adminOnly: false },
     { title: 'Daily Report', route: 'DailyReport', icon: 'chart-bar', color: '#8b5cf6', adminOnly: false },
+    { title: 'Unloading Entry', route: 'UnloadingEntry', icon: 'warehouse', color: '#ec4899', adminOnly: false },
+    { title: 'Precleaning Bin', route: 'PrecleaningBin', icon: 'box', color: '#14b8a6', adminOnly: false },
+    { title: 'Route Config', route: 'RouteConfiguration', icon: 'route', color: '#f97316', adminOnly: false },
+    { title: 'Reports', route: 'Reports', icon: 'file-pdf', color: '#06b6d4', adminOnly: false },
+    { title: 'Raw Products', route: 'RawProductMaster', icon: 'tasks', color: '#84cc16', adminOnly: false },
+    { title: 'Finished Goods', route: 'FinishedGoodsMaster', icon: 'box', color: '#a855f7', adminOnly: false },
+    { title: 'Production Orders', route: 'ProductionOrder', icon: 'cogs', color: '#ef4444', adminOnly: false },
+    { title: 'Precleaning Timeline', route: 'PrecleaningTimeline', icon: 'clock', color: '#6366f1', adminOnly: false },
   ];
 
   const quickActions = allQuickActions.filter(action => 

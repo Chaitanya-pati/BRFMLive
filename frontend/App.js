@@ -130,6 +130,7 @@ export default function App() {
           <Stack.Screen name="RawProductMaster" component={RawProductMasterScreen} />
           <Stack.Screen name="FinishedGoodsMaster" component={FinishedGoodsMasterScreen} />
           <Stack.Screen name="ProductionOrder" component={ProductionOrderScreen} />
+          <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}
