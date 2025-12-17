@@ -9,7 +9,6 @@ import {
   Platform,
   Modal as RNModal,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
@@ -31,8 +30,6 @@ const ORDER_STATUSES = [
 ];
 
 export default function ProductionOrderScreen({ navigation }) {
-  const route = useRoute();
-  const planningMode = route.params?.planningMode || false;
   const { activeBranch } = useBranch();
   const [orders, setOrders] = useState([]);
   const [rawProducts, setRawProducts] = useState([]);
@@ -226,29 +223,23 @@ export default function ProductionOrderScreen({ navigation }) {
       <TouchableOpacity style={styles.planButton} onPress={() => handlePlan(item)}>
         <Text style={styles.buttonText}>Plan</Text>
       </TouchableOpacity>
-      {!planningMode && (
-        <>
-          <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
-            <Text style={styles.buttonText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-            <Text style={styles.buttonText}>Delete</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
+        <Text style={styles.buttonText}>Edit</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
+        <Text style={styles.buttonText}>Delete</Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
-    <Layout title={planningMode ? "Order Planning" : "Production Orders"} navigation={navigation}>
+    <Layout title="Production Orders" navigation={navigation}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>{planningMode ? "Order Planning" : "Production Orders"}</Text>
-          {!planningMode && (
-            <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-              <Text style={styles.addButtonText}>+ Create Order</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.title}>Production Orders</Text>
+          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+            <Text style={styles.addButtonText}>+ Create Order</Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
