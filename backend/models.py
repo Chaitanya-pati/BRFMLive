@@ -453,7 +453,7 @@ class ProductionOrder(Base):
     quantity = Column(Float, nullable=False)
     order_date = Column(DateTime, default=get_utc_now)
     target_finish_date = Column(DateTime, nullable=False)
-    status = Column(Enum(ProductionOrderStatus), default=ProductionOrderStatus.CREATED, nullable=False)
+    status = Column(String(20), default="CREATED", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)

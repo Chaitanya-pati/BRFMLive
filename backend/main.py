@@ -2381,7 +2381,7 @@ def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Opt
         quantity=order.quantity,
         order_date=order.order_date or get_utc_now(),
         target_finish_date=order.target_finish_date,
-        status=order.status or models.ProductionOrderStatus.CREATED,
+        status=order.status or "CREATED",
         branch_id=branch_id or order.branch_id
     )
     db.add(db_order)
@@ -2518,7 +2518,7 @@ def save_production_order_planning(
         db.add(db_dest)
     
     # Update order status to PLANNED
-    db_order.status = models.ProductionOrderStatus.PLANNED
+    db_order.status = "PLANNED"
     
     db.commit()
     db.refresh(db_order)
