@@ -2711,11 +2711,19 @@ def divert_transfer(
     
     transfer.updated_by = user_id
     
+    # Get the planned quantity for the new destination bin from configuration
+    dest_bin_config = db.query(models.ProductionOrderDestinationBin).filter(
+        models.ProductionOrderDestinationBin.production_order_id == transfer.production_order_id,
+        models.ProductionOrderDestinationBin.bin_id == next_bin_id
+    ).first()
+    
+    quantity_for_new_bin = dest_bin_config.quantity if dest_bin_config else transfer.quantity_planned
+    
     # Create new transfer for next destination bin
     new_transfer = models.TransferRecording(
         production_order_id=transfer.production_order_id,
         destination_bin_id=next_bin_id,
-        quantity_planned=transfer.quantity_planned,
+        quantity_planned=quantity_for_new_bin,
         status=models.TransferRecordingStatus.IN_PROGRESS,
         transfer_start_time=get_utc_now(),
         created_by=user_id

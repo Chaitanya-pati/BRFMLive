@@ -228,8 +228,16 @@ export default function TransferRecordingScreen({ navigation }) {
   // Calculate available bins for divert using useMemo to prevent hook violations
   const availableBinsForDivert = useMemo(() => {
     if (!selectedBin || !destinationBins) return [];
-    return destinationBins.filter((bin) => bin.bin_id !== selectedBin.bin_id);
-  }, [destinationBins, selectedBin]);
+    
+    // Get completed transfer bin IDs
+    const completedBinIds = transferHistory
+      .filter(t => t.status === 'COMPLETED')
+      .map(t => t.destination_bin_id);
+    
+    return destinationBins.filter(
+      (bin) => bin.bin_id !== selectedBin.bin_id && !completedBinIds.includes(bin.bin_id)
+    );
+  }, [destinationBins, selectedBin, transferHistory]);
 
   // STAGE: SELECT ORDER
   if (stage === STAGES.SELECT_ORDER) {
