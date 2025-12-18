@@ -496,11 +496,10 @@ class TransferRecordingStatus(str, enum.Enum):
     COMPLETED = "COMPLETED"
 
 class TransferRecording(Base):
-    __tablename__ = "transfer_recordings"
+    __tablename__ = "24hours_transfer_records"
 
     id = Column(Integer, primary_key=True, index=True)
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
-    source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False)
     quantity_planned = Column(Float, nullable=False)
@@ -516,7 +515,6 @@ class TransferRecording(Base):
     updated_by = Column(Integer, ForeignKey("users.id"))
 
     production_order = relationship("ProductionOrder")
-    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
     created_by_user = relationship("User", foreign_keys=[created_by])
     updated_by_user = relationship("User", foreign_keys=[updated_by])

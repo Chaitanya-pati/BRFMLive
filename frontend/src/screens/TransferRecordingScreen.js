@@ -329,7 +329,7 @@ export default function TransferRecordingScreen({ navigation }) {
               <Text style={styles.historyTitle}>Recent Transfers</Text>
               {transferHistory.slice(0, 3).map((transfer) => (
                 <View key={transfer?.id} style={styles.historyCard}>
-                  <Text style={styles.historyBin}>{transfer?.source_bin?.bin_number} → {transfer?.destination_bin?.bin_number}</Text>
+                  <Text style={styles.historyBin}>To Bin: {transfer?.destination_bin?.bin_number}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: transfer?.status === 'COMPLETED' ? '#10b981' : '#f97316' }]}>
                     <Text style={styles.statusText}>{transfer?.status}</Text>
                   </View>
@@ -357,11 +357,7 @@ export default function TransferRecordingScreen({ navigation }) {
 
             <View style={styles.detailsSection}>
               <View style={styles.detailRow}>
-                <Text style={styles.label}>From:</Text>
-                <Text style={styles.value}>{currentTransfer?.source_bin?.bin_number}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>To:</Text>
+                <Text style={styles.label}>To Bin:</Text>
                 <Text style={styles.value}>{currentTransfer?.destination_bin?.bin_number}</Text>
               </View>
               <View style={styles.detailRow}>

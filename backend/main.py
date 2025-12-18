@@ -2624,17 +2624,9 @@ def start_transfer(
     if not dest_bin_config:
         raise HTTPException(status_code=404, detail="Destination bin not configured for this order")
     
-    # Get first source bin (you can extend this for multiple source bins)
-    source_bin = db.query(models.ProductionOrderSourceBin).filter(
-        models.ProductionOrderSourceBin.production_order_id == data.production_order_id
-    ).first()
-    if not source_bin:
-        raise HTTPException(status_code=404, detail="No source bins configured")
-    
     # Create transfer recording
     transfer = models.TransferRecording(
         production_order_id=data.production_order_id,
-        source_bin_id=source_bin.bin_id,
         destination_bin_id=data.destination_bin_id,
         quantity_planned=dest_bin_config.quantity,
         status=models.TransferRecordingStatus.IN_PROGRESS,
@@ -2719,17 +2711,9 @@ def divert_transfer(
     
     transfer.updated_by = user_id
     
-    # Get source bin from current transfer
-    source_bins = db.query(models.ProductionOrderSourceBin).filter(
-        models.ProductionOrderSourceBin.production_order_id == transfer.production_order_id
-    ).all()
-    if not source_bins:
-        raise HTTPException(status_code=404, detail="No source bins found")
-    
     # Create new transfer for next destination bin
     new_transfer = models.TransferRecording(
         production_order_id=transfer.production_order_id,
-        source_bin_id=source_bins[0].bin_id,
         destination_bin_id=next_bin_id,
         quantity_planned=transfer.quantity_planned,
         status=models.TransferRecordingStatus.IN_PROGRESS,

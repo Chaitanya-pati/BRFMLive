@@ -701,7 +701,6 @@ class TransferRecordingStatusEnum(str, Enum):
 
 class TransferRecordingBase(ISTModel):
     production_order_id: int
-    source_bin_id: int
     destination_bin_id: int
     quantity_planned: float
 
@@ -734,9 +733,8 @@ class TransferRecording(TransferRecordingBase):
         from_attributes = True
 
 class TransferRecordingWithDetails(TransferRecording):
-    source_bin: Bin
     destination_bin: Bin
-    production_order: ProductionOrderBase
+    production_order: ProductionOrderWithPlanning
 
     class Config:
         from_attributes = True
