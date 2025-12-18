@@ -278,7 +278,7 @@ export default function TransferRecordingScreen({ navigation }) {
           <View style={styles.header}>
             <Text style={styles.title}>Select Destination Bin</Text>
             <Button
-              text="← Back"
+              title="← Back"
               onPress={() => {
                 setStage(STAGES.SELECT_ORDER);
                 setSelectedOrder(null);
@@ -313,7 +313,7 @@ export default function TransferRecordingScreen({ navigation }) {
                     <Text style={styles.binDetail}>To Transfer: {item.quantity} kg</Text>
                   </View>
                   <Button
-                    text="START"
+                    title="START"
                     onPress={() => handleStartTransfer(item)}
                     style={styles.startBtn}
                   />
@@ -387,7 +387,7 @@ export default function TransferRecordingScreen({ navigation }) {
 
           <View style={styles.actionsContainer}>
             <Button
-              text="Stop Transfer"
+              title="Stop Transfer"
               onPress={handleCompleteTransfer}
               style={styles.actionBtn}
             />
@@ -443,7 +443,7 @@ export default function TransferRecordingScreen({ navigation }) {
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={({ item }) => (
                       <Button
-                        text={`Divert to ${item.bin.bin_number}`}
+                        title={`Divert to ${item.bin.bin_number}`}
                         onPress={() => handleDivertBin(item)}
                         loading={loading}
                         style={styles.divertBtn}
@@ -454,14 +454,14 @@ export default function TransferRecordingScreen({ navigation }) {
               )}
 
               <Button
-                text="Stop Transfer"
+                title="Stop Transfer"
                 onPress={handleStopTransfer}
                 loading={loading}
                 style={styles.stopBtn}
               />
 
               <Button
-                text="Back"
+                title="Back"
                 onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
                 variant="secondary"
                 style={styles.backBtn}
@@ -563,13 +563,18 @@ const styles = StyleSheet.create({
   },
   binCard: {
     backgroundColor: colors.white,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     marginVertical: 8,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
+    justifyContent: "space-between",
+    borderWidth: 2,
     borderColor: colors.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   binCardContent: {
     flex: 1,
@@ -586,10 +591,12 @@ const styles = StyleSheet.create({
   },
   startBtn: {
     marginLeft: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   backBtn: {
     paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   historySection: {
     marginTop: 24,
@@ -742,9 +749,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   divertBtn: {
-    marginVertical: 6,
+    marginVertical: 8,
+    backgroundColor: "#06b6d4",
+    paddingVertical: 12,
   },
   stopBtn: {
-    marginVertical: 8,
+    marginVertical: 12,
+    backgroundColor: "#10b981",
+    paddingVertical: 14,
   },
 });
