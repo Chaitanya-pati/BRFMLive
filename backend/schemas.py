@@ -693,6 +693,54 @@ class ProductionOrderWithPlanning(ProductionOrderBase):
     source_bins: List[ProductionOrderSourceBinWithDetails] = []
     destination_bins: List[ProductionOrderDestinationBinWithDetails] = []
 
+# Transfer Recording Schemas
+class TransferRecordingStatusEnum(str, Enum):
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+class TransferRecordingBase(ISTModel):
+    production_order_id: int
+    source_bin_id: int
+    destination_bin_id: int
+    quantity_planned: float
+
+class TransferRecordingCreate(TransferRecordingBase):
+    pass
+
+class TransferRecordingStartTransfer(BaseModel):
+    production_order_id: int
+    destination_bin_id: int
+
+class TransferRecordingCompleteTransfer(BaseModel):
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+
+class TransferRecording(TransferRecordingBase):
+    id: int
+    status: TransferRecordingStatusEnum
+    quantity_transferred: Optional[float] = None
+    transfer_start_time: Optional[datetime] = None
+    transfer_end_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    updated_by: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class TransferRecordingWithDetails(TransferRecording):
+    source_bin: Bin
+    destination_bin: Bin
+    production_order: ProductionOrderBase
+
+    class Config:
+        from_attributes = True
+
 # Resolve forward references
 VehicleEntryWithLabTests.model_rebuild()
 BinTransferWithBin.model_rebuild()

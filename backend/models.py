@@ -489,3 +489,34 @@ class ProductionOrderDestinationBin(Base):
 
     production_order = relationship("ProductionOrder", back_populates="destination_bins")
     bin = relationship("Bin")
+
+class TransferRecordingStatus(str, enum.Enum):
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+class TransferRecording(Base):
+    __tablename__ = "transfer_recordings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False)
+    quantity_planned = Column(Float, nullable=False)
+    quantity_transferred = Column(Float, default=0.0)
+    transfer_start_time = Column(DateTime)
+    transfer_end_time = Column(DateTime)
+    duration_minutes = Column(Integer)
+    water_added = Column(Float)
+    moisture_level = Column(Float)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    updated_by = Column(Integer, ForeignKey("users.id"))
+
+    production_order = relationship("ProductionOrder")
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    created_by_user = relationship("User", foreign_keys=[created_by])
+    updated_by_user = relationship("User", foreign_keys=[updated_by])

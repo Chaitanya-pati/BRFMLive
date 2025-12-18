@@ -2579,6 +2579,179 @@ def validate_production_order_planning(
     }
 
 
+# ===================== TRANSFER RECORDING ENDPOINTS =====================
+
+@app.get("/api/transfer/planned-orders", response_model=List[schemas.ProductionOrderWithPlanning])
+def get_planned_orders(branch_id: Optional[int] = Header(None), db: Session = Depends(get_db)):
+    """Get all PLANNED production orders with their destination bins"""
+    query = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.status == models.ProductionOrderStatus.PLANNED
+    )
+    if branch_id:
+        query = query.filter(models.ProductionOrder.branch_id == branch_id)
+    
+    orders = query.all()
+    return orders
+
+
+@app.get("/api/transfer/destination-bins/{order_id}", response_model=List[schemas.ProductionOrderDestinationBinWithDetails])
+def get_destination_bins(order_id: int, db: Session = Depends(get_db)):
+    """Get destination bins for a production order"""
+    dest_bins = db.query(models.ProductionOrderDestinationBin).filter(
+        models.ProductionOrderDestinationBin.production_order_id == order_id
+    ).all()
+    return dest_bins
+
+
+@app.post("/api/transfer/start", response_model=schemas.TransferRecordingWithDetails)
+def start_transfer(
+    data: schemas.TransferRecordingStartTransfer,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Start transfer from source bins to destination bin"""
+    # Get production order and destination bins configuration
+    prod_order = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.id == data.production_order_id
+    ).first()
+    if not prod_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    
+    dest_bin_config = db.query(models.ProductionOrderDestinationBin).filter(
+        models.ProductionOrderDestinationBin.production_order_id == data.production_order_id,
+        models.ProductionOrderDestinationBin.bin_id == data.destination_bin_id
+    ).first()
+    if not dest_bin_config:
+        raise HTTPException(status_code=404, detail="Destination bin not configured for this order")
+    
+    # Get first source bin (you can extend this for multiple source bins)
+    source_bin = db.query(models.ProductionOrderSourceBin).filter(
+        models.ProductionOrderSourceBin.production_order_id == data.production_order_id
+    ).first()
+    if not source_bin:
+        raise HTTPException(status_code=404, detail="No source bins configured")
+    
+    # Create transfer recording
+    transfer = models.TransferRecording(
+        production_order_id=data.production_order_id,
+        source_bin_id=source_bin.bin_id,
+        destination_bin_id=data.destination_bin_id,
+        quantity_planned=dest_bin_config.quantity,
+        status=models.TransferRecordingStatus.IN_PROGRESS,
+        transfer_start_time=get_utc_now(),
+        created_by=user_id
+    )
+    db.add(transfer)
+    db.commit()
+    db.refresh(transfer)
+    return transfer
+
+
+@app.get("/api/transfer/{transfer_id}", response_model=schemas.TransferRecordingWithDetails)
+def get_transfer_status(transfer_id: int, db: Session = Depends(get_db)):
+    """Get current transfer status and monitoring data"""
+    transfer = db.query(models.TransferRecording).filter(
+        models.TransferRecording.id == transfer_id
+    ).first()
+    if not transfer:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    return transfer
+
+
+@app.post("/api/transfer/{transfer_id}/complete", response_model=schemas.TransferRecordingWithDetails)
+def complete_transfer(
+    transfer_id: int,
+    data: schemas.TransferRecordingCompleteTransfer,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Complete current transfer and optionally divert to next bin"""
+    transfer = db.query(models.TransferRecording).filter(
+        models.TransferRecording.id == transfer_id
+    ).first()
+    if not transfer:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    
+    if transfer.status != models.TransferRecordingStatus.IN_PROGRESS:
+        raise HTTPException(status_code=400, detail="Transfer is not in progress")
+    
+    # Mark transfer as completed
+    transfer.status = models.TransferRecordingStatus.COMPLETED
+    transfer.transfer_end_time = get_utc_now()
+    transfer.water_added = data.water_added
+    transfer.moisture_level = data.moisture_level
+    
+    # Calculate duration
+    if transfer.transfer_start_time and transfer.transfer_end_time:
+        duration = transfer.transfer_end_time - transfer.transfer_start_time
+        transfer.duration_minutes = int(duration.total_seconds() / 60)
+    
+    transfer.updated_by = user_id
+    db.commit()
+    db.refresh(transfer)
+    return transfer
+
+
+@app.post("/api/transfer/{transfer_id}/divert/{next_bin_id}", response_model=schemas.TransferRecordingWithDetails)
+def divert_transfer(
+    transfer_id: int,
+    next_bin_id: int,
+    data: schemas.TransferRecordingCompleteTransfer,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Divert current transfer to next bin (completes current, starts new)"""
+    # Complete current transfer
+    transfer = db.query(models.TransferRecording).filter(
+        models.TransferRecording.id == transfer_id
+    ).first()
+    if not transfer:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    
+    transfer.status = models.TransferRecordingStatus.COMPLETED
+    transfer.transfer_end_time = get_utc_now()
+    transfer.water_added = data.water_added
+    transfer.moisture_level = data.moisture_level
+    
+    if transfer.transfer_start_time and transfer.transfer_end_time:
+        duration = transfer.transfer_end_time - transfer.transfer_start_time
+        transfer.duration_minutes = int(duration.total_seconds() / 60)
+    
+    transfer.updated_by = user_id
+    
+    # Get source bin from current transfer
+    source_bins = db.query(models.ProductionOrderSourceBin).filter(
+        models.ProductionOrderSourceBin.production_order_id == transfer.production_order_id
+    ).all()
+    if not source_bins:
+        raise HTTPException(status_code=404, detail="No source bins found")
+    
+    # Create new transfer for next destination bin
+    new_transfer = models.TransferRecording(
+        production_order_id=transfer.production_order_id,
+        source_bin_id=source_bins[0].bin_id,
+        destination_bin_id=next_bin_id,
+        quantity_planned=transfer.quantity_planned,
+        status=models.TransferRecordingStatus.IN_PROGRESS,
+        transfer_start_time=get_utc_now(),
+        created_by=user_id
+    )
+    
+    db.add(new_transfer)
+    db.commit()
+    db.refresh(new_transfer)
+    return new_transfer
+
+
+@app.get("/api/transfer/order/{order_id}/history")
+def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
+    """Get transfer history for a production order"""
+    transfers = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == order_id
+    ).order_by(models.TransferRecording.created_at.desc()).all()
+    return transfers
+
+
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")
