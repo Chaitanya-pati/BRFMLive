@@ -286,6 +286,13 @@ export default function HomeScreen({ navigation }) {
       color: "#6366f1",
       adminOnly: false,
     },
+    {
+      title: "Transfer Recording",
+      route: "TransferRecording",
+      icon: "warehouse",
+      color: "#d946ef",
+      adminOnly: false,
+    },
   ];
 
   const quickActions = allQuickActions.filter(
