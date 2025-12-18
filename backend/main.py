@@ -2518,7 +2518,7 @@ def save_production_order_planning(
         db.add(db_dest)
     
     # Update order status to PLANNED
-    db_order.status = "PLANNED"
+    db_order.status = models.ProductionOrderStatus.PLANNED
     
     db.commit()
     db.refresh(db_order)
