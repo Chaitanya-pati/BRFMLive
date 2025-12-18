@@ -70,7 +70,7 @@ export default function TransferRecordingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/api/transfer/planned-orders");
+      const response = await client.get("/transfer/planned-orders");
       setPlannedOrders(response.data || []);
     } catch (error) {
       showAlert("Error", "Failed to fetch planned orders");
@@ -85,11 +85,11 @@ export default function TransferRecordingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get(`/api/transfer/destination-bins/${order.id}`);
+      const response = await client.get(`/transfer/destination-bins/${order.id}`);
       setDestinationBins(response.data || []);
       
       // Fetch transfer history for this order
-      const historyResponse = await client.get(`/api/transfer/order/${order.id}/history`);
+      const historyResponse = await client.get(`/transfer/order/${order.id}/history`);
       setTransferHistory(historyResponse.data || []);
       
       setStage(STAGES.SELECT_BIN);
@@ -106,7 +106,7 @@ export default function TransferRecordingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.post("/api/transfer/start", {
+      const response = await client.post("/transfer/start", {
         production_order_id: selectedOrder.id,
         destination_bin_id: destBin.bin_id,
       });
@@ -157,14 +157,14 @@ export default function TransferRecordingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      await client.post(`/api/transfer/${currentTransfer.id}/complete`, {
+      await client.post(`/transfer/${currentTransfer.id}/complete`, {
         water_added: parseFloat(waterAdded),
         moisture_level: parseFloat(moistureLevel),
       });
       showToast("Transfer completed successfully");
       
       // Refresh history
-      const historyResponse = await client.get(`/api/transfer/order/${selectedOrder.id}/history`);
+      const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
       setTransferHistory(historyResponse.data || []);
       
       // Reset to select bin stage
@@ -188,7 +188,7 @@ export default function TransferRecordingScreen({ navigation }) {
     try {
       const client = getApiClient();
       const response = await client.post(
-        `/api/transfer/${currentTransfer.id}/divert/${nextBin.bin_id}`,
+        `/transfer/${currentTransfer.id}/divert/${nextBin.bin_id}`,
         {
           water_added: parseFloat(waterAdded),
           moisture_level: parseFloat(moistureLevel),
@@ -206,7 +206,7 @@ export default function TransferRecordingScreen({ navigation }) {
       setSelectedBin(nextBin);
       
       // Refresh history
-      const historyResponse = await client.get(`/api/transfer/order/${selectedOrder.id}/history`);
+      const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
       setTransferHistory(historyResponse.data || []);
       
       setStage(STAGES.TRANSFER_IN_PROGRESS);

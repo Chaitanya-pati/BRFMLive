@@ -467,3 +467,7 @@ export const stateCityApi = {
     }
   },
 };
+
+export const getApiClient = () => {
+  return api;
+};
