@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -225,9 +225,11 @@ export default function TransferRecordingScreen({ navigation }) {
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  const getAvailableBinsForDivert = () => {
+  // Calculate available bins for divert using useMemo to prevent hook violations
+  const availableBinsForDivert = useMemo(() => {
+    if (!selectedBin || !destinationBins) return [];
     return destinationBins.filter((bin) => bin.bin_id !== selectedBin.bin_id);
-  };
+  }, [destinationBins, selectedBin]);
 
   // STAGE: SELECT ORDER
   if (stage === STAGES.SELECT_ORDER) {
@@ -326,10 +328,10 @@ export default function TransferRecordingScreen({ navigation }) {
             <View style={styles.historySection}>
               <Text style={styles.historyTitle}>Recent Transfers</Text>
               {transferHistory.slice(0, 3).map((transfer) => (
-                <View key={transfer.id} style={styles.historyCard}>
-                  <Text style={styles.historyBin}>{transfer.source_bin.bin_number} → {transfer.destination_bin.bin_number}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: transfer.status === 'COMPLETED' ? '#10b981' : '#f97316' }]}>
-                    <Text style={styles.statusText}>{transfer.status}</Text>
+                <View key={transfer?.id} style={styles.historyCard}>
+                  <Text style={styles.historyBin}>{transfer?.source_bin?.bin_number} → {transfer?.destination_bin?.bin_number}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: transfer?.status === 'COMPLETED' ? '#10b981' : '#f97316' }]}>
+                    <Text style={styles.statusText}>{transfer?.status}</Text>
                   </View>
                 </View>
               ))}
@@ -341,7 +343,7 @@ export default function TransferRecordingScreen({ navigation }) {
   }
 
   // STAGE: TRANSFER IN PROGRESS
-  if (stage === STAGES.TRANSFER_IN_PROGRESS) {
+  if (stage === STAGES.TRANSFER_IN_PROGRESS && currentTransfer) {
     return (
       <Layout>
         <ScrollView style={styles.container}>
@@ -356,29 +358,29 @@ export default function TransferRecordingScreen({ navigation }) {
             <View style={styles.detailsSection}>
               <View style={styles.detailRow}>
                 <Text style={styles.label}>From:</Text>
-                <Text style={styles.value}>{currentTransfer.source_bin.bin_number}</Text>
+                <Text style={styles.value}>{currentTransfer?.source_bin?.bin_number}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.label}>To:</Text>
-                <Text style={styles.value}>{currentTransfer.destination_bin.bin_number}</Text>
+                <Text style={styles.value}>{currentTransfer?.destination_bin?.bin_number}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.label}>Quantity:</Text>
-                <Text style={styles.value}>{currentTransfer.quantity_planned} kg</Text>
+                <Text style={styles.value}>{currentTransfer?.quantity_planned} kg</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.label}>Started:</Text>
-                <Text style={styles.value}>{formatISTDateTime(currentTransfer.transfer_start_time)}</Text>
+                <Text style={styles.value}>{formatISTDateTime(currentTransfer?.transfer_start_time)}</Text>
               </View>
             </View>
 
-            {currentTransfer.production_order.source_bins && currentTransfer.production_order.source_bins.length > 0 && (
+            {currentTransfer?.production_order?.source_bins && currentTransfer.production_order.source_bins.length > 0 && (
               <View style={styles.blendSection}>
                 <Text style={styles.blendTitle}>Source Blend %:</Text>
                 {currentTransfer.production_order.source_bins.map((bin, idx) => (
                   <View key={idx} style={styles.blendRow}>
-                    <Text style={styles.blendLabel}>{bin.bin.bin_number}:</Text>
-                    <Text style={styles.blendValue}>{bin.blend_percentage}%</Text>
+                    <Text style={styles.blendLabel}>{bin?.bin?.bin_number}:</Text>
+                    <Text style={styles.blendValue}>{bin?.blend_percentage}%</Text>
                   </View>
                 ))}
               </View>
@@ -399,8 +401,6 @@ export default function TransferRecordingScreen({ navigation }) {
 
   // STAGE: PARAMETERS INPUT
   if (stage === STAGES.PARAMETERS_INPUT) {
-    const availableBinsForDivert = getAvailableBinsForDivert();
-
     return (
       <Layout>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
@@ -412,7 +412,7 @@ export default function TransferRecordingScreen({ navigation }) {
             </View>
 
             <View style={styles.binContext}>
-              <Text style={styles.binContextLabel}>Current Bin: {currentTransfer.destination_bin.bin_number}</Text>
+              <Text style={styles.binContextLabel}>Current Bin: {currentTransfer?.destination_bin?.bin_number}</Text>
             </View>
 
             <InputField
