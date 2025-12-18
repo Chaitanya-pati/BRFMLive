@@ -29,10 +29,6 @@ import FinishedGoodsMasterScreen from './src/screens/FinishedGoodsMasterScreen';
 import ProductionOrderScreen from './src/screens/ProductionOrderScreen';
 import ProductionOrderPlanningScreen from './src/screens/ProductionOrderPlanningScreen';
 import TransferRecordingScreen from './src/screens/TransferRecordingScreen';
-import MonitorTransferScreen from './src/screens/MonitorTransferScreen';
-import ParametersInputScreen from './src/screens/ParametersInputScreen';
-import NextBinSelectionScreen from './src/screens/NextBinSelectionScreen';
-import TransferHistoryScreen from './src/screens/TransferHistoryScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -139,10 +135,6 @@ export default function App() {
           <Stack.Screen name="ProductionOrderPlanning" component={ProductionOrderPlanningScreen} />
           <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
           <Stack.Screen name="TransferRecording" component={TransferRecordingScreen} />
-          <Stack.Screen name="MonitorTransfer" component={MonitorTransferScreen} />
-          <Stack.Screen name="ParametersInput" component={ParametersInputScreen} />
-          <Stack.Screen name="NextBinSelection" component={NextBinSelectionScreen} />
-          <Stack.Screen name="TransferHistory" component={TransferHistoryScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}
