@@ -16,8 +16,15 @@ export const showWarning = (message) => {
   showToast(message, 'warning');
 };
 
-export const showConfirm = (title, message, onConfirm, onCancel, confirmText = 'OK', cancelText = 'Cancel') => {
-  customShowConfirm(title, message, onConfirm, onCancel);
+export const showConfirm = (title, message, onConfirm, onCancel) => {
+  return customShowConfirm(title, message).then(confirmed => {
+    if (confirmed && onConfirm) {
+      onConfirm();
+    } else if (!confirmed && onCancel) {
+      onCancel();
+    }
+    return confirmed;
+  });
 };
 
 export default {

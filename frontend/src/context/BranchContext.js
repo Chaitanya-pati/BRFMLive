@@ -35,6 +35,8 @@ export const BranchProvider = ({ children }) => {
     try {
       await storage.setActiveBranch(branch);
       setActiveBranchState(branch);
+      // Ensure state update is complete
+      await new Promise(resolve => setTimeout(resolve, 50));
       return true;
     } catch (error) {
       console.error('Error setting active branch:', error);

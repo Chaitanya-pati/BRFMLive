@@ -41,7 +41,7 @@ export default function RouteConfigurationScreen({ navigation }) {
   const componentTypes = ['godown', 'magnet', 'machine', 'bin'];
   const firstStageTypes = ['godown', 'bin'];
 
-  
+
 
   useEffect(() => {
     loadRoutes();
@@ -95,7 +95,7 @@ export default function RouteConfigurationScreen({ navigation }) {
     const components = getComponentsForType(type);
     const component = components.find((c) => c.id === componentId);
     if (!component) return 'Not selected';
-    
+
     switch (type) {
       case 'godown':
         return component.name;
@@ -144,23 +144,23 @@ export default function RouteConfigurationScreen({ navigation }) {
   const handleAddStage = () => {
     const stages = [...formData.stages];
     const lastStage = stages[stages.length - 1];
-    
+
     const newStage = {
       sequence_no: stages.length,
       component_type: 'magnet',
       component_id: null,
       interval_hours: null,
     };
-    
+
     stages[stages.length - 1] = newStage;
-    
+
     stages.push({
       sequence_no: stages.length + 1,
       component_type: 'bin',
       component_id: lastStage.component_id,
       interval_hours: null,
     });
-    
+
     setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
   };
 
@@ -169,7 +169,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       showAlert('Error', 'Cannot remove first or last stage', 'error');
       return;
     }
-    
+
     const stages = formData.stages.filter((_, idx) => idx !== index);
     setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
   };
@@ -183,11 +183,11 @@ export default function RouteConfigurationScreen({ navigation }) {
   const handleStageChange = (index, field, value) => {
     const stages = [...formData.stages];
     stages[index] = { ...stages[index], [field]: value };
-    
+
     if (field === 'component_type') {
       stages[index].component_id = null;
     }
-    
+
     setFormData({ ...formData, stages });
   };
 
@@ -201,15 +201,15 @@ export default function RouteConfigurationScreen({ navigation }) {
       const stage = formData.stages[i];
       // Convert component_id to integer if it's a string
       const componentId = stage.component_id ? parseInt(stage.component_id) : null;
-      
+
       if (!componentId) {
         showAlert('Validation Error', `Please select a component for stage ${i + 1}`, 'error');
         return;
       }
-      
+
       // Update the component_id to be an integer
       formData.stages[i].component_id = componentId;
-      
+
       if (stage.component_type === 'magnet') {
         const intervalValue = parseFloat(stage.interval_hours);
         if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
@@ -240,10 +240,10 @@ export default function RouteConfigurationScreen({ navigation }) {
     try {
       if (editMode) {
         await routeConfigurationApi.update(currentRoute.id, formData);
-        showToast('Route updated successfully', 'success');
+        showToast('Route Configuration updated successfully!', 'success');
       } else {
         await routeConfigurationApi.create(formData);
-        showToast('Route created successfully', 'success');
+        showToast('Route Configuration created successfully!', 'success');
       }
       setModalVisible(false);
       loadRoutes();
@@ -263,7 +263,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       async () => {
         try {
           await routeConfigurationApi.delete(route.id);
-          showToast('Route deleted successfully', 'success');
+          showToast('Route Configuration deleted successfully!', 'success');
           loadRoutes();
         } catch (error) {
           console.error('Error deleting route:', error);

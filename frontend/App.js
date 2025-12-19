@@ -22,6 +22,8 @@ import UserManagementScreen from './src/screens/UserManagementScreen';
 import MachineManagementScreen from './src/screens/MachineManagementScreen';
 import RouteConfigurationScreen from './src/screens/RouteConfigurationScreen';
 import DailyReportScreen from './src/screens/DailyReportScreen';
+import PrecleaningTimelineScreen from './src/screens/PrecleaningTimelineScreen';
+import ReportsScreen from './src/screens/ReportsScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -29,17 +31,29 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const toastRef = useRef(null);
   const alertRef = useRef(null);
-  const [containersReady, setContainersReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
 
   useEffect(() => {
-    if (toastRef.current && alertRef.current) {
-      setToastContainer(toastRef.current);
-      setAlertContainer(alertRef.current);
-      setContainersReady(true);
-      console.log('✅ Toast and Alert containers initialized');
-    }
+    // Retry mechanism to ensure refs are captured even on slower devices
+    let attempts = 0;
+    const maxAttempts = 20; // Try for up to 1 second (20 * 50ms)
+
+    const interval = setInterval(() => {
+      attempts++;
+
+      if (toastRef.current && alertRef.current) {
+        setToastContainer(toastRef.current);
+        setAlertContainer(alertRef.current);
+        console.log('✅ Toast and Alert containers initialized');
+        clearInterval(interval);
+      } else if (attempts >= maxAttempts) {
+        console.error('❌ Failed to initialize Toast/Alert containers after', maxAttempts, 'attempts');
+        clearInterval(interval);
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -48,63 +62,51 @@ export default function App() {
 
   const checkAuthStatus = async () => {
     try {
-      console.log('🔍 Checking authentication status...');
       const userData = await storage.getUserData();
       const activeBranch = await storage.getActiveBranch();
 
       if (userData && userData.user_id) {
-        console.log('✅ User data found:', { userId: userData.user_id, username: userData.username });
-
         if (activeBranch && activeBranch.id) {
-          console.log('✅ Active branch found:', activeBranch.name);
           setInitialRoute('Home');
         } else if (userData.branches && userData.branches.length > 1) {
-          console.log('📋 Multiple branches found, redirecting to branch selection');
           setInitialRoute('BranchSelection');
         } else if (userData.branches && userData.branches.length === 1) {
-          console.log('✅ Single branch found, auto-selecting');
           await storage.setActiveBranch(userData.branches[0]);
           setInitialRoute('Home');
         } else {
-          console.log('⚠️ No branches found');
           setInitialRoute('Login');
         }
       } else {
-        console.log('❌ No user data found, redirecting to login');
         setInitialRoute('Login');
       }
     } catch (error) {
-      console.error('❌ Error checking auth status:', error);
+      console.error('Error checking auth status:', error);
       setInitialRoute('Login');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading || !containersReady) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ToastContainer ref={toastRef} />
-        <AlertContainer ref={alertRef} />
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <NavigationContainer
-      onStateChange={(state) => console.log('Navigation state changed:', state)}
-      onError={(error) => console.error('Navigation error:', error)}
-    >
+    <>
       <ToastContainer ref={toastRef} />
       <AlertContainer ref={alertRef} />
-      <BranchProvider>
-        <Stack.Navigator
-          initialRouteName={initialRoute}
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
+      <NavigationContainer
+        onStateChange={(state) => console.log('Navigation state changed:', state)}
+        onError={(error) => console.error('Navigation error:', error)}
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <BranchProvider>
+            <Stack.Navigator
+              initialRouteName={initialRoute}
+              screenOptions={{
+                headerShown: false,
+              }}
+            >
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="BranchSelection" component={BranchSelectionScreen} />
           <Stack.Screen name="Dashboard" component={HomeScreen} />
@@ -120,9 +122,13 @@ export default function App() {
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
           <Stack.Screen name="DailyReport" component={DailyReportScreen} />
+          <Stack.Screen name="PrecleaningTimeline" component={PrecleaningTimelineScreen} />
+          <Stack.Screen name="Reports" component={ReportsScreen} />
         </Stack.Navigator>
-      </BranchProvider>
-    </NavigationContainer>
+          </BranchProvider>
+        )}
+      </NavigationContainer>
+    </>
   );
 }
 

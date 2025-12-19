@@ -8,17 +8,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Dimensions,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Layout from '../components/Layout';
-import DatePicker from '../components/DatePicker';
 import { vehicleApi, supplierApi, labTestApi, godownApi, binApi, unloadingApi } from '../api/client';
 import colors from '../theme/colors';
 import notify from '../utils/notifications';
-import { formatISTDate } from '../utils/timeUtils';
+import { formatISTDateTime, formatISTDate, formatISTTime } from '../utils/dateUtils';
+
+const { width } = Dimensions.get('window');
+const isMobile = width < 768;
 
 export default function DailyReportScreen({ navigation }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null);
   const [reportData, setReportData] = useState({
     vehicleEntries: [],
     labTests: [],
@@ -43,10 +49,16 @@ export default function DailyReportScreen({ navigation }) {
     loadDailyReport();
   }, [selectedDate]);
 
+  const handleDateChange = (event, date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
   const loadDailyReport = async () => {
     setLoading(true);
     try {
-      // Fetch all data
       const [vehicles, labTests, unloadings, suppliers, godowns, bins] = await Promise.all([
         vehicleApi.getAll(),
         labTestApi ? labTestApi.getAll() : Promise.resolve({ data: [] }),
@@ -56,21 +68,20 @@ export default function DailyReportScreen({ navigation }) {
         binApi.getAll(),
       ]);
 
-      // Filter data for selected date
-      const dateStr = formatISTDate(selectedDate).split(' ')[0]; // Get YYYY-MM-DD part
+      const dateStr = formatISTDate(selectedDate);
 
       const filteredVehicles = (vehicles.data || []).filter(v => {
-        const vehicleDate = formatISTDate(new Date(v.arrival_time)).split(' ')[0];
+        const vehicleDate = formatISTDate(new Date(v.arrival_time));
         return vehicleDate === dateStr;
       });
 
       const filteredLabTests = (labTests.data || []).filter(lt => {
-        const testDate = formatISTDate(new Date(lt.test_date)).split(' ')[0];
+        const testDate = formatISTDate(new Date(lt.test_date));
         return testDate === dateStr;
       });
 
       const filteredUnloadings = (unloadings.data || []).filter(u => {
-        const unloadDate = formatISTDate(new Date(u.unloading_start_time)).split(' ')[0];
+        const unloadDate = formatISTDate(new Date(u.unloading_start_time));
         return unloadDate === dateStr;
       });
 
@@ -83,7 +94,6 @@ export default function DailyReportScreen({ navigation }) {
         bins: bins.data || [],
       });
 
-      // Calculate summary
       const uniqueSupplierIds = new Set(filteredVehicles.map(v => v.supplier_id));
       const totalQuantity = filteredUnloadings.reduce((sum, u) => sum + (u.net_weight / 1000 || 0), 0);
       const passedTests = filteredLabTests.filter(lt => !lt.raise_claim).length;
@@ -118,40 +128,67 @@ export default function DailyReportScreen({ navigation }) {
     return godown ? godown.name : 'Unknown';
   };
 
+  const toggleSection = (section) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
+
   const renderSummaryCard = () => (
     <View style={styles.summaryCard}>
       <Text style={styles.summaryTitle}>Daily Summary</Text>
       <Text style={styles.summaryDate}>{formatISTDate(selectedDate)}</Text>
       
       <View style={styles.summaryGrid}>
-        <View style={styles.summaryItem}>
+        <TouchableOpacity 
+          style={styles.summaryItem}
+          onPress={() => toggleSection('vehicles')}
+        >
           <Text style={styles.summaryValue}>{summary.totalVehicles}</Text>
-          <Text style={styles.summaryLabel}>Vehicles Arrived</Text>
-        </View>
-        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Vehicles</Text>
+          <Text style={styles.viewButton}>View Details</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.summaryItem}
+          onPress={() => toggleSection('suppliers')}
+        >
           <Text style={styles.summaryValue}>{summary.uniqueSuppliers}</Text>
-          <Text style={styles.summaryLabel}>Unique Suppliers</Text>
-        </View>
-        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Suppliers</Text>
+          <Text style={styles.viewButton}>View Details</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.summaryItem}
+          onPress={() => toggleSection('labTests')}
+        >
           <Text style={styles.summaryValue}>{summary.totalLabTests}</Text>
           <Text style={styles.summaryLabel}>Lab Tests</Text>
-        </View>
-        <View style={styles.summaryItem}>
+          <Text style={styles.viewButton}>View Details</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.summaryItem}
+          onPress={() => toggleSection('unloading')}
+        >
           <Text style={styles.summaryValue}>{summary.totalUnloadings}</Text>
           <Text style={styles.summaryLabel}>Unloadings</Text>
-        </View>
+          <Text style={styles.viewButton}>View Details</Text>
+        </TouchableOpacity>
+
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{summary.totalQuantityUnloaded.toFixed(2)}</Text>
           <Text style={styles.summaryLabel}>Tons Unloaded</Text>
         </View>
+
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: colors.success }]}>{summary.passedTests}</Text>
           <Text style={styles.summaryLabel}>Tests Passed</Text>
         </View>
+
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: colors.error }]}>{summary.failedTests}</Text>
           <Text style={styles.summaryLabel}>Tests Failed</Text>
         </View>
+
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: colors.warning }]}>{summary.claimsRaised}</Text>
           <Text style={styles.summaryLabel}>Claims Raised</Text>
@@ -160,136 +197,164 @@ export default function DailyReportScreen({ navigation }) {
     </View>
   );
 
-  const renderVehicleReport = () => (
-    <View style={styles.reportSection}>
-      <Text style={styles.sectionTitle}>Vehicle Arrivals ({reportData.vehicleEntries.length})</Text>
-      {reportData.vehicleEntries.length === 0 ? (
-        <Text style={styles.noData}>No vehicles arrived on this date</Text>
-      ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Vehicle #</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Supplier</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Bill No</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Time</Text>
-          </View>
-          {reportData.vehicleEntries.map((vehicle, index) => (
-            <View key={vehicle.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{vehicle.vehicle_number}</Text>
-              <Text style={[styles.tableCell, { flex: 1.5 }]}>{getSupplierName(vehicle.supplier_id)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{vehicle.bill_no}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>
-                {new Date(vehicle.arrival_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
+  const renderVehicleCard = (vehicle) => (
+    <View key={vehicle.id} style={styles.detailCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{vehicle.vehicle_number}</Text>
+        <Text style={styles.cardTime}>{formatISTTime(vehicle.arrival_time)}</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Supplier:</Text>
+        <Text style={styles.cardValue}>{getSupplierName(vehicle.supplier_id)}</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Bill No:</Text>
+        <Text style={styles.cardValue}>{vehicle.bill_no}</Text>
+      </View>
     </View>
   );
 
-  const renderLabTestReport = () => (
-    <View style={styles.reportSection}>
-      <Text style={styles.sectionTitle}>Lab Test Results ({reportData.labTests.length})</Text>
-      {reportData.labTests.length === 0 ? (
-        <Text style={styles.noData}>No lab tests conducted on this date</Text>
-      ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Bill No</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Moisture %</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Protein %</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Category</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Status</Text>
-          </View>
-          {reportData.labTests.map((test, index) => (
-            <View key={test.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.bill_number || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.moisture?.toFixed(1) || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.protein_percent?.toFixed(1) || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{test.category || '-'}</Text>
-              <Text style={[styles.tableCell, { flex: 1, color: test.raise_claim ? colors.error : colors.success }]}>
-                {test.raise_claim ? 'Failed' : 'Passed'}
-              </Text>
-            </View>
-          ))}
+  const renderLabTestCard = (test) => (
+    <View key={test.id} style={styles.detailCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{test.bill_number || 'N/A'}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: test.raise_claim ? colors.error : colors.success }]}>
+          <Text style={styles.statusText}>{test.raise_claim ? 'Failed' : 'Passed'}</Text>
         </View>
-      )}
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Moisture:</Text>
+        <Text style={styles.cardValue}>{test.moisture?.toFixed(1)}%</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Protein:</Text>
+        <Text style={styles.cardValue}>{test.protein_percent?.toFixed(1)}%</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Category:</Text>
+        <Text style={styles.cardValue}>{test.category || '-'}</Text>
+      </View>
     </View>
   );
 
-  const renderUnloadingReport = () => (
-    <View style={styles.reportSection}>
-      <Text style={styles.sectionTitle}>Unloading Activities ({reportData.unloadingEntries.length})</Text>
-      {reportData.unloadingEntries.length === 0 ? (
-        <Text style={styles.noData}>No unloading activities on this date</Text>
-      ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Godown</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Gross (kg)</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Empty (kg)</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Net (tons)</Text>
-          </View>
-          {reportData.unloadingEntries.map((unloading, index) => (
-            <View key={unloading.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-              <Text style={[styles.tableCell, { flex: 1.5 }]}>{getGodownName(unloading.godown_id)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{unloading.gross_weight?.toFixed(0)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{unloading.empty_vehicle_weight?.toFixed(0)}</Text>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{(unloading.net_weight / 1000)?.toFixed(2)}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+  const renderUnloadingCard = (unloading) => (
+    <View key={unloading.id} style={styles.detailCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{getGodownName(unloading.godown_id)}</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Gross Weight:</Text>
+        <Text style={styles.cardValue}>{unloading.gross_weight?.toFixed(0)} kg</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Empty Weight:</Text>
+        <Text style={styles.cardValue}>{unloading.empty_vehicle_weight?.toFixed(0)} kg</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Net Weight:</Text>
+        <Text style={[styles.cardValue, styles.highlightValue]}>{(unloading.net_weight / 1000)?.toFixed(2)} tons</Text>
+      </View>
     </View>
   );
 
-  const renderSupplierWiseReport = () => {
-    const supplierStats = {};
-    
-    reportData.vehicleEntries.forEach(vehicle => {
-      const supplierId = vehicle.supplier_id;
-      const supplierName = getSupplierName(supplierId);
-      
-      if (!supplierStats[supplierId]) {
-        supplierStats[supplierId] = {
-          name: supplierName,
-          vehicles: 0,
-          totalQuantity: 0,
-        };
-      }
-      
-      supplierStats[supplierId].vehicles += 1;
-      
-      const unloading = reportData.unloadingEntries.find(u => u.vehicle_entry_id === vehicle.id);
-      if (unloading) {
-        supplierStats[supplierId].totalQuantity += (unloading.net_weight / 1000) || 0;
-      }
-    });
+  const renderSupplierCard = (supplier) => (
+    <View key={supplier.id} style={styles.detailCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{supplier.name}</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Vehicles:</Text>
+        <Text style={styles.cardValue}>{supplier.vehicles}</Text>
+      </View>
+      <View style={styles.cardRow}>
+        <Text style={styles.cardLabel}>Total Quantity:</Text>
+        <Text style={[styles.cardValue, styles.highlightValue]}>{supplier.totalQuantity.toFixed(2)} tons</Text>
+      </View>
+    </View>
+  );
 
-    const suppliers = Object.values(supplierStats);
+  const renderExpandedSection = () => {
+    if (!expandedSection) return null;
 
-    return (
-      <View style={styles.reportSection}>
-        <Text style={styles.sectionTitle}>Supplier-wise Summary ({suppliers.length})</Text>
-        {suppliers.length === 0 ? (
+    let content = null;
+    let title = '';
+
+    switch (expandedSection) {
+      case 'vehicles':
+        title = `Vehicle Arrivals (${reportData.vehicleEntries.length})`;
+        content = reportData.vehicleEntries.length === 0 ? (
+          <Text style={styles.noData}>No vehicles arrived on this date</Text>
+        ) : (
+          reportData.vehicleEntries.map(renderVehicleCard)
+        );
+        break;
+
+      case 'labTests':
+        title = `Lab Test Results (${reportData.labTests.length})`;
+        content = reportData.labTests.length === 0 ? (
+          <Text style={styles.noData}>No lab tests conducted on this date</Text>
+        ) : (
+          reportData.labTests.map(renderLabTestCard)
+        );
+        break;
+
+      case 'unloading':
+        title = `Unloading Activities (${reportData.unloadingEntries.length})`;
+        content = reportData.unloadingEntries.length === 0 ? (
+          <Text style={styles.noData}>No unloading activities on this date</Text>
+        ) : (
+          reportData.unloadingEntries.map(renderUnloadingCard)
+        );
+        break;
+
+      case 'suppliers':
+        const supplierStats = {};
+        
+        reportData.vehicleEntries.forEach(vehicle => {
+          const supplierId = vehicle.supplier_id;
+          const supplierName = getSupplierName(supplierId);
+          
+          if (!supplierStats[supplierId]) {
+            supplierStats[supplierId] = {
+              id: supplierId,
+              name: supplierName,
+              vehicles: 0,
+              totalQuantity: 0,
+            };
+          }
+          
+          supplierStats[supplierId].vehicles += 1;
+          
+          const unloading = reportData.unloadingEntries.find(u => u.vehicle_entry_id === vehicle.id);
+          if (unloading) {
+            supplierStats[supplierId].totalQuantity += (unloading.net_weight / 1000) || 0;
+          }
+        });
+
+        const suppliers = Object.values(supplierStats);
+        title = `Supplier-wise Summary (${suppliers.length})`;
+        content = suppliers.length === 0 ? (
           <Text style={styles.noData}>No supplier data available</Text>
         ) : (
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Supplier Name</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Vehicles</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Total (tons)</Text>
-            </View>
-            {suppliers.map((supplier, index) => (
-              <View key={index} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                <Text style={[styles.tableCell, { flex: 2 }]}>{supplier.name}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{supplier.vehicles}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{supplier.totalQuantity.toFixed(2)}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+          suppliers.map(renderSupplierCard)
+        );
+        break;
+
+      default:
+        return null;
+    }
+
+    return (
+      <View style={styles.expandedSection}>
+        <View style={styles.expandedHeader}>
+          <Text style={styles.expandedTitle}>{title}</Text>
+          <TouchableOpacity onPress={() => setExpandedSection(null)} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>✕ Close</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.expandedContent}>
+          {content}
+        </ScrollView>
       </View>
     );
   };
@@ -299,11 +364,29 @@ export default function DailyReportScreen({ navigation }) {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Daily Operations Report</Text>
-          <DatePicker
-            label="Select Date"
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
+          
+          <View style={styles.datePickerContainer}>
+            <Text style={styles.dateLabel}>Select Date</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.dateButtonText}>
+                {formatISTDate(selectedDate)}
+              </Text>
+              <Text style={styles.calendarIcon}>📅</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+            />
+          )}
+
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={loadDailyReport}
@@ -323,10 +406,7 @@ export default function DailyReportScreen({ navigation }) {
         ) : (
           <>
             {renderSummaryCard()}
-            {renderVehicleReport()}
-            {renderLabTestReport()}
-            {renderUnloadingReport()}
-            {renderSupplierWiseReport()}
+            {renderExpandedSection()}
           </>
         )}
       </ScrollView>
@@ -337,34 +417,61 @@ export default function DailyReportScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     backgroundColor: '#fff',
-    padding: 16,
+    padding: isMobile ? 16 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e5e7eb',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: isMobile ? 20 : 24,
+    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 16,
   },
+  datePickerContainer: {
+    marginBottom: 16,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  dateButton: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  calendarIcon: {
+    fontSize: 20,
+  },
   refreshButton: {
     backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
   },
   refreshButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   loadingContainer: {
-    padding: 40,
+    padding: isMobile ? 30 : 40,
     alignItems: 'center',
   },
   loadingText: {
@@ -374,18 +481,18 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
+    margin: isMobile ? 12 : 16,
+    padding: isMobile ? 16 : 20,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
   summaryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: isMobile ? 18 : 20,
+    fontWeight: '700',
     color: colors.primary,
     marginBottom: 4,
   },
@@ -393,45 +500,133 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     marginBottom: 16,
+    fontWeight: '500',
   },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: isMobile ? 8 : 12,
   },
   summaryItem: {
-    width: '25%',
-    minWidth: 100,
-    padding: 12,
+    flex: 1,
+    minWidth: isMobile ? '45%' : 140,
+    padding: isMobile ? 12 : 16,
     alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   summaryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: isMobile ? 24 : 28,
+    fontWeight: '800',
     color: colors.primary,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
+    fontWeight: '600',
   },
-  reportSection: {
+  viewButton: {
+    fontSize: 10,
+    color: colors.primary,
+    marginTop: 6,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  expandedSection: {
     backgroundColor: '#fff',
-    margin: 16,
-    marginTop: 0,
-    padding: 16,
+    margin: isMobile ? 12 : 16,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
+    maxHeight: 500,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  expandedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: isMobile ? 14 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  expandedTitle: {
+    fontSize: isMobile ? 16 : 18,
+    fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  closeButtonText: {
+    fontSize: 14,
+    color: colors.error,
+    fontWeight: '600',
+  },
+  expandedContent: {
+    padding: isMobile ? 12 : 16,
+  },
+  detailCard: {
+    backgroundColor: '#f9fafb',
+    padding: isMobile ? 12 : 14,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  cardTitle: {
+    fontSize: isMobile ? 15 : 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  cardTime: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  cardLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  cardValue: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  highlightValue: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   noData: {
     fontSize: 14,
@@ -439,34 +634,5 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: colors.primary,
-    padding: 12,
-  },
-  tableHeaderCell: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tableRowEven: {
-    backgroundColor: '#f9f9f9',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: colors.textPrimary,
   },
 });

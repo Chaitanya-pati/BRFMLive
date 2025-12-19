@@ -17,6 +17,8 @@ import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { unloadingApi, godownApi } from '../api/client';
+import { getFullImageUrl } from '../utils/imageUtils';
+import { useFormSubmission } from '../utils/useFormSubmission';
 import colors from '../theme/colors';
 
 export default function UnloadingEntryScreen({ navigation }) {
@@ -38,6 +40,87 @@ export default function UnloadingEntryScreen({ navigation }) {
     notes: '',
   });
 
+  // Define showNotification function locally or import it if it's a utility
+  const showNotification = (message, type) => {
+    if (type === "success") {
+      notify.showSuccess(message);
+    } else if (type === "error") {
+      notify.showError(message);
+    } else if (type === "warning") {
+      notify.showWarning(message);
+    }
+  };
+
+
+  const { isSubmitting, handleSubmit: submitForm } = useFormSubmission(
+    async (data) => {
+      console.log('📝 Submitting unloading entry:', data);
+      
+      const submitFormData = new FormData();
+      submitFormData.append('vehicle_entry_id', data.vehicle_entry_id);
+      submitFormData.append('godown_id', data.godown_id);
+      submitFormData.append('unloading_start_time', data.unloading_start_time);
+      submitFormData.append('unloading_end_time', data.unloading_end_time);
+      if (data.notes) {
+        submitFormData.append('notes', data.notes);
+      }
+
+      // Only append new images (not existing URLs)
+      if (data.beforeImage && !data.beforeImage.uri.startsWith('http')) {
+        console.log('📷 Adding before image');
+        if (Platform.OS === 'web') {
+          const beforeBlob = await fetch(data.beforeImage.uri).then(r => r.blob());
+          submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
+        } else {
+          submitFormData.append('before_unloading_image', {
+            uri: data.beforeImage.uri,
+            type: 'image/jpeg',
+            name: 'before.jpg',
+          });
+        }
+      }
+
+      if (data.afterImage && !data.afterImage.uri.startsWith('http')) {
+        console.log('📷 Adding after image');
+        if (Platform.OS === 'web') {
+          const afterBlob = await fetch(data.afterImage.uri).then(r => r.blob());
+          submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
+        } else {
+          submitFormData.append('after_unloading_image', {
+            uri: data.afterImage.uri,
+            type: 'image/jpeg',
+            name: 'after.jpg',
+          });
+        }
+      }
+
+      if (data.id) {
+        console.log('🔄 Updating entry ID:', data.id);
+        await unloadingApi.update(data.id, submitFormData);
+        showNotification("Unloading Entry updated successfully!", "success");
+      } else {
+        console.log('➕ Creating new entry');
+        await unloadingApi.create(submitFormData);
+        showNotification("Unloading Entry created successfully!", "success");
+      }
+
+      setModalVisible(false);
+      
+      // Refresh all data
+      console.log('🔄 Refreshing data...');
+      await Promise.all([
+        loadEntries(),
+        loadGodowns(),
+        loadVehicles()
+      ]);
+      console.log('✅ Data refreshed');
+    },
+    {
+      onValidationFail: () => {
+        showNotification('Please select both vehicle and godown', 'error');
+      },
+    }
+  );
 
 
   useEffect(() => {
@@ -55,16 +138,30 @@ export default function UnloadingEntryScreen({ navigation }) {
     const { status } = await Camera.requestCameraPermissionsAsync();
     setCameraPermission(status === 'granted');
     if (status !== 'granted') {
-      notify.showWarning('Camera permission is required to take photos');
+      showNotification('Camera permission is required to take photos', 'warning');
     }
   };
 
   const loadEntries = async () => {
     try {
+      console.log('📊 Loading unloading entries...');
       const response = await unloadingApi.getAll();
-      setEntries(response.data);
+      console.log('📊 Raw API Response:', response);
+      console.log('📊 Response Data:', response.data);
+      console.log('📊 Total entries:', response.data?.length || 0);
+      
+      if (response.data && response.data.length > 0) {
+        console.log('📊 First entry sample:', JSON.stringify(response.data[0], null, 2));
+        console.log('📊 First entry vehicle_entry:', response.data[0].vehicle_entry);
+        console.log('📊 First entry godown:', response.data[0].godown);
+      }
+      
+      setEntries(response.data || []);
     } catch (error) {
-      console.error('Error loading entries:', error);
+      console.error('❌ Error loading entries:', error);
+      console.error('❌ Error details:', error.response?.data);
+      showNotification('Failed to load unloading entries', 'error');
+      setEntries([]);
     }
   };
 
@@ -74,6 +171,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setVehicles(response.data);
     } catch (error) {
       console.error('Error loading vehicles:', error);
+      showNotification('Failed to load vehicles', 'error');
     }
   };
 
@@ -83,6 +181,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setGodowns(response.data);
     } catch (error) {
       console.error('Error loading godowns:', error);
+      showNotification('Failed to load godowns', 'error');
     }
   };
 
@@ -127,7 +226,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      notify.showError('Failed to pick image');
+      showNotification('Failed to pick image', 'error');
     }
   };
 
@@ -135,7 +234,8 @@ export default function UnloadingEntryScreen({ navigation }) {
     try {
       if (!cameraPermission) {
         await requestCameraPermission();
-        return;
+        // Re-check permission after requesting
+        if (!cameraPermission) return; 
       }
 
       const result = await ImagePicker.launchCameraAsync({
@@ -153,7 +253,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error capturing image:', error);
-      notify.showError('Failed to capture image');
+      showNotification('Failed to capture image', 'error');
     }
   };
 
@@ -183,29 +283,19 @@ export default function UnloadingEntryScreen({ navigation }) {
       notes: entry.notes || '',
     });
 
-    // Load existing images if available
+    // Load existing images if available (convert relative paths to full URLs)
     if (entry.before_unloading_image) {
-      let beforeImageUrl = entry.before_unloading_image;
-      if (!beforeImageUrl.startsWith('http')) {
-        beforeImageUrl = beforeImageUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${beforeImageUrl}`
-          : `https://brfmlive.onrender.com/${beforeImageUrl}`;
-      }
-      console.log('Loading before image from:', beforeImageUrl);
-      setBeforeImage({ uri: beforeImageUrl });
+      const fullUrl = getFullImageUrl(entry.before_unloading_image);
+      console.log('Loading before image from:', fullUrl);
+      setBeforeImage({ uri: fullUrl });
     } else {
       setBeforeImage(null);
     }
 
     if (entry.after_unloading_image) {
-      let afterImageUrl = entry.after_unloading_image;
-      if (!afterImageUrl.startsWith('http')) {
-        afterImageUrl = afterImageUrl.startsWith('/') 
-          ? `https://brfmlive.onrender.com${afterImageUrl}`
-          : `https://brfmlive.onrender.com/${afterImageUrl}`;
-      }
-      console.log('Loading after image from:', afterImageUrl);
-      setAfterImage({ uri: afterImageUrl });
+      const fullUrl = getFullImageUrl(entry.after_unloading_image);
+      console.log('Loading after image from:', fullUrl);
+      setAfterImage({ uri: fullUrl });
     } else {
       setAfterImage(null);
     }
@@ -230,63 +320,11 @@ export default function UnloadingEntryScreen({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    try {
-      if (!formData.vehicle_entry_id || !formData.godown_id) {
-        notify.showWarning('Please fill all required fields');
-        return;
-      }
-
-      const submitFormData = new FormData();
-      submitFormData.append('vehicle_entry_id', formData.vehicle_entry_id);
-      submitFormData.append('godown_id', formData.godown_id);
-      submitFormData.append('unloading_start_time', formData.unloading_start_time);
-      submitFormData.append('unloading_end_time', formData.unloading_end_time);
-      if (formData.notes) {
-        submitFormData.append('notes', formData.notes);
-      }
-
-      // Only append new images (not existing URLs)
-      if (beforeImage && !beforeImage.uri.startsWith('http')) {
-        if (Platform.OS === 'web') {
-          const beforeBlob = await fetch(beforeImage.uri).then(r => r.blob());
-          submitFormData.append('before_unloading_image', beforeBlob, 'before.jpg');
-        } else {
-          submitFormData.append('before_unloading_image', {
-            uri: beforeImage.uri,
-            type: 'image/jpeg',
-            name: 'before.jpg',
-          });
-        }
-      }
-
-      if (afterImage && !afterImage.uri.startsWith('http')) {
-        if (Platform.OS === 'web') {
-          const afterBlob = await fetch(afterImage.uri).then(r => r.blob());
-          submitFormData.append('after_unloading_image', afterBlob, 'after.jpg');
-        } else {
-          submitFormData.append('after_unloading_image', {
-            uri: afterImage.uri,
-            type: 'image/jpeg',
-            name: 'after.jpg',
-          });
-        }
-      }
-
-      if (formData.id) {
-        await unloadingApi.update(formData.id, submitFormData);
-        notify.showSuccess('Unloading entry updated successfully');
-      } else {
-        await unloadingApi.create(submitFormData);
-        notify.showSuccess('Unloading entry added successfully');
-      }
-
-      setModalVisible(false);
-      loadEntries();
-      loadGodowns();
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      notify.showError('Failed to save unloading entry. Please try again.');
-    }
+    submitForm({
+      ...formData,
+      beforeImage,
+      afterImage,
+    });
   };
 
   const handleDelete = (entry) => {
@@ -297,37 +335,50 @@ export default function UnloadingEntryScreen({ navigation }) {
         try {
           await unloadingApi.delete(entry.id);
           loadEntries();
-          notify.showSuccess('Unloading entry deleted successfully');
+          showNotification('Unloading Entry deleted successfully!', 'success');
         } catch (error) {
           console.error('Error deleting:', error);
-          notify.showError('Failed to delete unloading entry');
+          showNotification('Failed to delete unloading entry', 'error');
         }
       }
     );
   };
 
   const columns = [
-    { key: 'id', label: 'ID', field: 'id', width: 80 },
+    { key: 'id', label: 'ID', field: 'id', flex: 0.5 },
     { 
-      key: 'vehicle_entry', 
-      label: 'Vehicle', 
-      field: 'vehicle_entry',
-      width: 180,
-      render: (value) => value?.vehicle_number || 'N/A'
+      key: 'vehicle_number', 
+      label: 'Vehicle Number', 
+      field: 'vehicle_number',
+      flex: 1,
+      render: (value, row) => {
+        return row.vehicle_entry?.vehicle_number || 'N/A';
+      }
+    },
+    { 
+      key: 'supplier', 
+      label: 'Supplier', 
+      field: 'supplier',
+      flex: 1.5,
+      render: (value, row) => {
+        return row.vehicle_entry?.supplier?.supplier_name || 'N/A';
+      }
     },
     { 
       key: 'godown', 
       label: 'Godown', 
       field: 'godown',
-      width: 200,
-      render: (value) => value?.name || 'N/A'
+      flex: 1.5,
+      render: (value, row) => {
+        const godown = row.godown;
+        return godown ? `${godown.name} (${godown.type || 'N/A'})` : 'N/A';
+      }
     },
-    { key: 'net_weight', label: 'Net Weight (kg)', field: 'net_weight', width: 150 },
     { 
       key: 'images', 
       label: 'Images', 
-      field: 'before_unloading_image',
-      width: 150,
+      field: 'images',
+      flex: 0.8,
       render: (value, row) => {
         const hasBeforeImage = row.before_unloading_image;
         const hasAfterImage = row.after_unloading_image;
@@ -335,11 +386,11 @@ export default function UnloadingEntryScreen({ navigation }) {
         if (hasBeforeImage && hasAfterImage) {
           return '✅ Complete';
         } else if (!hasBeforeImage && !hasAfterImage) {
-          return '⚠️ Missing Both';
+          return '⚠️ None';
         } else if (!hasBeforeImage) {
-          return '⚠️ Missing Before';
+          return '⚠️ Before';
         } else {
-          return '⚠️ Missing After';
+          return '⚠️ After';
         }
       }
     },
@@ -397,77 +448,99 @@ export default function UnloadingEntryScreen({ navigation }) {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Before Unloading Photo</Text>
-          {beforeImage ? (
-            <View>
-              <Image source={{ uri: beforeImage.uri }} style={styles.imagePreview} />
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>Before Unloading Photo</Text>
+            {beforeImage ? (
+              <View>
+                <Image
+                  source={{ uri: beforeImage.uri }}
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load before unloading image:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('Before unloading image loaded successfully')}
+                />
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureImage('before')}
+                    style={[styles.imageActionButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickImage('before')}
+                    style={[styles.imageActionButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
               <View style={styles.imageButtonRow}>
                 <TouchableOpacity
                   onPress={() => captureImage('before')}
-                  style={[styles.imageActionButton, styles.cameraButton]}
+                  style={[styles.uploadButton, styles.cameraButton]}
                 >
-                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => pickImage('before')}
-                  style={[styles.imageActionButton, styles.galleryButton]}
+                  style={[styles.uploadButton, styles.galleryButton]}
                 >
-                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            <View style={styles.imageButtonRow}>
-              <TouchableOpacity
-                onPress={() => captureImage('before')}
-                style={[styles.uploadButton, styles.cameraButton]}
-              >
-                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => pickImage('before')}
-                style={[styles.uploadButton, styles.galleryButton]}
-              >
-                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
 
-          <Text style={styles.label}>After Unloading Photo</Text>
-          {afterImage ? (
-            <View>
-              <Image source={{ uri: afterImage.uri }} style={styles.imagePreview} />
+          <View style={styles.imageSection}>
+            <Text style={styles.label}>After Unloading Photo</Text>
+            {afterImage ? (
+              <View>
+                <Image
+                  source={{ uri: afterImage.uri }}
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.error('Failed to load after unloading image:', error);
+                    showNotification('Failed to load image', 'error');
+                  }}
+                  onLoad={() => console.log('After unloading image loaded successfully')}
+                />
+                <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
+                    onPress={() => captureImage('after')}
+                    style={[styles.imageActionButton, styles.cameraButton]}
+                  >
+                    <Text style={styles.imageActionText}>📷 Capture</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickImage('after')}
+                    style={[styles.imageActionButton, styles.galleryButton]}
+                  >
+                    <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
               <View style={styles.imageButtonRow}>
                 <TouchableOpacity
                   onPress={() => captureImage('after')}
-                  style={[styles.imageActionButton, styles.cameraButton]}
+                  style={[styles.uploadButton, styles.cameraButton]}
                 >
-                  <Text style={styles.imageActionText}>📷 Capture</Text>
+                  <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => pickImage('after')}
-                  style={[styles.imageActionButton, styles.galleryButton]}
+                  style={[styles.uploadButton, styles.galleryButton]}
                 >
-                  <Text style={styles.imageActionText}>🖼️ Gallery</Text>
+                  <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            <View style={styles.imageButtonRow}>
-              <TouchableOpacity
-                onPress={() => captureImage('after')}
-                style={[styles.uploadButton, styles.cameraButton]}
-              >
-                <Text style={styles.uploadButtonText}>📷 Capture Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => pickImage('after')}
-                style={[styles.uploadButton, styles.galleryButton]}
-              >
-                <Text style={styles.uploadButtonText}>🖼️ Upload from Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
 
           <Text style={styles.label}>Notes</Text>
           <TextInput
@@ -489,8 +562,9 @@ export default function UnloadingEntryScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.button, styles.submitButton]}
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Text style={styles.buttonText}>Save</Text>
+              <Text style={styles.buttonText}>{isSubmitting ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -536,45 +610,15 @@ const styles = StyleSheet.create({
     height: 50,
   },
   imageSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   imagePreview: {
     width: '100%',
     height: 200,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: 200,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    backgroundColor: '#f9fafb',
-  },
-  placeholderText: {
-    color: '#9ca3af',
-    fontSize: 14,
-  },
-  imageButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  imageButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   buttonContainer: {
     flexDirection: 'row',

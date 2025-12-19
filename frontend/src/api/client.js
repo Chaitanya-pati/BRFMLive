@@ -1,97 +1,105 @@
 import axios from "axios";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Get the current hostname and construct the API URL
 const getCurrentAPIUrl = () => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
 
     // For local development, use localhost with port 8000
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
       return `http://${hostname}:8000/api`;
     }
 
-    // For Replit deployment, use relative /api path
-    // The Replit webview will proxy requests to the correct service
-    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      return '/api';
-    }
+    // For production deployment (Netlify, Replit, etc.), use the same hostname without port
+    // The backend should be served on standard ports (80/443)
+    return `${protocol}//${hostname}/api`;
   }
 
   // Final fallback
-  return 'http://localhost:8000/api';
+  return "http://localhost:8000/api";
 };
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-
+// Use getCurrentAPIUrl() for dynamic URL, or fallback to environment variable
+const API_URL = "https://brfmlive.onrender.com/api";
+//const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
 console.log("API Base URL:", API_URL);
 
 // Export API_BASE_URL for components that need direct fetch calls (without /api suffix)
-export const API_BASE_URL = API_URL.replace('/api', '');
+export const API_BASE_URL = API_URL.replace("/api", "");
 
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
 });
 
 // Add request interceptor for authentication and branch filtering
 api.interceptors.request.use(
   async (config) => {
-    console.log('📤 API Request:', config.method?.toUpperCase(), config.baseURL + config.url);
+    console.log(
+      "📤 API Request:",
+      config.method?.toUpperCase(),
+      config.baseURL + config.url,
+    );
     if (config.data) {
-      console.log('📦 Request Data:', config.data);
+      console.log("📦 Request Data:", config.data);
     }
 
     // Add active branch ID to request header
     try {
-      const activeBranchJson = await AsyncStorage.getItem('@active_branch');
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
         if (activeBranch && activeBranch.id) {
-          config.headers['X-Branch-ID'] = activeBranch.id.toString();
-          console.log('🏢 Branch ID:', activeBranch.id, 'Branch Name:', activeBranch.name);
+          config.headers["X-Branch-ID"] = activeBranch.id.toString();
+          console.log(
+            "🏢 Branch ID:",
+            activeBranch.id,
+            "Branch Name:",
+            activeBranch.name,
+          );
         }
       }
     } catch (error) {
-      console.error('Error retrieving active branch:', error);
+      console.error("Error retrieving active branch:", error);
     }
 
     // Add authentication token if available
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Error retrieving auth token:', error);
+      console.error("Error retrieving auth token:", error);
     }
 
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    console.error("❌ Request Error:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add response interceptor for logging
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.status, response.config.url);
+    console.log("✅ API Response:", response.status, response.config.url);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', {
+    console.error("❌ API Error:", {
       message: error.message,
       url: error.config?.url,
       status: error.response?.status,
-      data: error.response?.data
+      data: error.response?.data,
     });
     return Promise.reject(error);
-  }
+  },
 );
 
 export const supplierApi = {
@@ -142,23 +150,48 @@ export const godownApi = {
 };
 
 export const unloadingApi = {
-  getAll: () => api.get("/unloading-entries"),
-  getLabTestedVehicles: () => api.get("/vehicles/lab-tested"),
-  create: (formData) => {
-    return axios.post(`${API_URL}/unloading-entries`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  getAll: () => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get('/unloading-entries', {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
     });
   },
-  update: (id, formData) => {
-    return axios.put(`${API_URL}/unloading-entries/${id}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  getById: (id) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get(`/unloading-entries/${id}`, {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
     });
   },
-  delete: (id) => api.delete(`/unloading-entries/${id}`),
+  create: (data) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.post('/unloading-entries', data, {
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+        ...(branchId ? { 'X-Branch-Id': branchId } : {})
+      }
+    });
+  },
+  update: (id, data) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.put(`/unloading-entries/${id}`, data, {
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+        ...(branchId ? { 'X-Branch-Id': branchId } : {})
+      }
+    });
+  },
+  delete: (id) => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.delete(`/unloading-entries/${id}`, {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    });
+  },
+  getLabTestedVehicles: () => {
+    const branchId = localStorage.getItem('selectedBranchId');
+    return api.get('/vehicles/lab-tested', {
+      headers: branchId ? { 'X-Branch-Id': branchId } : {}
+    });
+  },
 };
 
 export const binApi = {
@@ -202,23 +235,32 @@ export const routeConfigurationApi = {
 };
 
 export const magnetCleaningRecordApi = {
-  getAll: (magnetId) => api.get("/magnet-cleaning-records", { params: magnetId ? { magnet_id: magnetId } : {} }),
+  getAll: (magnetId) =>
+    api.get("/magnet-cleaning-records", {
+      params: magnetId ? { magnet_id: magnetId } : {},
+    }),
   getById: (id) => api.get(`/magnet-cleaning-records/${id}`),
-  create: (formData) => api.post("/magnet-cleaning-records", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }),
-  update: (id, formData) => api.put(`/magnet-cleaning-records/${id}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }),
+  create: (formData) =>
+    api.post("/magnet-cleaning-records", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  update: (id, formData) =>
+    api.put(`/magnet-cleaning-records/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
   delete: (id) => api.delete(`/magnet-cleaning-records/${id}`),
 };
 
 export const transferSessionApi = {
-  getAll: (status) => api.get("/transfer-sessions", { params: status ? { status } : {} }),
+  getAll: (status) =>
+    api.get("/transfer-sessions", { params: status ? { status } : {} }),
   getById: (id) => api.get(`/transfer-sessions/${id}`),
   start: (data) => api.post("/transfer-sessions/start", data),
   divert: (id, data) => api.post(`/transfer-sessions/${id}/divert`, data),
-  stop: (id, transferred_quantity) => api.post(`/transfer-sessions/${id}/stop`, null, { params: { transferred_quantity } }),
+  stop: (id, transferred_quantity) =>
+    api.post(`/transfer-sessions/${id}/stop`, null, {
+      params: { transferred_quantity },
+    }),
   update: (id, data) => api.put(`/transfer-sessions/${id}`, data),
   delete: (id) => api.delete(`/transfer-sessions/${id}`),
 };

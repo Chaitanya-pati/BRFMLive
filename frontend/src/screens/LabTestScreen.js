@@ -9,7 +9,7 @@ import {
   ScrollView,
   useWindowDimensions,
 } from "react-native";
-import notify from '../utils/notifications';
+import notify from "../utils/notifications";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Layout from "../components/Layout";
@@ -134,7 +134,9 @@ export default function LabTestScreen({ navigation }) {
       return vehicle.vehicle_number?.toLowerCase().includes(searchLower);
     } else {
       // Search by supplier name
-      return vehicle.supplier?.supplier_name?.toLowerCase().includes(searchLower);
+      return vehicle.supplier?.supplier_name
+        ?.toLowerCase()
+        .includes(searchLower);
     }
   });
 
@@ -144,6 +146,7 @@ export default function LabTestScreen({ navigation }) {
       setVehicles(response.data);
     } catch (error) {
       console.error("Error loading vehicles:", error);
+      notify.showError("Failed to load vehicles");
     }
   };
 
@@ -153,6 +156,7 @@ export default function LabTestScreen({ navigation }) {
       setLabTests(response.data);
     } catch (error) {
       console.error("Error loading lab tests:", error);
+      notify.showError("Failed to load Lab Tests");
     }
   };
 
@@ -271,9 +275,11 @@ export default function LabTestScreen({ navigation }) {
     setLoading(true);
     try {
       const submitData = {
-        ...formData,
-        wheat_variety: formData.wheat_variety,
-        bill_number: formData.bill_number,
+        vehicle_entry_id: parseInt(formData.vehicle_entry_id),
+        wheat_variety: formData.wheat_variety || null,
+        bill_number: formData.bill_number || null,
+        test_date: formData.test_date ? formData.test_date.toISOString() : new Date().toISOString(),
+        department: formData.department || "QA",
         moisture: parseFloat(formData.moisture) || null,
         test_weight: parseFloat(formData.hectoliter_weight) || null,
         protein_percent: parseFloat(formData.protein_percent) || null,
@@ -293,32 +299,38 @@ export default function LabTestScreen({ navigation }) {
         sprouted_grains: parseFloat(formData.other_grains) || null,
         other_grain_damage: parseFloat(formData.soft_wheat) || null,
         total_dockage: parseFloat(formData.total_dockage) || null,
-        test_date: formData.test_date.toISOString(),
-        raise_claim: formData.raise_claim, // Include raise_claim flag
+        category: formData.category || null,
+        remarks: formData.comments_action || null,
+        tested_by: formData.tested_by || null,
+        raise_claim: formData.raise_claim ? 1 : 0,
       };
 
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
-        notify.showSuccess("Lab test updated successfully");
+        notify.showSuccess("Lab Test updated successfully!");
       } else {
         await labTestApi.create(submitData);
-        notify.showSuccess("Lab test created successfully");
+        notify.showSuccess("Lab Test created successfully!");
       }
 
       setModalVisible(false);
-      loadLabTests();
-      loadVehicles();
+      await loadLabTests();
+      await loadVehicles();
 
       // Show download/print options after modal closes
       setTimeout(() => {
-        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.');
+        const shouldPrint = window.confirm(
+          "Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.",
+        );
 
         if (shouldPrint) {
           generatePDF();
         }
       }, 100);
     } catch (error) {
-      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(
+        editMode ? "Failed to update lab test" : "Failed to create lab test",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -364,11 +376,11 @@ export default function LabTestScreen({ navigation }) {
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
         savedLabTest = currentLabTest;
-        notify.showSuccess("Lab test updated successfully");
+        notify.showSuccess("Lab Test updated successfully!");
       } else {
         const response = await labTestApi.create(submitData);
         savedLabTest = response.data;
-        notify.showSuccess("Lab test created successfully");
+        notify.showSuccess("Lab Test created successfully!");
       }
 
       // Close the lab test modal
@@ -380,27 +392,33 @@ export default function LabTestScreen({ navigation }) {
 
       // Ask if user wants to print before opening claim modal
       setTimeout(() => {
-        const shouldPrint = window.confirm('Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.');
+        const shouldPrint = window.confirm(
+          "Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.",
+        );
 
         if (shouldPrint) {
           generatePDF();
         }
 
         // Open raise claim modal with the saved lab test after print dialog
-        setTimeout(() => {
-          setSelectedLabTestForClaim(savedLabTest);
-          setClaimFormData({
-            description: "", // Ensure description is empty for new claim
-            claim_type: "",
-            claim_amount: "",
-            claim_date: new Date(),
-          });
-          setRaiseClaimModalVisible(true);
-        }, shouldPrint ? 500 : 0);
+        setTimeout(
+          () => {
+            setSelectedLabTestForClaim(savedLabTest);
+            setClaimFormData({
+              description: "", // Ensure description is empty for new claim
+              claim_type: "",
+              claim_amount: "",
+              claim_date: new Date(),
+            });
+            setRaiseClaimModalVisible(true);
+          },
+          shouldPrint ? 500 : 0,
+        );
       }, 100);
-
     } catch (error) {
-      notify.showError(editMode ? "Failed to update lab test" : "Failed to create lab test");
+      notify.showError(
+        editMode ? "Failed to update lab test" : "Failed to create lab test",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -655,7 +673,9 @@ export default function LabTestScreen({ navigation }) {
   <div class="header">
     <div class="header-row">
       <div class="logo-box">
-        <img src="https://ce943af2-133a-49c4-9b89-498b74daab1d-00-33k2v3rppz17r.janeway.replit.dev/assets/new-logo.png" alt="Logo" />
+        <img src="./assets/?unstable_path=./assets/new-logo.png" 
+  onerror="this.onerror=null; this.src='assets/new-logo.png'" 
+  alt="Logo" onerror="this.style.display='none'" />
       </div>
       <div class="title">
         <h2>Raw Wheat Quality Report</h2>
@@ -780,7 +800,7 @@ export default function LabTestScreen({ navigation }) {
         <td class="test-col"><strong>Total Impurities (%)</strong></td>
         <td class="uom-col"></td>
         <td class="standard-col"></td>
-        <td class="actual-col"></td>
+        <td class="actual-col">${formData.total_impurities}</td>
       </tr>
       <tr class="section-header">
         <td class="sr-col"></td>
@@ -850,7 +870,7 @@ export default function LabTestScreen({ navigation }) {
         <td class="test-col"><strong>Total Dockage</strong></td>
         <td class="uom-col">%</td>
         <td class="standard-col"></td>
-        <td class="actual-col"></td>
+        <td class="actual-col">${formData.total_dockage}</td>
       </tr>
     </tbody>
   </table>
@@ -897,10 +917,13 @@ export default function LabTestScreen({ navigation }) {
       setVehicles(response.data);
 
       // Find the vehicle for this lab test
-      const vehicle = response.data.find(v => v.id === labTest.vehicle_entry_id);
+      const vehicle = response.data.find(
+        (v) => v.id === labTest.vehicle_entry_id,
+      );
       setSelectedVehicle(vehicle);
     } catch (error) {
       console.error("Error loading vehicles:", error);
+      notify.showError("Failed to load vehicles for editing");
     }
 
     setEditMode(true);
@@ -934,13 +957,13 @@ export default function LabTestScreen({ navigation }) {
       blackened_wheat: labTest.blackened_wheat?.toString() || "",
       other_grains: labTest.sprouted_grains?.toString() || "",
       soft_wheat: labTest.other_grain_damage?.toString() || "",
-      heat_damaged: "",
-      immature_wheat: "",
-      broken_wheat: "",
+      heat_damaged: labTest.heat_damaged?.toString() || "",
+      immature_wheat: labTest.immature_wheat?.toString() || "",
+      broken_wheat: labTest.broken_wheat?.toString() || "",
       total_dockage: labTest.total_dockage?.toString() || "0.00",
       category: labTest.category || "",
       comments_action: labTest.remarks || "",
-      approved: false,
+      approved: false, // Reset approved status on edit
       tested_by: labTest.tested_by || "",
       raise_claim: labTest.raise_claim || false, // Load existing raise_claim state
     });
@@ -949,20 +972,21 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleDelete = async (labTest) => {
-    notify.showConfirm(
-      'Confirm Delete',
-      'Are you sure you want to delete this lab test?',
-      async () => {
-        try {
-          await labTestApi.delete(labTest.id);
-          notify.showSuccess('Lab test deleted successfully');
-          loadLabTests();
-        } catch (error) {
-          notify.showError('Failed to delete lab test');
-          console.error(error);
-        }
-      }
+    const confirmed = await notify.showConfirm(
+      "Confirm Delete",
+      "Are you sure you want to delete this lab test?",
     );
+
+    if (confirmed) {
+      try {
+        await labTestApi.delete(labTest.id);
+        notify.showSuccess("Lab Test deleted successfully!");
+        loadLabTests();
+      } catch (error) {
+        notify.showError("Failed to delete lab test");
+        console.error(error);
+      }
+    }
   };
 
   const openRaiseClaimModal = (labTest) => {
@@ -988,7 +1012,9 @@ export default function LabTestScreen({ navigation }) {
         lab_test_id: selectedLabTestForClaim.id,
         description: claimFormData.description,
         claim_type: claimFormData.claim_type || null,
-        claim_amount: claimFormData.claim_amount ? parseFloat(claimFormData.claim_amount) : null,
+        claim_amount: claimFormData.claim_amount
+          ? parseFloat(claimFormData.claim_amount)
+          : null,
         claim_date: claimFormData.claim_date.toISOString(),
       });
 
@@ -1041,7 +1067,7 @@ export default function LabTestScreen({ navigation }) {
       label: "Test Date",
       field: "test_date",
       width: 180,
-      render: (value) => new Date(value).toLocaleDateString(),
+      type: "date",
     },
     {
       label: "Actions",
@@ -1080,8 +1106,12 @@ export default function LabTestScreen({ navigation }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title={editMode ? "Edit Raw Wheat Quality Report" : "Raw Wheat Quality Report"}
-        width={isMobile ? "100%" : isTablet ? "85%" : "90%"}
+        title={
+          editMode
+            ? "Edit Raw Wheat Quality Report"
+            : "Raw Wheat Quality Report"
+        }
+        width={isMobile ? "100%" : isTablet ? "75%" : "800px"}
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
@@ -1089,16 +1119,16 @@ export default function LabTestScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Select Vehicle *</Text>
-
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Select Vehicle *</Text>
+                <View style={styles.rowField}>
                   {/* Filter Type Selection */}
                   <View style={styles.filterTypeContainer}>
                     <TouchableOpacity
                       style={[
                         styles.filterTypeButton,
-                        vehicleFilterType === "vehicle" && styles.filterTypeButtonActive,
+                        vehicleFilterType === "vehicle" &&
+                          styles.filterTypeButtonActive,
                       ]}
                       onPress={() => {
                         setVehicleFilterType("vehicle");
@@ -1108,7 +1138,8 @@ export default function LabTestScreen({ navigation }) {
                       <Text
                         style={[
                           styles.filterTypeText,
-                          vehicleFilterType === "vehicle" && styles.filterTypeTextActive,
+                          vehicleFilterType === "vehicle" &&
+                            styles.filterTypeTextActive,
                         ]}
                       >
                         By Vehicle Number
@@ -1117,7 +1148,8 @@ export default function LabTestScreen({ navigation }) {
                     <TouchableOpacity
                       style={[
                         styles.filterTypeButton,
-                        vehicleFilterType === "supplier" && styles.filterTypeButtonActive,
+                        vehicleFilterType === "supplier" &&
+                          styles.filterTypeButtonActive,
                       ]}
                       onPress={() => {
                         setVehicleFilterType("supplier");
@@ -1127,7 +1159,8 @@ export default function LabTestScreen({ navigation }) {
                       <Text
                         style={[
                           styles.filterTypeText,
-                          vehicleFilterType === "supplier" && styles.filterTypeTextActive,
+                          vehicleFilterType === "supplier" &&
+                            styles.filterTypeTextActive,
                         ]}
                       >
                         By Supplier Name
@@ -1150,7 +1183,9 @@ export default function LabTestScreen({ navigation }) {
                   {/* Vehicle Picker with Filtered Results */}
                   <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={formData.vehicle_entry_id?.toString() || ""}
+                      selectedValue={
+                        formData.vehicle_entry_id?.toString() || ""
+                      }
                       onValueChange={handleVehicleChange}
                       style={styles.picker}
                     >
@@ -1158,7 +1193,7 @@ export default function LabTestScreen({ navigation }) {
                       {filteredVehicles.map((vehicle) => (
                         <Picker.Item
                           key={vehicle.id}
-                          label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || "N/A"}`}
+                          label={`${vehicle.vehicle_number} - ${vehicle.bill_no || "N/A"} - ${vehicle.supplier?.supplier_name || "N/A"}`}
                           value={vehicle.id.toString()}
                         />
                       ))}
@@ -1171,9 +1206,11 @@ export default function LabTestScreen({ navigation }) {
                     </Text>
                   )}
                 </View>
+              </View>
 
-                <View style={styles.field}>
-                  <Text style={styles.label}>Bill Number</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Bill Number</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={[styles.input, styles.inputDisabled]}
                     value={formData.bill_number}
@@ -1182,11 +1219,377 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>
-                    Quality Category (Wheat Variety) *
-                  </Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Test Date *</Text>
+                <View style={styles.rowField}>
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text>{formData.test_date.toLocaleDateString()}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formData.test_date}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                />
+              )}
+
+              {/* Test Parameters Table */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Test Parameters</Text>
+                
+                <View style={styles.tableContainer}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderCell, styles.srNoCol]}>Sr.</Text>
+                    <Text style={[styles.tableHeaderCell, styles.testCol]}>TEST</Text>
+                    <Text style={[styles.tableHeaderCell, styles.uomCol]}>UOM</Text>
+                    <Text style={[styles.tableHeaderCell, styles.standardCol]}>STANDARD</Text>
+                    <Text style={[styles.tableHeaderCell, styles.actualCol]}>ACTUAL REPORT</Text>
+                  </View>
+
+                  {/* Row 1: Moisture */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>1</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Moisture</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>8-10.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.moisture}
+                      onChangeText={(text) => setFormData({ ...formData, moisture: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 2: Hectoliter Weight */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>2</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Hectoliter weight</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>Kg/hl</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>&gt;75</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.hectoliter_weight}
+                      onChangeText={(text) => setFormData({ ...formData, hectoliter_weight: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 3: Gluten Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>3</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
+
+                  {/* Row 3a: Wet Gluten */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>a</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Wet Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>32-33</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.wet_gluten}
+                      onChangeText={(text) => setFormData({ ...formData, wet_gluten: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 3b: Dry Gluten */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>b</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Dry Gluten</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>10.5-11.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.dry_gluten}
+                      onChangeText={(text) => setFormData({ ...formData, dry_gluten: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 4: Sedimentation Value */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>4</Text>
+                    <Text style={[styles.tableCell, styles.testCol]}>Sedimentation Value</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>ml</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>24-25 ml</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.sedimentation_value}
+                      onChangeText={(text) => setFormData({ ...formData, sedimentation_value: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5: Refractions Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>5</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Refractions</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
+
+                  {/* Row 5a: Chaff/Husk */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>a</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>chaff/Husk</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.chaff_husk}
+                      onChangeText={(text) => setFormData({ ...formData, chaff_husk: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5b: Straws/Sticks */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>b</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>straws/sticks</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.straws_sticks}
+                      onChangeText={(text) => setFormData({ ...formData, straws_sticks: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5c: Other Foreign Matter */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>c</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Other Foreign Matter (OFM)</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.other_foreign_matter}
+                      onChangeText={(text) => setFormData({ ...formData, other_foreign_matter: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5d: Mudballs */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>d</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Mudballs</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>&lt;3</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.mudballs}
+                      onChangeText={(text) => setFormData({ ...formData, mudballs: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5e: Stones */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>e</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Stones</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.stones}
+                      onChangeText={(text) => setFormData({ ...formData, stones: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5f: Dust/Sand */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>f</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Dust/Sand</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.dust_sand}
+                      onChangeText={(text) => setFormData({ ...formData, dust_sand: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Total Impurities Row */}
+                  <View style={[styles.tableRow, styles.totalRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Total Impurities (%)</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol, styles.boldText]}>{formData.total_impurities}</Text>
+                  </View>
+
+                  {/* Grain Dockage Header */}
+                  <View style={[styles.tableRow, styles.sectionRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Grain dockage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol]}></Text>
+                  </View>
+
+                  {/* Row 1: Shriveled Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>1</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Shriveled wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.shriveled_wheat}
+                      onChangeText={(text) => setFormData({ ...formData, shriveled_wheat: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 2: Insect Bored Damage */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>2</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Insect Bored damage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.insect_damage}
+                      onChangeText={(text) => setFormData({ ...formData, insect_damage: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 3: Blackened Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>3</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Blackened wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.blackened_wheat}
+                      onChangeText={(text) => setFormData({ ...formData, blackened_wheat: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 4: Other Grains */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>4</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Other Grains</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.other_grains}
+                      onChangeText={(text) => setFormData({ ...formData, other_grains: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 5: Soft Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>5</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Soft Wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.soft_wheat}
+                      onChangeText={(text) => setFormData({ ...formData, soft_wheat: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 6: Heat Damaged Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>6</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Heat Damaged wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.heat_damaged}
+                      onChangeText={(text) => setFormData({ ...formData, heat_damaged: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 7: Immature Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>7</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Immature wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.immature_wheat}
+                      onChangeText={(text) => setFormData({ ...formData, immature_wheat: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Row 8: Broken Wheat */}
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}>8</Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.indentedText]}>Broken wheat</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}></Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}>0.5</Text>
+                    <TextInput
+                      style={[styles.tableInput, styles.actualCol]}
+                      value={formData.broken_wheat}
+                      onChangeText={(text) => setFormData({ ...formData, broken_wheat: text })}
+                      keyboardType="decimal-pad"
+                      placeholder=""
+                    />
+                  </View>
+
+                  {/* Total Dockage Row */}
+                  <View style={[styles.tableRow, styles.totalRow]}>
+                    <Text style={[styles.tableCell, styles.srNoCol]}></Text>
+                    <Text style={[styles.tableCell, styles.testCol, styles.boldText]}>Total Dockage</Text>
+                    <Text style={[styles.tableCell, styles.uomCol]}>%</Text>
+                    <Text style={[styles.tableCell, styles.standardCol]}></Text>
+                    <Text style={[styles.tableCell, styles.actualCol, styles.boldText]}>{formData.total_dockage}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>
+                  Quality Category (Wheat Variety) *
+                </Text>
+                <View style={styles.rowField}>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.wheat_variety}
@@ -1206,341 +1609,64 @@ export default function LabTestScreen({ navigation }) {
                     </Picker>
                   </View>
                 </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.label}>Test Date *</Text>
-                  <TouchableOpacity
-                    style={styles.input}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text>{formData.test_date.toLocaleDateString()}</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={formData.test_date}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                />
-              )}
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Tested By</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.tested_by}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, tested_by: text })
-                  }
-                  placeholder="Name of lab chemist"
-                />
-              </View>
-            </View>
-
-            {/* Raise Claim Toggle */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Raise Claim</Text>
-              <View style={styles.checkboxContainer}>
-                <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={() =>
-                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
-                  }
-                >
-                  {formData.raise_claim && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-                <Text style={styles.checkboxText}>Yes/No</Text>
-              </View>
-            </View>
-
-
-            {/* Test Parameters */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Test Parameters</Text>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Moisture (%)</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Tested By</Text>
+                <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
-                    value={formData.moisture}
+                    value={formData.tested_by}
                     onChangeText={(text) =>
-                      setFormData({ ...formData, moisture: text })
+                      setFormData({ ...formData, tested_by: text })
                     }
-                    keyboardType="decimal-pad"
-                    placeholder="8-10.5"
+                    placeholder="Name of lab chemist"
                   />
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Hectoliter Weight (Kg/hl)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.hectoliter_weight}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, hectoliter_weight: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder=">75"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Wet Gluten (%)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.wet_gluten}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, wet_gluten: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="32-33"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Dry Gluten</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dry_gluten}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, dry_gluten: text })
-                    }
-                    keyboardType="decimal-pad"
-                    placeholder="10.5-11.5"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Sedimentation Value (ml)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.sedimentation_value}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, sedimentation_value: text })
-                  }
-                  keyboardType="decimal-pad"
-                  placeholder="24-25"
-                />
-              </View>
-            </View>
-
-            {/* Impurities */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Refractions / Impurities</Text>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Chaff/Husk</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.chaff_husk}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, chaff_husk: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Straws/Sticks</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.straws_sticks}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, straws_sticks: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Other Foreign Matter</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.other_foreign_matter}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, other_foreign_matter: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Mudballs (%, &lt;3)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.mudballs}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, mudballs: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Stones</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.stones}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, stones: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Dust/Sand</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dust_sand}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, dust_sand: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.totalField}>
-                <Text style={styles.totalLabel}>Total Impurities (%)</Text>
-                <Text style={styles.totalValue}>
-                  {formData.total_impurities}
-                </Text>
-              </View>
-            </View>
-
-            {/* Grain Dockage */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Grain Dockage</Text>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Shriveled Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.shriveled_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, shriveled_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Insect Bored Damage</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.insect_damage}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, insect_damage: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Blackened Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.blackened_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, blackened_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Other Grains (%)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.other_grains}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, other_grains: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Soft Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.soft_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, soft_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Heat Damaged Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.heat_damaged}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, heat_damaged: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Immature Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.immature_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, immature_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Broken Wheat</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.broken_wheat}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, broken_wheat: text })
-                    }
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.totalField}>
-                <Text style={styles.totalLabel}>Total Dockage (%)</Text>
-                <Text style={styles.totalValue}>{formData.total_dockage}</Text>
               </View>
             </View>
-
             {/* Comments & Final Approval */}
             <View style={styles.section}>
-              <Text style={styles.label}>Comments & Action</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.comments_action}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, comments_action: text })
-                }
-                placeholder="Enter comments and actions here..."
-                multiline
-                numberOfLines={4}
-              />
+              <View style={styles.formRow}>
+                <Text style={styles.rowLabel}>Comments & Action</Text>
+                <View style={styles.rowField}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={formData.comments_action}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, comments_action: text })
+                    }
+                    placeholder="Enter comments and actions here..."
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+              </View>
+
+              {/* Raise Claim Section */}
+              <View style={styles.raiseClaimSection}>
+                <Text style={styles.sectionTitle}>Raise Claim</Text>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() =>
+                    setFormData({
+                      ...formData,
+                      raise_claim: !formData.raise_claim,
+                    })
+                  }
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      formData.raise_claim && styles.checkboxChecked,
+                    ]}
+                  >
+                    {formData.raise_claim && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </View>
+                  <Text style={styles.checkboxText}>Yes/No</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.approvalBox}>
                 <Text style={styles.approvalTitle}>Final Approval</Text>
@@ -1590,7 +1716,11 @@ export default function LabTestScreen({ navigation }) {
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? "Saving..." : editMode ? "Update Test" : "Save Test"}
+                  {loading
+                    ? "Saving..."
+                    : editMode
+                      ? "Update Test"
+                      : "Save Test"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1623,7 +1753,8 @@ export default function LabTestScreen({ navigation }) {
             Lab Test: {selectedLabTestForClaim?.document_no || "N/A"}
           </Text>
           <Text style={styles.claimSubLabel}>
-            Vehicle: {selectedLabTestForClaim?.vehicle_entry?.vehicle_number || "N/A"}
+            Vehicle:{" "}
+            {selectedLabTestForClaim?.vehicle_entry?.vehicle_number || "N/A"}
           </Text>
 
           <View style={styles.formGroup}>
@@ -1653,7 +1784,10 @@ export default function LabTestScreen({ navigation }) {
               >
                 <Picker.Item label="Select Claim Type" value="" />
                 <Picker.Item label="Percentage (%)" value="percentage" />
-                <Picker.Item label="Rupees per Kilogram (₹/kg)" value="per_kg" />
+                <Picker.Item
+                  label="Rupees per Kilogram (₹/kg)"
+                  value="per_kg"
+                />
               </Picker>
             </View>
           </View>
@@ -1661,7 +1795,8 @@ export default function LabTestScreen({ navigation }) {
           {claimFormData.claim_type && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>
-                Claim Amount {claimFormData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
+                Claim Amount{" "}
+                {claimFormData.claim_type === "percentage" ? "(%)" : "(₹/kg)"}
               </Text>
               <TextInput
                 style={styles.input}
@@ -1669,7 +1804,11 @@ export default function LabTestScreen({ navigation }) {
                 onChangeText={(text) =>
                   setClaimFormData({ ...claimFormData, claim_amount: text })
                 }
-                placeholder={claimFormData.claim_type === "percentage" ? "Enter percentage" : "Enter amount per kg"}
+                placeholder={
+                  claimFormData.claim_type === "percentage"
+                    ? "Enter percentage"
+                    : "Enter amount per kg"
+                }
                 keyboardType="numeric"
               />
             </View>
@@ -1707,19 +1846,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   form: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: colors.textPrimary,
-    marginBottom: 12,
-    paddingBottom: 8,
+    marginBottom: 8,
+    paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
+  },
+  formRow: {
+    marginBottom: 14,
+  },
+  rowLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  rowField: {
+    width: "100%",
   },
   row: {
     flexDirection: "row",
@@ -1728,11 +1879,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   field: {
-    flex: 1,
-    minWidth: Platform.select({ web: 200, default: "100%" }),
+    width: "100%",
+    marginBottom: 14,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: 6,
@@ -1740,27 +1891,27 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.outline,
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 14,
+    borderRadius: 4,
+    padding: 8,
+    fontSize: 13,
     backgroundColor: colors.surface,
     color: colors.textPrimary,
-    minHeight: 44,
+    minHeight: 38,
   },
   inputDisabled: {
     backgroundColor: "#f5f5f5",
     color: colors.textSecondary,
   },
   textArea: {
-    height: 80,
+    height: 70,
     textAlignVertical: "top",
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: colors.outline,
-    borderRadius: 6,
+    borderRadius: 4,
     backgroundColor: colors.surface,
-    minHeight: 44,
+    minHeight: 38,
   },
   picker: {
     height: Platform.OS === "ios" ? 150 : 50,
@@ -1785,32 +1936,132 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: colors.primary,
+    padding: 12,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: colors.outline,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 8,
+    width: '100%',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.outline,
+  },
+  tableHeaderCell: {
+    padding: 8,
+    fontWeight: '700',
+    fontSize: 10,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 40,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
+    minHeight: 40,
+  },
+  sectionRow: {
+    backgroundColor: '#f9f9f9',
+  },
+  totalRow: {
+    backgroundColor: '#e8f5e9',
+  },
+  tableCell: {
+    padding: 6,
+    fontSize: 11,
+    color: colors.textPrimary,
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 40,
+    textAlign: 'center',
+    display: 'flex',
+  },
+  tableInput: {
+    padding: 6,
+    fontSize: 11,
+    color: colors.textPrimary,
+    borderRightWidth: 1,
+    borderRightColor: colors.outline,
+    backgroundColor: colors.surface,
+    minHeight: 40,
+    outlineStyle: 'none',
+    textAlign: 'left',
+  },
+  srNoCol: {
+    width: 40,
+    minWidth: 40,
+    maxWidth: 40,
+  },
+  testCol: {
+    width: 180,
+    minWidth: 180,
+  },
+  uomCol: {
+    width: 60,
+    minWidth: 60,
+    maxWidth: 60,
+  },
+  standardCol: {
+    width: 80,
+    minWidth: 80,
+  },
+  actualCol: {
+    flex: 1,
+    minWidth: 100,
+  },
+  boldText: {
+    fontWeight: '700',
+  },
+  indentedText: {
+    paddingLeft: 12,
+    textAlign: 'left',
+  },
+  raiseClaimSection: {
+    backgroundColor: "#fff3cd",
+    borderColor: "#ffc107",
+    borderWidth: 1,
+    borderRadius: 4,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 12,
   },
   approvalBox: {
     backgroundColor: "#d4edda",
     borderColor: "#28a745",
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 12,
-    marginTop: 16,
+    borderRadius: 4,
+    padding: 10,
+    marginTop: 12,
   },
   approvalTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     color: "#155724",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderWidth: 2,
     borderColor: "#28a745",
-    borderRadius: 4,
-    marginRight: 12,
+    borderRadius: 3,
+    marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
@@ -1820,34 +2071,34 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
   },
   checkboxLabel: {
     flex: 1,
   },
   checkboxText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#155724",
   },
   checkboxSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6c757d",
-    marginTop: 2,
+    marginTop: 1,
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 20,
+    gap: 10,
+    marginTop: 16,
     flexWrap: "wrap",
   },
   button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-    minWidth: Platform.select({ web: 100, default: "48%" }),
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 4,
+    minWidth: Platform.select({ web: 90, default: "48%" }),
     alignItems: "center",
   },
   cancelButton: {
@@ -1930,18 +2181,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   filterTypeContainer: {
     flexDirection: "row",
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 6,
+    gap: 6,
   },
   filterTypeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.outline,
     backgroundColor: colors.surface,
@@ -1960,9 +2211,9 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
   },
   noResultsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     fontStyle: "italic",
-    marginTop: 4,
+    marginTop: 3,
   },
 });

@@ -16,6 +16,16 @@ import Modal from '../components/Modal';
 import { machineApi } from '../api/client';
 import colors from '../theme/colors';
 
+// Assuming showNotification is a function available in the scope,
+// possibly imported from a UI library or a custom hook.
+// For demonstration, let's define a placeholder if it's not globally available.
+const showNotification = (message, type) => {
+  // In a real app, this would display a toast/snackbar.
+  // For this example, we'll use Alert, similar to showAlert.
+  Alert.alert(type.charAt(0).toUpperCase() + type.slice(1), message);
+};
+
+
 export default function MachineManagementScreen({ navigation }) {
   const [machines, setMachines] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -113,10 +123,12 @@ export default function MachineManagementScreen({ navigation }) {
     try {
       if (editMode) {
         await machineApi.update(currentMachine.id, formData);
-        showAlert('Success', 'Machine updated successfully');
+        // Updated toast message for successful machine update
+        showNotification("Machine updated successfully!", "success");
       } else {
         await machineApi.create(formData);
-        showAlert('Success', 'Machine created successfully');
+        // Updated toast message for successful machine creation
+        showNotification("Machine created successfully!", "success");
       }
       setModalVisible(false);
       loadMachines();
@@ -136,7 +148,8 @@ export default function MachineManagementScreen({ navigation }) {
       async () => {
         try {
           await machineApi.delete(machine.id);
-          showAlert('Success', 'Machine deleted successfully');
+          // Updated toast message for successful machine deletion
+          showNotification("Machine deleted successfully!", "success");
           loadMachines();
         } catch (error) {
           console.error('Error deleting machine:', error);

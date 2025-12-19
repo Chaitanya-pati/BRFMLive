@@ -5,8 +5,8 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
@@ -14,6 +14,9 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { supplierApi, stateCityApi } from '../api/client';
 import colors from '../theme/colors';
+import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
+import { useFormSubmission } from '../utils/useFormSubmission';
+import { formatISTDate } from '../utils/dateUtils';
 
 export default function SupplierMasterScreen({ navigation }) {
   const [suppliers, setSuppliers] = useState([]);
@@ -22,7 +25,7 @@ export default function SupplierMasterScreen({ navigation }) {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [states, setStates] = useState([]);
   const [selectedStateId, setSelectedStateId] = useState('');
-  const [loading, setLoading] = useState(false);
+  // Removed local loading state as it's now managed by useFormSubmission
 
   const [formData, setFormData] = useState({
     supplier_name: '',
@@ -38,26 +41,8 @@ export default function SupplierMasterScreen({ navigation }) {
     gstin: '',
   });
 
-  const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) {
-        onConfirm();
-      }
-    } else {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onConfirm }
-      ]);
-    }
-  };
+  // Initialize the useFormSubmission hook
+  const { isSubmitting, handleFormSubmission } = useFormSubmission();
 
   useEffect(() => {
     loadSuppliers();
@@ -81,9 +66,9 @@ export default function SupplierMasterScreen({ navigation }) {
   const handleStateChange = (stateId) => {
     if (!stateId || stateId === '') {
       setSelectedStateId('');
-      setFormData({ 
-        ...formData, 
-        state: ''
+      setFormData({
+        ...formData,
+        state: '',
       });
       return;
     }
@@ -96,15 +81,15 @@ export default function SupplierMasterScreen({ navigation }) {
 
     if (state) {
       setSelectedStateId(numericStateId);
-      setFormData({ 
-        ...formData, 
-        state: state.state_name
+      setFormData({
+        ...formData,
+        state: state.state_name,
       });
     } else {
       setSelectedStateId('');
-      setFormData({ 
-        ...formData, 
-        state: ''
+      setFormData({
+        ...formData,
+        state: '',
       });
     }
   };
@@ -161,13 +146,15 @@ export default function SupplierMasterScreen({ navigation }) {
     const trimmedState = formData.state?.trim();
     const trimmedCity = formData.city?.trim();
 
+    console.log('📝 Submitting supplier:', { trimmedName, trimmedState, trimmedCity, editMode });
+
     if (!trimmedName || !trimmedState || !trimmedCity) {
-      showAlert('Error', 'Please fill in all required fields (Supplier Name, State, City)');
+      await showAlert('Validation Error', 'Please fill in all required fields (Supplier Name, State, City)', 'error');
       return;
     }
 
-    setLoading(true);
-    try {
+    // Use handleFormSubmission for the actual submission logic
+    await handleFormSubmission(async () => {
       const payload = {
         supplier_name: trimmedName,
         contact_person: formData.contact_person?.trim() || '',
@@ -182,41 +169,39 @@ export default function SupplierMasterScreen({ navigation }) {
         gstin: formData.gstin?.trim() || '',
       };
 
+      console.log('📤 Sending payload:', payload);
+
       if (editMode && currentSupplier) {
-        await supplierApi.update(currentSupplier.id, payload);
-        showAlert('Success', 'Supplier updated successfully');
+        const response = await supplierApi.update(currentSupplier.id, payload);
+        console.log('✅ Update response:', response.data);
+        showSuccess('Supplier updated successfully');
       } else {
-        await supplierApi.create(payload);
-        showAlert('Success', 'Supplier created successfully');
+        const response = await supplierApi.create(payload);
+        console.log('✅ Create response:', response.data);
+        showSuccess('Supplier created successfully');
       }
 
       setModalVisible(false);
       await loadSuppliers();
-    } catch (error) {
-      const errorMessage = error.response?.data?.detail 
-        || error.response?.data?.message 
-        || error.message 
-        || 'Unknown error occurred';
-      showAlert('Error', 'Failed to save supplier: ' + errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    }, 'supplier'); // Pass a unique identifier for this form submission
   };
 
   const handleDelete = async (supplier) => {
-    showConfirm(
+    const confirmed = await showConfirm(
       'Confirm Delete',
-      `Are you sure you want to delete ${supplier.supplier_name}?`,
-      async () => {
-        try {
-          await supplierApi.delete(supplier.id);
-          showAlert('Success', 'Supplier deleted successfully');
-          loadSuppliers();
-        } catch (error) {
-          showAlert('Error', 'Failed to delete supplier');
-        }
-      }
+      `Are you sure you want to delete ${supplier.supplier_name}?`
     );
+
+    if (confirmed) {
+      try {
+        await supplierApi.delete(supplier.id);
+        showSuccess('Supplier deleted successfully');
+        loadSuppliers();
+      } catch (error) {
+        console.error('❌ Delete error:', error);
+        showError('Failed to delete supplier');
+      }
+    }
   };
 
   const columns = [
@@ -229,11 +214,11 @@ export default function SupplierMasterScreen({ navigation }) {
     { label: 'State', field: 'state', width: 130 },
     { label: 'City', field: 'city', width: 130 },
     { label: 'District', field: 'district', width: 130 },
-    { 
-      label: 'Created', 
-      field: 'created_at', 
+    {
+      label: 'Created',
+      field: 'created_at',
       width: 150,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => formatISTDate(value)
     },
   ];
 
@@ -295,34 +280,6 @@ export default function SupplierMasterScreen({ navigation }) {
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>GSTIN</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.gstin}
-            onChangeText={(text) => setFormData({ ...formData, gstin: text })}
-            placeholder="Enter GSTIN (15 characters)"
-            maxLength={15}
-            autoCapitalize="characters"
-          />
-
-          <Text style={styles.label}>Address</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={formData.address}
-            onChangeText={(text) => setFormData({ ...formData, address: text })}
-            placeholder="Enter address"
-            multiline
-            numberOfLines={3}
-          />
-
-          <Text style={styles.label}>Street</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.street}
-            onChangeText={(text) => setFormData({ ...formData, street: text })}
-            placeholder="Enter street"
-          />
-
           <Text style={styles.label}>State *</Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -357,6 +314,23 @@ export default function SupplierMasterScreen({ navigation }) {
             placeholder="Enter district name"
           />
 
+          <Text style={styles.label}>Street</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.street || ''}
+            onChangeText={(text) => setFormData({ ...formData, street: text })}
+            placeholder="Enter street"
+          />
+
+          <Text style={styles.label}>Address</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.address || ''}
+            onChangeText={(text) => setFormData({ ...formData, address: text })}
+            placeholder="Enter full address"
+            multiline
+          />
+
           <Text style={styles.label}>Zip Code</Text>
           <TextInput
             style={styles.input}
@@ -366,20 +340,31 @@ export default function SupplierMasterScreen({ navigation }) {
             keyboardType="numeric"
           />
 
+          <Text style={styles.label}>GSTIN</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.gstin}
+            onChangeText={(text) => setFormData({ ...formData, gstin: text })}
+            placeholder="Enter GSTIN (15 characters)"
+            maxLength={15}
+            autoCapitalize="characters"
+          />
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={() => setModalVisible(false)}
+              disabled={isSubmitting}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+              style={[styles.button, styles.saveButton, isSubmitting && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={isSubmitting}
             >
               <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : editMode ? 'Update' : 'Save'}
+                {isSubmitting ? 'Saving...' : editMode ? 'Update' : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>

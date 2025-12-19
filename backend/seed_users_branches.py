@@ -1,9 +1,8 @@
-import bcrypt
 from database import SessionLocal
 import models
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return password
 
 def seed_data():
     db = SessionLocal()

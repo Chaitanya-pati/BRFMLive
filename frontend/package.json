@@ -21,6 +21,7 @@
     "expo-camera": "~17.0.9",
     "expo-image-picker": "^17.0.8",
     "expo-status-bar": "~3.0.8",
+    "intro.js": "^8.3.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.63.0",
