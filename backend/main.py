@@ -2776,6 +2776,189 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
                                  branches=user.branches)
 
 
+# ============================================================================
+# 12-Hour Transfer API Endpoints
+# ============================================================================
+
+@app.get("/api/12hour-transfer/available-source-bins/{production_order_id}")
+def get_available_source_bins(
+    production_order_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get available 24-hour source bins for a production order"""
+    source_bins = db.query(
+        models.ProductionOrderSourceBin,
+        models.Bin
+    ).join(models.Bin).filter(
+        models.ProductionOrderSourceBin.production_order_id == production_order_id,
+        models.Bin.bin_type == "24_hour",
+        models.Bin.current_quantity > 0,
+        models.Bin.status == "Active"
+    ).all()
+    
+    result = []
+    for pb, bin_obj in source_bins:
+        result.append({
+            "id": bin_obj.id,
+            "bin_number": bin_obj.bin_number,
+            "capacity": bin_obj.capacity,
+            "current_quantity": bin_obj.current_quantity,
+            "bin_type": bin_obj.bin_type,
+            "status": bin_obj.status
+        })
+    return result
+
+
+@app.get("/api/12hour-transfer/available-destination-bins/{production_order_id}")
+def get_available_destination_bins(
+    production_order_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get available 12-hour destination bins for a production order"""
+    destination_bins = db.query(
+        models.ProductionOrderDestinationBin,
+        models.Bin
+    ).join(models.Bin).filter(
+        models.ProductionOrderDestinationBin.production_order_id == production_order_id,
+        models.Bin.bin_type == "12_hour",
+        models.Bin.current_quantity < models.Bin.capacity,
+        models.Bin.status == "Active",
+        models.Bin.locked_by_transfer_session_id.is_(None)
+    ).all()
+    
+    result = []
+    for pb, bin_obj in destination_bins:
+        result.append({
+            "id": bin_obj.id,
+            "bin_number": bin_obj.bin_number,
+            "capacity": bin_obj.capacity,
+            "current_quantity": bin_obj.current_quantity,
+            "remaining_capacity": bin_obj.capacity - bin_obj.current_quantity,
+            "bin_type": bin_obj.bin_type,
+            "status": bin_obj.status
+        })
+    return result
+
+
+@app.post("/api/12hour-transfer/create-session-normal")
+def create_transfer_session_normal(
+    request: schemas.Transfer12HourSessionCreate,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Create a Normal 12-hour transfer session with bins mapping"""
+    session = models.Transfer12HourSession(
+        production_order_id=request.production_order_id,
+        transfer_type=models.Transfer12HourType.NORMAL,
+        status=models.Transfer12HourSessionStatus.PLANNED,
+        created_by=user_id
+    )
+    db.add(session)
+    db.flush()
+    
+    # Add bins mappings
+    for idx, mapping in enumerate(request.bins_mapping):
+        bins_map = models.Transfer12HourBinsMapping(
+            transfer_session_id=session.id,
+            source_bin_id=mapping.source_bin_id,
+            destination_bin_id=mapping.destination_bin_id,
+            source_sequence=mapping.source_sequence,
+            destination_sequence=mapping.destination_sequence,
+            planned_quantity=mapping.planned_quantity
+        )
+        db.add(bins_map)
+    
+    db.commit()
+    db.refresh(session)
+    
+    return {
+        "id": session.id,
+        "production_order_id": session.production_order_id,
+        "transfer_type": session.transfer_type,
+        "status": session.status,
+        "message": "Normal transfer session created successfully"
+    }
+
+
+@app.post("/api/12hour-transfer/create-session-special")
+def create_transfer_session_special(
+    request: schemas.Transfer12HourSessionCreateSpecial,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Create a Special 12-hour transfer session with special transfer mapping"""
+    session = models.Transfer12HourSession(
+        production_order_id=request.production_order_id,
+        transfer_type=models.Transfer12HourType.SPECIAL,
+        status=models.Transfer12HourSessionStatus.PLANNED,
+        created_by=user_id
+    )
+    db.add(session)
+    db.flush()
+    
+    # Add bins mappings
+    for mapping in request.bins_mapping:
+        bins_map = models.Transfer12HourBinsMapping(
+            transfer_session_id=session.id,
+            source_bin_id=mapping.source_bin_id,
+            destination_bin_id=mapping.destination_bin_id,
+            source_sequence=mapping.source_sequence,
+            destination_sequence=mapping.destination_sequence,
+            planned_quantity=mapping.planned_quantity
+        )
+        db.add(bins_map)
+    
+    # Add special transfer mapping
+    special = models.Transfer12HourSpecialTransfer(
+        transfer_session_id=session.id,
+        special_source_bin_id=request.special_transfer.special_source_bin_id,
+        special_destination_bin_id=request.special_transfer.special_destination_bin_id,
+        manual_quantity=request.special_transfer.manual_quantity
+    )
+    db.add(special)
+    
+    # Lock destination bin
+    dest_bin = db.query(models.Bin).filter(
+        models.Bin.id == request.special_transfer.special_destination_bin_id
+    ).first()
+    if dest_bin:
+        dest_bin.locked_by_transfer_session_id = session.id
+    
+    db.commit()
+    db.refresh(session)
+    
+    return {
+        "id": session.id,
+        "production_order_id": session.production_order_id,
+        "transfer_type": session.transfer_type,
+        "status": session.status,
+        "message": "Special transfer session created successfully"
+    }
+
+
+@app.get("/api/12hour-transfer/session/{session_id}")
+def get_transfer_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get transfer session details"""
+    session = db.query(models.Transfer12HourSession).filter(
+        models.Transfer12HourSession.id == session_id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return {
+        "id": session.id,
+        "production_order_id": session.production_order_id,
+        "transfer_type": session.transfer_type,
+        "status": session.status,
+        "session_sequence": session.session_sequence,
+        "created_at": format_ist_iso(session.created_at)
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -30,6 +30,93 @@ class TransferSessionStatusEnum(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+# 12-Hour Transfer Enums
+class Transfer12HourTypeEnum(str, Enum):
+    NORMAL = "NORMAL"
+    SPECIAL = "SPECIAL"
+
+class Transfer12HourSessionStatusEnum(str, Enum):
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    PAUSED = "PAUSED"
+    CANCELLED = "CANCELLED"
+
+# 12-Hour Transfer Schemas
+class Transfer12HourBinsMappingBase(ISTModel):
+    source_bin_id: int
+    destination_bin_id: int
+    source_sequence: int
+    destination_sequence: int
+    planned_quantity: float
+
+class Transfer12HourBinsMappingCreate(Transfer12HourBinsMappingBase):
+    pass
+
+class Transfer12HourBinsMapping(Transfer12HourBinsMappingBase):
+    id: int
+    transfer_session_id: int
+    transferred_quantity: float
+    status: str
+    is_locked: bool
+    created_at: datetime
+    updated_at: datetime
+
+class Transfer12HourSpecialTransferBase(ISTModel):
+    special_source_bin_id: int
+    special_destination_bin_id: int
+    manual_quantity: float
+
+class Transfer12HourSpecialTransferCreate(Transfer12HourSpecialTransferBase):
+    pass
+
+class Transfer12HourSpecialTransfer(Transfer12HourSpecialTransferBase):
+    id: int
+    transfer_session_id: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+class Transfer12HourSessionBase(ISTModel):
+    production_order_id: int
+    transfer_type: Transfer12HourTypeEnum
+
+class Transfer12HourSessionCreate(Transfer12HourSessionBase):
+    bins_mapping: List[Transfer12HourBinsMappingCreate]
+
+class Transfer12HourSessionCreateSpecial(Transfer12HourSessionBase):
+    bins_mapping: List[Transfer12HourBinsMappingCreate]
+    special_transfer: Transfer12HourSpecialTransferCreate
+
+class Transfer12HourSession(Transfer12HourSessionBase):
+    id: int
+    status: str
+    session_sequence: int
+    start_timestamp: Optional[datetime]
+    end_timestamp: Optional[datetime]
+    bins_mapping: List[Transfer12HourBinsMapping] = []
+    special_transfer: Optional[Transfer12HourSpecialTransfer] = None
+    created_at: datetime
+    updated_at: datetime
+
+class Transfer12HourRecordBase(ISTModel):
+    source_bin_id: int
+    destination_bin_id: int
+    quantity_planned: float
+
+class Transfer12HourRecordCreate(Transfer12HourRecordBase):
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+
+class Transfer12HourRecord(Transfer12HourRecordBase):
+    id: int
+    transfer_session_id: int
+    bins_mapping_id: int
+    quantity_transferred: float
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
 class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None
