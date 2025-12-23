@@ -29,6 +29,7 @@ import FinishedGoodsMasterScreen from './src/screens/FinishedGoodsMasterScreen';
 import ProductionOrderScreen from './src/screens/ProductionOrderScreen';
 import ProductionOrderPlanningScreen from './src/screens/ProductionOrderPlanningScreen';
 import TransferRecordingScreen from './src/screens/TransferRecordingScreen';
+import Transfer12HourScreen from './src/screens/Transfer12HourScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -135,6 +136,7 @@ export default function App() {
           <Stack.Screen name="ProductionOrderPlanning" component={ProductionOrderPlanningScreen} />
           <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
           <Stack.Screen name="TransferRecording" component={TransferRecordingScreen} />
+          <Stack.Screen name="Transfer12Hour" component={Transfer12HourScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

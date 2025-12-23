@@ -257,6 +257,23 @@ export const transferSessionApi = {
   delete: (id) => api.delete(`/transfer-sessions/${id}`),
 };
 
+export const transfer12HourApi = {
+  getSessions: () => api.get("/12hour-transfer/sessions"),
+  getSession: (id) => api.get(`/12hour-transfer/session/${id}`),
+  getAvailableSourceBins: (productionOrderId) =>
+    api.get(`/12hour-transfer/available-source-bins/${productionOrderId}`),
+  getAvailableDestinationBins: (productionOrderId) =>
+    api.get(`/12hour-transfer/available-destination-bins/${productionOrderId}`),
+  createSessionNormal: (data) => api.post("/12hour-transfer/create-session-normal", data),
+  createSessionSpecial: (data) => api.post("/12hour-transfer/create-session-special", data),
+  startSession: (sessionId) => api.post(`/12hour-transfer/start-session/${sessionId}`),
+  recordTransfer: (sessionId, data) => api.post(`/12hour-transfer/record-transfer/${sessionId}`, data),
+  divertTransfer: (sessionId, data) => api.post(`/12hour-transfer/divert/${sessionId}`, data),
+  stopTransfer: (sessionId) => api.post(`/12hour-transfer/stop/${sessionId}`),
+  pauseSession: (sessionId) => api.post(`/12hour-transfer/pause/${sessionId}`),
+  resumeSession: (sessionId) => api.post(`/12hour-transfer/resume/${sessionId}`),
+};
+
 const STATIC_STATES = [
   { state_id: 1, state_name: "Andhra Pradesh" },
   { state_id: 2, state_name: "Arunachal Pradesh" },

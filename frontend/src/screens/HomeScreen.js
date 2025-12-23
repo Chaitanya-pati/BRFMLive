@@ -293,6 +293,13 @@ export default function HomeScreen({ navigation }) {
       color: "#d946ef",
       adminOnly: false,
     },
+    {
+      title: "12 Hour Transfer",
+      route: "Transfer12Hour",
+      icon: "clock",
+      color: "#06b6d4",
+      adminOnly: false,
+    },
   ];
 
   const quickActions = allQuickActions.filter(
