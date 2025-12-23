@@ -2780,24 +2780,17 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 # 12-Hour Transfer API Endpoints
 # ============================================================================
 
-@app.get("/api/12hour-transfer/available-source-bins/{production_order_id}")
-def get_available_source_bins(
-    production_order_id: int,
-    db: Session = Depends(get_db)
-):
-    """Get available 24-hour source bins for a production order"""
-    source_bins = db.query(
-        models.ProductionOrderSourceBin,
-        models.Bin
-    ).join(models.Bin).filter(
-        models.ProductionOrderSourceBin.production_order_id == production_order_id,
+@app.get("/api/12hour-transfer/available-source-bins")
+def get_available_source_bins(db: Session = Depends(get_db)):
+    """Get available 24-hour source bins (filtered by type, status, and quantity)"""
+    source_bins = db.query(models.Bin).filter(
         models.Bin.bin_type == "24_hour",
-        models.Bin.current_quantity > 0,
-        models.Bin.status == "Active"
+        models.Bin.status == "Active",
+        models.Bin.current_quantity > 0
     ).all()
     
     result = []
-    for pb, bin_obj in source_bins:
+    for bin_obj in source_bins:
         result.append({
             "id": bin_obj.id,
             "bin_number": bin_obj.bin_number,
@@ -2809,25 +2802,18 @@ def get_available_source_bins(
     return result
 
 
-@app.get("/api/12hour-transfer/available-destination-bins/{production_order_id}")
-def get_available_destination_bins(
-    production_order_id: int,
-    db: Session = Depends(get_db)
-):
-    """Get available 12-hour destination bins for a production order"""
-    destination_bins = db.query(
-        models.ProductionOrderDestinationBin,
-        models.Bin
-    ).join(models.Bin).filter(
-        models.ProductionOrderDestinationBin.production_order_id == production_order_id,
+@app.get("/api/12hour-transfer/available-destination-bins")
+def get_available_destination_bins(db: Session = Depends(get_db)):
+    """Get available 12-hour destination bins (filtered by type, status, capacity, and lock status)"""
+    destination_bins = db.query(models.Bin).filter(
         models.Bin.bin_type == "12_hour",
-        models.Bin.current_quantity < models.Bin.capacity,
         models.Bin.status == "Active",
+        models.Bin.current_quantity < models.Bin.capacity,
         models.Bin.locked_by_transfer_session_id.is_(None)
     ).all()
     
     result = []
-    for pb, bin_obj in destination_bins:
+    for bin_obj in destination_bins:
         result.append({
             "id": bin_obj.id,
             "bin_number": bin_obj.bin_number,

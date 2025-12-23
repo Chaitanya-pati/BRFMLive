@@ -93,8 +93,8 @@ export default function Transfer12HourScreen({ navigation }) {
     try {
       const client = getApiClient();
       const [sourceResponse, destResponse] = await Promise.all([
-        client.get(`/12hour-transfer/available-source-bins/${order.id}`),
-        client.get(`/12hour-transfer/available-destination-bins/${order.id}`),
+        client.get("/12hour-transfer/available-source-bins"),
+        client.get("/12hour-transfer/available-destination-bins"),
       ]);
       setSourceBins(sourceResponse.data || []);
       setDestinationBins(destResponse.data || []);
