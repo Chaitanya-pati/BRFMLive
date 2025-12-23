@@ -1,0 +1,166 @@
+📦 12-Hour Transfer Process (Production – Next Step)
+Overview
+
+We are implementing a 12-Hour Transfer process.
+
+Source Bins → 24-Hour bins
+
+Destination Bins → 12-Hour bins
+
+12-Hour bins have smaller capacity than 24-Hour bins
+
+Transfer is done only for a selected Production Order
+
+🔹 Bin Selection Rules
+Source Bins (24-Hour)
+
+Multiple source bins are allowed
+
+Only bins having available quantity for the selected production order should be shown
+
+User selects source bins in sequence (first selected = transferred first)
+
+Destination Bins (12-Hour)
+
+Multiple destination bins allowed
+
+Only bins with available capacity should be shown
+
+User selects destination bins in sequence
+
+🔁 Transfer Types
+
+User must choose one transfer type:
+
+1️⃣ Normal Transfer
+2️⃣ Special Transfer
+1️⃣ Normal Transfer Flow
+Step 1: Select Source Bins
+
+Multi-select 24-Hour bins
+
+Order of selection = transfer priority
+
+Step 2: Select Destination Bins
+
+Multi-select 12-Hour bins
+
+Order of selection = filling priority
+
+Step 3: Start Transfer
+Transfer Logic (Normal Transfer)
+
+Wheat is transferred from first source bin → first destination bin
+
+Transfer continues until destination bin capacity is full
+
+Example:
+
+Source Bin: 65 tons
+
+Destination Bin-1 capacity: 25 tons
+
+Flow:
+
+Transfer up to 25 tons to Destination Bin-1
+
+System shows “Divert to Next Bin”
+
+User must:
+
+Enter quantity transferred to current bin
+
+Confirm
+
+Only then:
+
+Transfer continues to Destination Bin-2
+
+This continues until the entire source bin is empty
+
+Then system automatically moves to next source bin
+
+🔒 Rule:
+User cannot divert without entering and confirming transferred quantity.
+
+2️⃣ Special Transfer Flow
+
+Special Transfer is used when a specific source → specific destination mapping is required.
+
+Extra Options in Special Transfer
+
+User can select:
+
+One additional specific source bin
+
+One specific destination bin
+
+User must manually enter:
+
+Exact quantity transferred to that destination bin
+
+Special Transfer Restrictions
+
+Destination bins used in Special Transfer:
+
+❌ Must NOT appear in Normal Transfer destination list
+
+❌ Cannot be selected again until wheat is completely transferred out
+
+Once emptied:
+
+✅ Bin becomes available again for Normal Transfer
+
+🧠 System Validations & Rules
+General
+
+Quantity transferred must not exceed:
+
+Source bin available quantity
+
+Destination bin remaining capacity
+
+Transfer sequence must be followed strictly
+
+Normal Transfer
+
+Source bins processed one by one
+
+Destination bins filled one by one
+
+Quantity entry is mandatory before diverting
+
+Special Transfer
+
+Locked destination bins until emptied
+
+Manual quantity entry mandatory
+
+✅ Completion
+
+Transfer completes when:
+
+All selected source bins are emptied
+OR
+
+All destination bins are full
+
+🎯 Expected Output from Replit Agent
+
+UI with:
+
+Transfer Type selector (Normal / Special)
+
+Multi-select source bins (sequence aware)
+
+Multi-select destination bins (capacity aware)
+
+Transfer engine with:
+
+Divert logic
+
+Quantity confirmation
+
+Bin locking/unlocking
+
+Full validation & error handling
