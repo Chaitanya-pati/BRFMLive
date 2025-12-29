@@ -2804,12 +2804,11 @@ def get_available_source_bins(db: Session = Depends(get_db)):
 
 @app.get("/api/12hour-transfer/available-destination-bins")
 def get_available_destination_bins(db: Session = Depends(get_db)):
-    """Get available 12-hour destination bins (filtered by type, status, capacity, and lock status)"""
+    """Get available 12-hour destination bins (filtered by type, status, and capacity)"""
     destination_bins = db.query(models.Bin).filter(
         models.Bin.bin_type == "12_hour",
         models.Bin.status == "Active",
-        models.Bin.current_quantity < models.Bin.capacity,
-        models.Bin.locked_by_transfer_session_id.is_(None)
+        models.Bin.current_quantity < models.Bin.capacity
     ).all()
     
     result = []
