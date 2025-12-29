@@ -312,8 +312,8 @@ export default function Transfer12HourScreen({ navigation }) {
           <SelectDropdown
             label="Special Source Bin"
             value={specialSourceBin}
-            onChange={setSpecialSourceBin}
-            items={sourceBins.map((bin) => ({
+            onValueChange={setSpecialSourceBin}
+            options={sourceBins.map((bin) => ({
               label: `${bin.bin_number} (${bin.current_quantity} tons)`,
               value: bin.id,
             }))}
@@ -321,8 +321,8 @@ export default function Transfer12HourScreen({ navigation }) {
           <SelectDropdown
             label="Special Destination Bin"
             value={specialDestinationBin}
-            onChange={setSpecialDestinationBin}
-            items={destinationBins.map((bin) => ({
+            onValueChange={setSpecialDestinationBin}
+            options={destinationBins.map((bin) => ({
               label: `${bin.bin_number} (${bin.remaining_capacity} capacity left)`,
               value: bin.id,
             }))}
@@ -355,8 +355,8 @@ export default function Transfer12HourScreen({ navigation }) {
           <SelectDropdown
             label="Source Bin"
             value={mapping.source_bin_id}
-            onChange={(value) => updateBinsMapping(index, "source_bin_id", value)}
-            items={sourceBins.map((bin) => ({
+            onValueChange={(value) => updateBinsMapping(index, "source_bin_id", value)}
+            options={sourceBins.map((bin) => ({
               label: `${bin.bin_number} (${bin.current_quantity} tons)`,
               value: bin.id,
             }))}
@@ -365,8 +365,8 @@ export default function Transfer12HourScreen({ navigation }) {
           <SelectDropdown
             label="Destination Bin"
             value={mapping.destination_bin_id}
-            onChange={(value) => updateBinsMapping(index, "destination_bin_id", value)}
-            items={destinationBins.map((bin) => ({
+            onValueChange={(value) => updateBinsMapping(index, "destination_bin_id", value)}
+            options={destinationBins.map((bin) => ({
               label: `${bin.bin_number} (${bin.remaining_capacity} capacity)`,
               value: bin.id,
             }))}
