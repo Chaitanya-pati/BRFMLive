@@ -597,6 +597,7 @@ class Transfer12HourBinsMapping(Base):
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     source_sequence = Column(Integer, nullable=False)
     destination_sequence = Column(Integer, nullable=False)
+    planned_quantity = Column(Float, nullable=False, default=0.0)
     transferred_quantity = Column(Float, default=0.0)
     status = Column(Enum(Transfer12HourBinsMappingStatus), default=Transfer12HourBinsMappingStatus.PENDING, nullable=False)
     is_locked = Column(Boolean, default=False)
