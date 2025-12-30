@@ -2829,7 +2829,7 @@ def create_transfer_session_normal(
     db: Session = Depends(get_db),
     user_id: Optional[int] = Header(None)
 ):
-    """Create a Normal 12-hour transfer session with bins mapping"""
+    """Create a Normal 12-hour transfer session with simplified mapping"""
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
         transfer_type=models.Transfer12HourType.NORMAL,
@@ -2839,17 +2839,15 @@ def create_transfer_session_normal(
     db.add(session)
     db.flush()
     
-    # Add bins mappings
-    for idx, mapping in enumerate(request.bins_mapping):
-        bins_map = models.Transfer12HourBinsMapping(
-            transfer_session_id=session.id,
-            source_bin_id=mapping.source_bin_id,
-            destination_bin_id=mapping.destination_bin_id,
-            source_sequence=mapping.source_sequence,
-            destination_sequence=mapping.destination_sequence,
-            planned_quantity=mapping.planned_quantity
-        )
-        db.add(bins_map)
+    # Add simplified bins mapping (single pair)
+    bins_map = models.Transfer12HourBinsMapping(
+        transfer_session_id=session.id,
+        source_bin_id=request.source_bin_id,
+        destination_bin_id=request.destination_bin_id,
+        source_sequence=1,
+        destination_sequence=1
+    )
+    db.add(bins_map)
     
     db.commit()
     db.refresh(session)
@@ -2879,33 +2877,14 @@ def create_transfer_session_special(
     db.add(session)
     db.flush()
     
-    # Add bins mappings
-    for mapping in request.bins_mapping:
-        bins_map = models.Transfer12HourBinsMapping(
-            transfer_session_id=session.id,
-            source_bin_id=mapping.source_bin_id,
-            destination_bin_id=mapping.destination_bin_id,
-            source_sequence=mapping.source_sequence,
-            destination_sequence=mapping.destination_sequence,
-            planned_quantity=mapping.planned_quantity
-        )
-        db.add(bins_map)
-    
     # Add special transfer mapping
     special = models.Transfer12HourSpecialTransfer(
         transfer_session_id=session.id,
-        special_source_bin_id=request.special_transfer.special_source_bin_id,
-        special_destination_bin_id=request.special_transfer.special_destination_bin_id,
-        manual_quantity=request.special_transfer.manual_quantity
+        special_source_bin_id=request.source_bin_id,
+        special_destination_bin_id=request.destination_bin_id,
+        status=models.Transfer12HourSpecialStatus.PENDING
     )
     db.add(special)
-    
-    # Lock destination bin
-    dest_bin = db.query(models.Bin).filter(
-        models.Bin.id == request.special_transfer.special_destination_bin_id
-    ).first()
-    if dest_bin:
-        dest_bin.locked_by_transfer_session_id = session.id
     
     db.commit()
     db.refresh(session)
@@ -2917,6 +2896,50 @@ def create_transfer_session_special(
         "status": session.status,
         "message": "Special transfer session created successfully"
     }
+
+@app.post("/api/12hour-transfer/record")
+def record_12hour_transfer(
+    record: schemas.Transfer12HourRecordCreate,
+    session_id: int,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
+):
+    """Record transfer quantity and update bin levels"""
+    session = db.query(models.Transfer12HourSession).filter(
+        models.Transfer12HourSession.id == session_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    source_bin = db.query(models.Bin).filter(models.Bin.id == record.source_bin_id).first()
+    dest_bin = db.query(models.Bin).filter(models.Bin.id == record.destination_bin_id).first()
+    
+    if not source_bin or not dest_bin:
+        raise HTTPException(status_code=400, detail="Invalid source or destination bin")
+        
+    if source_bin.current_quantity < record.quantity_transferred:
+        raise HTTPException(status_code=400, detail="Insufficient quantity in source bin")
+        
+    # Create record
+    db_record = models.Transfer12HourRecord(
+        transfer_session_id=session_id,
+        source_bin_id=record.source_bin_id,
+        destination_bin_id=record.destination_bin_id,
+        quantity_transferred=record.quantity_transferred,
+        water_added=record.water_added,
+        moisture_level=record.moisture_level,
+        status=models.TransferRecordingStatus.COMPLETED,
+        created_by=user_id
+    )
+    
+    # Update bin levels
+    source_bin.current_quantity -= record.quantity_transferred
+    dest_bin.current_quantity += record.quantity_transferred
+    
+    db.add(db_record)
+    db.commit()
+    
+    return {"message": "Transfer recorded and bin levels updated successfully"}
 
 
 @app.get("/api/12hour-transfer/session/{session_id}")
