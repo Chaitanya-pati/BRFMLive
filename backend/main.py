@@ -2839,19 +2839,13 @@ def create_transfer_session_normal(
     db.add(session)
     db.flush()
     
-    # Get source bin to set planned quantity
-    source_bin = db.query(models.Bin).filter(models.Bin.id == request.source_bin_id).first()
-    if not source_bin:
-        raise HTTPException(status_code=400, detail="Source bin not found")
-    
     # Add simplified bins mapping (single pair)
     bins_map = models.Transfer12HourBinsMapping(
         transfer_session_id=session.id,
         source_bin_id=request.source_bin_id,
         destination_bin_id=request.destination_bin_id,
         source_sequence=1,
-        destination_sequence=1,
-        planned_quantity=source_bin.current_quantity
+        destination_sequence=1
     )
     db.add(bins_map)
     
