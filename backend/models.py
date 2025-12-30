@@ -214,6 +214,19 @@ class Bin(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     branch = relationship("Branch")
+    source_bins = relationship("ProductionOrderSourceBin", back_populates="bin", cascade="all, delete-orphan")
+    destination_bins = relationship("ProductionOrderDestinationBin", back_populates="bin", cascade="all, delete-orphan")
+    route_mappings_source = relationship("RouteMagnetMapping", foreign_keys="[RouteMagnetMapping.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
+    route_mappings_dest = relationship("RouteMagnetMapping", foreign_keys="[RouteMagnetMapping.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfers = relationship("BinTransfer", back_populates="bin", cascade="all, delete-orphan")
+    transfer_sessions_dest = relationship("TransferSession", foreign_keys="[TransferSession.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_sessions_current = relationship("TransferSession", foreign_keys="[TransferSession.current_bin_id]", back_populates="current_bin", cascade="all, delete-orphan")
+    transfer_recording_dest = relationship("TransferRecording", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_12h_session_source = relationship("Transfer12HourSession", back_populates="source_bin", cascade="all, delete-orphan")
+    transfer_12h_mapping_dest = relationship("Transfer12HourBinsMapping", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_12h_mapping_source = relationship("Transfer12HourBinsMapping", back_populates="source_bin", cascade="all, delete-orphan")
+    transfer_12h_special_dest = relationship("Transfer12HourSpecial", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_12h_special_source = relationship("Transfer12HourSpecial", back_populates="source_bin", cascade="all, delete-orphan")
 
 class Magnet(Base):
     __tablename__ = "magnets"
@@ -258,8 +271,8 @@ class RouteMagnetMapping(Base):
 
     magnet = relationship("Magnet")
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
-    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id], back_populates="route_mappings_source")
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="route_mappings_dest")
 
 class RouteConfiguration(Base):
     __tablename__ = "route_configurations"
@@ -307,8 +320,8 @@ class TransferSession(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
-    current_bin = relationship("Bin", foreign_keys=[current_bin_id])
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_sessions_dest")
+    current_bin = relationship("Bin", foreign_keys=[current_bin_id], back_populates="transfer_sessions_current")
     magnet = relationship("Magnet", foreign_keys=[magnet_id])
     cleaning_records = relationship("MagnetCleaningRecord", back_populates="transfer_session")
     bin_transfers = relationship("BinTransfer", back_populates="transfer_session", cascade="all, delete-orphan")
@@ -343,7 +356,7 @@ class BinTransfer(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     transfer_session = relationship("TransferSession", back_populates="bin_transfers")
-    bin = relationship("Bin")
+    bin = relationship("Bin", back_populates="transfers")
 
 class MagnetCleaningRecord(Base):
     __tablename__ = "magnet_cleaning_records"
@@ -475,7 +488,7 @@ class ProductionOrderSourceBin(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     production_order = relationship("ProductionOrder", back_populates="source_bins")
-    bin = relationship("Bin")
+    bin = relationship("Bin", back_populates="source_bins")
 
 class ProductionOrderDestinationBin(Base):
     __tablename__ = "production_order_destination_bins"
@@ -488,7 +501,7 @@ class ProductionOrderDestinationBin(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     production_order = relationship("ProductionOrder", back_populates="destination_bins")
-    bin = relationship("Bin")
+    bin = relationship("Bin", back_populates="destination_bins")
 
 class TransferRecordingStatus(str, enum.Enum):
     PLANNED = "PLANNED"
@@ -515,7 +528,7 @@ class TransferRecording(Base):
     updated_by = Column(Integer, ForeignKey("users.id"))
 
     production_order = relationship("ProductionOrder")
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_recording_dest")
     created_by_user = relationship("User", foreign_keys=[created_by])
     updated_by_user = relationship("User", foreign_keys=[updated_by])
 
