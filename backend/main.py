@@ -2782,9 +2782,9 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 
 @app.get("/api/12hour-transfer/available-source-bins")
 def get_available_source_bins(db: Session = Depends(get_db)):
-    """Get available 12-hour source bins (filtered by type, status, and quantity)"""
+    """Get available 24-hour source bins (filtered by type, status, and quantity)"""
     source_bins = db.query(models.Bin).filter(
-        models.Bin.bin_type == "12 hours bin",
+        models.Bin.bin_type == "24 hours bin",
         models.Bin.status == "Active",
         models.Bin.current_quantity > 0
     ).all()
@@ -2804,9 +2804,9 @@ def get_available_source_bins(db: Session = Depends(get_db)):
 
 @app.get("/api/12hour-transfer/available-destination-bins")
 def get_available_destination_bins(db: Session = Depends(get_db)):
-    """Get available 24-hour destination bins (filtered by type, status, and capacity)"""
+    """Get available 12-hour destination bins (filtered by type, status, and capacity)"""
     destination_bins = db.query(models.Bin).filter(
-        models.Bin.bin_type == "24 hours bin",
+        models.Bin.bin_type == "12 hours bin",
         models.Bin.status == "Active",
         models.Bin.current_quantity < models.Bin.capacity
     ).all()
