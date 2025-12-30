@@ -222,11 +222,12 @@ class Bin(Base):
     transfer_sessions_dest = relationship("TransferSession", foreign_keys="[TransferSession.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
     transfer_sessions_current = relationship("TransferSession", foreign_keys="[TransferSession.current_bin_id]", back_populates="current_bin", cascade="all, delete-orphan")
     transfer_recording_dest = relationship("TransferRecording", back_populates="destination_bin", cascade="all, delete-orphan")
-    transfer_12h_session_source = relationship("Transfer12HourSession", back_populates="source_bin", cascade="all, delete-orphan")
-    transfer_12h_mapping_dest = relationship("Transfer12HourBinsMapping", back_populates="destination_bin", cascade="all, delete-orphan")
-    transfer_12h_mapping_source = relationship("Transfer12HourBinsMapping", back_populates="source_bin", cascade="all, delete-orphan")
-    transfer_12h_special_dest = relationship("Transfer12HourSpecial", back_populates="destination_bin", cascade="all, delete-orphan")
-    transfer_12h_special_source = relationship("Transfer12HourSpecial", back_populates="source_bin", cascade="all, delete-orphan")
+    transfer_12h_mapping_dest = relationship("Transfer12HourBinsMapping", foreign_keys="[Transfer12HourBinsMapping.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_12h_mapping_source = relationship("Transfer12HourBinsMapping", foreign_keys="[Transfer12HourBinsMapping.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
+    transfer_12h_special_dest = relationship("Transfer12HourSpecialTransfer", foreign_keys="[Transfer12HourSpecialTransfer.special_destination_bin_id]", back_populates="special_destination_bin", cascade="all, delete-orphan")
+    transfer_12h_special_source = relationship("Transfer12HourSpecialTransfer", foreign_keys="[Transfer12HourSpecialTransfer.special_source_bin_id]", back_populates="special_source_bin", cascade="all, delete-orphan")
+    transfer_12h_record_dest = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
+    transfer_12h_record_source = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
 
 class Magnet(Base):
     __tablename__ = "magnets"
@@ -606,8 +607,8 @@ class Transfer12HourBinsMapping(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     session = relationship("Transfer12HourSession", back_populates="bins_mapping")
-    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id], back_populates="transfer_12h_mapping_source")
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_12h_mapping_dest")
 
 
 class Transfer12HourSpecialTransfer(Base):
@@ -625,8 +626,8 @@ class Transfer12HourSpecialTransfer(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     session = relationship("Transfer12HourSession", back_populates="special_transfer")
-    special_source_bin = relationship("Bin", foreign_keys=[special_source_bin_id])
-    special_destination_bin = relationship("Bin", foreign_keys=[special_destination_bin_id])
+    special_source_bin = relationship("Bin", foreign_keys=[special_source_bin_id], back_populates="transfer_12h_special_source")
+    special_destination_bin = relationship("Bin", foreign_keys=[special_destination_bin_id], back_populates="transfer_12h_special_dest")
 
 
 class Transfer12HourRecord(Base):
@@ -651,7 +652,7 @@ class Transfer12HourRecord(Base):
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     session = relationship("Transfer12HourSession", back_populates="transfer_records")
-    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id], back_populates="transfer_12h_record_source")
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_12h_record_dest")
     created_by_user = relationship("User", foreign_keys=[created_by])
     updated_by_user = relationship("User", foreign_keys=[updated_by])
