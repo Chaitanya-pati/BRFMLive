@@ -2785,8 +2785,7 @@ def get_available_source_bins(db: Session = Depends(get_db)):
     """Get available 24-hour source bins (filtered by type, status, and quantity)"""
     source_bins = db.query(models.Bin).filter(
         models.Bin.bin_type == "24 hours bin",
-        models.Bin.status == "Active",
-        models.Bin.current_quantity > 0
+        models.Bin.status == "Active"
     ).all()
     
     result = []
@@ -2807,8 +2806,7 @@ def get_available_destination_bins(db: Session = Depends(get_db)):
     """Get available 12-hour destination bins (filtered by type, status, and capacity)"""
     destination_bins = db.query(models.Bin).filter(
         models.Bin.bin_type == "12 hours bin",
-        models.Bin.status == "Active",
-        models.Bin.current_quantity < models.Bin.capacity
+        models.Bin.status == "Active"
     ).all()
     
     result = []
