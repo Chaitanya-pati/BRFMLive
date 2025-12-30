@@ -29,6 +29,13 @@ const STAGES = {
   HISTORY: "HISTORY",
 };
 
+const formatTimer = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+};
+
 const TRANSFER_TYPES = [
   { label: "Normal Transfer", value: "NORMAL", description: "Standard transfer" },
   { label: "Special Transfer", value: "SPECIAL", description: "Custom transfer" },
@@ -55,11 +62,21 @@ export default function Transfer12HourScreen({ navigation }) {
   const [transferQuantity, setTransferQuantity] = useState("");
   const [waterAdded, setWaterAdded] = useState("");
   const [moistureLevel, setMoistureLevel] = useState("");
+  const [transferStartTime, setTransferStartTime] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     fetchProductionOrders();
     fetchSessions();
   }, []);
+
+  useEffect(() => {
+    if (!transferStartTime) return;
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - transferStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [transferStartTime]);
 
   const fetchProductionOrders = async () => {
     setLoading(true);
@@ -103,7 +120,7 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
-  const handleCreateSession = async () => {
+  const handleStartTransfer = async () => {
     if (!selectedSourceBin || !selectedDestinationBin) {
       showAlert("Validation Error", "Please select both source and destination bins");
       return;
@@ -123,12 +140,14 @@ export default function Transfer12HourScreen({ navigation }) {
         destination_bin_id: selectedDestinationBin,
       });
       
-      showToast("Success", "Transfer session created");
+      showToast("Success", "Transfer started");
       setSelectedSession(response.data);
+      setTransferStartTime(Date.now());
+      setElapsedSeconds(0);
       setStage(STAGES.SESSION_ACTIVE);
       fetchSessions();
     } catch (error) {
-      showAlert("Error", "Failed to create session");
+      showAlert("Error", "Failed to start transfer");
     } finally {
       setLoading(false);
     }
@@ -170,6 +189,17 @@ export default function Transfer12HourScreen({ navigation }) {
     setSelectedSourceBin(null);
     setSelectedDestinationBin(null);
     setStage(STAGES.SELECT_TYPE);
+  };
+
+  const handleStopTransfer = () => {
+    setTransferStartTime(null);
+    setElapsedSeconds(0);
+    setStage(STAGES.HISTORY);
+    showToast("Success", "Transfer stopped");
+  };
+
+  const handleDivertToBin = () => {
+    setShowQuantityModal(true);
   };
 
   const renderSelectType = () => (
@@ -228,30 +258,37 @@ export default function Transfer12HourScreen({ navigation }) {
           options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
         />
       </Card>
-      <Button title="Create Session" onPress={handleCreateSession} loading={loading} />
+      <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
       <Button title="Back" onPress={() => setStage(STAGES.SELECT_ORDER)} variant="secondary" />
     </ScrollView>
   );
 
   const renderSessionActive = () => (
     <ScrollView style={styles.container}>
-      <Card style={styles.sessionDetailsCard}>
-        <Text>Session ID: {selectedSession?.id}</Text>
-        <Text>Status: {selectedSession?.status}</Text>
+      <Card style={styles.timerCard}>
+        <Text style={styles.timerLabel}>Transfer Time</Text>
+        <Text style={styles.timerValue}>{formatTimer(elapsedSeconds)}</Text>
       </Card>
-      <Button title="Record Transfer" onPress={() => setShowQuantityModal(true)} />
+      <Card style={styles.sessionDetailsCard}>
+        <Text style={styles.detailsText}>Session ID: {selectedSession?.id}</Text>
+        <Text style={styles.detailsText}>Status: {selectedSession?.status}</Text>
+        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id === selectedSourceBin)?.bin_number}</Text>
+        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id === selectedDestinationBin)?.bin_number}</Text>
+      </Card>
+      <Button title="Divert to Next Bin" onPress={handleDivertToBin} />
       {showQuantityModal && (
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Record Transfer Details</Text>
             <InputField label="Quantity" value={transferQuantity} onChangeText={setTransferQuantity} keyboardType="decimal-pad" />
-            <InputField label="Water" value={waterAdded} onChangeText={setWaterAdded} keyboardType="decimal-pad" />
-            <InputField label="Moisture" value={moistureLevel} onChangeText={setMoistureLevel} keyboardType="decimal-pad" />
+            <InputField label="Water Added" value={waterAdded} onChangeText={setWaterAdded} keyboardType="decimal-pad" />
+            <InputField label="Moisture Level" value={moistureLevel} onChangeText={setMoistureLevel} keyboardType="decimal-pad" />
             <Button title="Save" onPress={handleRecordTransfer} loading={loading} />
             <Button title="Cancel" onPress={() => setShowQuantityModal(false)} variant="secondary" />
           </Card>
         </View>
       )}
-      <Button title="Finish" onPress={() => setStage(STAGES.HISTORY)} variant="secondary" />
+      <Button title="Stop Transfer" onPress={handleStopTransfer} variant="secondary" />
     </ScrollView>
   );
 
@@ -293,8 +330,13 @@ const styles = StyleSheet.create({
   typeDescription: { fontSize: 12, color: colors.text.secondary },
   orderCard: { padding: 16, marginBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mappingCard: { padding: 16, marginBottom: 16 },
-  sessionDetailsCard: { padding: 16, marginBottom: 16 },
+  timerCard: { padding: 20, marginBottom: 16, backgroundColor: colors.primary, borderRadius: 8, alignItems: "center" },
+  timerLabel: { fontSize: 14, color: "#fff", marginBottom: 8 },
+  timerValue: { fontSize: 48, fontWeight: "bold", color: "#fff", fontFamily: "monospace" },
+  sessionDetailsCard: { padding: 16, marginBottom: 16, backgroundColor: "#f5f5f5", borderRadius: 8 },
+  detailsText: { fontSize: 14, marginBottom: 8, color: colors.text.primary },
   modalOverlay: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modalContent: { width: "90%", padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
   sessionCard: { padding: 16, marginBottom: 10 },
 });
