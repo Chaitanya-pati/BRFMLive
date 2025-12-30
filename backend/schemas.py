@@ -48,7 +48,6 @@ class Transfer12HourBinsMappingBase(ISTModel):
     destination_bin_id: int
     source_sequence: int
     destination_sequence: int
-    planned_quantity: float
 
 class Transfer12HourBinsMappingCreate(Transfer12HourBinsMappingBase):
     pass
@@ -65,7 +64,6 @@ class Transfer12HourBinsMapping(Transfer12HourBinsMappingBase):
 class Transfer12HourSpecialTransferBase(ISTModel):
     special_source_bin_id: int
     special_destination_bin_id: int
-    manual_quantity: float
 
 class Transfer12HourSpecialTransferCreate(Transfer12HourSpecialTransferBase):
     pass
@@ -82,11 +80,12 @@ class Transfer12HourSessionBase(ISTModel):
     transfer_type: Transfer12HourTypeEnum
 
 class Transfer12HourSessionCreate(Transfer12HourSessionBase):
-    bins_mapping: List[Transfer12HourBinsMappingCreate]
+    source_bin_id: int
+    destination_bin_id: int
 
 class Transfer12HourSessionCreateSpecial(Transfer12HourSessionBase):
-    bins_mapping: List[Transfer12HourBinsMappingCreate]
-    special_transfer: Transfer12HourSpecialTransferCreate
+    source_bin_id: int
+    destination_bin_id: int
 
 class Transfer12HourSession(Transfer12HourSessionBase):
     id: int
@@ -102,7 +101,7 @@ class Transfer12HourSession(Transfer12HourSessionBase):
 class Transfer12HourRecordBase(ISTModel):
     source_bin_id: int
     destination_bin_id: int
-    quantity_planned: float
+    quantity_transferred: float
 
 class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     water_added: Optional[float] = None
