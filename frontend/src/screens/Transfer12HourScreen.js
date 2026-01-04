@@ -58,6 +58,12 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const [selectedSourceBin, setSelectedSourceBin] = useState(null);
   const [selectedDestinationBin, setSelectedDestinationBin] = useState(null);
+  
+  // Special transfer manual fields
+  const [specialSourceBin, setSpecialSourceBin] = useState(null);
+  const [specialDestinationBin, setSpecialDestinationBin] = useState(null);
+  const [manualQuantity, setManualQuantity] = useState("");
+
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [transferQuantity, setTransferQuantity] = useState("");
   const [waterAdded, setWaterAdded] = useState("");
@@ -138,6 +144,10 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_type: transferType,
         source_bin_id: selectedSourceBin,
         destination_bin_id: selectedDestinationBin,
+        // Include special transfer manual fields if applicable
+        special_source_bin_id: transferType === "SPECIAL" ? specialSourceBin : null,
+        special_destination_bin_id: transferType === "SPECIAL" ? specialDestinationBin : null,
+        manual_quantity: transferType === "SPECIAL" && manualQuantity ? parseFloat(manualQuantity) : null,
       });
       
       showToast("Success", "Transfer started");
@@ -245,6 +255,7 @@ export default function Transfer12HourScreen({ navigation }) {
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
       <Card style={styles.mappingCard}>
+        <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
         <SelectDropdown
           label="Source Bin"
           value={selectedSourceBin}
@@ -258,6 +269,32 @@ export default function Transfer12HourScreen({ navigation }) {
           options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
         />
       </Card>
+
+      {transferType === "SPECIAL" && (
+        <Card style={styles.mappingCard}>
+          <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
+          <SelectDropdown
+            label="Manual Source Bin"
+            value={specialSourceBin}
+            onValueChange={setSpecialSourceBin}
+            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          />
+          <SelectDropdown
+            label="Manual Destination Bin"
+            value={specialDestinationBin}
+            onValueChange={setSpecialDestinationBin}
+            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          />
+          <InputField
+            label="Quantity to Transfer"
+            value={manualQuantity}
+            onChangeText={setManualQuantity}
+            keyboardType="decimal-pad"
+            placeholder="Enter quantity"
+          />
+        </Card>
+      )}
+
       <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
       <Button title="Back" onPress={() => setStage(STAGES.SELECT_ORDER)} variant="secondary" />
     </ScrollView>
@@ -330,6 +367,7 @@ const styles = StyleSheet.create({
   typeDescription: { fontSize: 12, color: colors.text.secondary },
   orderCard: { padding: 16, marginBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mappingCard: { padding: 16, marginBottom: 16 },
+  cardSectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 12, color: colors.primary },
   timerCard: { padding: 20, marginBottom: 16, backgroundColor: colors.primary, borderRadius: 8, alignItems: "center" },
   timerLabel: { fontSize: 14, color: "#fff", marginBottom: 8 },
   timerValue: { fontSize: 48, fontWeight: "bold", color: "#fff", fontFamily: "monospace" },

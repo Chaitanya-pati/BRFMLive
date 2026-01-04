@@ -2867,35 +2867,45 @@ def create_transfer_session_special(
     db: Session = Depends(get_db),
     user_id: Optional[int] = Header(None)
 ):
-    """Create a Special 12-hour transfer session with special transfer mapping"""
+    """Create a Special 12-hour transfer session with both normal and special mappings"""
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
         transfer_type=models.Transfer12HourType.SPECIAL,
-        status=models.Transfer12HourSessionStatus.PLANNED,
+        status=models.Transfer12HourSessionStatus.IN_PROGRESS,  # Set to in-progress immediately
         created_by=user_id
     )
     db.add(session)
     db.flush()
     
-    # Add special transfer mapping
-    special = models.Transfer12HourSpecialTransfer(
+    # Add normal bins mapping (Standard Transfer)
+    normal_mapping = models.Transfer12HourBinsMapping(
         transfer_session_id=session.id,
-        special_source_bin_id=request.source_bin_id,
-        special_destination_bin_id=request.destination_bin_id,
-        status=models.Transfer12HourSpecialStatus.PENDING
+        source_bin_id=request.source_bin_id,
+        destination_bin_id=request.destination_bin_id,
+        source_sequence=1,
+        destination_sequence=1,
+        status=models.Transfer12HourBinsMappingStatus.ACTIVE,
+        start_timestamp=get_utc_now()
     )
-    db.add(special)
+    db.add(normal_mapping)
+    
+    # Add special manual transfer mapping if provided
+    if request.special_source_bin_id and request.special_destination_bin_id:
+        special = models.Transfer12HourSpecialTransfer(
+            transfer_session_id=session.id,
+            special_source_bin_id=request.special_source_bin_id,
+            special_destination_bin_id=request.special_destination_bin_id,
+            manual_quantity=request.manual_quantity,
+            status=models.Transfer12HourSpecialStatus.PENDING,
+            created_at=get_utc_now(),
+            updated_at=get_utc_now()
+        )
+        db.add(special)
     
     db.commit()
     db.refresh(session)
     
-    return {
-        "id": session.id,
-        "production_order_id": session.production_order_id,
-        "transfer_type": session.transfer_type,
-        "status": session.status,
-        "message": "Special transfer session created successfully"
-    }
+    return session
 
 @app.post("/api/12hour-transfer/record")
 def record_12hour_transfer(

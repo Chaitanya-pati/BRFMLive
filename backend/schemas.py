@@ -86,6 +86,9 @@ class Transfer12HourSessionCreate(Transfer12HourSessionBase):
 class Transfer12HourSessionCreateSpecial(Transfer12HourSessionBase):
     source_bin_id: int
     destination_bin_id: int
+    special_source_bin_id: Optional[int] = None
+    special_destination_bin_id: Optional[int] = None
+    manual_quantity: Optional[float] = None
 
 class Transfer12HourSession(Transfer12HourSessionBase):
     id: int
