@@ -617,6 +617,7 @@ class Transfer12HourSpecialTransfer(Base):
     transfer_session_id = Column(Integer, ForeignKey("12hours_transfer_sessions.id"), nullable=False, unique=True)
     special_source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     special_destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
+    manual_quantity = Column(Float, nullable=True)
     status = Column(Enum(Transfer12HourSpecialStatus), default=Transfer12HourSpecialStatus.PENDING, nullable=False)
     start_timestamp = Column(DateTime)
     end_timestamp = Column(DateTime)
