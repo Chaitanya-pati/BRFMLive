@@ -2884,7 +2884,7 @@ def create_transfer_session_special(
         destination_bin_id=request.destination_bin_id,
         source_sequence=1,
         destination_sequence=1,
-        status=models.Transfer12HourBinsMappingStatus.ACTIVE,
+        status=models.Transfer12HourBinsMappingStatus.IN_PROGRESS,
         start_timestamp=get_utc_now()
     )
     db.add(normal_mapping)
