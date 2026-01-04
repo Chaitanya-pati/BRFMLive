@@ -633,7 +633,7 @@ class Transfer12HourRecord(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     transfer_session_id = Column(Integer, ForeignKey("12hours_transfer_sessions.id"), nullable=False)
-    bins_mapping_id = Column(Integer, ForeignKey("12hours_transfer_bins_mapping.id"), nullable=False)
+    bins_mapping_id = Column(Integer, ForeignKey("12hours_transfer_bins_mapping.id"), nullable=True)
     source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     quantity_transferred = Column(Float, default=0.0)

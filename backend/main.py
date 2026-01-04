@@ -2921,8 +2921,28 @@ def record_12hour_transfer(
         raise HTTPException(status_code=400, detail="Insufficient quantity in source bin")
         
     # Create record
+    # Find the active bins mapping for this session
+    bins_mapping = db.query(models.Transfer12HourBinsMapping).filter(
+        models.Transfer12HourBinsMapping.transfer_session_id == session_id,
+        models.Transfer12HourBinsMapping.source_bin_id == record.source_bin_id,
+        models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id,
+        models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
+    ).first()
+
+    # If no in-progress mapping found, try to find any mapping for these bins in this session
+    if not bins_mapping:
+        bins_mapping = db.query(models.Transfer12HourBinsMapping).filter(
+            models.Transfer12HourBinsMapping.transfer_session_id == session_id,
+            models.Transfer12HourBinsMapping.source_bin_id == record.source_bin_id,
+            models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id
+        ).first()
+
+    # If still no mapping, and it's a special transfer, we might need a dummy or handling
+    # But for now, let's fix the NotNullViolation by ensuring bins_mapping_id is provided if possible
+    
     db_record = models.Transfer12HourRecord(
         transfer_session_id=session_id,
+        bins_mapping_id=bins_mapping.id if bins_mapping else None,
         source_bin_id=record.source_bin_id,
         destination_bin_id=record.destination_bin_id,
         quantity_transferred=record.quantity_transferred,
