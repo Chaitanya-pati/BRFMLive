@@ -2947,8 +2947,19 @@ def record_12hour_transfer(
             models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id
         ).first()
 
-    # If still no mapping, and it's a special transfer, we might need a dummy or handling
-    # But for now, let's fix the NotNullViolation by ensuring bins_mapping_id is provided if possible
+    # If still no mapping, and it's a special transfer, create one on the fly
+    if not bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
+        bins_mapping = models.Transfer12HourBinsMapping(
+            transfer_session_id=session_id,
+            source_bin_id=record.source_bin_id,
+            destination_bin_id=record.destination_bin_id,
+            source_sequence=1,
+            destination_sequence=1,
+            status=models.Transfer12HourBinsMappingStatus.IN_PROGRESS,
+            start_timestamp=get_utc_now()
+        )
+        db.add(bins_mapping)
+        db.flush()
     
     db_record = models.Transfer12HourRecord(
         transfer_session_id=session_id,
