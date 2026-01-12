@@ -309,8 +309,8 @@ export default function Transfer12HourScreen({ navigation }) {
       <Card style={styles.sessionDetailsCard}>
         <Text style={styles.detailsText}>Session ID: {selectedSession?.id}</Text>
         <Text style={styles.detailsText}>Status: {selectedSession?.status}</Text>
-        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id === selectedSourceBin)?.bin_number}</Text>
-        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id === selectedDestinationBin)?.bin_number}</Text>
+        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin.toString())?.bin_number}</Text>
+        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin.toString())?.bin_number}</Text>
       </Card>
       <Button title="Divert to Next Bin" onPress={handleDivertToBin} />
       {showQuantityModal && (
