@@ -100,10 +100,14 @@ export default function Transfer12HourScreen({ navigation }) {
   const fetchSessions = async () => {
     try {
       const client = getApiClient();
+      // Use the plural endpoint for listing active sessions or history
+      // If the backend has no list endpoint yet, we might need to handle it gracefully
       const response = await client.get("/12hour-transfer/sessions");
       setSessions(response.data || []);
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
+      // Fallback to empty if not found
+      setSessions([]);
     }
   };
 
