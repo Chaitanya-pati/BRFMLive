@@ -300,11 +300,11 @@ export default function ProductionOrderScreen({ navigation }) {
 
             <Text style={styles.label}>Order Number *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.lightGray }]}
               value={formData.order_number}
               onChangeText={(text) => setFormData({ ...formData, order_number: text })}
               placeholder="Select a product to generate"
-              editable={!editMode}
+              editable={false}
             />
 
             <Text style={styles.label}>Quantity (kg) *</Text>
