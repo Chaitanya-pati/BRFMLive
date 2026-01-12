@@ -324,20 +324,48 @@ export default function TransferRecordingScreen({ navigation }) {
               data={destinationBins}
               scrollEnabled={false}
               keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.binCard}>
-                  <View style={styles.binCardContent}>
-                    <Text style={styles.binNumber}>{item.bin.bin_number}</Text>
-                    <Text style={styles.binDetail}>Capacity: {item.bin.capacity} kg</Text>
-                    <Text style={styles.binDetail}>To Transfer: {item.quantity} kg</Text>
+              renderItem={({ item }) => {
+                const inProgressTransfer = transferHistory.find(
+                  (t) => t.destination_bin_id === item.bin_id && t.status === "IN_PROGRESS"
+                );
+                const isCompleted = transferHistory.some(
+                  (t) => t.destination_bin_id === item.bin_id && t.status === "COMPLETED"
+                );
+
+                return (
+                  <View style={styles.binCard}>
+                    <View style={styles.binCardContent}>
+                      <Text style={styles.binNumber}>{item.bin.bin_number}</Text>
+                      <Text style={styles.binDetail}>Capacity: {item.bin.capacity} kg</Text>
+                      <Text style={styles.binDetail}>To Transfer: {item.quantity} kg</Text>
+                    </View>
+                    {inProgressTransfer ? (
+                      <Button
+                        title="VIEW"
+                        onPress={() => {
+                          setCurrentTransfer(inProgressTransfer);
+                          // Calculate elapsed time from transfer_start_time
+                          const startTime = new Date(inProgressTransfer.transfer_start_time).getTime();
+                          const now = new Date().getTime();
+                          setTimer(Math.floor((now - startTime) / 1000));
+                          setStage(STAGES.TRANSFER_IN_PROGRESS);
+                        }}
+                        style={[styles.startBtn, { backgroundColor: "#f97316" }]}
+                      />
+                    ) : isCompleted ? (
+                      <View style={[styles.statusBadge, { backgroundColor: "#10b981", marginLeft: 12 }]}>
+                        <Text style={styles.statusText}>COMPLETED</Text>
+                      </View>
+                    ) : (
+                      <Button
+                        title="START"
+                        onPress={() => handleStartTransfer(item)}
+                        style={styles.startBtn}
+                      />
+                    )}
                   </View>
-                  <Button
-                    title="START"
-                    onPress={() => handleStartTransfer(item)}
-                    style={styles.startBtn}
-                  />
-                </View>
-              )}
+                );
+              }}
             />
           )}
 
