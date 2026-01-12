@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Use environment variable if available, otherwise fallback to hardcoded URL
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-summer-brook-af6opqny-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
 if not DATABASE_URL:
     # Fallback for local development if needed, but Replit should provide DATABASE_URL
     DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-summer-brook-af6opqny-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
