@@ -369,7 +369,11 @@ export default function TransferRecordingScreen({ navigation }) {
                 <Text style={styles.value}>{currentTransfer?.destination_bin?.bin_number}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Quantity:</Text>
+                <Text style={styles.label}>Qty Transferred:</Text>
+                <Text style={styles.value}>{currentTransfer?.quantity_transferred || 0} kg</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.label}>Qty Planned:</Text>
                 <Text style={styles.value}>{currentTransfer?.quantity_planned} kg</Text>
               </View>
               <View style={styles.detailRow}>
@@ -420,7 +424,7 @@ export default function TransferRecordingScreen({ navigation }) {
             </View>
 
             <InputField
-              label="Water Added (kg)"
+              label="Water Added (Litres)"
               placeholder="Enter amount"
               value={waterAdded}
               onChangeText={setWaterAdded}
