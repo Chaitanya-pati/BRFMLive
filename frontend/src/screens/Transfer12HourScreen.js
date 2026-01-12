@@ -369,7 +369,13 @@ export default function Transfer12HourScreen({ navigation }) {
               label="Next Destination Bin"
               value={nextDestinationBin}
               onValueChange={setNextDestinationBin}
-              options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+              options={destinationBins
+                .filter((bin) => 
+                  bin.id.toString() !== selectedDestinationBin.toString() && 
+                  (bin.capacity - bin.current_quantity) > 0
+                )
+                .map((bin) => ({ label: bin.bin_number, value: bin.id }))
+              }
             />
             <Button title="Update Bin" onPress={handleUpdateBins} style={{ marginTop: 10 }} />
           </Card>
