@@ -243,7 +243,7 @@ export default function Transfer12HourScreen({ navigation }) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <Card style={styles.orderCard}>
-            <Text>Order ID: {item.id}</Text>
+            <Text>Order No: {item.order_number}</Text>
             <Button title="Select" onPress={() => handleSelectOrder(item)} />
           </Card>
         )}
