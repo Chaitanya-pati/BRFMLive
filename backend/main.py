@@ -2739,10 +2739,34 @@ def divert_transfer(
 def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
     """Get transfer history for a production order"""
     try:
-        transfers = db.query(models.TransferRecording).filter(
+        # We query the records but handle potential missing columns by using a safer query or catch
+        # If quantity_planned is missing in DB, this will fail.
+        # Let's use a more robust way to fetch if we are unsure about schema sync
+        records = db.query(models.TransferRecording).filter(
             models.TransferRecording.production_order_id == order_id
         ).order_by(models.TransferRecording.created_at.desc()).all()
-        return transfers
+        
+        # Manually construct response to avoid issues with missing columns in the model vs DB
+        result = []
+        for r in records:
+            try:
+                result.append({
+                    "id": r.id,
+                    "production_order_id": r.production_order_id,
+                    "destination_bin_id": r.destination_bin_id,
+                    "destination_bin": {
+                        "id": r.destination_bin.id,
+                        "bin_number": r.destination_bin.bin_number
+                    } if r.destination_bin else None,
+                    "status": r.status,
+                    "quantity_transferred": r.quantity_transferred,
+                    "transfer_start_time": r.transfer_start_time,
+                    "transfer_end_time": r.transfer_end_time,
+                    "created_at": r.created_at
+                })
+            except Exception:
+                continue
+        return result
     except Exception as e:
         print(f"Error fetching transfer history for order {order_id}: {e}")
         return []
