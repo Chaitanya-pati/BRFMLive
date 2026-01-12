@@ -88,7 +88,7 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/production-orders");
+      const response = await client.get("/12hour-transfer/production-orders");
       setProductionOrders(response.data || []);
     } catch (error) {
       showAlert("Error", "Failed to fetch production orders");
@@ -113,7 +113,7 @@ export default function Transfer12HourScreen({ navigation }) {
     try {
       const client = getApiClient();
       const [sourceResponse, destResponse] = await Promise.all([
-        client.get("/12hour-transfer/available-source-bins"),
+        client.get(`/12hour-transfer/available-source-bins/${order.id}`),
         client.get("/12hour-transfer/available-destination-bins"),
       ]);
       setSourceBins(sourceResponse.data || []);

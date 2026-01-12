@@ -2780,11 +2780,49 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 # 12-Hour Transfer API Endpoints
 # ============================================================================
 
-@app.get("/api/12hour-transfer/available-source-bins")
-def get_available_source_bins(db: Session = Depends(get_db)):
-    """Get available 24-hour source bins (filtered by type, status, and quantity)"""
+@app.get("/api/12hour-transfer/production-orders", response_model=List[schemas.ProductionOrder])
+def get_12hour_available_production_orders(
+    branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get production orders that have at least one 24-hour bin 
+    that has completed its transfer process.
+    """
+    # Orders that have at least one completed 24h transfer record
+    completed_orders_ids = db.query(models.TransferRecording.production_order_id).filter(
+        models.TransferRecording.status == models.TransferRecordingStatus.COMPLETED
+    ).distinct().all()
+    completed_orders_ids = [r[0] for r in completed_orders_ids]
+
+    query = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.id.in_(completed_orders_ids)
+    )
+    if branch_id:
+        query = query.filter(models.ProductionOrder.branch_id == branch_id)
+    
+    return query.all()
+
+
+@app.get("/api/12hour-transfer/available-source-bins/{production_order_id}")
+def get_available_source_bins(production_order_id: int, db: Session = Depends(get_db)):
+    """
+    Get available 24-hour source bins for a specific production order.
+    Only bins that have completed their 24-hour transfer for this order are shown.
+    """
+    # Find all completed 24h transfer records for this production order
+    completed_transfers = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == production_order_id,
+        models.TransferRecording.status == models.TransferRecordingStatus.COMPLETED
+    ).all()
+    
+    completed_bin_ids = [t.destination_bin_id for t in completed_transfers]
+    
+    if not completed_bin_ids:
+        return []
+
     source_bins = db.query(models.Bin).filter(
-        models.Bin.bin_type == "24 hours bin",
+        models.Bin.id.in_(completed_bin_ids),
         models.Bin.status == "Active"
     ).all()
     

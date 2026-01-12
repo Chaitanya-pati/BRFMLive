@@ -258,6 +258,7 @@ export const transferSessionApi = {
 };
 
 export const transfer12HourApi = {
+  getAvailableProductionOrders: () => api.get("/12hour-transfer/production-orders"),
   getSessions: () => api.get("/12hour-transfer/sessions"),
   getSession: (id) => api.get(`/12hour-transfer/session/${id}`),
   getAvailableSourceBins: (productionOrderId) =>
