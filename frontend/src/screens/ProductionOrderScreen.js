@@ -73,19 +73,30 @@ export default function ProductionOrderScreen({ navigation }) {
   };
 
   const generateOrderNumber = () => {
+    const product = rawProducts.find(p => p.id.toString() === formData.raw_product_id);
+    const initial = product ? product.product_initial : 'PO';
     const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `PO-${year}${month}${day}-${random}`;
+    const dateStr = date.getFullYear() + 
+                    String(date.getMonth() + 1).padStart(2, '0') + 
+                    String(date.getDate()).padStart(2, '0');
+    
+    // Filter orders for the same product in the current year
+    const currentYear = date.getFullYear();
+    const productOrdersInYear = orders.filter(o => {
+      const orderDate = new Date(o.order_date);
+      return o.raw_product_id.toString() === formData.raw_product_id && 
+             orderDate.getFullYear() === currentYear;
+    });
+    
+    const nextCount = productOrdersInYear.length + 1;
+    return `${initial}-${dateStr}-${nextCount}`;
   };
 
   const openAddModal = () => {
     setEditMode(false);
     setCurrentOrder(null);
     setFormData({
-      order_number: generateOrderNumber(),
+      order_number: '', // Set to empty initially, will generate when product is selected
       raw_product_id: rawProducts.length > 0 ? rawProducts[0].id.toString() : '',
       quantity: '',
       order_date: new Date().toISOString().split('T')[0],
@@ -94,6 +105,16 @@ export default function ProductionOrderScreen({ navigation }) {
     });
     setModalVisible(true);
   };
+
+  // Add useEffect to generate order number when raw_product_id changes in Add Mode
+  useEffect(() => {
+    if (modalVisible && !editMode && formData.raw_product_id && rawProducts.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        order_number: generateOrderNumber()
+      }));
+    }
+  }, [formData.raw_product_id, modalVisible, editMode]);
 
   const openEditModal = (order) => {
     setEditMode(true);
