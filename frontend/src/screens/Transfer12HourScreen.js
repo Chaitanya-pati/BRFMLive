@@ -167,9 +167,7 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
-  const [isDiverting, setIsDiverting] = useState(false);
-  const [nextSourceBin, setNextSourceBin] = useState(null);
-  const [nextDestinationBin, setNextDestinationBin] = useState(null);
+  const [showBinSelectionModal, setShowBinSelectionModal] = useState(false);
 
   const handleDivertToBin = () => {
     setIsDiverting(true);
@@ -179,11 +177,6 @@ export default function Transfer12HourScreen({ navigation }) {
   const handleRecordTransfer = async () => {
     if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
       showAlert("Validation Error", "Please enter a valid transfer quantity");
-      return;
-    }
-
-    if (isDiverting && (!nextSourceBin || !nextDestinationBin)) {
-      showAlert("Validation Error", "Please select next source and destination bins for divert");
       return;
     }
 
@@ -200,24 +193,37 @@ export default function Transfer12HourScreen({ navigation }) {
         params: { session_id: selectedSession.id }
       });
 
-      if (isDiverting) {
-        setSelectedSourceBin(nextSourceBin);
-        setSelectedDestinationBin(nextDestinationBin);
-        setNextSourceBin(null);
-        setNextDestinationBin(null);
-        setIsDiverting(false);
-      }
-
       showToast("Success", "Transfer recorded");
       setShowQuantityModal(false);
-      setTransferQuantity("");
-      setWaterAdded("");
-      setMoistureLevel("");
+      
+      if (isDiverting) {
+        setShowBinSelectionModal(true);
+      } else {
+        setTransferQuantity("");
+        setWaterAdded("");
+        setMoistureLevel("");
+      }
     } catch (error) {
       showAlert("Error", "Failed to record transfer");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateBins = () => {
+    if (!nextDestinationBin) {
+      showAlert("Validation Error", "Please select next destination bin");
+      return;
+    }
+
+    setSelectedDestinationBin(nextDestinationBin);
+    setNextDestinationBin(null);
+    setIsDiverting(false);
+    setShowBinSelectionModal(false);
+    setTransferQuantity("");
+    setWaterAdded("");
+    setMoistureLevel("");
+    showToast("Success", "Destination bin updated");
   };
 
   const handleGoBack = () => {
@@ -339,35 +345,31 @@ export default function Transfer12HourScreen({ navigation }) {
         <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin.toString())?.bin_number}</Text>
         <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin.toString())?.bin_number}</Text>
       </Card>
-      <Button title="Record Transfer" onPress={handleOpenRecordModal} style={{ marginBottom: 10 }} />
-      <Button title="Divert to Next Bin" onPress={handleDivertToBin} />
+      <Button title="Divert Transfer" onPress={handleDivertToBin} />
       {showQuantityModal && (
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{isDiverting ? "Divert to Next Bin" : "Record Transfer Details"}</Text>
-            
-            {isDiverting && (
-              <View style={{ marginBottom: 15 }}>
-                <SelectDropdown
-                  label="Next Source Bin"
-                  value={nextSourceBin}
-                  onValueChange={setNextSourceBin}
-                  options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-                />
-                <SelectDropdown
-                  label="Next Destination Bin"
-                  value={nextDestinationBin}
-                  onValueChange={setNextDestinationBin}
-                  options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-                />
-              </View>
-            )}
-
+            <Text style={styles.modalTitle}>Enter Transfer Details</Text>
             <InputField label="Quantity" value={transferQuantity} onChangeText={setTransferQuantity} keyboardType="decimal-pad" />
             <InputField label="Water Added" value={waterAdded} onChangeText={setWaterAdded} keyboardType="decimal-pad" />
             <InputField label="Moisture Level" value={moistureLevel} onChangeText={setMoistureLevel} keyboardType="decimal-pad" />
-            <Button title="Save" onPress={handleRecordTransfer} loading={loading} />
-            <Button title="Cancel" onPress={() => setShowQuantityModal(false)} variant="secondary" />
+            <Button title="Save & Continue" onPress={handleRecordTransfer} loading={loading} />
+            <Button title="Cancel" onPress={() => { setShowQuantityModal(false); setIsDiverting(false); }} variant="secondary" />
+          </Card>
+        </View>
+      )}
+
+      {showBinSelectionModal && (
+        <View style={styles.modalOverlay}>
+          <Card style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Next Destination Bin</Text>
+            <SelectDropdown
+              label="Next Destination Bin"
+              value={nextDestinationBin}
+              onValueChange={setNextDestinationBin}
+              options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+            />
+            <Button title="Update Bin" onPress={handleUpdateBins} style={{ marginTop: 10 }} />
           </Card>
         </View>
       )}
