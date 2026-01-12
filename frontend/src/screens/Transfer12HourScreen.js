@@ -385,6 +385,25 @@ export default function Transfer12HourScreen({ navigation }) {
     </ScrollView>
   );
 
+  const [activeTab, setActiveTab] = useState("TRANSFER");
+
+  const renderTabs = () => (
+    <View style={styles.tabContainer}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "TRANSFER" && styles.activeTab]}
+        onPress={() => setActiveTab("TRANSFER")}
+      >
+        <Text style={[styles.tabText, activeTab === "TRANSFER" && styles.activeTabText]}>Transfer</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "HISTORY" && styles.activeTab]}
+        onPress={() => setActiveTab("HISTORY")}
+      >
+        <Text style={[styles.tabText, activeTab === "HISTORY" && styles.activeTabText]}>History</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderHistory = () => (
     <ScrollView style={styles.container}>
       <FlatList
@@ -392,21 +411,41 @@ export default function Transfer12HourScreen({ navigation }) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <Card style={styles.sessionCard}>
-            <Text>Session #{item.id} - {item.status}</Text>
+            <View style={styles.sessionHeader}>
+              <Text style={styles.sessionTitle}>Session #{item.id}</Text>
+              <Text style={[styles.statusBadge, { backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0' }]}>
+                {item.status}
+              </Text>
+            </View>
+            <Text style={styles.sessionDetail}>Type: {item.transfer_type}</Text>
+            <Text style={styles.sessionDetail}>Date: {formatISTDateTime(item.created_at)}</Text>
+            <Button 
+              title="View Details" 
+              variant="secondary" 
+              size="small"
+              onPress={() => showAlert("Details", `Production Order: ${item.production_order_id}\nStatus: ${item.status}`)} 
+            />
           </Card>
         )}
+        ListEmptyComponent={<Text style={styles.emptyText}>No transfer history found</Text>}
       />
-      <Button title="Back" onPress={handleGoBack} variant="secondary" />
     </ScrollView>
   );
 
   return (
     <Layout navigation={navigation}>
-      {stage === STAGES.SELECT_TYPE && renderSelectType()}
-      {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
-      {stage === STAGES.CONFIGURE_BINS && renderConfigureBins()}
-      {stage === STAGES.SESSION_ACTIVE && renderSessionActive()}
-      {stage === STAGES.HISTORY && renderHistory()}
+      {stage === STAGES.SELECT_TYPE && renderTabs()}
+      
+      {activeTab === "TRANSFER" ? (
+        <>
+          {stage === STAGES.SELECT_TYPE && renderSelectType()}
+          {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
+          {stage === STAGES.CONFIGURE_BINS && renderConfigureBins()}
+          {stage === STAGES.SESSION_ACTIVE && renderSessionActive()}
+        </>
+      ) : (
+        renderHistory()
+      )}
     </Layout>
   );
 }
@@ -433,4 +472,14 @@ const styles = StyleSheet.create({
   modalContent: { width: "90%", padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
   sessionCard: { padding: 16, marginBottom: 10 },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: colors.border },
+  tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
+  activeTab: { borderBottomWidth: 3, borderBottomColor: colors.primary },
+  tabText: { fontSize: 16, color: colors.text.secondary, fontWeight: '600' },
+  activeTabText: { color: colors.primary },
+  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  sessionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 12, fontWeight: 'bold' },
+  sessionDetail: { fontSize: 14, color: colors.text.secondary, marginBottom: 5 },
+  emptyText: { textAlign: 'center', marginTop: 50, color: colors.text.secondary, fontSize: 16 },
 });
