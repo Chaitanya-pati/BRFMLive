@@ -110,7 +110,12 @@ export default function TransferRecordingScreen({ navigation }) {
         production_order_id: selectedOrder.id,
         destination_bin_id: destBin.bin_id,
       });
-      setCurrentTransfer(response.data);
+      // Store the planned quantity from the selection
+      const transferData = {
+        ...response.data,
+        quantity_planned: destBin.quantity
+      };
+      setCurrentTransfer(transferData);
       setTimer(0);
       setWaterAdded("");
       setMoistureLevel("");
@@ -198,7 +203,11 @@ export default function TransferRecordingScreen({ navigation }) {
       showToast("Transfer diverted successfully");
       
       // Start new transfer
-      setCurrentTransfer(response.data);
+      const nextBinTransferData = {
+        ...response.data,
+        quantity_planned: nextBin.quantity
+      };
+      setCurrentTransfer(nextBinTransferData);
       setTimer(0);
       setWaterAdded("");
       setMoistureLevel("");
@@ -382,10 +391,10 @@ export default function TransferRecordingScreen({ navigation }) {
               </View>
             </View>
 
-            {currentTransfer?.production_order?.source_bins && currentTransfer.production_order.source_bins.length > 0 && (
+            {selectedOrder?.source_bins && selectedOrder.source_bins.length > 0 && (
               <View style={styles.blendSection}>
                 <Text style={styles.blendTitle}>Source Blend %:</Text>
-                {currentTransfer.production_order.source_bins.map((bin, idx) => (
+                {selectedOrder.source_bins.map((bin, idx) => (
                   <View key={idx} style={styles.blendRow}>
                     <Text style={styles.blendLabel}>{bin?.bin?.bin_number}:</Text>
                     <Text style={styles.blendValue}>{bin?.blend_percentage}%</Text>
