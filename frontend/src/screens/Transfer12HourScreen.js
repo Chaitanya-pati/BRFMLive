@@ -238,7 +238,7 @@ export default function Transfer12HourScreen({ navigation }) {
   const handleStopTransfer = () => {
     setTransferStartTime(null);
     setElapsedSeconds(0);
-    setStage(STAGES.HISTORY);
+    handleGoBack();
     showToast("Success", "Transfer stopped");
   };
 
