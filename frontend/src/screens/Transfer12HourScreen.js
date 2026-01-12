@@ -167,9 +167,23 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
+  const [isDiverting, setIsDiverting] = useState(false);
+  const [nextSourceBin, setNextSourceBin] = useState(null);
+  const [nextDestinationBin, setNextDestinationBin] = useState(null);
+
+  const handleDivertToBin = () => {
+    setIsDiverting(true);
+    setShowQuantityModal(true);
+  };
+
   const handleRecordTransfer = async () => {
     if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
       showAlert("Validation Error", "Please enter a valid transfer quantity");
+      return;
+    }
+
+    if (isDiverting && (!nextSourceBin || !nextDestinationBin)) {
+      showAlert("Validation Error", "Please select next source and destination bins for divert");
       return;
     }
 
@@ -185,6 +199,14 @@ export default function Transfer12HourScreen({ navigation }) {
       }, {
         params: { session_id: selectedSession.id }
       });
+
+      if (isDiverting) {
+        setSelectedSourceBin(nextSourceBin);
+        setSelectedDestinationBin(nextDestinationBin);
+        setNextSourceBin(null);
+        setNextDestinationBin(null);
+        setIsDiverting(false);
+      }
 
       showToast("Success", "Transfer recorded");
       setShowQuantityModal(false);
@@ -212,7 +234,8 @@ export default function Transfer12HourScreen({ navigation }) {
     showToast("Success", "Transfer stopped");
   };
 
-  const handleDivertToBin = () => {
+  const handleOpenRecordModal = () => {
+    setIsDiverting(false);
     setShowQuantityModal(true);
   };
 
@@ -316,11 +339,30 @@ export default function Transfer12HourScreen({ navigation }) {
         <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin.toString())?.bin_number}</Text>
         <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin.toString())?.bin_number}</Text>
       </Card>
+      <Button title="Record Transfer" onPress={handleOpenRecordModal} style={{ marginBottom: 10 }} />
       <Button title="Divert to Next Bin" onPress={handleDivertToBin} />
       {showQuantityModal && (
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Record Transfer Details</Text>
+            <Text style={styles.modalTitle}>{isDiverting ? "Divert to Next Bin" : "Record Transfer Details"}</Text>
+            
+            {isDiverting && (
+              <View style={{ marginBottom: 15 }}>
+                <SelectDropdown
+                  label="Next Source Bin"
+                  value={nextSourceBin}
+                  onValueChange={setNextSourceBin}
+                  options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+                />
+                <SelectDropdown
+                  label="Next Destination Bin"
+                  value={nextDestinationBin}
+                  onValueChange={setNextDestinationBin}
+                  options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+                />
+              </View>
+            )}
+
             <InputField label="Quantity" value={transferQuantity} onChangeText={setTransferQuantity} keyboardType="decimal-pad" />
             <InputField label="Water Added" value={waterAdded} onChangeText={setWaterAdded} keyboardType="decimal-pad" />
             <InputField label="Moisture Level" value={moistureLevel} onChangeText={setMoistureLevel} keyboardType="decimal-pad" />
