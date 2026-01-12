@@ -2738,10 +2738,14 @@ def divert_transfer(
 @app.get("/api/transfer/order/{order_id}/history")
 def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
     """Get transfer history for a production order"""
-    transfers = db.query(models.TransferRecording).filter(
-        models.TransferRecording.production_order_id == order_id
-    ).order_by(models.TransferRecording.created_at.desc()).all()
-    return transfers
+    try:
+        transfers = db.query(models.TransferRecording).filter(
+            models.TransferRecording.production_order_id == order_id
+        ).order_by(models.TransferRecording.created_at.desc()).all()
+        return transfers
+    except Exception as e:
+        print(f"Error fetching transfer history for order {order_id}: {e}")
+        return []
 
 
 @app.post("/api/login", response_model=schemas.LoginResponse)

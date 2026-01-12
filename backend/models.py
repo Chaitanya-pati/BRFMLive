@@ -516,7 +516,7 @@ class TransferRecording(Base):
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False)
-    quantity_planned = Column(Float, nullable=False)
+    quantity_planned = Column(Float, nullable=False, default=0.0)
     quantity_transferred = Column(Float, default=0.0)
     transfer_start_time = Column(DateTime)
     transfer_end_time = Column(DateTime)
