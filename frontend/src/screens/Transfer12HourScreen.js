@@ -167,6 +167,8 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
+  const [isDiverting, setIsDiverting] = useState(false);
+  const [nextDestinationBin, setNextDestinationBin] = useState(null);
   const [showBinSelectionModal, setShowBinSelectionModal] = useState(false);
 
   const handleDivertToBin = () => {
