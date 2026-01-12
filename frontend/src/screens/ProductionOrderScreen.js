@@ -96,8 +96,8 @@ export default function ProductionOrderScreen({ navigation }) {
     setEditMode(false);
     setCurrentOrder(null);
     setFormData({
-      order_number: '', // Set to empty initially, will generate when product is selected
-      raw_product_id: rawProducts.length > 0 ? rawProducts[0].id.toString() : '',
+      order_number: '',
+      raw_product_id: '',
       quantity: '',
       order_date: new Date().toISOString().split('T')[0],
       target_finish_date: '',
@@ -279,15 +279,6 @@ export default function ProductionOrderScreen({ navigation }) {
           title={editMode ? 'Edit Production Order' : 'Create Production Order'}
         >
           <View style={styles.form}>
-            <Text style={styles.label}>Order Number *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.order_number}
-              onChangeText={(text) => setFormData({ ...formData, order_number: text })}
-              placeholder="e.g., PO-20251216-001"
-              editable={!editMode}
-            />
-
             <Text style={styles.label}>Raw Product *</Text>
             <View style={styles.pickerContainer}>
               <Picker
@@ -306,6 +297,15 @@ export default function ProductionOrderScreen({ navigation }) {
                 ))}
               </Picker>
             </View>
+
+            <Text style={styles.label}>Order Number *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.order_number}
+              onChangeText={(text) => setFormData({ ...formData, order_number: text })}
+              placeholder="Select a product to generate"
+              editable={!editMode}
+            />
 
             <Text style={styles.label}>Quantity (kg) *</Text>
             <TextInput
