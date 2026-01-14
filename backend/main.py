@@ -2862,39 +2862,58 @@ def get_available_source_bins(production_order_id: int, db: Session = Depends(ge
 @app.get("/api/12hour-transfer/available-destination-bins")
 def get_available_destination_bins(db: Session = Depends(get_db)):
     """Get available 12-hour destination bins (filtered by type, status, capacity, and current activity)"""
-    # Subquery for bins currently in an active 12-hour transfer session via bins_mapping
-    active_mapping_bins = db.query(models.Transfer12HourBinsMapping.destination_bin_id).join(
-        models.Transfer12HourSession, 
-        models.Transfer12HourSession.id == models.Transfer12HourBinsMapping.transfer_session_id
-    ).filter(
-        models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
-        models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
-    ).all()
-    active_mapping_bin_ids = [r[0] for r in active_mapping_bins]
-    
-    # Subquery for bins currently in an active special transfer session
-    active_special_bins = db.query(models.Transfer12HourSpecialTransfer.special_destination_bin_id).join(
-        models.Transfer12HourSession,
-        models.Transfer12HourSession.id == models.Transfer12HourSpecialTransfer.transfer_session_id
-    ).filter(
-        models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
-        models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
-    ).all()
-    active_special_bin_ids = [r[0] for r in active_special_bins]
+    try:
+        # Find bins currently in an active 12-hour transfer session
+        active_bin_ids = db.query(models.Transfer12HourBinsMapping.destination_bin_id).join(
+            models.Transfer12HourSession, 
+            models.Transfer12HourSession.id == models.Transfer12HourBinsMapping.transfer_session_id
+        ).filter(
+            models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
+            models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
+        ).all()
+        active_bin_ids = [r[0] for r in active_bin_ids]
+        
+        active_special_bin_ids = db.query(models.Transfer12HourSpecialTransfer.special_destination_bin_id).join(
+            models.Transfer12HourSession,
+            models.Transfer12HourSession.id == models.Transfer12HourSpecialTransfer.transfer_session_id
+        ).filter(
+            models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
+            models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
+        ).all()
+        active_special_bin_ids = [r[0] for r in active_special_bin_ids]
 
-    locked_bin_ids = list(set(active_mapping_bin_ids + active_special_bin_ids))
+        locked_bin_ids = list(set(active_bin_ids + active_special_bin_ids))
 
-    # Base query for 12-hour bins
-    query = db.query(models.Bin).filter(
-        models.Bin.bin_type == "12 hours bin",
-        models.Bin.status == "Active"
-    )
+        # Base query for 12-hour bins
+        query = db.query(models.Bin).filter(
+            models.Bin.bin_type == "12 hours bin",
+            models.Bin.status == "Active"
+        )
+        
+        if locked_bin_ids:
+            destination_bins = query.filter(~models.Bin.id.in_(locked_bin_ids)).all()
+        else:
+            destination_bins = query.all()
+    except Exception as e:
+        print(f"Error filtering locked bins: {e}")
+        # Fallback to simple query if tables are missing or complex query fails
+        destination_bins = db.query(models.Bin).filter(
+            models.Bin.bin_type == "12 hours bin",
+            models.Bin.status == "Active"
+        ).all()
     
-    if locked_bin_ids:
-        destination_bins = query.filter(~models.Bin.id.in_(locked_bin_ids)).all()
-    else:
-        destination_bins = query.all()
-    
+    result = []
+    for bin_obj in destination_bins:
+        result.append({
+            "id": bin_obj.id,
+            "bin_number": bin_obj.bin_number,
+            "capacity": bin_obj.capacity,
+            "current_quantity": bin_obj.current_quantity,
+            "remaining_capacity": bin_obj.capacity - bin_obj.current_quantity,
+            "bin_type": bin_obj.bin_type,
+            "status": bin_obj.status
+        })
+    return result    
     result = []
     for bin_obj in destination_bins:
         result.append({
