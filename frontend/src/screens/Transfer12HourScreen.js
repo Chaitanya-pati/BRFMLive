@@ -372,7 +372,8 @@ export default function Transfer12HourScreen({ navigation }) {
               options={destinationBins
                 .filter((bin) => 
                   bin.id.toString() !== selectedDestinationBin.toString() && 
-                  (bin.capacity - bin.current_quantity) > 0
+                  (bin.capacity - bin.current_quantity) > 0 &&
+                  bin.status === "Active"
                 )
                 .map((bin) => ({ label: bin.bin_number, value: bin.id }))
               }
