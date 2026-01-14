@@ -2862,30 +2862,38 @@ def get_available_source_bins(production_order_id: int, db: Session = Depends(ge
 @app.get("/api/12hour-transfer/available-destination-bins")
 def get_available_destination_bins(db: Session = Depends(get_db)):
     """Get available 12-hour destination bins (filtered by type, status, capacity, and current activity)"""
-    # Find bins currently in an active 12-hour transfer session
-    active_bin_ids = db.query(models.Transfer12HourBinsMapping.destination_bin_id).join(
+    # Subquery for bins currently in an active 12-hour transfer session via bins_mapping
+    active_mapping_bins = db.query(models.Transfer12HourBinsMapping.destination_bin_id).join(
         models.Transfer12HourSession, 
         models.Transfer12HourSession.id == models.Transfer12HourBinsMapping.transfer_session_id
     ).filter(
         models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
         models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
     ).all()
+    active_mapping_bin_ids = [r[0] for r in active_mapping_bins]
     
-    active_special_bin_ids = db.query(models.Transfer12HourSpecialTransfer.special_destination_bin_id).join(
+    # Subquery for bins currently in an active special transfer session
+    active_special_bins = db.query(models.Transfer12HourSpecialTransfer.special_destination_bin_id).join(
         models.Transfer12HourSession,
         models.Transfer12HourSession.id == models.Transfer12HourSpecialTransfer.transfer_session_id
     ).filter(
         models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
         models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
     ).all()
+    active_special_bin_ids = [r[0] for r in active_special_bins]
 
-    locked_bin_ids = [r[0] for r in active_bin_ids + active_special_bin_ids]
+    locked_bin_ids = list(set(active_mapping_bin_ids + active_special_bin_ids))
 
-    destination_bins = db.query(models.Bin).filter(
+    # Base query for 12-hour bins
+    query = db.query(models.Bin).filter(
         models.Bin.bin_type == "12 hours bin",
-        models.Bin.status == "Active",
-        ~models.Bin.id.in_(locked_bin_ids) if locked_bin_ids else True
-    ).all()
+        models.Bin.status == "Active"
+    )
+    
+    if locked_bin_ids:
+        destination_bins = query.filter(~models.Bin.id.in_(locked_bin_ids)).all()
+    else:
+        destination_bins = query.all()
     
     result = []
     for bin_obj in destination_bins:
