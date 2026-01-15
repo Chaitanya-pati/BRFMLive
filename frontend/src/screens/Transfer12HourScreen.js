@@ -58,6 +58,7 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const [selectedSourceBin, setSelectedSourceBin] = useState(null);
   const [selectedDestinationBin, setSelectedDestinationBin] = useState(null);
+  const [subType, setSubType] = useState("NORMAL");
   
   // Special transfer manual fields
   const [specialSourceBin, setSpecialSourceBin] = useState(null);
@@ -138,7 +139,11 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const handleStartTransfer = async () => {
-    if (!selectedSourceBin || !selectedDestinationBin) {
+    // Determine which bins to validate based on sub-type
+    const source = (transferType === "SPECIAL" && subType === "SPECIAL") ? specialSourceBin : selectedSourceBin;
+    const dest = (transferType === "SPECIAL" && subType === "SPECIAL") ? specialDestinationBin : selectedDestinationBin;
+
+    if (!source || !dest) {
       showAlert("Validation Error", "Please select both source and destination bins");
       return;
     }
@@ -155,10 +160,10 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_type: transferType,
         source_bin_id: selectedSourceBin,
         destination_bin_id: selectedDestinationBin,
-        // Include special transfer manual fields if applicable
-        special_source_bin_id: transferType === "SPECIAL" ? specialSourceBin : null,
-        special_destination_bin_id: transferType === "SPECIAL" ? specialDestinationBin : null,
-        manual_quantity: transferType === "SPECIAL" && manualQuantity ? parseFloat(manualQuantity) : null,
+        // Include special transfer manual fields only if special sub-type is selected
+        special_source_bin_id: (transferType === "SPECIAL" && subType === "SPECIAL") ? specialSourceBin : null,
+        special_destination_bin_id: (transferType === "SPECIAL" && subType === "SPECIAL") ? specialDestinationBin : null,
+        manual_quantity: (transferType === "SPECIAL" && subType === "SPECIAL" && manualQuantity) ? parseFloat(manualQuantity) : null,
       });
       
       showToast("Success", "Transfer started");
@@ -323,47 +328,84 @@ export default function Transfer12HourScreen({ navigation }) {
     </ScrollView>
   );
 
+  const [subType, setSubType] = useState("NORMAL"); // Added state for special transfer sub-type
+
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
-      <Card style={styles.mappingCard}>
-        <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
-        <SelectDropdown
-          label="Source Bin"
-          value={selectedSourceBin}
-          onValueChange={setSelectedSourceBin}
-          options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-        />
-        <SelectDropdown
-          label="Destination Bin"
-          value={selectedDestinationBin}
-          onValueChange={setSelectedDestinationBin}
-          options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-        />
-      </Card>
-
-      {transferType === "SPECIAL" && (
+      {transferType === "NORMAL" ? (
         <Card style={styles.mappingCard}>
-          <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
+          <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
           <SelectDropdown
-            label="Manual Source Bin"
-            value={specialSourceBin}
-            onValueChange={setSpecialSourceBin}
+            label="Source Bin"
+            value={selectedSourceBin}
+            onValueChange={setSelectedSourceBin}
             options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
           />
           <SelectDropdown
-            label="Manual Destination Bin"
-            value={specialDestinationBin}
-            onValueChange={setSpecialDestinationBin}
+            label="Destination Bin"
+            value={selectedDestinationBin}
+            onValueChange={setSelectedDestinationBin}
             options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
           />
-          <InputField
-            label="Quantity to Transfer"
-            value={manualQuantity}
-            onChangeText={setManualQuantity}
-            keyboardType="decimal-pad"
-            placeholder="Enter quantity"
-          />
         </Card>
+      ) : (
+        <View>
+          <View style={styles.subTypeSelector}>
+            <TouchableOpacity 
+              style={[styles.subTypeTab, subType === "NORMAL" && styles.activeSubTypeTab]} 
+              onPress={() => setSubType("NORMAL")}
+            >
+              <Text style={[styles.subTypeTabText, subType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.subTypeTab, subType === "SPECIAL" && styles.activeSubTypeTab]} 
+              onPress={() => setSubType("SPECIAL")}
+            >
+              <Text style={[styles.subTypeTabText, subType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
+            </TouchableOpacity>
+          </View>
+
+          {subType === "NORMAL" ? (
+            <Card style={styles.mappingCard}>
+              <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
+              <SelectDropdown
+                label="Source Bin"
+                value={selectedSourceBin}
+                onValueChange={setSelectedSourceBin}
+                options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+              />
+              <SelectDropdown
+                label="Destination Bin"
+                value={selectedDestinationBin}
+                onValueChange={setSelectedDestinationBin}
+                options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+              />
+            </Card>
+          ) : (
+            <Card style={styles.mappingCard}>
+              <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
+              <SelectDropdown
+                label="Manual Source Bin"
+                value={specialSourceBin}
+                onValueChange={setSpecialSourceBin}
+                options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+              />
+              <SelectDropdown
+                label="Manual Destination Bin"
+                value={specialDestinationBin}
+                onValueChange={setSpecialDestinationBin}
+                options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+              />
+              <InputField
+                label="Quantity to Transfer"
+                value={manualQuantity}
+                onChangeText={setManualQuantity}
+                keyboardType="decimal-pad"
+                placeholder="Enter quantity"
+              />
+            </Card>
+          )}
+        </View>
       )}
 
       <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
@@ -516,6 +558,11 @@ const styles = StyleSheet.create({
   activeTabText: { color: colors.primary },
   activeWarningCard: { padding: 16, backgroundColor: '#fff3cd', borderColor: '#ffeeba', borderWidth: 1, marginBottom: 16 },
   activeWarningText: { color: '#856404', fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
+  subTypeSelector: { flexDirection: 'row', marginBottom: 16, backgroundColor: '#f0f0f0', borderRadius: 8, padding: 4 },
+  subTypeTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6 },
+  activeSubTypeTab: { backgroundColor: colors.primary },
+  subTypeTabText: { color: colors.text.secondary, fontWeight: '600' },
+  activeSubTypeTabText: { color: '#fff' },
   sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sessionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 12, fontWeight: 'bold' },
