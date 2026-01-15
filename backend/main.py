@@ -2947,6 +2947,16 @@ def create_transfer_session_normal(
     user_id: Optional[int] = Header(None)
 ):
     """Create a Normal 12-hour transfer session with simplified mapping"""
+    # Prevent concurrent transfers
+    active_session = db.query(models.Transfer12HourSession).filter(
+        models.Transfer12HourSession.status.in_([
+            models.Transfer12HourSessionStatus.IN_PROGRESS,
+            models.Transfer12HourSessionStatus.PLANNED
+        ])
+    ).first()
+    if active_session:
+        raise HTTPException(status_code=400, detail="Another transfer session is already active")
+
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
         transfer_type=models.Transfer12HourType.NORMAL,
@@ -2985,6 +2995,16 @@ def create_transfer_session_special(
     user_id: Optional[int] = Header(None)
 ):
     """Create a Special 12-hour transfer session with both normal and special mappings"""
+    # Prevent concurrent transfers
+    active_session = db.query(models.Transfer12HourSession).filter(
+        models.Transfer12HourSession.status.in_([
+            models.Transfer12HourSessionStatus.IN_PROGRESS,
+            models.Transfer12HourSessionStatus.PLANNED
+        ])
+    ).first()
+    if active_session:
+        raise HTTPException(status_code=400, detail="Another transfer session is already active")
+
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
         transfer_type=models.Transfer12HourType.SPECIAL,
@@ -3121,14 +3141,54 @@ def get_transfer_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Calculate elapsed seconds if active
+    elapsed = 0
+    if session.status == models.Transfer12HourSessionStatus.IN_PROGRESS and session.created_at:
+        now = datetime.utcnow()
+        elapsed = int((now - session.created_at).total_seconds())
+
     return {
         "id": session.id,
         "production_order_id": session.production_order_id,
         "transfer_type": session.transfer_type,
         "status": session.status,
         "session_sequence": session.session_sequence,
-        "created_at": format_ist_iso(session.created_at)
+        "created_at": format_ist_iso(session.created_at),
+        "elapsed_seconds": elapsed
     }
+
+@app.patch("/api/12hour-transfer/session/{session_id}")
+def update_transfer_session(
+    session_id: int,
+    update_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Update transfer session status"""
+    session = db.query(models.Transfer12HourSession).filter(
+        models.Transfer12HourSession.id == session_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if "status" in update_data:
+        session.status = update_data["status"]
+        if update_data["status"] == "COMPLETED":
+            session.end_timestamp = datetime.utcnow()
+            # Also complete any in-progress mappings
+            db.query(models.Transfer12HourBinsMapping).filter(
+                models.Transfer12HourBinsMapping.transfer_session_id == session_id,
+                models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
+            ).update({"status": models.Transfer12HourBinsMappingStatus.COMPLETED, "end_timestamp": datetime.utcnow()})
+            
+            # Update special transfers if any
+            db.query(models.Transfer12HourSpecialTransfer).filter(
+                models.Transfer12HourSpecialTransfer.transfer_session_id == session_id,
+                models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
+            ).update({"status": models.Transfer12HourSpecialStatus.COMPLETED})
+
+    db.commit()
+    db.refresh(session)
+    return session
 
 
 if __name__ == "__main__":

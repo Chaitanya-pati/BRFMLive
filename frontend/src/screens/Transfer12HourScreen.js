@@ -100,13 +100,20 @@ export default function Transfer12HourScreen({ navigation }) {
   const fetchSessions = async () => {
     try {
       const client = getApiClient();
-      // Use the plural endpoint for listing active sessions or history
-      // If the backend has no list endpoint yet, we might need to handle it gracefully
       const response = await client.get("/12hour-transfer/sessions");
-      setSessions(response.data || []);
+      const sessionData = response.data || [];
+      setSessions(sessionData);
+      
+      // Check if there is an active session to prevent starting a new one
+      const active = sessionData.find(s => s.status === "IN_PROGRESS" || s.status === "PLANNED");
+      if (active) {
+        setSelectedSession(active);
+        setStage(STAGES.SESSION_ACTIVE);
+        // We don't have exact start time, but we can approximate or just start from 0
+        setTransferStartTime(Date.now() - (active.elapsed_seconds || 0) * 1000);
+      }
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
-      // Fallback to empty if not found
       setSessions([]);
     }
   };
@@ -241,11 +248,24 @@ export default function Transfer12HourScreen({ navigation }) {
     setStage(STAGES.SELECT_TYPE);
   };
 
-  const handleStopTransfer = () => {
-    setTransferStartTime(null);
-    setElapsedSeconds(0);
-    handleGoBack();
-    showToast("Success", "Transfer stopped");
+  const handleStopTransfer = async () => {
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      await client.patch(`/12hour-transfer/session/${selectedSession.id}`, {
+        status: "COMPLETED"
+      });
+      setTransferStartTime(null);
+      setElapsedSeconds(0);
+      setSelectedSession(null);
+      handleGoBack();
+      showToast("Success", "Transfer stopped and session completed");
+      fetchSessions();
+    } catch (error) {
+      showAlert("Error", "Failed to complete session");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenRecordModal = () => {
@@ -258,19 +278,29 @@ export default function Transfer12HourScreen({ navigation }) {
       <View style={styles.headerSection}>
         <Text style={styles.mainHeading}>12-Hour Transfer</Text>
       </View>
-      <View style={[styles.typeGrid, isMobile && styles.typeGridMobile]}>
-        {TRANSFER_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type.value}
-            style={[styles.typeCard, transferType === type.value && styles.typeCardSelected]}
-            onPress={() => setTransferType(type.value)}
-          >
-            <Text style={styles.typeLabel}>{type.label}</Text>
-            <Text style={styles.typeDescription}>{type.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Button title="Continue" onPress={() => setStage(STAGES.SELECT_ORDER)} />
+      
+      {selectedSession && (selectedSession.status === "IN_PROGRESS" || selectedSession.status === "PLANNED") ? (
+        <Card style={styles.activeWarningCard}>
+          <Text style={styles.activeWarningText}>A transfer session is already in progress.</Text>
+          <Button title="View Active Session" onPress={() => setStage(STAGES.SESSION_ACTIVE)} />
+        </Card>
+      ) : (
+        <>
+          <View style={[styles.typeGrid, isMobile && styles.typeGridMobile]}>
+            {TRANSFER_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type.value}
+                style={[styles.typeCard, transferType === type.value && styles.typeCardSelected]}
+                onPress={() => setTransferType(type.value)}
+              >
+                <Text style={styles.typeLabel}>{type.label}</Text>
+                <Text style={styles.typeDescription}>{type.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Button title="Continue" onPress={() => setStage(STAGES.SELECT_ORDER)} />
+        </>
+      )}
     </ScrollView>
   );
 
@@ -484,6 +514,8 @@ const styles = StyleSheet.create({
   activeTab: { borderBottomWidth: 3, borderBottomColor: colors.primary },
   tabText: { fontSize: 16, color: colors.text.secondary, fontWeight: '600' },
   activeTabText: { color: colors.primary },
+  activeWarningCard: { padding: 16, backgroundColor: '#fff3cd', borderColor: '#ffeeba', borderWidth: 1, marginBottom: 16 },
+  activeWarningText: { color: '#856404', fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sessionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 12, fontWeight: 'bold' },
