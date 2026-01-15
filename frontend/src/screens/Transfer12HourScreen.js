@@ -202,6 +202,9 @@ export default function Transfer12HourScreen({ navigation }) {
     setSelectedOrder(null);
     setSelectedSourceBin(null);
     setSelectedDestinationBin(null);
+    setSpecialSourceBin(null);
+    setSpecialDestinationBin(null);
+    setManualQuantity("");
     setStage(STAGES.SELECT_TYPE);
   };
 
@@ -269,7 +272,8 @@ export default function Transfer12HourScreen({ navigation }) {
         setDestinationBins(destResponse.data || []);
       }
     } catch (error) {
-      showAlert("Error", "Failed to start transfer");
+      const errorMsg = error.response?.data?.detail || "Failed to start transfer";
+      showAlert("Error", errorMsg);
     } finally {
       setLoading(false);
     }
@@ -417,8 +421,8 @@ export default function Transfer12HourScreen({ navigation }) {
       <Card style={styles.sessionDetailsCard}>
         <Text style={styles.detailsText}>Session ID: {selectedSession?.id}</Text>
         <Text style={styles.detailsText}>Status: {selectedSession?.status}</Text>
-        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin?.toString())?.bin_number}</Text>
-        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin?.toString())?.bin_number}</Text>
+        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin?.toString())?.bin_number || selectedSourceBin}</Text>
+        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin?.toString())?.bin_number || selectedDestinationBin}</Text>
       </Card>
       <Button title="Divert Transfer" onPress={handleDivertToBin} />
       {showQuantityModal && (

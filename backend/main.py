@@ -2955,7 +2955,13 @@ def create_transfer_session_normal(
         ])
     ).first()
     if active_session:
-        raise HTTPException(status_code=400, detail="Another transfer session is already active")
+        # Check if it's actually stalled (older than 1 minute)
+        now = datetime.utcnow()
+        if (now - active_session.created_at).total_seconds() > 60:
+            active_session.status = models.Transfer12HourSessionStatus.COMPLETED
+            db.commit()
+        else:
+            raise HTTPException(status_code=400, detail="Another transfer session is already active")
 
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
@@ -3003,7 +3009,13 @@ def create_transfer_session_special(
         ])
     ).first()
     if active_session:
-        raise HTTPException(status_code=400, detail="Another transfer session is already active")
+        # Check if it's actually stalled (older than 1 minute)
+        now = datetime.utcnow()
+        if (now - active_session.created_at).total_seconds() > 60:
+            active_session.status = models.Transfer12HourSessionStatus.COMPLETED
+            db.commit()
+        else:
+            raise HTTPException(status_code=400, detail="Another transfer session is already active")
 
     session = models.Transfer12HourSession(
         production_order_id=request.production_order_id,
