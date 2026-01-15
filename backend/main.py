@@ -2880,7 +2880,8 @@ def get_available_destination_bins(db: Session = Depends(get_db)):
                 models.Transfer12HourSession.id == models.Transfer12HourBinsMapping.transfer_session_id
             ).filter(
                 models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
-                models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
+                (models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS) | 
+                (models.Transfer12HourBinsMapping.is_locked == True)
             ).all()
             locked_bin_ids.extend([r[0] for r in active_mapping_bins])
         except Exception as e:
@@ -3076,10 +3077,14 @@ def record_12hour_transfer(
             source_sequence=1,
             destination_sequence=1,
             status=models.Transfer12HourBinsMappingStatus.IN_PROGRESS,
-            start_timestamp=get_utc_now()
+            start_timestamp=get_utc_now(),
+            is_locked=True  # Lock the destination bin for special transfer
         )
         db.add(bins_mapping)
         db.flush()
+    elif bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
+        # If it was a pre-configured mapping in a special transfer, lock it now
+        bins_mapping.is_locked = True
     
     db_record = models.Transfer12HourRecord(
         transfer_session_id=session_id,

@@ -160,6 +160,12 @@ export default function Transfer12HourScreen({ navigation }) {
       setElapsedSeconds(0);
       setStage(STAGES.SESSION_ACTIVE);
       fetchSessions();
+      
+      // If special transfer, we might want to refresh available bins to ensure locking is respected
+      if (transferType === "SPECIAL") {
+        const destResponse = await client.get("/12hour-transfer/available-destination-bins");
+        setDestinationBins(destResponse.data || []);
+      }
     } catch (error) {
       showAlert("Error", "Failed to start transfer");
     } finally {
