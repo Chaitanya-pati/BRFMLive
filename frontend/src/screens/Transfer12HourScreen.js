@@ -106,7 +106,7 @@ export default function Transfer12HourScreen({ navigation }) {
       
       // Check if there is an active session to prevent starting a new one
       const active = sessionData.find(s => s.status === "IN_PROGRESS" || s.status === "PLANNED");
-      if (active) {
+      if (active && stage === STAGES.SELECT_TYPE) {
         setSelectedSession(active);
         setStage(STAGES.SESSION_ACTIVE);
         // We don't have exact start time, but we can approximate or just start from 0
