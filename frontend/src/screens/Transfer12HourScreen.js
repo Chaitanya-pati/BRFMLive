@@ -110,7 +110,6 @@ export default function Transfer12HourScreen({ navigation }) {
       if (active && stage === STAGES.SELECT_TYPE) {
         setSelectedSession(active);
         setStage(STAGES.SESSION_ACTIVE);
-        // We don't have exact start time, but we can approximate or just start from 0
         setTransferStartTime(Date.now() - (active.elapsed_seconds || 0) * 1000);
       }
     } catch (error) {
@@ -133,53 +132,6 @@ export default function Transfer12HourScreen({ navigation }) {
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
       showAlert("Error", "Failed to fetch bins");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartTransfer = async () => {
-    // Determine which bins to validate based on sub-type
-    const source = (transferType === "SPECIAL" && subType === "SPECIAL") ? specialSourceBin : selectedSourceBin;
-    const dest = (transferType === "SPECIAL" && subType === "SPECIAL") ? specialDestinationBin : selectedDestinationBin;
-
-    if (!source || !dest) {
-      showAlert("Validation Error", "Please select both source and destination bins");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      const endpoint = transferType === "NORMAL" 
-        ? "/12hour-transfer/create-session-normal" 
-        : "/12hour-transfer/create-session-special";
-        
-      const response = await client.post(endpoint, {
-        production_order_id: selectedOrder.id,
-        transfer_type: transferType,
-        source_bin_id: selectedSourceBin,
-        destination_bin_id: selectedDestinationBin,
-        // Include special transfer manual fields only if special sub-type is selected
-        special_source_bin_id: (transferType === "SPECIAL" && subType === "SPECIAL") ? specialSourceBin : null,
-        special_destination_bin_id: (transferType === "SPECIAL" && subType === "SPECIAL") ? specialDestinationBin : null,
-        manual_quantity: (transferType === "SPECIAL" && subType === "SPECIAL" && manualQuantity) ? parseFloat(manualQuantity) : null,
-      });
-      
-      showToast("Success", "Transfer started");
-      setSelectedSession(response.data);
-      setTransferStartTime(Date.now());
-      setElapsedSeconds(0);
-      setStage(STAGES.SESSION_ACTIVE);
-      fetchSessions();
-      
-      // If special transfer, we might want to refresh available bins to ensure locking is respected
-      if (transferType === "SPECIAL") {
-        const destResponse = await client.get("/12hour-transfer/available-destination-bins");
-        setDestinationBins(destResponse.data || []);
-      }
-    } catch (error) {
-      showAlert("Error", "Failed to start transfer");
     } finally {
       setLoading(false);
     }
@@ -278,6 +230,51 @@ export default function Transfer12HourScreen({ navigation }) {
     setShowQuantityModal(true);
   };
 
+  const handleStartTransfer = async () => {
+    const isManualSpecial = transferType === "SPECIAL" && subType === "SPECIAL";
+    const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
+    const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+
+    if (!source || !dest) {
+      showAlert("Validation Error", "Please select both source and destination bins");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      const endpoint = transferType === "NORMAL" 
+        ? "/12hour-transfer/create-session-normal" 
+        : "/12hour-transfer/create-session-special";
+        
+      const response = await client.post(endpoint, {
+        production_order_id: selectedOrder.id,
+        transfer_type: transferType,
+        source_bin_id: selectedSourceBin,
+        destination_bin_id: selectedDestinationBin,
+        special_source_bin_id: isManualSpecial ? specialSourceBin : null,
+        special_destination_bin_id: isManualSpecial ? specialDestinationBin : null,
+        manual_quantity: (isManualSpecial && manualQuantity) ? parseFloat(manualQuantity) : null,
+      });
+      
+      showToast("Success", "Transfer started");
+      setSelectedSession(response.data);
+      setTransferStartTime(Date.now());
+      setElapsedSeconds(0);
+      setStage(STAGES.SESSION_ACTIVE);
+      fetchSessions();
+      
+      if (transferType === "SPECIAL") {
+        const destResponse = await client.get("/12hour-transfer/available-destination-bins");
+        setDestinationBins(destResponse.data || []);
+      }
+    } catch (error) {
+      showAlert("Error", "Failed to start transfer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderSelectType = () => (
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
@@ -327,8 +324,6 @@ export default function Transfer12HourScreen({ navigation }) {
       <Button title="Back" onPress={handleGoBack} variant="secondary" />
     </ScrollView>
   );
-
-  const [subType, setSubType] = useState("NORMAL"); // Added state for special transfer sub-type
 
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
@@ -422,8 +417,8 @@ export default function Transfer12HourScreen({ navigation }) {
       <Card style={styles.sessionDetailsCard}>
         <Text style={styles.detailsText}>Session ID: {selectedSession?.id}</Text>
         <Text style={styles.detailsText}>Status: {selectedSession?.status}</Text>
-        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin.toString())?.bin_number}</Text>
-        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin.toString())?.bin_number}</Text>
+        <Text style={styles.detailsText}>Source Bin: {sourceBins.find(b => b.id.toString() === selectedSourceBin?.toString())?.bin_number}</Text>
+        <Text style={styles.detailsText}>Destination Bin: {destinationBins.find(b => b.id.toString() === selectedDestinationBin?.toString())?.bin_number}</Text>
       </Card>
       <Button title="Divert Transfer" onPress={handleDivertToBin} />
       {showQuantityModal && (
@@ -449,7 +444,7 @@ export default function Transfer12HourScreen({ navigation }) {
               onValueChange={setNextDestinationBin}
               options={destinationBins
                 .filter((bin) => 
-                  bin.id.toString() !== selectedDestinationBin.toString() && 
+                  bin.id.toString() !== selectedDestinationBin?.toString() && 
                   (bin.capacity - bin.current_quantity) > 0 &&
                   bin.status === "Active"
                 )
