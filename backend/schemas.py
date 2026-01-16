@@ -109,6 +109,7 @@ class Transfer12HourRecordBase(ISTModel):
 class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
+    transfer_start_time: Optional[datetime] = None
 
 class Transfer12HourRecord(Transfer12HourRecordBase):
     id: int

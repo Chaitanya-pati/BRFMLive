@@ -154,12 +154,15 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
+      const startTimeISO = transferStartTime ? new Date(transferStartTime).toISOString() : null;
+      
       await client.post("/12hour-transfer/record", {
         source_bin_id: selectedSourceBin,
         destination_bin_id: selectedDestinationBin,
         quantity_transferred: parseFloat(transferQuantity),
         water_added: waterAdded ? parseFloat(waterAdded) : null,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
+        transfer_start_time: startTimeISO,
       }, {
         params: { session_id: selectedSession.id }
       });
@@ -169,6 +172,9 @@ export default function Transfer12HourScreen({ navigation }) {
       
       if (isDiverting) {
         setShowBinSelectionModal(true);
+        // Set new start time for the next bin
+        setTransferStartTime(Date.now());
+        setElapsedSeconds(0);
       } else {
         setTransferQuantity("");
         setWaterAdded("");

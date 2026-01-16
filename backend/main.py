@@ -3121,6 +3121,29 @@ def record_12hour_transfer(
             models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id
         ).first()
 
+    # Capture start time from session or mapping if not already set
+    start_time = record.transfer_start_time or (bins_mapping.start_timestamp if bins_mapping else session.start_timestamp) or get_utc_now()
+    end_time = get_utc_now()
+    
+    duration = 0
+    if start_time and end_time:
+        duration = int((end_time - start_time).total_seconds() / 60)
+
+    db_record = models.Transfer12HourRecord(
+        transfer_session_id=session_id,
+        bins_mapping_id=bins_mapping.id if bins_mapping else None,
+        source_bin_id=record.source_bin_id,
+        destination_bin_id=record.destination_bin_id,
+        quantity_transferred=record.quantity_transferred,
+        water_added=record.water_added,
+        moisture_level=record.moisture_level,
+        status=models.TransferRecordingStatus.COMPLETED,
+        transfer_start_time=start_time,
+        transfer_end_time=end_time,
+        duration_minutes=duration,
+        created_by=user_id
+    )
+
     # If still no mapping, and it's a special transfer, create one on the fly
     if not bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
         bins_mapping = models.Transfer12HourBinsMapping(
