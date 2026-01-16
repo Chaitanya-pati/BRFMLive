@@ -207,16 +207,30 @@ export default function Transfer12HourScreen({ navigation }) {
     setStage(STAGES.SELECT_TYPE);
   };
 
+  const [showStopModal, setShowStopModal] = useState(false);
+
   const handleStopTransfer = async () => {
+    if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
+      showAlert("Validation Error", "Please enter a valid transfer quantity before stopping");
+      return;
+    }
+
     setLoading(true);
     try {
       const client = getApiClient();
       await client.patch(`/12hour-transfer/session/${selectedSession.id}`, {
-        status: "COMPLETED"
+        status: "COMPLETED",
+        total_quantity: parseFloat(transferQuantity),
+        water_added: waterAdded ? parseFloat(waterAdded) : null,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
       });
       setTransferStartTime(null);
       setElapsedSeconds(0);
       setSelectedSession(null);
+      setTransferQuantity("");
+      setWaterAdded("");
+      setMoistureLevel("");
+      setShowStopModal(false);
       handleGoBack();
       showToast("Success", "Transfer stopped and session completed");
       fetchSessions();
@@ -256,9 +270,7 @@ export default function Transfer12HourScreen({ navigation }) {
         destination_bin_id: selectedDestinationBin,
         special_source_bin_id: isManualSpecial ? specialSourceBin : null,
         special_destination_bin_id: isManualSpecial ? specialDestinationBin : null,
-        manual_quantity: isManualSpecial ? parseFloat(manualQuantity) : parseFloat(transferQuantity),
-        water_added: waterAdded ? parseFloat(waterAdded) : null,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
+        manual_quantity: isManualSpecial ? parseFloat(manualQuantity) : null,
       });
       
       showToast("Success", "Transfer started");
@@ -377,35 +389,6 @@ export default function Transfer12HourScreen({ navigation }) {
             onValueChange={setSelectedDestinationBin}
             options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
           />
-          <View style={styles.inputRow}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <InputField
-                label="Quantity"
-                value={transferQuantity}
-                onChangeText={setTransferQuantity}
-                keyboardType="decimal-pad"
-                placeholder="Qty"
-              />
-            </View>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <InputField
-                label="Water"
-                value={waterAdded}
-                onChangeText={setWaterAdded}
-                keyboardType="decimal-pad"
-                placeholder="Water"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <InputField
-                label="Moisture"
-                value={moistureLevel}
-                onChangeText={setMoistureLevel}
-                keyboardType="decimal-pad"
-                placeholder="Moisture"
-              />
-            </View>
-          </View>
         </Card>
       ) : (
         <Card style={styles.mappingCard}>
@@ -484,7 +467,38 @@ export default function Transfer12HourScreen({ navigation }) {
           </Card>
         </View>
       )}
-      <Button title="Stop Transfer" onPress={handleStopTransfer} variant="secondary" />
+      <Button title="Stop Transfer" onPress={() => setShowStopModal(true)} variant="secondary" />
+
+      {showStopModal && (
+        <View style={styles.modalOverlay}>
+          <Card style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Complete Transfer</Text>
+            <InputField 
+              label="Total Quantity Transferred" 
+              value={transferQuantity} 
+              onChangeText={setTransferQuantity} 
+              keyboardType="decimal-pad" 
+              placeholder="Enter final quantity"
+            />
+            <InputField 
+              label="Water Added" 
+              value={waterAdded} 
+              onChangeText={setWaterAdded} 
+              keyboardType="decimal-pad" 
+              placeholder="Total water added"
+            />
+            <InputField 
+              label="Moisture Level" 
+              value={moistureLevel} 
+              onChangeText={setMoistureLevel} 
+              keyboardType="decimal-pad" 
+              placeholder="Final moisture level"
+            />
+            <Button title="Confirm & Stop" onPress={handleStopTransfer} loading={loading} />
+            <Button title="Cancel" onPress={() => setShowStopModal(false)} variant="secondary" />
+          </Card>
+        </View>
+      )}
     </ScrollView>
   );
 
