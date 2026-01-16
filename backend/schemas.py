@@ -808,6 +808,7 @@ class TransferRecordingStartTransfer(BaseModel):
 class TransferRecordingCompleteTransfer(BaseModel):
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
+    quantity_transferred: Optional[float] = None
 
 class TransferRecording(TransferRecordingBase):
     id: int
