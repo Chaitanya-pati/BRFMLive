@@ -3212,7 +3212,12 @@ def update_transfer_session(
                         models.Transfer12HourRecord.status == models.TransferRecordingStatus.COMPLETED
                     ).scalar() or 0.0
 
-                    if total_transferred >= order.quantity:
+                    # Calculate target quantity from the planned 24-hour bins (Destination Bins)
+                    target_quantity = db.query(func.sum(models.ProductionOrderDestinationBin.quantity)).filter(
+                        models.ProductionOrderDestinationBin.production_order_id == order.id
+                    ).scalar() or 0.0
+
+                    if total_transferred >= target_quantity and target_quantity > 0:
                         order.status = models.ProductionOrderStatus.COMPLETED
 
     db.commit()
