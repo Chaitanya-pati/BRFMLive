@@ -342,11 +342,6 @@ export default function Layout({ children, title, currentRoute }) {
           >
             <Text style={styles.menuToggleIcon}>☰</Text>
           </TouchableOpacity>
-          <Image
-            source={require("../../assets/new-logo.png")}
-            style={[styles.logo, isMobile && styles.logoMobile]}
-            resizeMode="contain"
-          />
           <Text style={[styles.brfmText, isMobile && styles.brfmTextMobile]}>
             BRFM
           </Text>
@@ -572,13 +567,8 @@ export default function Layout({ children, title, currentRoute }) {
             <ScrollView style={styles.branchList}>
               {userBranches.map((branch) => (
                 <View key={branch.id} style={styles.branchCheckboxContainer}>
-                  <Checkbox
-                    value={false} // This would be managed by state
-                    onValueChange={(isSelected) => handleBranchSelectionChange(branch.id, isSelected)}
-                    style={styles.checkbox}
-                  />
+                  <Text style={styles.branchOptionName}>{branch.name}</Text>
                   <View style={styles.branchOptionContent}>
-                    <Text style={styles.branchOptionName}>{branch.name}</Text>
                     {branch.description && (
                       <Text style={styles.branchOptionDescription}>{branch.description}</Text>
                     )}
