@@ -3158,26 +3158,22 @@ def record_12hour_transfer(
         )
         db.add(bins_mapping)
         db.flush()
+        # Update the record with the newly created mapping ID
+        db_record.bins_mapping_id = bins_mapping.id
     elif bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
         # If it was a pre-configured mapping in a special transfer, lock it now
         bins_mapping.is_locked = True
-    
-    db_record = models.Transfer12HourRecord(
-        transfer_session_id=session_id,
-        bins_mapping_id=bins_mapping.id if bins_mapping else None,
-        source_bin_id=record.source_bin_id,
-        destination_bin_id=record.destination_bin_id,
-        quantity_transferred=record.quantity_transferred,
-        water_added=record.water_added,
-        moisture_level=record.moisture_level,
-        status=models.TransferRecordingStatus.COMPLETED,
-        created_by=user_id
-    )
     
     # Update bin levels
     source_bin.current_quantity -= record.quantity_transferred
     dest_bin.current_quantity += record.quantity_transferred
     
+    # Update mapping status if it was in progress
+    if bins_mapping:
+        bins_mapping.status = models.Transfer12HourBinsMappingStatus.COMPLETED
+        bins_mapping.end_timestamp = end_time
+        bins_mapping.transferred_quantity += record.quantity_transferred
+
     db.add(db_record)
     db.commit()
     
