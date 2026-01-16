@@ -105,12 +105,11 @@ export default function Transfer12HourScreen({ navigation }) {
       const sessionData = response.data || [];
       setSessions(sessionData);
       
-      // Check if there is an active session to prevent starting a new one
+      // Check if there is an active session to track status but don't auto-redirect
       const active = sessionData.find(s => s.status === "IN_PROGRESS" || s.status === "PLANNED");
-      if (active && stage === STAGES.SELECT_TYPE) {
+      if (active) {
         setSelectedSession(active);
-        setStage(STAGES.SESSION_ACTIVE);
-        setTransferStartTime(Date.now() - (active.elapsed_seconds || 0) * 1000);
+        // Removed auto-redirect to SESSION_ACTIVE stage
       }
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
