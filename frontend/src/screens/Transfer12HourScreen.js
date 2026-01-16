@@ -313,24 +313,54 @@ export default function Transfer12HourScreen({ navigation }) {
   const renderSelectOrder = () => (
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Select Order</Text>
+        <Text style={styles.mainHeading}>Select Production Order</Text>
       </View>
-      <FlatList
-        data={productionOrders}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <Card style={styles.orderCard}>
-            <Text>Order No: {item.order_number}</Text>
-            <Button title="Select" onPress={() => handleSelectOrder(item)} />
-          </Card>
-        )}
-      />
-      <Button title="Back" onPress={handleGoBack} variant="secondary" />
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : (
+        <View>
+          {productionOrders.map((item) => (
+            <TouchableOpacity key={item.id.toString()} onPress={() => handleSelectOrder(item)}>
+              <Card style={styles.orderCard}>
+                <View>
+                  <Text style={styles.orderNumber}>Order No: {item.order_number}</Text>
+                  <Text style={styles.orderDetail}>{item.product_name || 'Wheat Transfer'}</Text>
+                </View>
+                <Text style={styles.selectText}>Select ›</Text>
+              </Card>
+            </TouchableOpacity>
+          ))}
+          {productionOrders.length === 0 && <Text style={styles.emptyText}>No active production orders found</Text>}
+        </View>
+      )}
     </ScrollView>
   );
 
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
+      <View style={styles.headerSection}>
+        <Text style={styles.mainHeading}>Configure Transfer</Text>
+        <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
+      </View>
+
+      <View style={styles.subTypeSelector}>
+        <TouchableOpacity 
+          style={[styles.subTypeTab, transferType === "NORMAL" && styles.activeSubTypeTab]} 
+          onPress={() => setTransferType("NORMAL")}
+        >
+          <Text style={[styles.subTypeTabText, transferType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.subTypeTab, transferType === "SPECIAL" && styles.activeSubTypeTab]} 
+          onPress={() => {
+            setTransferType("SPECIAL");
+            setSubType("SPECIAL");
+          }}
+        >
+          <Text style={[styles.subTypeTabText, transferType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
+        </TouchableOpacity>
+      </View>
+
       {transferType === "NORMAL" ? (
         <Card style={styles.mappingCard}>
           <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
@@ -348,63 +378,28 @@ export default function Transfer12HourScreen({ navigation }) {
           />
         </Card>
       ) : (
-        <View>
-          <View style={styles.subTypeSelector}>
-            <TouchableOpacity 
-              style={[styles.subTypeTab, subType === "NORMAL" && styles.activeSubTypeTab]} 
-              onPress={() => setSubType("NORMAL")}
-            >
-              <Text style={[styles.subTypeTabText, subType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.subTypeTab, subType === "SPECIAL" && styles.activeSubTypeTab]} 
-              onPress={() => setSubType("SPECIAL")}
-            >
-              <Text style={[styles.subTypeTabText, subType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
-            </TouchableOpacity>
-          </View>
-
-          {subType === "NORMAL" ? (
-            <Card style={styles.mappingCard}>
-              <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
-              <SelectDropdown
-                label="Source Bin"
-                value={selectedSourceBin}
-                onValueChange={setSelectedSourceBin}
-                options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-              />
-              <SelectDropdown
-                label="Destination Bin"
-                value={selectedDestinationBin}
-                onValueChange={setSelectedDestinationBin}
-                options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-              />
-            </Card>
-          ) : (
-            <Card style={styles.mappingCard}>
-              <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
-              <SelectDropdown
-                label="Manual Source Bin"
-                value={specialSourceBin}
-                onValueChange={setSpecialSourceBin}
-                options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-              />
-              <SelectDropdown
-                label="Manual Destination Bin"
-                value={specialDestinationBin}
-                onValueChange={setSpecialDestinationBin}
-                options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-              />
-              <InputField
-                label="Quantity to Transfer"
-                value={manualQuantity}
-                onChangeText={setManualQuantity}
-                keyboardType="decimal-pad"
-                placeholder="Enter quantity"
-              />
-            </Card>
-          )}
-        </View>
+        <Card style={styles.mappingCard}>
+          <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
+          <SelectDropdown
+            label="Manual Source Bin"
+            value={specialSourceBin}
+            onValueChange={setSpecialSourceBin}
+            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          />
+          <SelectDropdown
+            label="Manual Destination Bin"
+            value={specialDestinationBin}
+            onValueChange={setSpecialDestinationBin}
+            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          />
+          <InputField
+            label="Quantity to Transfer"
+            value={manualQuantity}
+            onChangeText={setManualQuantity}
+            keyboardType="decimal-pad"
+            placeholder="Enter quantity"
+          />
+        </Card>
       )}
 
       <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
@@ -484,11 +479,9 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const renderHistory = () => (
     <ScrollView style={styles.container}>
-      <FlatList
-        data={sessions}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <Card style={styles.sessionCard}>
+      <View>
+        {sessions.map((item) => (
+          <Card key={item.id.toString()} style={styles.sessionCard}>
             <View style={styles.sessionHeader}>
               <Text style={styles.sessionTitle}>Session #{item.id}</Text>
               <Text style={[styles.statusBadge, { backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0' }]}>
@@ -504,19 +497,19 @@ export default function Transfer12HourScreen({ navigation }) {
               onPress={() => showAlert("Details", `Production Order: ${item.production_order_id}\nStatus: ${item.status}`)} 
             />
           </Card>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No transfer history found</Text>}
-      />
+        ))}
+        {sessions.length === 0 && <Text style={styles.emptyText}>No transfer history found</Text>}
+      </View>
     </ScrollView>
   );
 
   return (
     <Layout navigation={navigation}>
-      {stage === STAGES.SELECT_TYPE && renderTabs()}
+      {stage !== STAGES.SESSION_ACTIVE && renderTabs()}
       
       {activeTab === "TRANSFER" ? (
         <>
-          {stage === STAGES.SELECT_TYPE && renderSelectType()}
+          {stage === STAGES.SELECT_TYPE && renderSelectOrder()}
           {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
           {stage === STAGES.CONFIGURE_BINS && renderConfigureBins()}
           {stage === STAGES.SESSION_ACTIVE && renderSessionActive()}
@@ -546,6 +539,10 @@ const styles = StyleSheet.create({
   timerValue: { fontSize: 48, fontWeight: "bold", color: "#fff", fontFamily: "monospace" },
   sessionDetailsCard: { padding: 16, marginBottom: 16, backgroundColor: "#f5f5f5", borderRadius: 8 },
   detailsText: { fontSize: 14, marginBottom: 8, color: colors.text.primary },
+  orderNumber: { fontSize: 16, fontWeight: "bold", color: colors.text.primary },
+  orderDetail: { fontSize: 14, color: colors.text.secondary, marginTop: 4 },
+  selectText: { color: colors.primary, fontWeight: "600" },
+  subHeading: { fontSize: 14, color: colors.text.secondary, marginTop: 4 },
   modalOverlay: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modalContent: { width: "90%", padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
