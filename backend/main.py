@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -2391,7 +2392,7 @@ def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Opt
 
 @app.get("/api/production-orders", response_model=List[schemas.ProductionOrderWithProduct])
 def get_production_orders(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
-    query = db.query(models.ProductionOrder)
+    query = db.query(models.ProductionOrder).filter(models.ProductionOrder.status != models.ProductionOrderStatus.COMPLETED)
     if branch_id:
         query = query.filter(models.ProductionOrder.branch_id == branch_id)
     return query.all()
@@ -3175,7 +3176,7 @@ def update_transfer_session(
     update_data: dict,
     db: Session = Depends(get_db)
 ):
-    """Update transfer session status"""
+    """Update transfer session status and check if production order is completed"""
     session = db.query(models.Transfer12HourSession).filter(
         models.Transfer12HourSession.id == session_id
     ).first()
@@ -3197,6 +3198,22 @@ def update_transfer_session(
                 models.Transfer12HourSpecialTransfer.transfer_session_id == session_id,
                 models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
             ).update({"status": models.Transfer12HourSpecialStatus.COMPLETED})
+
+            # Auto-complete Production Order if quantity reached
+            if session.production_order_id:
+                order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == session.production_order_id).first()
+                if order:
+                    # Calculate total transferred for this order across all 12-hour sessions
+                    total_transferred = db.query(func.sum(models.Transfer12HourRecord.quantity_transferred)).join(
+                        models.Transfer12HourSession,
+                        models.Transfer12HourSession.id == models.Transfer12HourRecord.transfer_session_id
+                    ).filter(
+                        models.Transfer12HourSession.production_order_id == order.id,
+                        models.Transfer12HourRecord.status == models.TransferRecordingStatus.COMPLETED
+                    ).scalar() or 0.0
+
+                    if total_transferred >= order.quantity:
+                        order.status = models.ProductionOrderStatus.COMPLETED
 
     db.commit()
     db.refresh(session)
