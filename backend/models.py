@@ -314,6 +314,7 @@ class TransferSession(Base):
     current_bin_start_timestamp = Column(DateTime, nullable=True)
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
+    quantity_transferred = Column(Float, nullable=True)
     status = Column(String(20), default="active", nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     notes = Column(Text)

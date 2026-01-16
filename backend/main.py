@@ -2685,6 +2685,7 @@ def complete_transfer(
     transfer.transfer_end_time = get_utc_now()
     transfer.water_added = data.water_added
     transfer.moisture_level = data.moisture_level
+    transfer.quantity_transferred = data.quantity_transferred
     
     # Calculate duration
     if transfer.transfer_start_time and transfer.transfer_end_time:
@@ -2717,6 +2718,7 @@ def divert_transfer(
     transfer.transfer_end_time = get_utc_now()
     transfer.water_added = data.water_added
     transfer.moisture_level = data.moisture_level
+    transfer.quantity_transferred = data.quantity_transferred
     
     if transfer.transfer_start_time and transfer.transfer_end_time:
         duration = transfer.transfer_end_time - transfer.transfer_start_time

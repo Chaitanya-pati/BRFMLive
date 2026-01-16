@@ -48,6 +48,7 @@ export default function TransferRecordingScreen({ navigation }) {
   // Parameters states
   const [waterAdded, setWaterAdded] = useState("");
   const [moistureLevel, setMoistureLevel] = useState("");
+  const [quantityTransferred, setQuantityTransferred] = useState("");
   const [errors, setErrors] = useState({});
 
   // Timer effect
@@ -152,6 +153,14 @@ export default function TransferRecordingScreen({ navigation }) {
       newErrors.moistureLevel = "Must be 0-100";
     }
 
+    if (!quantityTransferred || quantityTransferred.trim() === "") {
+      newErrors.quantityTransferred = "Quantity transferred is required";
+    } else if (isNaN(parseFloat(quantityTransferred))) {
+      newErrors.quantityTransferred = "Must be a number";
+    } else if (parseFloat(quantityTransferred) <= 0) {
+      newErrors.quantityTransferred = "Must be greater than 0";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -165,6 +174,7 @@ export default function TransferRecordingScreen({ navigation }) {
       await client.post(`/transfer/${currentTransfer.id}/complete`, {
         water_added: parseFloat(waterAdded),
         moisture_level: parseFloat(moistureLevel),
+        quantity_transferred: parseFloat(quantityTransferred),
       });
       showToast("Transfer completed successfully");
       
@@ -197,6 +207,7 @@ export default function TransferRecordingScreen({ navigation }) {
         {
           water_added: parseFloat(waterAdded),
           moisture_level: parseFloat(moistureLevel),
+          quantity_transferred: parseFloat(quantityTransferred),
         }
       );
       
@@ -476,6 +487,15 @@ export default function TransferRecordingScreen({ navigation }) {
               onChangeText={setMoistureLevel}
               keyboardType="decimal-pad"
               error={errors.moistureLevel}
+            />
+
+            <InputField
+              label="Quantity Transferred (kg)"
+              placeholder="Enter quantity"
+              value={quantityTransferred}
+              onChangeText={setQuantityTransferred}
+              keyboardType="decimal-pad"
+              error={errors.quantityTransferred}
             />
 
             <View style={styles.actionButtons}>

@@ -486,6 +486,11 @@ class TransferSessionDivert(ISTModel):
     new_bin_id: int
     quantity_transferred: float
 
+class TransferSessionComplete(ISTModel):
+    water_added: float
+    moisture_level: float
+    quantity_transferred: float
+
 class TransferSessionUpdate(ISTModel):
     transferred_quantity: Optional[float] = None
     status: Optional[TransferSessionStatusEnum] = None
