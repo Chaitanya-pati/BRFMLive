@@ -17,8 +17,28 @@ export default function GrindingExcelViewScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/grinding/hourly-production");
-      setProductionData(response.data || []);
+      const [prodRes, fgRes, bsRes] = await Promise.all([
+        client.get("/grinding/hourly-production"),
+        client.get("/finished-goods"),
+        client.get("/bag-sizes")
+      ]);
+      
+      const fgMap = {};
+      fgRes.data.forEach(item => fgMap[item.id] = item.product_name);
+      
+      const bsMap = {};
+      bsRes.data.forEach(item => bsMap[item.id] = `${item.weight_kg}kg`);
+
+      const formattedData = (prodRes.data || []).map(row => ({
+        ...row,
+        details: (row.details || []).map(d => ({
+          ...d,
+          product_name: fgMap[d.finished_good_id] || d.finished_good_id,
+          bag_size_label: bsMap[d.bag_size_id] || d.bag_size_id
+        }))
+      }));
+
+      setProductionData(formattedData);
     } catch (error) {
       showAlert("Error", "Failed to fetch production data");
     } finally {
@@ -48,8 +68,8 @@ export default function GrindingExcelViewScreen({ navigation }) {
               <Text style={[styles.cellText, { width: 80 }]}>{idx === 0 ? row.production_time : ""}</Text>
               <Text style={[styles.cellText, { width: 100 }]}>{idx === 0 ? row.b1_scale_reading : ""}</Text>
               <Text style={[styles.cellText, { width: 100 }]}>{idx === 0 ? row.load_per_hour_tons : ""}</Text>
-              <Text style={[styles.cellText, { width: 120 }]}>{detail.finished_good_id}</Text>
-              <Text style={[styles.cellText, { width: 80 }]}>{detail.bag_size_id}</Text>
+              <Text style={[styles.cellText, { width: 120 }]}>{detail.product_name}</Text>
+              <Text style={[styles.cellText, { width: 80 }]}>{detail.bag_size_label}</Text>
               <Text style={[styles.cellText, { width: 80 }]}>{detail.quantity_bags}</Text>
             </View>
           ))
