@@ -84,15 +84,29 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/bins");
-      const allBins = response.data || [];
+      const [binsResponse, transferRecordsResponse] = await Promise.all([
+        client.get("/bins"),
+        client.get("/24hour-transfer/records")
+      ]);
       
-      // Source bins: 24 hours bin, Active, current_quantity > 0
+      const allBins = binsResponse.data || [];
+      const transferRecords = transferRecordsResponse.data || [];
+      
+      // Get unique source bin IDs from 24-hour transfer records for this production order
+      const validSourceBinIds = [...new Set(
+        transferRecords
+          .filter(record => 
+            (record.production_order_id === order.id || record.production_order_id?.toString() === order.id?.toString())
+          )
+          .map(record => record.source_bin_id)
+      )];
+
+      // Source bins: 24 hours bin, Active, current_quantity > 0, and present in 24h transfer records for this order
       const filteredSource = allBins.filter(bin => 
         bin.bin_type === "24 hours bin" && 
         bin.status === "Active" && 
         (bin.current_quantity || 0) > 0 &&
-        (bin.production_order_id === order.id || bin.production_order_id?.toString() === order.id?.toString())
+        validSourceBinIds.includes(bin.id)
       );
       
       // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
@@ -106,7 +120,8 @@ export default function Transfer12HourScreen({ navigation }) {
       setDestinationBins(filteredDest);
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
-      showAlert("Error", "Failed to fetch bins");
+      console.error("Failed to fetch data:", error);
+      showAlert("Error", "Failed to fetch bins or transfer records");
     } finally {
       setLoading(false);
     }
