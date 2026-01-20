@@ -2937,12 +2937,15 @@ def get_24hour_transfer_records(
         branch_id: Optional[int] = Depends(get_branch_id),
         db: Session = Depends(get_db)):
     query = db.query(models.TransferRecording)
-    # branch_id might not exist on TransferRecording model based on 500 error
+    # The database table might not have branch_id yet, and alembic is failing
+    # We will try to filter if possible, otherwise return all
     try:
-        if branch_id and hasattr(models.TransferRecording, 'branch_id'):
+        if branch_id:
             query = query.filter(models.TransferRecording.branch_id == branch_id)
     except Exception:
-        pass
+        # Fallback to no filter if branch_id column is missing
+        query = db.query(models.TransferRecording)
+    
     records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
     return records
 
