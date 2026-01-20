@@ -1097,46 +1097,6 @@ def get_bins(skip: int = 0,
     return bins
 
 
-# 12-Hour Transfer Endpoints (Simplified)
-@app.post("/api/12hours-transfer/records", response_model=schemas.Transfer12HourRecord)
-def create_12hour_transfer_record(record: schemas.Transfer12HourRecordCreate, 
-                                 db: Session = Depends(get_db),
-                                 user: models.User = Depends(get_current_user)):
-    record_data = record.dict()
-    record_data['created_by'] = user.id
-    db_record = models.Transfer12HourRecord(**record_data)
-    db.add(db_record)
-    db.commit()
-    db.refresh(db_record)
-    return db_record
-
-@app.get("/api/12hours-transfer/records", response_model=List[schemas.Transfer12HourRecord])
-def get_12hour_transfer_records(branch_id: Optional[int] = None, 
-                               production_order_id: Optional[int] = None, 
-                               db: Session = Depends(get_db)):
-    query = db.query(models.Transfer12HourRecord)
-    if branch_id:
-        query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
-    if production_order_id:
-        query = query.filter(models.Transfer12HourRecord.production_order_id == production_order_id)
-    return query.all()
-
-@app.patch("/api/12hours-transfer/records/{record_id}", response_model=schemas.Transfer12HourRecord)
-def update_12hour_transfer_record(record_id: int, 
-                                 record_update: schemas.Transfer12HourRecordUpdate, 
-                                 db: Session = Depends(get_db)):
-    db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
-    if not db_record:
-        raise HTTPException(status_code=404, detail="Record not found")
-    
-    update_data = record_update.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_record, key, value)
-    
-    db.commit()
-    db.refresh(db_record)
-    return db_record
-
 
 @app.get("/api/bins/source", response_model=List[schemas.Bin])
 def get_source_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Header(None, alias="X-Branch-Id")):
@@ -2970,449 +2930,79 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 # 12-Hour Transfer API Endpoints
 # ============================================================================
 
-@app.get("/api/12hour-transfer/production-orders", response_model=List[schemas.ProductionOrder])
-def get_12hour_available_production_orders(
-    branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
-    db: Session = Depends(get_db)
-):
-    """
-    Get production orders that have at least one 24-hour bin 
-    that has completed its transfer process.
-    """
-    # Orders that have at least one completed 24h transfer record
-    completed_orders_ids = db.query(models.TransferRecording.production_order_id).all()
-    completed_orders_ids = [r[0] for r in completed_orders_ids]
-
-    query = db.query(models.ProductionOrder).filter(
-        models.ProductionOrder.id.in_(completed_orders_ids)
-    )
-    if branch_id:
-        query = query.filter(models.ProductionOrder.branch_id == branch_id)
-    
-    return query.all()
-
-
-@app.get("/api/12hour-transfer/available-source-bins/{production_order_id}")
-def get_available_source_bins(production_order_id: int, db: Session = Depends(get_db)):
-    """
-    Get available 24-hour source bins for a specific production order.
-    Only bins that have completed their 24-hour transfer for this order are shown.
-    """
-    # Find all completed 24h transfer records for this production order
-    completed_transfers = db.query(models.TransferRecording).filter(
-        models.TransferRecording.production_order_id == production_order_id,
-        models.TransferRecording.status == models.TransferRecordingStatus.COMPLETED
-    ).all()
-    
-    completed_bin_ids = [t.destination_bin_id for t in completed_transfers]
-    
-    if not completed_bin_ids:
-        return []
-
-    source_bins = db.query(models.Bin).filter(
-        models.Bin.id.in_(completed_bin_ids),
-        models.Bin.status == "Active"
-    ).all()
-    
-    result = []
-    for bin_obj in source_bins:
-        result.append({
-            "id": bin_obj.id,
-            "bin_number": bin_obj.bin_number,
-            "capacity": bin_obj.capacity,
-            "current_quantity": bin_obj.current_quantity,
-            "bin_type": bin_obj.bin_type,
-            "status": bin_obj.status
-        })
-    return result
-
-
-@app.get("/api/12hour-transfer/available-destination-bins")
-@app.get("/api/12hour-transfer/available-destination-bins")
-def get_available_destination_bins(db: Session = Depends(get_db)):
-    """Get available 12-hour destination bins (filtered by type, status, capacity, and current activity)"""
-    try:
-        # 1. Base query for 12-hour bins that are Active
-        query = db.query(models.Bin).filter(
-            models.Bin.bin_type == "12 hours bin",
-            models.Bin.status == "Active"
-        )
-        
-        # 2. Get IDs of bins currently locked in an active 12-hour transfer session
-        locked_bin_ids = []
-        
-        # Check normal mappings
-        try:
-            active_mapping_bins = db.query(models.Transfer12HourBinsMapping.destination_bin_id).join(
-                models.Transfer12HourSession, 
-                models.Transfer12HourSession.id == models.Transfer12HourBinsMapping.transfer_session_id
-            ).filter(
-                models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
-                (models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS) | 
-                (models.Transfer12HourBinsMapping.is_locked == True)
-            ).all()
-            locked_bin_ids.extend([r[0] for r in active_mapping_bins])
-        except Exception as e:
-            print(f"Warning querying active_mapping_bins: {e}")
-
-        # Check special transfers
-        try:
-            active_special_bins = db.query(models.Transfer12HourSpecialTransfer.special_destination_bin_id).join(
-                models.Transfer12HourSession,
-                models.Transfer12HourSession.id == models.Transfer12HourSpecialTransfer.transfer_session_id
-            ).filter(
-                models.Transfer12HourSession.status == models.Transfer12HourSessionStatus.IN_PROGRESS,
-                models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
-            ).all()
-            locked_bin_ids.extend([r[0] for r in active_special_bins])
-        except Exception as e:
-            print(f"Warning querying active_special_bins: {e}")
-
-        # Apply locking filter if any bins are locked
-        if locked_bin_ids:
-            query = query.filter(~models.Bin.id.in_(list(set(locked_bin_ids))))
-            
-        destination_bins = query.all()
-        
-        # CRITICAL FALLBACK: If we get absolutely nothing, return all active 12-hour bins
-        # This resolves the user reported issue where they get "nothing"
-        if not destination_bins:
-            destination_bins = db.query(models.Bin).filter(
-                models.Bin.bin_type == "12 hours bin",
-                models.Bin.status == "Active"
-            ).all()
-
-    except Exception as e:
-        print(f"CRITICAL ERROR in get_available_destination_bins: {e}")
-        # Final safety fallback
-        destination_bins = []
-        try:
-            destination_bins = db.query(models.Bin).filter(
-                models.Bin.bin_type == "12 hours bin",
-                models.Bin.status == "Active"
-            ).all()
-        except:
-            pass
-    
-    result = []
-    for bin_obj in destination_bins:
-        result.append({
-            "id": bin_obj.id,
-            "bin_number": bin_obj.bin_number,
-            "capacity": bin_obj.capacity,
-            "current_quantity": bin_obj.current_quantity,
-            "remaining_capacity": bin_obj.capacity - bin_obj.current_quantity,
-            "bin_type": bin_obj.bin_type,
-            "status": bin_obj.status
-        })
-    print(f"DEBUG: Returning {len(result)} available destination bins.")
-    return result
-
-@app.post("/api/12hour-transfer/create-session-normal")
-def create_transfer_session_normal(
-    request: schemas.Transfer12HourSessionCreate,
-    db: Session = Depends(get_db),
-    user_id: Optional[int] = Header(None)
-):
-    """Create a Normal 12-hour transfer session with simplified mapping"""
-    # Prevent concurrent transfers
-    active_session = db.query(models.Transfer12HourSession).filter(
-        models.Transfer12HourSession.status.in_([
-            models.Transfer12HourSessionStatus.IN_PROGRESS,
-            models.Transfer12HourSessionStatus.PLANNED
-        ])
-    ).first()
-    if active_session:
-        # Check if it's actually stalled (older than 1 minute)
-        now = datetime.utcnow()
-        if (now - active_session.created_at).total_seconds() > 60:
-            active_session.status = models.Transfer12HourSessionStatus.COMPLETED
-            db.commit()
-        else:
-            raise HTTPException(status_code=400, detail="Another transfer session is already active")
-
-    session = models.Transfer12HourSession(
-        production_order_id=request.production_order_id,
-        transfer_type=models.Transfer12HourType.NORMAL,
-        status=models.Transfer12HourSessionStatus.PLANNED,
-        created_by=user_id
-    )
-    db.add(session)
-    db.flush()
-    
-    # Add simplified bins mapping (single pair)
-    bins_map = models.Transfer12HourBinsMapping(
-        transfer_session_id=session.id,
-        source_bin_id=request.source_bin_id,
-        destination_bin_id=request.destination_bin_id,
-        source_sequence=1,
-        destination_sequence=1
-    )
-    db.add(bins_map)
-    
-    db.commit()
-    db.refresh(session)
-    
-    return {
-        "id": session.id,
-        "production_order_id": session.production_order_id,
-        "transfer_type": session.transfer_type,
-        "status": session.status,
-        "message": "Normal transfer session created successfully"
-    }
-
-
-@app.post("/api/12hour-transfer/create-session-special")
-def create_transfer_session_special(
-    request: schemas.Transfer12HourSessionCreateSpecial,
-    db: Session = Depends(get_db),
-    user_id: Optional[int] = Header(None)
-):
-    """Create a Special 12-hour transfer session with both normal and special mappings"""
-    # Prevent concurrent transfers
-    active_session = db.query(models.Transfer12HourSession).filter(
-        models.Transfer12HourSession.status.in_([
-            models.Transfer12HourSessionStatus.IN_PROGRESS,
-            models.Transfer12HourSessionStatus.PLANNED
-        ])
-    ).first()
-    if active_session:
-        # Check if it's actually stalled (older than 1 minute)
-        now = datetime.utcnow()
-        if (now - active_session.created_at).total_seconds() > 60:
-            active_session.status = models.Transfer12HourSessionStatus.COMPLETED
-            db.commit()
-        else:
-            raise HTTPException(status_code=400, detail="Another transfer session is already active")
-
-    session = models.Transfer12HourSession(
-        production_order_id=request.production_order_id,
-        transfer_type=models.Transfer12HourType.SPECIAL,
-        status=models.Transfer12HourSessionStatus.IN_PROGRESS,  # Set to in-progress immediately
-        created_by=user_id
-    )
-    db.add(session)
-    db.flush()
-    
-    # Add normal bins mapping (Standard Transfer)
-    normal_mapping = models.Transfer12HourBinsMapping(
-        transfer_session_id=session.id,
-        source_bin_id=request.source_bin_id,
-        destination_bin_id=request.destination_bin_id,
-        source_sequence=1,
-        destination_sequence=1,
-        status=models.Transfer12HourBinsMappingStatus.IN_PROGRESS,
-        start_timestamp=get_utc_now()
-    )
-    db.add(normal_mapping)
-    
-    # Add special manual transfer mapping if provided
-    if request.special_source_bin_id and request.special_destination_bin_id:
-        special = models.Transfer12HourSpecialTransfer(
-            transfer_session_id=session.id,
-            special_source_bin_id=request.special_source_bin_id,
-            special_destination_bin_id=request.special_destination_bin_id,
-            manual_quantity=request.manual_quantity,
-            status=models.Transfer12HourSpecialStatus.PENDING,
-            created_at=get_utc_now(),
-            updated_at=get_utc_now()
-        )
-        db.add(special)
-    
-    db.commit()
-    db.refresh(session)
-    
-    return session
-
-@app.get("/api/12hour-transfer/sessions")
-def list_transfer_sessions(db: Session = Depends(get_db)):
-    """List all 12-hour transfer sessions"""
-    sessions = db.query(models.Transfer12HourSession).order_by(models.Transfer12HourSession.created_at.desc()).all()
-    return sessions
-
-
-@app.post("/api/12hour-transfer/record")
-def record_12hour_transfer(
+@app.post("/api/12hour-transfer/records", response_model=schemas.Transfer12HourRecord)
+def create_12hour_transfer_record(
     record: schemas.Transfer12HourRecordCreate,
-    session_id: int,
     db: Session = Depends(get_db),
-    user_id: Optional[int] = Header(None)
+    user_id: Optional[int] = Header(None),
+    branch_id: Optional[int] = Depends(get_branch_id)
 ):
-    """Record transfer quantity and update bin levels"""
-    session = db.query(models.Transfer12HourSession).filter(
-        models.Transfer12HourSession.id == session_id
-    ).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    """Create a new 12-hour transfer record"""
+    db_record = models.Transfer12HourRecord(
+        **record.dict(),
+        created_by=user_id
+    )
+    if branch_id and not db_record.branch_id:
+        db_record.branch_id = branch_id
         
+    db.add(db_record)
+    
+    # Update bin quantities
     source_bin = db.query(models.Bin).filter(models.Bin.id == record.source_bin_id).first()
     dest_bin = db.query(models.Bin).filter(models.Bin.id == record.destination_bin_id).first()
     
-    if not source_bin or not dest_bin:
-        raise HTTPException(status_code=400, detail="Invalid source or destination bin")
+    if source_bin and record.quantity_transferred:
+        source_bin.current_quantity -= record.quantity_transferred
+    if dest_bin and record.quantity_transferred:
+        dest_bin.current_quantity += record.quantity_transferred
         
-    # Create record
-    # Find the active bins mapping for this session
-    bins_mapping = db.query(models.Transfer12HourBinsMapping).filter(
-        models.Transfer12HourBinsMapping.transfer_session_id == session_id,
-        models.Transfer12HourBinsMapping.source_bin_id == record.source_bin_id,
-        models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id,
-        models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
-    ).first()
-
-    # If no in-progress mapping found, try to find any mapping for these bins in this session
-    if not bins_mapping:
-        bins_mapping = db.query(models.Transfer12HourBinsMapping).filter(
-            models.Transfer12HourBinsMapping.transfer_session_id == session_id,
-            models.Transfer12HourBinsMapping.source_bin_id == record.source_bin_id,
-            models.Transfer12HourBinsMapping.destination_bin_id == record.destination_bin_id
-        ).first()
-
-    # Capture start time from session or mapping if not already set
-    start_time = record.transfer_start_time or (bins_mapping.start_timestamp if bins_mapping else session.start_timestamp) or get_utc_now()
-    end_time = get_utc_now()
-    
-    duration = 0
-    if end_time and start_time:
-        # Ensure both are naive to allow subtraction
-        start_time_naive = start_time.replace(tzinfo=None) if start_time.tzinfo else start_time
-        end_time_naive = end_time.replace(tzinfo=None) if end_time.tzinfo else end_time
-        duration = int((end_time_naive - start_time_naive).total_seconds() / 60)
-
-    db_record = models.Transfer12HourRecord(
-        transfer_session_id=session_id,
-        bins_mapping_id=bins_mapping.id if bins_mapping else None,
-        source_bin_id=record.source_bin_id,
-        destination_bin_id=record.destination_bin_id,
-        quantity_transferred=record.quantity_transferred,
-        water_added=record.water_added,
-        moisture_level=record.moisture_level,
-        status=models.TransferRecordingStatus.COMPLETED,
-        transfer_start_time=start_time,
-        transfer_end_time=end_time,
-        duration_minutes=duration,
-        created_by=user_id
-    )
-
-    # If still no mapping, and it's a special transfer, create one on the fly
-    if not bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
-        bins_mapping = models.Transfer12HourBinsMapping(
-            transfer_session_id=session_id,
-            source_bin_id=record.source_bin_id,
-            destination_bin_id=record.destination_bin_id,
-            source_sequence=1,
-            destination_sequence=1,
-            status=models.Transfer12HourBinsMappingStatus.IN_PROGRESS,
-            start_timestamp=get_utc_now(),
-            is_locked=True  # Lock the destination bin for special transfer
-        )
-        db.add(bins_mapping)
-        db.flush()
-        # Update the record with the newly created mapping ID
-        db_record.bins_mapping_id = bins_mapping.id
-    elif bins_mapping and session.transfer_type == models.Transfer12HourType.SPECIAL:
-        # If it was a pre-configured mapping in a special transfer, lock it now
-        bins_mapping.is_locked = True
-    
-    # Update bin levels
-    source_bin.current_quantity -= record.quantity_transferred
-    dest_bin.current_quantity += record.quantity_transferred
-    
-    # Update mapping status if it was in progress
-    if bins_mapping:
-        bins_mapping.status = models.Transfer12HourBinsMappingStatus.COMPLETED
-        bins_mapping.end_timestamp = end_time
-        bins_mapping.transferred_quantity += record.quantity_transferred
-
-    db.add(db_record)
     db.commit()
-    
-    return {"message": "Transfer recorded and bin levels updated successfully"}
+    db.refresh(db_record)
+    return db_record
 
-
-@app.get("/api/12hour-transfer/session/{session_id}")
-def get_transfer_session(
-    session_id: int,
+@app.get("/api/12hour-transfer/records", response_model=List[schemas.Transfer12HourRecord])
+def get_12hour_transfer_records(
+    skip: int = 0,
+    limit: int = 100,
+    branch_id: Optional[int] = Depends(get_branch_id),
     db: Session = Depends(get_db)
 ):
-    """Get transfer session details"""
-    session = db.query(models.Transfer12HourSession).filter(
-        models.Transfer12HourSession.id == session_id
-    ).first()
-    
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    # Calculate elapsed seconds if active
-    elapsed = 0
-    if session.status == models.Transfer12HourSessionStatus.IN_PROGRESS and session.created_at:
-        now = datetime.utcnow()
-        elapsed = int((now - session.created_at).total_seconds())
+    """Get all 12-hour transfer records"""
+    query = db.query(models.Transfer12HourRecord)
+    if branch_id:
+        query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
+    return query.order_by(models.Transfer12HourRecord.created_at.desc()).offset(skip).limit(limit).all()
 
-    return {
-        "id": session.id,
-        "production_order_id": session.production_order_id,
-        "transfer_type": session.transfer_type,
-        "status": session.status,
-        "session_sequence": session.session_sequence,
-        "created_at": format_ist_iso(session.created_at),
-        "elapsed_seconds": elapsed
-    }
-
-@app.patch("/api/12hour-transfer/session/{session_id}")
-def update_transfer_session(
-    session_id: int,
-    update_data: dict,
+@app.patch("/api/12hour-transfer/records/{record_id}", response_model=schemas.Transfer12HourRecord)
+def update_12hour_transfer_record(
+    record_id: int,
+    record_update: schemas.Transfer12HourRecordUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update transfer session status and check if production order is completed"""
-    session = db.query(models.Transfer12HourSession).filter(
-        models.Transfer12HourSession.id == session_id
-    ).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    """Update an existing 12-hour transfer record"""
+    db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Record not found")
+        
+    update_data = record_update.dict(exclude_unset=True)
     
-    if "status" in update_data:
-        session.status = update_data["status"]
-        if update_data["status"] == "COMPLETED":
-            session.end_timestamp = datetime.utcnow()
-            # Also complete any in-progress mappings
-            db.query(models.Transfer12HourBinsMapping).filter(
-                models.Transfer12HourBinsMapping.transfer_session_id == session_id,
-                models.Transfer12HourBinsMapping.status == models.Transfer12HourBinsMappingStatus.IN_PROGRESS
-            ).update({"status": models.Transfer12HourBinsMappingStatus.COMPLETED, "end_timestamp": datetime.utcnow()})
+    # If quantity is being updated, adjust bin balances
+    if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
+        diff = update_data["quantity_transferred"] - db_record.quantity_transferred
+        source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == db_record.destination_bin_id).first()
+        
+        if source_bin:
+            source_bin.current_quantity -= diff
+        if dest_bin:
+            dest_bin.current_quantity += diff
             
-            # Update special transfers if any
-            db.query(models.Transfer12HourSpecialTransfer).filter(
-                models.Transfer12HourSpecialTransfer.transfer_session_id == session_id,
-                models.Transfer12HourSpecialTransfer.status == models.Transfer12HourSpecialStatus.IN_PROGRESS
-            ).update({"status": models.Transfer12HourSpecialStatus.COMPLETED})
-
-            # Auto-complete Production Order if quantity reached
-            if session.production_order_id:
-                order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == session.production_order_id).first()
-                if order:
-                    # Calculate total transferred for this order across all 12-hour sessions
-                    total_transferred = db.query(func.sum(models.Transfer12HourRecord.quantity_transferred)).join(
-                        models.Transfer12HourSession,
-                        models.Transfer12HourSession.id == models.Transfer12HourRecord.transfer_session_id
-                    ).filter(
-                        models.Transfer12HourSession.production_order_id == order.id,
-                        models.Transfer12HourRecord.status == models.TransferRecordingStatus.COMPLETED
-                    ).scalar() or 0.0
-
-                    # Calculate target quantity from the planned 24-hour bins (Destination Bins)
-                    target_quantity = db.query(func.sum(models.ProductionOrderDestinationBin.quantity)).filter(
-                        models.ProductionOrderDestinationBin.production_order_id == order.id
-                    ).scalar() or 0.0
-
-                    if total_transferred >= target_quantity and target_quantity > 0:
-                        order.status = models.ProductionOrderStatus.COMPLETED
-
+    for key, value in update_data.items():
+        setattr(db_record, key, value)
+        
     db.commit()
-    db.refresh(session)
-    return session
-
+    db.refresh(db_record)
+    return db_record
 
 if __name__ == "__main__":
     import uvicorn
