@@ -2936,21 +2936,11 @@ def get_24hour_transfer_records(
         limit: int = 100,
         branch_id: Optional[int] = Depends(get_branch_id),
         db: Session = Depends(get_db)):
-    try:
-        query = db.query(models.TransferRecording)
-        if branch_id:
-            # Check if column exists to avoid 500
-            from sqlalchemy import inspect
-            inspector = inspect(db.bind)
-            columns = [c['name'] for c in inspector.get_columns('24hours_transfer_records')]
-            if 'branch_id' in columns:
-                query = query.filter(models.TransferRecording.branch_id == branch_id)
-        
-        records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
-        return records
-    except Exception as e:
-        print(f"Error fetching 24h transfer records: {e}")
-        return []
+    query = db.query(models.TransferRecording)
+    if branch_id:
+        query = query.filter(models.TransferRecording.branch_id == branch_id)
+    records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
+    return records
 
 
 @app.post("/api/12hour-transfer/records", response_model=schemas.Transfer12HourRecord)

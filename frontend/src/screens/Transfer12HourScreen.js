@@ -106,7 +106,7 @@ export default function Transfer12HourScreen({ navigation }) {
         bin.bin_type === "24 hours bin" && 
         bin.status === "Active" && 
         (bin.current_quantity || 0) > 0 &&
-        validSourceBinIds.includes(bin.id)
+        (validSourceBinIds.includes(bin.id) || validSourceBinIds.includes(bin.id?.toString()))
       );
       
       // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
