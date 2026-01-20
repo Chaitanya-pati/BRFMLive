@@ -87,11 +87,12 @@ export default function Transfer12HourScreen({ navigation }) {
       const response = await client.get("/bins");
       const allBins = response.data || [];
       
-      // Source bins: 24 hours bin, Active, and has current_quantity > 0
+      // Source bins: 24 hours bin, Active, current_quantity > 0, and belongs to selected production order
       const filteredSource = allBins.filter(bin => 
         bin.bin_type === "24 hours bin" && 
         bin.status === "Active" && 
-        (bin.current_quantity || 0) > 0
+        (bin.current_quantity || 0) > 0 &&
+        bin.production_order_id === order.id
       );
       
       // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
