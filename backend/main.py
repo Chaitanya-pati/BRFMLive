@@ -683,10 +683,39 @@ def create_bag_size(bag_size: schemas.BagSizeCreate, db: Session = Depends(get_d
 
 @app.get("/api/grinding/available-bins")
 def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    # Bins of type 12HOUR
     query = db.query(models.Bin).filter(models.Bin.bin_type == "12HOUR")
     if branch_id:
         query = query.filter(models.Bin.branch_id == branch_id)
-    return query.all()
+    bins = query.all()
+    
+    result = []
+    for bin_obj in bins:
+        # Find the latest 12-hour transfer record for this bin to get the production order
+        latest_transfer = db.query(models.Transfer12HourRecord)\
+            .join(models.BinsMapping, models.Transfer12HourRecord.bins_mapping_id == models.BinsMapping.id)\
+            .filter(models.BinsMapping.to_bin_id == bin_obj.id)\
+            .order_by(models.Transfer12HourRecord.created_at.desc())\
+            .first()
+        
+        production_order_id = None
+        order_number = None
+        if latest_transfer:
+            session = db.query(models.TransferSession).filter(models.TransferSession.id == latest_transfer.transfer_session_id).first()
+            if session and session.production_order_id:
+                production_order_id = session.production_order_id
+                order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == production_order_id).first()
+                if order:
+                    order_number = order.order_number
+        
+        result.append({
+            "id": bin_obj.id,
+            "bin_number": bin_obj.bin_number,
+            "status": bin_obj.status,
+            "production_order_id": production_order_id,
+            "order_number": order_number
+        })
+    return result
 
 @app.post("/api/grinding/hourly-production", response_model=schemas.HourlyProduction)
 def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):

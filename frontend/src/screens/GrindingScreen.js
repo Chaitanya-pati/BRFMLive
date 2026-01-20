@@ -15,12 +15,9 @@ export default function GrindingScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [availableBins, setAvailableBins] = useState([]);
-  const [productionOrders, setProductionOrders] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
 
-  const [showBinList, setShowBinList] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedBin, setSelectedBin] = useState(null);
   const [isGrindingStarted, setIsGrindingStarted] = useState(false);
 
@@ -40,14 +37,12 @@ export default function GrindingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [binsRes, ordersRes, bagsRes, fgRes] = await Promise.all([
+      const [binsRes, bagsRes, fgRes] = await Promise.all([
         client.get("/grinding/available-bins"),
-        client.get("/production-orders"),
         client.get("/bag-sizes"),
         client.get("/finished-goods")
       ]);
       setAvailableBins(binsRes.data || []);
-      setProductionOrders(ordersRes.data || []);
       setBagSizes(bagsRes.data || []);
       setFinishedGoods(fgRes.data || []);
     } catch (error) {
@@ -57,19 +52,14 @@ export default function GrindingScreen({ navigation }) {
     }
   };
 
-  const handleStartClick = () => {
-    if (!selectedOrder) {
-      showAlert("Validation", "Please select a Production Order first");
+  const handleBinSelect = (bin) => {
+    if (!bin.production_order_id) {
+      showAlert("Error", "No Production Order found for this bin in transfer records");
       return;
     }
-    setShowBinList(true);
-  };
-
-  const handleBinSelect = (bin) => {
     setSelectedBin(bin);
     setIsGrindingStarted(true);
-    setShowBinList(false);
-    showToast("Success", `Grinding started with Bin ${bin.bin_number}`);
+    showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
 
   const handleAddDetail = () => {
@@ -92,7 +82,7 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       await client.post("/grinding/hourly-production", {
-        production_order_id: selectedOrder,
+        production_order_id: selectedBin.production_order_id,
         production_date: productionDate,
         production_time: productionTime,
         b1_scale_reading: parseFloat(b1Reading),
@@ -130,49 +120,32 @@ export default function GrindingScreen({ navigation }) {
         </View>
 
         {!isGrindingStarted ? (
-          <View>
-            <Card style={styles.card}>
-              <Text style={styles.cardTitle}>Initial Selection</Text>
-              <SelectDropdown
-                label="Production Order"
-                value={selectedOrder}
-                onValueChange={setSelectedOrder}
-                options={productionOrders.map(o => ({ label: o.order_number, value: o.id }))}
-              />
-              {!showBinList && (
-                <Button title="Start Grinding" onPress={handleStartClick} />
-              )}
-            </Card>
-
-            {showBinList && (
-              <View style={styles.binListSection}>
-                <Text style={styles.sectionTitle}>Select a Filled 12-Hour Bin</Text>
-                {availableBins.length > 0 ? (
-                  availableBins.map((bin) => (
-                    <TouchableOpacity 
-                      key={bin.id} 
-                      style={styles.binCard}
-                      onPress={() => handleBinSelect(bin)}
-                    >
-                      <View style={styles.binIconContainer}>
-                        <Text style={styles.binIcon}>📦</Text>
-                      </View>
-                      <View>
-                        <Text style={styles.binName}>Bin {bin.bin_number}</Text>
-                        <Text style={styles.binStatus}>Status: {bin.status || 'Ready'}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <Text style={styles.noBinsText}>No filled 12-hour bins available</Text>
-                )}
-                <Button 
-                  title="Cancel" 
-                  variant="secondary" 
-                  onPress={() => setShowBinList(false)} 
-                  style={{ marginTop: 10 }}
-                />
-              </View>
+          <View style={styles.binListSection}>
+            <Text style={styles.sectionTitle}>Select a Filled 12-Hour Bin to Start</Text>
+            {loading && availableBins.length === 0 ? (
+              <ActivityIndicator size="large" color={colors.primary} />
+            ) : availableBins.length > 0 ? (
+              availableBins.map((bin) => (
+                <TouchableOpacity 
+                  key={bin.id} 
+                  style={styles.binCard}
+                  onPress={() => handleBinSelect(bin)}
+                >
+                  <View style={styles.binIconContainer}>
+                    <Text style={styles.binIcon}>📦</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.binName}>Bin {bin.bin_number}</Text>
+                    <Text style={styles.binOrder}>Order: {bin.order_number || 'None Found'}</Text>
+                    <Text style={styles.binStatus}>Status: {bin.status || 'Ready'}</Text>
+                  </View>
+                  <View style={styles.startBadge}>
+                    <Text style={styles.startBadgeText}>START</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.noBinsText}>No filled 12-hour bins available</Text>
             )}
           </View>
         ) : (
@@ -181,16 +154,14 @@ export default function GrindingScreen({ navigation }) {
               <View style={styles.activeRow}>
                 <View>
                   <Text style={styles.activeLabel}>Order</Text>
-                  <Text style={styles.activeValue}>
-                    {productionOrders.find(o => o.id === selectedOrder)?.order_number}
-                  </Text>
+                  <Text style={styles.activeValue}>{selectedBin?.order_number}</Text>
                 </View>
                 <View>
                   <Text style={styles.activeLabel}>Bin</Text>
                   <Text style={styles.activeValue}>Bin {selectedBin?.bin_number}</Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsGrindingStarted(false)}>
-                  <Text style={styles.changeText}>Change</Text>
+                  <Text style={styles.changeText}>Change Bin</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -252,41 +223,44 @@ const styles = StyleSheet.create({
   excelButtonText: { color: '#fff', fontWeight: 'bold' },
   card: { padding: 16, marginBottom: 16, borderRadius: 12 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.text.primary },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 15, color: colors.text.primary },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 15, color: colors.text.primary, textAlign: 'center' },
   binListSection: { marginBottom: 20 },
   binCard: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     backgroundColor: '#fff', 
     padding: 15, 
-    borderRadius: 10, 
-    marginBottom: 10,
+    borderRadius: 12, 
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
   },
   binIconContainer: { 
-    width: 45, 
-    height: 45, 
-    borderRadius: 22.5, 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
     backgroundColor: '#E3F2FD', 
     justifyContent: 'center', 
     alignItems: 'center', 
     marginRight: 15 
   },
-  binIcon: { fontSize: 24 },
-  binName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  binStatus: { fontSize: 14, color: '#666' },
+  binIcon: { fontSize: 26 },
+  binName: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  binOrder: { fontSize: 14, color: colors.primary, fontWeight: '600', marginTop: 2 },
+  binStatus: { fontSize: 13, color: '#666', marginTop: 2 },
+  startBadge: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  startBadgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   noBinsText: { textAlign: 'center', padding: 20, color: '#999', fontStyle: 'italic' },
-  activeInfoCard: { padding: 12, marginBottom: 16, backgroundColor: '#E8F5E9', borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
+  activeInfoCard: { padding: 15, marginBottom: 16, backgroundColor: '#E8F5E9', borderLeftWidth: 5, borderLeftColor: '#4CAF50', borderRadius: 10 },
   activeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  activeLabel: { fontSize: 12, color: '#666', textTransform: 'uppercase' },
+  activeLabel: { fontSize: 11, color: '#666', textTransform: 'uppercase', marginBottom: 4 },
   activeValue: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  changeText: { color: colors.primary, fontWeight: 'bold' },
+  changeText: { color: colors.primary, fontWeight: 'bold', fontSize: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   detailRow: { borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 15, marginTop: 15 },
   removeBtn: { alignSelf: 'flex-end', marginTop: 5 },
