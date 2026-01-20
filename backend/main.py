@@ -3213,8 +3213,11 @@ def record_12hour_transfer(
     end_time = get_utc_now()
     
     duration = 0
-    if start_time and end_time:
-        duration = int((end_time - start_time).total_seconds() / 60)
+    if end_time and start_time:
+        # Ensure both are naive to allow subtraction
+        start_time_naive = start_time.replace(tzinfo=None) if start_time.tzinfo else start_time
+        end_time_naive = end_time.replace(tzinfo=None) if end_time.tzinfo else end_time
+        duration = int((end_time_naive - start_time_naive).total_seconds() / 60)
 
     db_record = models.Transfer12HourRecord(
         transfer_session_id=session_id,
