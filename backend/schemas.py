@@ -42,81 +42,42 @@ class Transfer12HourSessionStatusEnum(str, Enum):
     PAUSED = "PAUSED"
     CANCELLED = "CANCELLED"
 
-# 12-Hour Transfer Schemas
-class Transfer12HourBinsMappingBase(ISTModel):
-    source_bin_id: int
-    destination_bin_id: int
-    source_sequence: int
-    destination_sequence: int
+class TransferRecordingStatusEnum(str, Enum):
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
 
-class Transfer12HourBinsMappingCreate(Transfer12HourBinsMappingBase):
-    pass
-
-class Transfer12HourBinsMapping(Transfer12HourBinsMappingBase):
-    id: int
-    transfer_session_id: int
-    transferred_quantity: float
-    status: str
-    is_locked: bool
-    created_at: datetime
-    updated_at: datetime
-
-class Transfer12HourSpecialTransferBase(ISTModel):
-    special_source_bin_id: int
-    special_destination_bin_id: int
-
-class Transfer12HourSpecialTransferCreate(Transfer12HourSpecialTransferBase):
-    pass
-
-class Transfer12HourSpecialTransfer(Transfer12HourSpecialTransferBase):
-    id: int
-    transfer_session_id: int
-    status: str
-    created_at: datetime
-    updated_at: datetime
-
-class Transfer12HourSessionBase(ISTModel):
-    production_order_id: int
-    transfer_type: Transfer12HourTypeEnum
-
-class Transfer12HourSessionCreate(Transfer12HourSessionBase):
-    source_bin_id: int
-    destination_bin_id: int
-
-class Transfer12HourSessionCreateSpecial(Transfer12HourSessionBase):
-    source_bin_id: int
-    destination_bin_id: int
-    special_source_bin_id: Optional[int] = None
-    special_destination_bin_id: Optional[int] = None
-    manual_quantity: Optional[float] = None
-
-class Transfer12HourSession(Transfer12HourSessionBase):
-    id: int
-    status: str
-    session_sequence: int
-    start_timestamp: Optional[datetime]
-    end_timestamp: Optional[datetime]
-    bins_mapping: List[Transfer12HourBinsMapping] = []
-    special_transfer: Optional[Transfer12HourSpecialTransfer] = None
-    created_at: datetime
-    updated_at: datetime
-
+# 12-Hour Transfer Schemas (Simplified)
 class Transfer12HourRecordBase(ISTModel):
     source_bin_id: int
     destination_bin_id: int
-    quantity_transferred: float
+    quantity_transferred: float = 0.0
+    production_order_id: int
+    transfer_type: Optional[str] = "NORMAL"
 
 class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
+    status: Optional[TransferRecordingStatusEnum] = TransferRecordingStatusEnum.PLANNED
+    branch_id: Optional[int] = None
+
+class Transfer12HourRecordUpdate(BaseModel):
+    quantity_transferred: Optional[float] = None
+    status: Optional[TransferRecordingStatusEnum] = None
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+    transfer_end_time: Optional[datetime] = None
 
 class Transfer12HourRecord(Transfer12HourRecordBase):
     id: int
-    transfer_session_id: int
-    bins_mapping_id: int
-    quantity_transferred: float
-    status: str
+    status: TransferRecordingStatusEnum
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+    transfer_start_time: Optional[datetime] = None
+    transfer_end_time: Optional[datetime] = None
+    created_by: Optional[int] = None
+    branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

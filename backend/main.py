@@ -1074,6 +1074,13 @@ def create_bin(bin_data: schemas.BinCreate,
     return db_bin
 
 
+def get_current_user(db: Session = Depends(get_db)):
+    # Fallback to admin user for now as auth might not be fully configured
+    user = db.query(models.User).filter(models.User.username == "admin").first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    return user
+
 @app.get("/api/bins", response_model=List[schemas.Bin])
 def get_bins(skip: int = 0,
              limit: int = 100,
@@ -1088,6 +1095,47 @@ def get_bins(skip: int = 0,
         bin_obj.capacity = sanitize_float(bin_obj.capacity)
         bin_obj.current_quantity = sanitize_float(bin_obj.current_quantity)
     return bins
+
+
+# 12-Hour Transfer Endpoints (Simplified)
+@app.post("/api/12hours-transfer/records", response_model=schemas.Transfer12HourRecord)
+def create_12hour_transfer_record(record: schemas.Transfer12HourRecordCreate, 
+                                 db: Session = Depends(get_db),
+                                 user: models.User = Depends(get_current_user)):
+    record_data = record.dict()
+    record_data['created_by'] = user.id
+    db_record = models.Transfer12HourRecord(**record_data)
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+@app.get("/api/12hours-transfer/records", response_model=List[schemas.Transfer12HourRecord])
+def get_12hour_transfer_records(branch_id: Optional[int] = None, 
+                               production_order_id: Optional[int] = None, 
+                               db: Session = Depends(get_db)):
+    query = db.query(models.Transfer12HourRecord)
+    if branch_id:
+        query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
+    if production_order_id:
+        query = query.filter(models.Transfer12HourRecord.production_order_id == production_order_id)
+    return query.all()
+
+@app.patch("/api/12hours-transfer/records/{record_id}", response_model=schemas.Transfer12HourRecord)
+def update_12hour_transfer_record(record_id: int, 
+                                 record_update: schemas.Transfer12HourRecordUpdate, 
+                                 db: Session = Depends(get_db)):
+    db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    update_data = record_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_record, key, value)
+    
+    db.commit()
+    db.refresh(db_record)
+    return db_record
 
 
 @app.get("/api/bins/source", response_model=List[schemas.Bin])

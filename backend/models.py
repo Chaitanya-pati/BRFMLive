@@ -574,122 +574,30 @@ class TransferRecording(Base):
 
 
 # ============================================================================
-# 12-Hour Transfer Models
+# 12-Hour Transfer Models (Simplified)
 # ============================================================================
-
-class Transfer12HourSessionStatus(str, enum.Enum):
-    PLANNED = "PLANNED"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    PAUSED = "PAUSED"
-    CANCELLED = "CANCELLED"
-
-
-class Transfer12HourType(str, enum.Enum):
-    NORMAL = "NORMAL"
-    SPECIAL = "SPECIAL"
-
-
-class Transfer12HourBinsMappingStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    SKIPPED = "SKIPPED"
-
-
-class Transfer12HourSpecialStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class Transfer12HourSession(Base):
-    __tablename__ = "12hours_transfer_sessions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
-    transfer_type = Column(Enum(Transfer12HourType), nullable=False)
-    status = Column(Enum(Transfer12HourSessionStatus), default=Transfer12HourSessionStatus.PLANNED, nullable=False)
-    session_sequence = Column(Integer, default=1, nullable=False)
-    start_timestamp = Column(DateTime)
-    end_timestamp = Column(DateTime)
-    created_by = Column(Integer, ForeignKey("users.id"))
-    updated_by = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
-
-    production_order = relationship("ProductionOrder")
-    created_by_user = relationship("User", foreign_keys=[created_by])
-    updated_by_user = relationship("User", foreign_keys=[updated_by])
-    bins_mapping = relationship("Transfer12HourBinsMapping", back_populates="session", cascade="all, delete-orphan")
-    special_transfer = relationship("Transfer12HourSpecialTransfer", back_populates="session", uselist=False, cascade="all, delete-orphan")
-    transfer_records = relationship("Transfer12HourRecord", back_populates="session", cascade="all, delete-orphan")
-
-
-class Transfer12HourBinsMapping(Base):
-    __tablename__ = "12hours_transfer_bins_mapping"
-
-    id = Column(Integer, primary_key=True, index=True)
-    transfer_session_id = Column(Integer, ForeignKey("12hours_transfer_sessions.id"), nullable=False)
-    source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    source_sequence = Column(Integer, nullable=False)
-    destination_sequence = Column(Integer, nullable=False)
-    transferred_quantity = Column(Float, default=0.0)
-    status = Column(Enum(Transfer12HourBinsMappingStatus), default=Transfer12HourBinsMappingStatus.PENDING, nullable=False)
-    is_locked = Column(Boolean, default=False)
-    start_timestamp = Column(DateTime)
-    end_timestamp = Column(DateTime)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
-
-    session = relationship("Transfer12HourSession", back_populates="bins_mapping")
-    source_bin = relationship("Bin", foreign_keys=[source_bin_id], back_populates="transfer_12h_mapping_source")
-    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_12h_mapping_dest")
-
-
-class Transfer12HourSpecialTransfer(Base):
-    __tablename__ = "12hours_special_transfers"
-
-    id = Column(Integer, primary_key=True, index=True)
-    transfer_session_id = Column(Integer, ForeignKey("12hours_transfer_sessions.id"), nullable=False, unique=True)
-    special_source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    special_destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    manual_quantity = Column(Float, nullable=True)
-    status = Column(Enum(Transfer12HourSpecialStatus), default=Transfer12HourSpecialStatus.PENDING, nullable=False)
-    start_timestamp = Column(DateTime)
-    end_timestamp = Column(DateTime)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
-
-    session = relationship("Transfer12HourSession", back_populates="special_transfer")
-    special_source_bin = relationship("Bin", foreign_keys=[special_source_bin_id], back_populates="transfer_12h_special_source")
-    special_destination_bin = relationship("Bin", foreign_keys=[special_destination_bin_id], back_populates="transfer_12h_special_dest")
-
 
 class Transfer12HourRecord(Base):
     __tablename__ = "12hours_transfer_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    transfer_session_id = Column(Integer, ForeignKey("12hours_transfer_sessions.id"), nullable=False)
-    bins_mapping_id = Column(Integer, ForeignKey("12hours_transfer_bins_mapping.id"), nullable=True)
     source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    quantity_transferred = Column(Float, default=0.0)
-    status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False)
+    quantity_transferred = Column(Float, nullable=False, default=0.0)
+    status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False, index=True)
     water_added = Column(Float)
     moisture_level = Column(Float)
     transfer_start_time = Column(DateTime)
     transfer_end_time = Column(DateTime)
-    duration_minutes = Column(Integer)
     created_by = Column(Integer, ForeignKey("users.id"))
-    updated_by = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+    transfer_type = Column(String(50))
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
 
-    session = relationship("Transfer12HourSession", back_populates="transfer_records")
     source_bin = relationship("Bin", foreign_keys=[source_bin_id], back_populates="transfer_12h_record_source")
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_12h_record_dest")
     created_by_user = relationship("User", foreign_keys=[created_by])
-    updated_by_user = relationship("User", foreign_keys=[updated_by])
+    branch = relationship("Branch")
+    production_order = relationship("ProductionOrder")
