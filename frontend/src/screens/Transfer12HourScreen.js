@@ -178,6 +178,32 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
+  const renderSelectOrder = () => (
+    <ScrollView style={styles.container}>
+      <View style={styles.headerSection}>
+        <Text style={styles.mainHeading}>Select Production Order</Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : (
+        <View>
+          {productionOrders.map((item) => (
+            <TouchableOpacity key={item.id.toString()} onPress={() => handleSelectOrder(item)}>
+              <Card style={styles.orderCard}>
+                <View>
+                  <Text style={styles.orderNumber}>Order No: {item.order_number}</Text>
+                  <Text style={styles.orderDetail}>{item.product_name || 'Wheat Transfer'}</Text>
+                </View>
+                <Text style={styles.selectText}>Select ›</Text>
+              </Card>
+            </TouchableOpacity>
+          ))}
+          {productionOrders.length === 0 && <Text style={styles.emptyText}>No active production orders found</Text>}
+        </View>
+      )}
+    </ScrollView>
+  );
+
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
