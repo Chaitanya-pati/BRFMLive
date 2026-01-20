@@ -17,6 +17,46 @@ def get_utc_now():
     """Get current UTC time as naive datetime"""
     return datetime.now(UTC).replace(tzinfo=None)
 
+class BagSize(Base):
+    __tablename__ = "bag_sizes"
+    id = Column(Integer, primary_key=True, index=True)
+    weight_kg = Column(Integer, nullable=False)
+    is_active = Column(Boolean, default=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    
+    branch = relationship("Branch")
+
+class HourlyProduction(Base):
+    __tablename__ = "hourly_productions"
+    id = Column(Integer, primary_key=True, index=True)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    production_date = Column(DateTime, nullable=False)
+    production_time = Column(String(50), nullable=False)
+    b1_scale_reading = Column(Float)
+    load_per_hour_tons = Column(Float)
+    reprocess = Column(Float)
+    refraction = Column(Float)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+
+    production_order = relationship("ProductionOrder")
+    details = relationship("HourlyProductionDetail", back_populates="hourly_production")
+
+class HourlyProductionDetail(Base):
+    __tablename__ = "hourly_production_details"
+    id = Column(Integer, primary_key=True, index=True)
+    hourly_production_id = Column(Integer, ForeignKey("hourly_productions.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
+    quantity_bags = Column(Integer)
+    refraction = Column(Float)
+    reprocess = Column(Float)
+
+    hourly_production = relationship("HourlyProduction", back_populates="details")
+    finished_good = relationship("FinishedGood")
+    bag_size = relationship("BagSize")
+
 class ClaimStatus(str, enum.Enum):
     OPEN = "Open"
     IN_PROGRESS = "In Progress"

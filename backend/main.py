@@ -659,6 +659,64 @@ def update_claim(claim_id: int,
     db.refresh(db_claim)
     return db_claim
 
+# --- BagSize API ---
+
+@app.get("/api/bag-sizes", response_model=List[schemas.BagSize])
+def get_bag_sizes(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.BagSize)
+    if branch_id:
+        query = query.filter(models.BagSize.branch_id == branch_id)
+    return query.all()
+
+@app.post("/api/bag-sizes", response_model=schemas.BagSize)
+def create_bag_size(bag_size: schemas.BagSizeCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = bag_size.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    db_obj = models.BagSize(**data)
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+# --- Grinding / Hourly Production API ---
+
+@app.get("/api/grinding/available-bins")
+def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.Bin).filter(models.Bin.bin_type == "12HOUR")
+    if branch_id:
+        query = query.filter(models.Bin.branch_id == branch_id)
+    return query.all()
+
+@app.post("/api/grinding/hourly-production", response_model=schemas.HourlyProduction)
+def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = prod.dict()
+    details_data = data.pop('details', [])
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    
+    db_prod = models.HourlyProduction(**data)
+    db.add(db_prod)
+    db.commit()
+    db.refresh(db_prod)
+    
+    for detail in details_data:
+        db_detail = models.HourlyProductionDetail(**detail, hourly_production_id=db_prod.id)
+        db.add(db_detail)
+    
+    db.commit()
+    db.refresh(db_prod)
+    return db_prod
+
+@app.get("/api/grinding/hourly-production", response_model=List[schemas.HourlyProduction])
+def get_hourly_productions(production_order_id: Optional[int] = None, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.HourlyProduction)
+    if branch_id:
+        query = query.filter(models.HourlyProduction.branch_id == branch_id)
+    if production_order_id:
+        query = query.filter(models.HourlyProduction.production_order_id == production_order_id)
+    return query.order_by(models.HourlyProduction.production_date.desc(), models.HourlyProduction.production_time.desc()).all()
+
 
 @app.delete("/api/lab-tests/{lab_test_id}")
 def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):

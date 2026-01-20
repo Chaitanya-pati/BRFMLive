@@ -120,6 +120,55 @@ class Transfer12HourRecord(Transfer12HourRecordBase):
     created_at: datetime
     updated_at: datetime
 
+class BagSizeBase(ISTModel):
+    weight_kg: int
+    is_active: bool = True
+
+class BagSizeCreate(BagSizeBase):
+    branch_id: Optional[int] = None
+
+class BagSize(BagSizeBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+
+class HourlyProductionDetailBase(BaseModel):
+    finished_good_id: int
+    bag_size_id: int
+    quantity_bags: int
+    refraction: Optional[float] = 0.0
+    reprocess: Optional[float] = 0.0
+
+class HourlyProductionDetailCreate(HourlyProductionDetailBase):
+    pass
+
+class HourlyProductionDetail(HourlyProductionDetailBase):
+    id: int
+    hourly_production_id: int
+
+class HourlyProductionBase(ISTModel):
+    production_order_id: int
+    production_date: datetime
+    production_time: str
+    b1_scale_reading: Optional[float] = 0.0
+    load_per_hour_tons: Optional[float] = 0.0
+    reprocess: Optional[float] = 0.0
+    refraction: Optional[float] = 0.0
+
+    @validator('production_date', pre=True)
+    def _parse_production_date(cls, v):
+        return parse_datetime(v)
+
+class HourlyProductionCreate(HourlyProductionBase):
+    branch_id: Optional[int] = None
+    details: List[HourlyProductionDetailCreate]
+
+class HourlyProduction(HourlyProductionBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    details: List[HourlyProductionDetail] = []
+
 class SupplierBase(ISTModel):
     supplier_name: str
     contact_person: Optional[str] = None

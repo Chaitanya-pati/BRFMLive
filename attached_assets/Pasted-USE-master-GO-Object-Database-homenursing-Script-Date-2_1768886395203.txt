@@ -1,0 +1,286 @@
+USE [master]
+GO
+/****** Object:  Database [homenursing_]    Script Date: 20-01-2026 10:28:45 ******/
+CREATE DATABASE [homenursing_]
+GO
+CREATE TABLE [dbo].[Attendance](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[fkHelperId] [int] NULL,
+	[fkNursingId] [int] NULL,
+	[Date] [date] NULL,
+	[Time] [float] NULL,
+	[Description] [nvarchar](max) NULL,
+ CONSTRAINT [PK__Attendan__3214EC071718A8AF] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[City]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[City](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](100) NOT NULL,
+	[OfficeAddress] [nvarchar](max) NULL,
+	[MobileNumbers] [nvarchar](100) NULL,
+	[Email] [nvarchar](100) NULL,
+	[ImageBase64] [nvarchar](max) NULL,
+ CONSTRAINT [PK__City__3214EC0770B7DB06] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Country]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Country](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](100) NOT NULL,
+ CONSTRAINT [PK__Country__3214EC070530B627] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Helpers]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Helpers](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](100) NOT NULL,
+	[Image] [nvarchar](max) NULL,
+	[DateOfBirth] [date] NULL,
+	[ParentName] [nvarchar](100) NULL,
+	[MaritalStatus] [nvarchar](20) NULL,
+	[PermanentAddress] [nvarchar](max) NULL,
+	[PresentAddress] [nvarchar](max) NULL,
+	[Education] [nvarchar](max) NULL,
+	[LanguagesKnown] [nvarchar](100) NULL,
+	[Experience] [nvarchar](max) NULL,
+	[IdProof] [nvarchar](max) NULL,
+	[Salary] [decimal](10, 2) NULL,
+	[Reference] [nvarchar](max) NULL,
+	[FamilyMembers] [nvarchar](max) NULL,
+	[suser] [nvarchar](110) NOT NULL,
+	[candidateSign] [nvarchar](max) NULL,
+	[Place] [nvarchar](100) NULL,
+	[admissionDate] [date] NOT NULL,
+ CONSTRAINT [PK__Helpers__3214EC077D723D46] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[HomeNursing]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[HomeNursing](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[AdmissionDate] [date] NOT NULL,
+	[PatientName] [nvarchar](100) NOT NULL,
+	[Address] [nvarchar](max) NULL,
+	[Age] [int] NULL,
+	[Condition] [nvarchar](200) NULL,
+	[CustomerName] [nvarchar](100) NULL,
+	[MobileNo] [nvarchar](20) NULL,
+	[TypesofServices] [nvarchar](200) NULL,
+	[RegistrationCharges] [decimal](10, 2) NULL,
+	[MonthlyPayment] [decimal](10, 2) NULL,
+	[PeriodFrom] [date] NULL,
+	[PeriodTo] [date] NULL,
+	[IdProof] [nvarchar](max) NULL,
+	[PaymentStatus] [nvarchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[UpdatedDate] [datetime] NULL,
+	[SUser] [nvarchar](50) NOT NULL,
+	[fkHelperId] [int] NULL,
+	[clientSign] [nvarchar](max) NULL,
+	[authorizedSign] [nvarchar](max) NULL,
+	[isActive] [bit] NULL,
+ CONSTRAINT [PK__HomeNurs__3214EC0723E6127E] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[HomeNursingCashMemo]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[HomeNursingCashMemo](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[patientName] [nvarchar](200) NULL,
+	[amount] [decimal](10, 2) NULL,
+	[amountInWords] [nvarchar](200) NULL,
+	[Inpaymentof] [nvarchar](max) NULL,
+	[paymentMode] [nvarchar](100) NULL,
+	[date] [date] NULL,
+	[authorizedSign] [nvarchar](max) NULL,
+	[recieversSign] [nvarchar](max) NULL,
+ CONSTRAINT [PK_HomeNursingCashMemo] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Logger]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Logger](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[controllerName] [nvarchar](100) NULL,
+	[actionName] [nvarchar](100) NULL,
+	[errorDescription] [nvarchar](max) NULL,
+	[createdDate] [date] NULL,
+ CONSTRAINT [PK_Logger] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[OldAge]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[OldAge](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[AdmissionDate] [date] NOT NULL,
+	[PatientName] [nvarchar](100) NOT NULL,
+	[Address] [nvarchar](max) NULL,
+	[Age] [int] NULL,
+	[Condition] [nvarchar](200) NULL,
+	[CustomerName] [nvarchar](100) NULL,
+	[MobileNo] [nvarchar](20) NULL,
+	[TypesofServices] [nvarchar](200) NULL,
+	[RegistrationCharges] [decimal](10, 2) NULL,
+	[MonthlyPayment] [decimal](10, 2) NULL,
+	[PeriodFrom] [date] NULL,
+	[PeriodTo] [date] NULL,
+	[IdProof] [nvarchar](max) NULL,
+	[PaymentStatus] [nvarchar](50) NULL,
+	[CreatedDate] [datetime] NULL,
+	[UpdatedDate] [datetime] NULL,
+	[SUser] [nvarchar](50) NOT NULL,
+	[clientSign] [nvarchar](max) NULL,
+	[authorizedSign] [nvarchar](max) NULL,
+ CONSTRAINT [PK__OldAge__3214EC07242C81C6] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[OldAgeCashMemo]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[OldAgeCashMemo](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[patientName] [nvarchar](200) NULL,
+	[amount] [decimal](10, 2) NULL,
+	[amountInWords] [nvarchar](200) NULL,
+	[Inpaymentof] [nvarchar](max) NULL,
+	[paymentMode] [nvarchar](100) NULL,
+	[date] [date] NULL,
+	[authorizedSign] [nvarchar](max) NULL,
+	[recieversSign] [nvarchar](max) NULL,
+ CONSTRAINT [PK_OldAgeCashMemo] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[State]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[State](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[Name] [nvarchar](100) NOT NULL,
+ CONSTRAINT [PK__State__3214EC0713183885] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Users]    Script Date: 20-01-2026 10:28:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Users](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[FirstName] [nvarchar](100) NOT NULL,
+	[LastName] [nvarchar](100) NULL,
+	[UserName] [nvarchar](50) NOT NULL,
+	[Password] [nvarchar](100) NOT NULL,
+	[Roles] [nvarchar](max) NULL,
+	[MobileNo] [nvarchar](20) NULL,
+	[ImageString] [nvarchar](max) NULL,
+	[IdProof] [nvarchar](max) NULL,
+	[fkCountry] [int] NULL,
+	[fkState] [int] NULL,
+	[fkCity] [int] NULL,
+	[PinCode] [nvarchar](20) NULL,
+	[HighestQualification] [nvarchar](100) NULL,
+	[faceDescriptor] [nvarchar](max) NULL,
+	[IsFaceAdded] [bit] NOT NULL,
+ CONSTRAINT [PK__Users__3214EC077557BDBB] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ__Users__C9F284564C103849] UNIQUE NONCLUSTERED 
+(
+	[UserName] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[Attendance]  WITH CHECK ADD  CONSTRAINT [FK__Attendanc__fkHel__37A5467C] FOREIGN KEY([fkHelperId])
+REFERENCES [dbo].[Helpers] ([Id])
+GO
+ALTER TABLE [dbo].[Attendance] CHECK CONSTRAINT [FK__Attendanc__fkHel__37A5467C]
+GO
+ALTER TABLE [dbo].[Attendance]  WITH CHECK ADD  CONSTRAINT [FK__Attendanc__fkNur__36B12243] FOREIGN KEY([fkNursingId])
+REFERENCES [dbo].[HomeNursing] ([Id])
+GO
+ALTER TABLE [dbo].[Attendance] CHECK CONSTRAINT [FK__Attendanc__fkNur__36B12243]
+GO
+ALTER TABLE [dbo].[HomeNursing]  WITH CHECK ADD  CONSTRAINT [FK__HomeNursi__fkHel__30F848ED] FOREIGN KEY([fkHelperId])
+REFERENCES [dbo].[Helpers] ([Id])
+GO
+ALTER TABLE [dbo].[HomeNursing] CHECK CONSTRAINT [FK__HomeNursi__fkHel__30F848ED]
+GO
+ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK__Users__fkCity__3D5E1FD2] FOREIGN KEY([fkCity])
+REFERENCES [dbo].[City] ([Id])
+GO
+ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK__Users__fkCity__3D5E1FD2]
+GO
+ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK__Users__fkState__3C69FB99] FOREIGN KEY([fkState])
+REFERENCES [dbo].[State] ([Id])
+GO
+ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK__Users__fkState__3C69FB99]
+GO
+ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK__Users__HighestQu__3B75D760] FOREIGN KEY([fkCountry])
+REFERENCES [dbo].[Country] ([Id])
+GO
+ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK__Users__HighestQu__3B75D760]
+GO
+USE [master]
+GO
+ALTER DATABASE [homenursing_] SET  READ_WRITE 
+GO
