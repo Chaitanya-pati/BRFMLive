@@ -84,12 +84,25 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [sourceResponse, destResponse] = await Promise.all([
-        client.get("/bins"),
-        client.get("/bins"),
-      ]);
-      setSourceBins(sourceResponse.data || []);
-      setDestinationBins(destResponse.data || []);
+      const response = await client.get("/bins");
+      const allBins = response.data || [];
+      
+      // Source bins: 24 hours bin, Active, and has current_quantity > 0
+      const filteredSource = allBins.filter(bin => 
+        bin.bin_type === "24 hours bin" && 
+        bin.status === "Active" && 
+        (bin.current_quantity || 0) > 0
+      );
+      
+      // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
+      const filteredDest = allBins.filter(bin => 
+        bin.bin_type === "12 hours bin" && 
+        bin.status === "Active" && 
+        (bin.current_quantity || 0) < (bin.capacity || 0)
+      );
+
+      setSourceBins(filteredSource);
+      setDestinationBins(filteredDest);
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
       showAlert("Error", "Failed to fetch bins");
