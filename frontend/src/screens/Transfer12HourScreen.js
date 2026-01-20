@@ -137,7 +137,17 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const handleRecordTransfer = async () => {
-    if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
+    const isManualSpecial = transferType === "SPECIAL";
+    const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
+    const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+    const qty = isManualSpecial ? manualQuantity : transferQuantity;
+
+    if (!source || !dest) {
+      showAlert("Validation Error", "Please select both source and destination bins");
+      return;
+    }
+
+    if (!qty || parseFloat(qty) <= 0) {
       showAlert("Validation Error", "Please enter a valid transfer quantity");
       return;
     }
@@ -145,199 +155,33 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const startTimeISO = transferStartTime ? new Date(transferStartTime).toISOString() : null;
       
-      await client.post("/12hour-transfer/record", {
-        source_bin_id: selectedSourceBin,
-        destination_bin_id: selectedDestinationBin,
-        quantity_transferred: parseFloat(transferQuantity),
-        water_added: waterAdded ? parseFloat(waterAdded) : null,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
-        transfer_start_time: startTimeISO,
-      }, {
-        params: { session_id: selectedSession.id }
-      });
-
-      showToast("Success", "Transfer recorded");
-      setShowQuantityModal(false);
-      
-      if (isDiverting) {
-        setShowBinSelectionModal(true);
-        // Set new start time for the next bin
-        setTransferStartTime(Date.now());
-        setElapsedSeconds(0);
-      } else {
-        setTransferQuantity("");
-        setWaterAdded("");
-        setMoistureLevel("");
-      }
-    } catch (error) {
-      showAlert("Error", "Failed to record transfer");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateBins = () => {
-    if (!nextDestinationBin) {
-      showAlert("Validation Error", "Please select next destination bin");
-      return;
-    }
-
-    setSelectedDestinationBin(nextDestinationBin);
-    setNextDestinationBin(null);
-    setIsDiverting(false);
-    setShowBinSelectionModal(false);
-    setTransferQuantity("");
-    setWaterAdded("");
-    setMoistureLevel("");
-    showToast("Success", "Destination bin updated");
-  };
-
-  const handleGoBack = () => {
-    setSelectedOrder(null);
-    setSelectedSourceBin(null);
-    setSelectedDestinationBin(null);
-    setSpecialSourceBin(null);
-    setSpecialDestinationBin(null);
-    setManualQuantity("");
-    setStage(STAGES.SELECT_ORDER);
-  };
-
-  const [showStopModal, setShowStopModal] = useState(false);
-
-  const handleStopTransfer = async () => {
-    if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
-      showAlert("Validation Error", "Please enter a valid transfer quantity before stopping");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      await client.patch(`/12hour-transfer/session/${selectedSession.id}`, {
-        status: "COMPLETED",
-        total_quantity: parseFloat(transferQuantity),
-        water_added: waterAdded ? parseFloat(waterAdded) : null,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
-      });
-      setTransferStartTime(null);
-      setElapsedSeconds(0);
-      setSelectedSession(null);
-      setTransferQuantity("");
-      setWaterAdded("");
-      setMoistureLevel("");
-      setShowStopModal(false);
-      handleGoBack();
-      showToast("Success", "Transfer stopped and session completed");
-      fetchSessions();
-    } catch (error) {
-      showAlert("Error", "Failed to complete session");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenRecordModal = () => {
-    setIsDiverting(false);
-    setShowQuantityModal(true);
-  };
-
-  const handleStartTransfer = async () => {
-    const isManualSpecial = transferType === "SPECIAL" && subType === "SPECIAL";
-    const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
-    const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-
-    if (!source || !dest) {
-      showAlert("Validation Error", "Please select both source and destination bins");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      
-      const response = await client.post("/12hour-transfer/records", {
+      await client.post("/12hour-transfer/records", {
         production_order_id: selectedOrder.id,
         source_bin_id: source,
         destination_bin_id: dest,
-        quantity_transferred: isManualSpecial ? parseFloat(manualQuantity) : 0,
+        quantity_transferred: parseFloat(qty),
+        water_added: waterAdded ? parseFloat(waterAdded) : null,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
         transfer_type: transferType,
-        status: "PLANNED"
+        status: "COMPLETED"
       });
-      
-      showToast("Success", "Transfer record created");
+
+      showToast("Success", "Transfer recorded");
       handleGoBack();
       fetchSessions();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || "Failed to create transfer record";
+      const errorMsg = error.response?.data?.detail || "Failed to record transfer";
       showAlert("Error", errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderSelectType = () => (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>12-Hour Transfer</Text>
-      </View>
-      
-      {selectedSession && (selectedSession.status === "IN_PROGRESS" || selectedSession.status === "PLANNED") ? (
-        <Card style={styles.activeWarningCard}>
-          <Text style={styles.activeWarningText}>A transfer session is already in progress.</Text>
-          <Button title="View Active Session" onPress={() => setStage(STAGES.SESSION_ACTIVE)} />
-        </Card>
-      ) : (
-        <>
-          <View style={[styles.typeGrid, isMobile && styles.typeGridMobile]}>
-            {TRANSFER_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type.value}
-                style={[styles.typeCard, transferType === type.value && styles.typeCardSelected]}
-                onPress={() => setTransferType(type.value)}
-              >
-                <Text style={styles.typeLabel}>{type.label}</Text>
-                <Text style={styles.typeDescription}>{type.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Button title="Continue" onPress={() => setStage(STAGES.SELECT_ORDER)} />
-        </>
-      )}
-    </ScrollView>
-  );
-
-  const renderSelectOrder = () => (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Select Production Order</Text>
-      </View>
-      {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} />
-      ) : (
-        <View>
-          {productionOrders.map((item) => (
-            <TouchableOpacity key={item.id.toString()} onPress={() => handleSelectOrder(item)}>
-              <Card style={styles.orderCard}>
-                <View>
-                  <Text style={styles.orderNumber}>Order No: {item.order_number}</Text>
-                  <Text style={styles.orderDetail}>{item.product_name || 'Wheat Transfer'}</Text>
-                </View>
-                <Text style={styles.selectText}>Select ›</Text>
-              </Card>
-            </TouchableOpacity>
-          ))}
-          {productionOrders.length === 0 && <Text style={styles.emptyText}>No active production orders found</Text>}
-        </View>
-      )}
-    </ScrollView>
-  );
-
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Configure Transfer</Text>
+        <Text style={styles.mainHeading}>Record Transfer</Text>
         <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
       </View>
 
@@ -350,57 +194,50 @@ export default function Transfer12HourScreen({ navigation }) {
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.subTypeTab, transferType === "SPECIAL" && styles.activeSubTypeTab]} 
-          onPress={() => {
-            setTransferType("SPECIAL");
-            setSubType("SPECIAL");
-          }}
+          onPress={() => setTransferType("SPECIAL")}
         >
           <Text style={[styles.subTypeTabText, transferType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
         </TouchableOpacity>
       </View>
 
-      {transferType === "NORMAL" ? (
-        <Card style={styles.mappingCard}>
-          <Text style={styles.cardSectionTitle}>Normal Mapping</Text>
-          <SelectDropdown
-            label="Source Bin"
-            value={selectedSourceBin}
-            onValueChange={setSelectedSourceBin}
-            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-          />
-          <SelectDropdown
-            label="Destination Bin"
-            value={selectedDestinationBin}
-            onValueChange={setSelectedDestinationBin}
-            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-          />
-        </Card>
-      ) : (
-        <Card style={styles.mappingCard}>
-          <Text style={styles.cardSectionTitle}>Special Manual Transfer</Text>
-          <SelectDropdown
-            label="Manual Source Bin"
-            value={specialSourceBin}
-            onValueChange={setSpecialSourceBin}
-            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-          />
-          <SelectDropdown
-            label="Manual Destination Bin"
-            value={specialDestinationBin}
-            onValueChange={setSpecialDestinationBin}
-            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
-          />
-          <InputField
-            label="Quantity to Transfer"
-            value={manualQuantity}
-            onChangeText={setManualQuantity}
-            keyboardType="decimal-pad"
-            placeholder="Enter quantity"
-          />
-        </Card>
-      )}
+      <Card style={styles.mappingCard}>
+        <Text style={styles.cardSectionTitle}>{transferType === "NORMAL" ? "Normal Mapping" : "Special Manual Transfer"}</Text>
+        <SelectDropdown
+          label="Source Bin"
+          value={transferType === "NORMAL" ? selectedSourceBin : specialSourceBin}
+          onValueChange={transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin}
+          options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+        />
+        <SelectDropdown
+          label="Destination Bin"
+          value={transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin}
+          onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
+          options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+        />
+        <InputField
+          label="Quantity transferred"
+          value={transferType === "NORMAL" ? transferQuantity : manualQuantity}
+          onChangeText={transferType === "NORMAL" ? setTransferQuantity : setManualQuantity}
+          keyboardType="decimal-pad"
+          placeholder="Enter quantity"
+        />
+        <InputField
+          label="Water Added"
+          value={waterAdded}
+          onChangeText={setWaterAdded}
+          keyboardType="decimal-pad"
+          placeholder="Optional"
+        />
+        <InputField
+          label="Moisture Level"
+          value={moistureLevel}
+          onChangeText={setMoistureLevel}
+          keyboardType="decimal-pad"
+          placeholder="Optional"
+        />
+      </Card>
 
-      <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
+      <Button title="Record Transfer" onPress={handleRecordTransfer} loading={loading} />
       <Button title="Back" onPress={() => setStage(STAGES.SELECT_ORDER)} variant="secondary" />
     </ScrollView>
   );
@@ -493,13 +330,19 @@ export default function Transfer12HourScreen({ navigation }) {
     <View style={styles.tabContainer}>
       <TouchableOpacity
         style={[styles.tab, activeTab === "TRANSFER" && styles.activeTab]}
-        onPress={() => setActiveTab("TRANSFER")}
+        onPress={() => {
+          setActiveTab("TRANSFER");
+          setStage(STAGES.SELECT_ORDER);
+        }}
       >
-        <Text style={[styles.tabText, activeTab === "TRANSFER" && styles.activeTabText]}>Transfer</Text>
+        <Text style={[styles.tabText, activeTab === "TRANSFER" && styles.activeTabText]}>Record Transfer</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.tab, activeTab === "HISTORY" && styles.activeTab]}
-        onPress={() => setActiveTab("HISTORY")}
+        onPress={() => {
+          setActiveTab("HISTORY");
+          fetchSessions();
+        }}
       >
         <Text style={[styles.tabText, activeTab === "HISTORY" && styles.activeTabText]}>History</Text>
       </TouchableOpacity>
@@ -508,16 +351,25 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const renderHistory = () => (
     <ScrollView style={styles.container}>
+      <View style={styles.headerSection}>
+        <Text style={styles.mainHeading}>Transfer History</Text>
+      </View>
       <View>
         {sessions.map((item) => (
           <Card key={item.id.toString()} style={styles.sessionCard}>
             <View style={styles.sessionHeader}>
               <Text style={styles.sessionTitle}>Record #{item.id}</Text>
-              <Text style={[styles.statusBadge, { backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0' }]}>
+              <Text style={[styles.statusBadge, { 
+                backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0',
+                color: item.status === 'COMPLETED' ? '#1e7e34' : '#856404',
+              }]}>
                 {item.status}
               </Text>
             </View>
             <Text style={styles.sessionDetail}>Type: {item.transfer_type}</Text>
+            <Text style={styles.sessionDetail}>Order: {item.production_order_number || 'N/A'}</Text>
+            <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || item.source_bin_id}</Text>
+            <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || item.destination_bin_id}</Text>
             <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} units</Text>
             <Text style={styles.sessionDetail}>Date: {formatISTDateTime(item.created_at)}</Text>
           </Card>
@@ -529,6 +381,7 @@ export default function Transfer12HourScreen({ navigation }) {
 
   return (
     <Layout navigation={navigation}>
+      {renderTabs()}
       {activeTab === "TRANSFER" ? (
         <>
           {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
