@@ -30,18 +30,6 @@ class TransferSessionStatusEnum(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
-# 12-Hour Transfer Enums
-class Transfer12HourTypeEnum(str, Enum):
-    NORMAL = "NORMAL"
-    SPECIAL = "SPECIAL"
-
-class Transfer12HourSessionStatusEnum(str, Enum):
-    PLANNED = "PLANNED"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    PAUSED = "PAUSED"
-    CANCELLED = "CANCELLED"
-
 class TransferRecordingStatusEnum(str, Enum):
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
