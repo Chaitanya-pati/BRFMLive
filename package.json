@@ -6,6 +6,7 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "babel-preset-expo": "^54.0.9",
+    "expo": "^49.0.23",
     "expo-cli": "^6.3.12",
     "intro.js": "^8.3.2",
     "jest": "^30.2.0",
