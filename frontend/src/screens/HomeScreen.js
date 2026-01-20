@@ -300,6 +300,13 @@ export default function HomeScreen({ navigation }) {
       color: "#06b6d4",
       adminOnly: false,
     },
+    {
+      title: "Grinding",
+      route: "Grinding",
+      icon: "cogs",
+      color: "#795548",
+      adminOnly: false,
+    },
   ];
 
   const quickActions = allQuickActions.filter(
