@@ -2930,6 +2930,19 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 # 12-Hour Transfer API Endpoints
 # ============================================================================
 
+@app.get("/api/24hour-transfer/records", response_model=List[schemas.TransferRecording])
+def get_24hour_transfer_records(
+        skip: int = 0,
+        limit: int = 100,
+        branch_id: Optional[int] = Depends(get_branch_id),
+        db: Session = Depends(get_db)):
+    query = db.query(models.TransferRecording)
+    if branch_id:
+        query = query.filter(models.TransferRecording.branch_id == branch_id)
+    records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
+    return records
+
+
 @app.post("/api/12hour-transfer/records", response_model=schemas.Transfer12HourRecord)
 def create_12hour_transfer_record(
     record: schemas.Transfer12HourRecordCreate,
