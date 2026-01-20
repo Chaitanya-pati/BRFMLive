@@ -260,10 +260,6 @@ class Bin(Base):
     transfer_sessions_dest = relationship("TransferSession", foreign_keys="[TransferSession.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
     transfer_sessions_current = relationship("TransferSession", foreign_keys="[TransferSession.current_bin_id]", back_populates="current_bin", cascade="all, delete-orphan")
     transfer_recording_dest = relationship("TransferRecording", back_populates="destination_bin", cascade="all, delete-orphan")
-    transfer_12h_mapping_dest = relationship("Transfer12HourBinsMapping", foreign_keys="[Transfer12HourBinsMapping.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
-    transfer_12h_mapping_source = relationship("Transfer12HourBinsMapping", foreign_keys="[Transfer12HourBinsMapping.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
-    transfer_12h_special_dest = relationship("Transfer12HourSpecialTransfer", foreign_keys="[Transfer12HourSpecialTransfer.special_destination_bin_id]", back_populates="special_destination_bin", cascade="all, delete-orphan")
-    transfer_12h_special_source = relationship("Transfer12HourSpecialTransfer", foreign_keys="[Transfer12HourSpecialTransfer.special_source_bin_id]", back_populates="special_source_bin", cascade="all, delete-orphan")
     transfer_12h_record_dest = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
     transfer_12h_record_source = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
 
