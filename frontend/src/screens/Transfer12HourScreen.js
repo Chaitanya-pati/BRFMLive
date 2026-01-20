@@ -93,19 +93,18 @@ export default function Transfer12HourScreen({ navigation }) {
       const transferRecords = transferRecordsResponse.data || [];
       
       // Get unique source bin IDs from 24-hour transfer records for this production order
-      const validSourceBinIds = [...new Set(
-        transferRecords
-          .filter(record => 
-            (record.production_order_id === order.id || record.production_order_id?.toString() === order.id?.toString())
-          )
-          .map(record => record.source_bin_id)
-      )];
+      const validSourceBinIds = transferRecords
+        .filter(record => 
+          (record.production_order_id === order.id || 
+           record.production_order_id?.toString() === order.id?.toString())
+        )
+        .map(record => record.destination_bin_id); // The destination of the 24h transfer is the source for 12h
 
-      // Source bins: 24 hours bin, Active, current_quantity > 0, and present in 24h transfer records for this order
+      // Source bins: 24 hours bin, Active, and present in 24h transfer records for this order
+      // Removed current_quantity > 0 check to show bins that were part of this order
       const filteredSource = allBins.filter(bin => 
         bin.bin_type === "24 hours bin" && 
         bin.status === "Active" && 
-        (bin.current_quantity || 0) > 0 &&
         (validSourceBinIds.includes(bin.id) || validSourceBinIds.includes(bin.id?.toString()))
       );
       
