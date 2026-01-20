@@ -93,16 +93,14 @@ export default function GrindingScreen({ navigation }) {
         production_time: productionTime,
         b1_scale_reading: parseFloat(b1Reading),
         load_per_hour_tons: parseFloat(loadPerHour) || 0,
-        reprocess: parseFloat(reprocess) || 0,
-        refraction: parseFloat(refraction) || 0,
         details: productionDetails.map(d => ({
           ...d,
-          quantity_bags: parseInt(d.quantity_bags) || 0,
-          refraction: parseFloat(d.refraction) || 0,
-          reprocess: parseFloat(d.reprocess) || 0
+          quantity_bags: parseInt(d.quantity_bags) || 0
         }))
       });
       showToast("Success", "Hourly production recorded");
+      // Redirect to Excel View after success
+      navigation.navigate('GrindingExcelView');
       // Reset form
       setProductionTime("");
       setB1Reading("");
