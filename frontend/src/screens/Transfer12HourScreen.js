@@ -22,10 +22,8 @@ import { showToast, showAlert } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
 
 const STAGES = {
-  SELECT_TYPE: "SELECT_TYPE",
   SELECT_ORDER: "SELECT_ORDER",
   CONFIGURE_BINS: "CONFIGURE_BINS",
-  SESSION_ACTIVE: "SESSION_ACTIVE",
   HISTORY: "HISTORY",
 };
 
@@ -51,7 +49,7 @@ export default function Transfer12HourScreen({ navigation }) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [stage, setStage] = useState(STAGES.SELECT_TYPE);
+  const [stage, setStage] = useState(STAGES.SELECT_ORDER);
   const [transferType, setTransferType] = useState("NORMAL");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
@@ -89,7 +87,7 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/12hour-transfer/production-orders");
+      const response = await client.get("/production-orders");
       setProductionOrders(response.data || []);
     } catch (error) {
       showAlert("Error", "Failed to fetch production orders");
@@ -101,18 +99,11 @@ export default function Transfer12HourScreen({ navigation }) {
   const fetchSessions = async () => {
     try {
       const client = getApiClient();
-      const response = await client.get("/12hour-transfer/sessions");
-      const sessionData = response.data || [];
-      setSessions(sessionData);
-      
-      // Check if there is an active session to track status but don't auto-redirect
-      const active = sessionData.find(s => s.status === "IN_PROGRESS" || s.status === "PLANNED");
-      if (active) {
-        setSelectedSession(active);
-        // Removed auto-redirect to SESSION_ACTIVE stage
-      }
+      const response = await client.get("/12hour-transfer/records");
+      const recordData = response.data || [];
+      setSessions(recordData);
     } catch (error) {
-      console.error("Failed to fetch sessions:", error);
+      console.error("Failed to fetch records:", error);
       setSessions([]);
     }
   };
@@ -123,8 +114,8 @@ export default function Transfer12HourScreen({ navigation }) {
     try {
       const client = getApiClient();
       const [sourceResponse, destResponse] = await Promise.all([
-        client.get(`/12hour-transfer/available-source-bins/${order.id}`),
-        client.get("/12hour-transfer/available-destination-bins"),
+        client.get("/bins"),
+        client.get("/bins"),
       ]);
       setSourceBins(sourceResponse.data || []);
       setDestinationBins(destResponse.data || []);
@@ -210,7 +201,7 @@ export default function Transfer12HourScreen({ navigation }) {
     setSpecialSourceBin(null);
     setSpecialDestinationBin(null);
     setManualQuantity("");
-    setStage(STAGES.SELECT_TYPE);
+    setStage(STAGES.SELECT_ORDER);
   };
 
   const [showStopModal, setShowStopModal] = useState(false);
@@ -265,33 +256,21 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const endpoint = transferType === "NORMAL" 
-        ? "/12hour-transfer/create-session-normal" 
-        : "/12hour-transfer/create-session-special";
-        
-      const response = await client.post(endpoint, {
+      
+      const response = await client.post("/12hour-transfer/records", {
         production_order_id: selectedOrder.id,
+        source_bin_id: source,
+        destination_bin_id: dest,
+        quantity_transferred: isManualSpecial ? parseFloat(manualQuantity) : 0,
         transfer_type: transferType,
-        source_bin_id: selectedSourceBin,
-        destination_bin_id: selectedDestinationBin,
-        special_source_bin_id: isManualSpecial ? specialSourceBin : null,
-        special_destination_bin_id: isManualSpecial ? specialDestinationBin : null,
-        manual_quantity: isManualSpecial ? parseFloat(manualQuantity) : null,
+        status: "PLANNED"
       });
       
-      showToast("Success", "Transfer started");
-      setSelectedSession(response.data);
-      setTransferStartTime(Date.now());
-      setElapsedSeconds(0);
-      setStage(STAGES.SESSION_ACTIVE);
+      showToast("Success", "Transfer record created");
+      handleGoBack();
       fetchSessions();
-      
-      if (transferType === "SPECIAL") {
-        const destResponse = await client.get("/12hour-transfer/available-destination-bins");
-        setDestinationBins(destResponse.data || []);
-      }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || "Failed to start transfer";
+      const errorMsg = error.response?.data?.detail || "Failed to create transfer record";
       showAlert("Error", errorMsg);
     } finally {
       setLoading(false);
@@ -533,36 +512,27 @@ export default function Transfer12HourScreen({ navigation }) {
         {sessions.map((item) => (
           <Card key={item.id.toString()} style={styles.sessionCard}>
             <View style={styles.sessionHeader}>
-              <Text style={styles.sessionTitle}>Session #{item.id}</Text>
+              <Text style={styles.sessionTitle}>Record #{item.id}</Text>
               <Text style={[styles.statusBadge, { backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0' }]}>
                 {item.status}
               </Text>
             </View>
             <Text style={styles.sessionDetail}>Type: {item.transfer_type}</Text>
+            <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} units</Text>
             <Text style={styles.sessionDetail}>Date: {formatISTDateTime(item.created_at)}</Text>
-            <Button 
-              title="View Details" 
-              variant="secondary" 
-              size="small"
-              onPress={() => showAlert("Details", `Production Order: ${item.production_order_id}\nStatus: ${item.status}`)} 
-            />
           </Card>
         ))}
-        {sessions.length === 0 && <Text style={styles.emptyText}>No transfer history found</Text>}
+        {sessions.length === 0 && <Text style={styles.emptyText}>No transfer records found</Text>}
       </View>
     </ScrollView>
   );
 
   return (
     <Layout navigation={navigation}>
-      {stage !== STAGES.SESSION_ACTIVE && renderTabs()}
-      
       {activeTab === "TRANSFER" ? (
         <>
-          {stage === STAGES.SELECT_TYPE && renderSelectOrder()}
           {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
           {stage === STAGES.CONFIGURE_BINS && renderConfigureBins()}
-          {stage === STAGES.SESSION_ACTIVE && renderSessionActive()}
         </>
       ) : (
         renderHistory()
