@@ -31,6 +31,7 @@ import ProductionOrderPlanningScreen from './src/screens/ProductionOrderPlanning
 import TransferRecordingScreen from './src/screens/TransferRecordingScreen';
 import Transfer12HourScreen from './src/screens/Transfer12HourScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
+import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -139,6 +140,7 @@ export default function App() {
           <Stack.Screen name="TransferRecording" component={TransferRecordingScreen} />
           <Stack.Screen name="Transfer12Hour" component={Transfer12HourScreen} />
           <Stack.Screen name="Grinding" component={GrindingScreen} />
+          <Stack.Screen name="GrindingExcelView" component={GrindingExcelViewScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

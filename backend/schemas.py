@@ -136,8 +136,6 @@ class HourlyProductionDetailBase(BaseModel):
     finished_good_id: int
     bag_size_id: int
     quantity_bags: int
-    refraction: Optional[float] = 0.0
-    reprocess: Optional[float] = 0.0
 
 class HourlyProductionDetailCreate(HourlyProductionDetailBase):
     pass

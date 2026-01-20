@@ -120,6 +120,12 @@ export default function GrindingScreen({ navigation }) {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Grinding Process</Text>
+          <TouchableOpacity 
+            style={styles.excelButton} 
+            onPress={() => navigation.navigate('GrindingExcelView')}
+          >
+            <Text style={styles.excelButtonText}>Excel View</Text>
+          </TouchableOpacity>
         </View>
 
         {!isGrindingStarted ? (
@@ -194,8 +200,10 @@ export default function GrindingScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  header: { marginBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 24, fontWeight: 'bold', color: colors.primary },
+  excelButton: { backgroundColor: colors.secondary, padding: 8, borderRadius: 5 },
+  excelButtonText: { color: '#fff', fontWeight: 'bold' },
   card: { padding: 16, marginBottom: 16 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.text.primary },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },

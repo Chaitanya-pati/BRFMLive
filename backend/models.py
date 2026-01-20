@@ -50,8 +50,6 @@ class HourlyProductionDetail(Base):
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
     quantity_bags = Column(Integer)
-    refraction = Column(Float)
-    reprocess = Column(Float)
 
     hourly_production = relationship("HourlyProduction", back_populates="details")
     finished_good = relationship("FinishedGood")
