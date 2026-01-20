@@ -19,6 +19,7 @@ export default function GrindingScreen({ navigation }) {
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
 
+  const [showBinList, setShowBinList] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedBin, setSelectedBin] = useState(null);
   const [isGrindingStarted, setIsGrindingStarted] = useState(false);
@@ -28,10 +29,7 @@ export default function GrindingScreen({ navigation }) {
   const [productionTime, setProductionTime] = useState("");
   const [b1Reading, setB1Reading] = useState("");
   const [loadPerHour, setLoadPerHour] = useState("");
-  const [reprocess, setReprocess] = useState("");
-  const [refraction, setRefraction] = useState("");
   
-  // Production Details (Finished Goods)
   const [productionDetails, setProductionDetails] = useState([]);
 
   useEffect(() => {
@@ -59,17 +57,23 @@ export default function GrindingScreen({ navigation }) {
     }
   };
 
-  const handleStartGrinding = () => {
-    if (!selectedOrder || !selectedBin) {
-      showAlert("Validation", "Please select Production Order and Bin");
+  const handleStartClick = () => {
+    if (!selectedOrder) {
+      showAlert("Validation", "Please select a Production Order first");
       return;
     }
+    setShowBinList(true);
+  };
+
+  const handleBinSelect = (bin) => {
+    setSelectedBin(bin);
     setIsGrindingStarted(true);
-    showToast("Success", "Grinding process started");
+    setShowBinList(false);
+    showToast("Success", `Grinding started with Bin ${bin.bin_number}`);
   };
 
   const handleAddDetail = () => {
-    setProductionDetails([...productionDetails, { finished_good_id: "", bag_size_id: "", quantity_bags: "", refraction: "0", reprocess: "0" }]);
+    setProductionDetails([...productionDetails, { finished_good_id: "", bag_size_id: "", quantity_bags: "" }]);
   };
 
   const updateDetail = (index, field, value) => {
@@ -99,7 +103,6 @@ export default function GrindingScreen({ navigation }) {
         }))
       });
       showToast("Success", "Hourly production recorded");
-      // Redirect to Excel View after success
       navigation.navigate('GrindingExcelView');
       // Reset form
       setProductionTime("");
@@ -122,35 +125,74 @@ export default function GrindingScreen({ navigation }) {
             style={styles.excelButton} 
             onPress={() => navigation.navigate('GrindingExcelView')}
           >
-            <Text style={styles.excelButtonText}>Excel View</Text>
+            <Text style={styles.excelButtonText}>View Data</Text>
           </TouchableOpacity>
         </View>
 
         {!isGrindingStarted ? (
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Start Grinding</Text>
-            <SelectDropdown
-              label="Production Order"
-              value={selectedOrder}
-              onValueChange={setSelectedOrder}
-              options={productionOrders.map(o => ({ label: o.order_number, value: o.id }))}
-            />
-            <SelectDropdown
-              label="Select 12-Hour Bin"
-              value={selectedBin}
-              onValueChange={setSelectedBin}
-              options={availableBins.map(b => ({ label: `Bin ${b.bin_number}`, value: b.id }))}
-            />
-            <Button title="Start Grinding" onPress={handleStartGrinding} />
-          </Card>
-        ) : (
           <View>
             <Card style={styles.card}>
-              <View style={styles.row}>
-                <Text style={styles.infoText}>Order: {productionOrders.find(o => o.id === selectedOrder)?.order_number}</Text>
-                <Text style={styles.infoText}>Bin: {availableBins.find(b => b.id === selectedBin)?.bin_number}</Text>
+              <Text style={styles.cardTitle}>Initial Selection</Text>
+              <SelectDropdown
+                label="Production Order"
+                value={selectedOrder}
+                onValueChange={setSelectedOrder}
+                options={productionOrders.map(o => ({ label: o.order_number, value: o.id }))}
+              />
+              {!showBinList && (
+                <Button title="Start Grinding" onPress={handleStartClick} />
+              )}
+            </Card>
+
+            {showBinList && (
+              <View style={styles.binListSection}>
+                <Text style={styles.sectionTitle}>Select a Filled 12-Hour Bin</Text>
+                {availableBins.length > 0 ? (
+                  availableBins.map((bin) => (
+                    <TouchableOpacity 
+                      key={bin.id} 
+                      style={styles.binCard}
+                      onPress={() => handleBinSelect(bin)}
+                    >
+                      <View style={styles.binIconContainer}>
+                        <Text style={styles.binIcon}>📦</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.binName}>Bin {bin.bin_number}</Text>
+                        <Text style={styles.binStatus}>Status: {bin.status || 'Ready'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.noBinsText}>No filled 12-hour bins available</Text>
+                )}
+                <Button 
+                  title="Cancel" 
+                  variant="secondary" 
+                  onPress={() => setShowBinList(false)} 
+                  style={{ marginTop: 10 }}
+                />
               </View>
-              <Button title="Change Bin" variant="secondary" size="small" onPress={() => setIsGrindingStarted(false)} />
+            )}
+          </View>
+        ) : (
+          <View>
+            <Card style={styles.activeInfoCard}>
+              <View style={styles.activeRow}>
+                <View>
+                  <Text style={styles.activeLabel}>Order</Text>
+                  <Text style={styles.activeValue}>
+                    {productionOrders.find(o => o.id === selectedOrder)?.order_number}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.activeLabel}>Bin</Text>
+                  <Text style={styles.activeValue}>Bin {selectedBin?.bin_number}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsGrindingStarted(false)}>
+                  <Text style={styles.changeText}>Change</Text>
+                </TouchableOpacity>
+              </View>
             </Card>
 
             <Card style={styles.card}>
@@ -182,9 +224,15 @@ export default function GrindingScreen({ navigation }) {
                     onChangeText={(v) => updateDetail(index, 'quantity_bags', v)}
                     keyboardType="numeric"
                   />
+                  <TouchableOpacity 
+                    onPress={() => setProductionDetails(productionDetails.filter((_, i) => i !== index))}
+                    style={styles.removeBtn}
+                  >
+                    <Text style={styles.removeText}>Remove</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
-              <Button title="+ Add Product" variant="secondary" onPress={handleAddDetail} />
+              <Button title="+ Add Product Line" variant="secondary" onPress={handleAddDetail} />
               <View style={{ marginTop: 20 }}>
                 <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
               </View>
@@ -197,15 +245,50 @@ export default function GrindingScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 16, backgroundColor: '#F8F9FA' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 24, fontWeight: 'bold', color: colors.primary },
-  excelButton: { backgroundColor: colors.secondary, padding: 8, borderRadius: 5 },
+  excelButton: { backgroundColor: colors.secondary, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
   excelButtonText: { color: '#fff', fontWeight: 'bold' },
-  card: { padding: 16, marginBottom: 16 },
+  card: { padding: 16, marginBottom: 16, borderRadius: 12 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.text.primary },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  infoText: { fontSize: 16, fontWeight: '600' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 15, color: colors.text.primary },
+  binListSection: { marginBottom: 20 },
+  binCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    padding: 15, 
+    borderRadius: 10, 
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  binIconContainer: { 
+    width: 45, 
+    height: 45, 
+    borderRadius: 22.5, 
+    backgroundColor: '#E3F2FD', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 15 
+  },
+  binIcon: { fontSize: 24 },
+  binName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  binStatus: { fontSize: 14, color: '#666' },
+  noBinsText: { textAlign: 'center', padding: 20, color: '#999', fontStyle: 'italic' },
+  activeInfoCard: { padding: 12, marginBottom: 16, backgroundColor: '#E8F5E9', borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
+  activeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  activeLabel: { fontSize: 12, color: '#666', textTransform: 'uppercase' },
+  activeValue: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  changeText: { color: colors.primary, fontWeight: 'bold' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  detailRow: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 10 },
+  detailRow: { borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 15, marginTop: 15 },
+  removeBtn: { alignSelf: 'flex-end', marginTop: 5 },
+  removeText: { color: '#F44336', fontWeight: 'bold' }
 });
