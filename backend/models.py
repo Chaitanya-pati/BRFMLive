@@ -558,6 +558,7 @@ class TransferRecording(Base):
     duration_minutes = Column(Integer)
     water_added = Column(Float)
     moisture_level = Column(Float)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
     created_by = Column(Integer, ForeignKey("users.id"))

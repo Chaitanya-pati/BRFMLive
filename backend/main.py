@@ -2937,8 +2937,12 @@ def get_24hour_transfer_records(
         branch_id: Optional[int] = Depends(get_branch_id),
         db: Session = Depends(get_db)):
     query = db.query(models.TransferRecording)
-    if branch_id:
-        query = query.filter(models.TransferRecording.branch_id == branch_id)
+    # branch_id might not exist on TransferRecording model based on 500 error
+    try:
+        if branch_id and hasattr(models.TransferRecording, 'branch_id'):
+            query = query.filter(models.TransferRecording.branch_id == branch_id)
+    except Exception:
+        pass
     records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
     return records
 
