@@ -696,28 +696,18 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
     for bin_obj in bins:
         # Find the latest 12-hour transfer record for this bin to get the production order
         latest_transfer = db.query(models.Transfer12HourRecord)\
-            .filter(models.Transfer12HourRecord.bins_mapping_id.isnot(None))\
+            .filter(models.Transfer12HourRecord.destination_bin_id == bin_obj.id)\
             .order_by(models.Transfer12HourRecord.id.desc())\
-            .all()
-        
-        # Filter manually since we had issues with join and mapping
-        target_transfer = None
-        for t in latest_transfer:
-            mapping = db.query(models.RouteStage).filter(models.RouteStage.id == t.bins_mapping_id).first()
-            if mapping and mapping.to_bin_id == bin_obj.id:
-                target_transfer = t
-                break
+            .first()
         
         production_order_id = None
         order_number = None
         
-        if target_transfer:
-            session = db.query(models.TransferSession).filter(models.TransferSession.id == target_transfer.transfer_session_id).first()
-            if session and session.production_order_id:
-                production_order_id = session.production_order_id
-                order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == production_order_id).first()
-                if order:
-                    order_number = order.order_number
+        if latest_transfer:
+            production_order_id = latest_transfer.production_order_id
+            order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == production_order_id).first()
+            if order:
+                order_number = order.order_number
         
         result.append({
             "id": bin_obj.id,
