@@ -543,7 +543,6 @@ class TransferRecordingStatus(str, enum.Enum):
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
-    DIVERTED = "DIVERTED"
 
     def __str__(self):
         return str(self.value)

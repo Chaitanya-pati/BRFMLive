@@ -2992,19 +2992,16 @@ def update_12hour_transfer_record(
     record_update: schemas.Transfer12HourRecordUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update an existing 12-hour transfer record (Legacy Support)"""
+    """Update an existing 12-hour transfer record"""
     db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
     if not db_record:
         raise HTTPException(status_code=404, detail="Record not found")
         
     update_data = record_update.dict(exclude_unset=True)
     
-    # Check if this is a "DIVERTED" or "COMPLETED" status update from the frontend
-    if update_data.get("status") == "DIVERTED":
-        # We don't have the next_bin_id in a PATCH request typically, 
-        # so we'll just handle the status update for now to avoid the 404.
-        # Ideally the frontend should use the /divert endpoint.
-        pass
+    # If the status is terminal (COMPLETED), ensure it's recorded correctly.
+    if "status" in update_data and update_data["status"] == "DIVERTED":
+        update_data["status"] = "COMPLETED"
 
     # If quantity is being updated, adjust bin balances
     if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
@@ -3019,6 +3016,10 @@ def update_12hour_transfer_record(
             
     for key, value in update_data.items():
         setattr(db_record, key, value)
+        
+    # Terminal status logic matching 24h transfer
+    if db_record.status == "COMPLETED":
+        db_record.transfer_end_time = get_utc_now()
         
     db.commit()
     db.refresh(db_record)
