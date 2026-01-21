@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { formatISTDateTime } from "../utils/dateUtils";
 const STAGES = {
   SELECT_ORDER: "SELECT_ORDER",
   CONFIGURE_BINS: "CONFIGURE_BINS",
+  TRANSFER_ACTIVE: "TRANSFER_ACTIVE",
 };
 
 export default function Transfer12HourScreen({ navigation }) {
@@ -49,11 +50,35 @@ export default function Transfer12HourScreen({ navigation }) {
   const [moistureLevel, setMoistureLevel] = useState("");
 
   const [activeTab, setActiveTab] = useState("TRANSFER");
+  
+  const [currentRecordId, setCurrentRecordId] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [timer, setTimer] = useState(0);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     fetchProductionOrders();
     fetchSessions();
+    return () => clearInterval(timerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (stage === STAGES.TRANSFER_ACTIVE) {
+      timerRef.current = setInterval(() => {
+        setTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+      setTimer(0);
+    }
+  }, [stage]);
+
+  const formatTimer = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const fetchProductionOrders = async () => {
     setLoading(true);
@@ -80,8 +105,6 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const handleSelectOrder = async (order) => {
-    debugger;
-    console.log("DEBUG: handleSelectOrder triggered with order:", order);
     setSelectedOrder(order);
     setLoading(true);
     try {
@@ -94,90 +117,78 @@ export default function Transfer12HourScreen({ navigation }) {
       const allBins = binsResponse.data || [];
       const transferRecords = transferRecordsResponse.data || [];
       
-      console.log("DEBUG: Data fetched. Bins count:", allBins.length, "Transfer records count:", transferRecords.length);
-      
-      // 1. Get unique destination bin IDs from 24-hour transfer records for this production order where status is COMPLETED
-      // The filter must use the production order's DATABASE ID (order.id), not the human-readable order_number.
       const validSourceBinIds = transferRecords
-        .filter(record => {
-          const isMatch = Number(record.production_order_id) === Number(order.id) &&
-                         record.status === "COMPLETED";
-          if (isMatch) console.log("DEBUG: Found matching 24h record for order:", record);
-          return isMatch;
-        })
+        .filter(record => Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED")
         .map(record => Number(record.destination_bin_id));
 
-      console.log("DEBUG: Valid Source Bin IDs derived:", validSourceBinIds);
-
-      // 2. Source bins: Must be "24 hours bin", status "Active", and linked to this order via the DATABASE ID check above
-      const filteredSource = allBins.filter(bin => {
-        const is24h = bin.bin_type === "24 hours bin";
-        const isActive = bin.status === "Active";
-        const isLinked = validSourceBinIds.includes(Number(bin.id));
-        
-        if (is24h && isActive) {
-            console.log(`DEBUG: Checking Active 24h Bin ${bin.bin_number} (ID: ${bin.id}). Linked=${isLinked}`);
-        }
-        
-        return is24h && isActive && isLinked;
-      });
-
-      console.log("DEBUG: Final filtered source bins:", filteredSource);
-      
-      // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
-      const filteredDest = allBins.filter(bin => 
-        bin.bin_type === "12 hours bin" && 
-        bin.status === "Active" && 
-        (bin.current_quantity || 0) < (bin.capacity || 0)
-      );
+      const filteredSource = allBins.filter(bin => bin.bin_type === "24 hours bin" && bin.status === "Active" && validSourceBinIds.includes(Number(bin.id)));
+      const filteredDest = allBins.filter(bin => bin.bin_type === "12 hours bin" && bin.status === "Active");
 
       setSourceBins(filteredSource);
       setDestinationBins(filteredDest);
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
-      console.error("Failed to fetch data:", error);
       showAlert("Error", "Failed to fetch bins or transfer records");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRecordTransfer = async () => {
+  const handleStartTransfer = async () => {
     const isManualSpecial = transferType === "SPECIAL";
     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
     const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-    const qty = isManualSpecial ? manualQuantity : transferQuantity;
 
     if (!source || !dest) {
       showAlert("Validation Error", "Please select both source and destination bins");
       return;
     }
 
-    if (!qty || parseFloat(qty) <= 0) {
-      showAlert("Validation Error", "Please enter a valid transfer quantity");
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      const response = await client.post("/12hour-transfer/records", {
+        production_order_id: selectedOrder.id,
+        source_bin_id: source,
+        destination_bin_id: dest,
+        transfer_type: transferType,
+        status: "IN_PROGRESS",
+        transfer_start_time: new Date().toISOString()
+      });
+
+      setCurrentRecordId(response.data.id);
+      setStartTime(new Date());
+      setStage(STAGES.TRANSFER_ACTIVE);
+      showToast("Success", "Transfer started");
+    } catch (error) {
+      showAlert("Error", error.response?.data?.detail || "Failed to start transfer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStopOrDivert = async (status) => {
+    if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
+      showAlert("Validation Error", "Please enter quantity transferred");
       return;
     }
 
     setLoading(true);
     try {
       const client = getApiClient();
-      await client.post("/12hour-transfer/records", {
-        production_order_id: selectedOrder.id,
-        source_bin_id: source,
-        destination_bin_id: dest,
-        quantity_transferred: parseFloat(qty),
-        water_added: waterAdded ? parseFloat(waterAdded) : null,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
-        transfer_type: transferType,
-        status: "COMPLETED"
+      await client.put(`/12hour-transfer/records/${currentRecordId}`, {
+        quantity_transferred: parseFloat(transferQuantity),
+        water_added: waterAdded ? parseFloat(waterAdded) : 0,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
+        status: status,
+        transfer_end_time: new Date().toISOString()
       });
 
-      showToast("Success", "Transfer recorded");
+      showToast("Success", `Transfer ${status.toLowerCase()}`);
       handleGoBack();
       fetchSessions();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || "Failed to record transfer";
-      showAlert("Error", errorMsg);
+      showAlert("Error", error.response?.data?.detail || "Failed to update transfer");
     } finally {
       setLoading(false);
     }
@@ -193,6 +204,8 @@ export default function Transfer12HourScreen({ navigation }) {
     setTransferQuantity("");
     setWaterAdded("");
     setMoistureLevel("");
+    setCurrentRecordId(null);
+    setStartTime(null);
     setStage(STAGES.SELECT_ORDER);
   };
 
@@ -225,7 +238,7 @@ export default function Transfer12HourScreen({ navigation }) {
   const renderConfigureBins = () => (
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Record Transfer</Text>
+        <Text style={styles.mainHeading}>Configure Transfer</Text>
         <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
       </View>
 
@@ -258,33 +271,78 @@ export default function Transfer12HourScreen({ navigation }) {
           onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
           options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
         />
-        <InputField
-          label="Quantity transferred"
-          value={transferType === "NORMAL" ? transferQuantity : manualQuantity}
-          onChangeText={transferType === "NORMAL" ? setTransferQuantity : setManualQuantity}
-          keyboardType="decimal-pad"
-          placeholder="Enter quantity"
-        />
-        <InputField
-          label="Water Added"
-          value={waterAdded}
-          onChangeText={setWaterAdded}
-          keyboardType="decimal-pad"
-          placeholder="Optional"
-        />
-        <InputField
-          label="Moisture Level"
-          value={moistureLevel}
-          onChangeText={setMoistureLevel}
-          keyboardType="decimal-pad"
-          placeholder="Optional"
-        />
       </Card>
 
-      <Button title="Record Transfer" onPress={handleRecordTransfer} loading={loading} />
+      <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
       <Button title="Back" onPress={handleGoBack} variant="secondary" />
     </ScrollView>
   );
+
+  const renderTransferActive = () => {
+    const isManualSpecial = transferType === "SPECIAL";
+    const sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
+    const destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+    const sourceBinName = sourceBins.find(b => b.id === sourceBinId)?.bin_number || "Unknown";
+    const destBinName = destinationBins.find(b => b.id === destBinId)?.bin_number || "Unknown";
+
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.mainHeading}>Transfer In Progress</Text>
+          <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
+        </View>
+
+        <Card style={styles.timerCard}>
+          <Text style={styles.timerLabel}>Duration</Text>
+          <Text style={styles.timerText}>{formatTimer(timer)}</Text>
+          <View style={styles.detailsRow}>
+            <View style={styles.detailCol}>
+              <Text style={styles.detailLabel}>From</Text>
+              <Text style={styles.detailValue}>{sourceBinName}</Text>
+            </View>
+            <View style={styles.detailCol}>
+              <Text style={styles.detailLabel}>To</Text>
+              <Text style={styles.detailValue}>{destBinName}</Text>
+            </View>
+          </View>
+        </Card>
+
+        <Card style={styles.mappingCard}>
+          <Text style={styles.cardSectionTitle}>Enter Current Data</Text>
+          <InputField
+            label="Quantity transferred"
+            value={transferQuantity}
+            onChangeText={setTransferQuantity}
+            keyboardType="decimal-pad"
+            placeholder="Enter quantity"
+          />
+          <InputField
+            label="Water Added"
+            value={waterAdded}
+            onChangeText={setWaterAdded}
+            keyboardType="decimal-pad"
+            placeholder="Optional"
+          />
+          <InputField
+            label="Moisture Level"
+            value={moistureLevel}
+            onChangeText={setMoistureLevel}
+            keyboardType="decimal-pad"
+            placeholder="Optional"
+          />
+        </Card>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#fbbc05'}]} onPress={() => handleStopOrDivert("DIVERTED")}>
+            <Text style={styles.buttonText}>Divert Transfer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ea4335'}]} onPress={() => handleStopOrDivert("COMPLETED")}>
+            <Text style={styles.buttonText}>Stop Transfer</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  };
 
   const renderTabs = () => (
     <View style={styles.tabContainer}>
@@ -320,8 +378,8 @@ export default function Transfer12HourScreen({ navigation }) {
             <View style={styles.sessionHeader}>
               <Text style={styles.sessionTitle}>Record #{item.id}</Text>
               <Text style={[styles.statusBadge, { 
-                backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : '#fef7e0',
-                color: item.status === 'COMPLETED' ? '#1e7e34' : '#856404',
+                backgroundColor: item.status === 'COMPLETED' ? '#e6f4ea' : item.status === 'DIVERTED' ? '#fef7e0' : '#f8f9fa',
+                color: item.status === 'COMPLETED' ? '#1e7e34' : item.status === 'DIVERTED' ? '#856404' : '#6c757d',
               }]}>
                 {item.status}
               </Text>
@@ -346,6 +404,7 @@ export default function Transfer12HourScreen({ navigation }) {
         <>
           {stage === STAGES.SELECT_ORDER && renderSelectOrder()}
           {stage === STAGES.CONFIGURE_BINS && renderConfigureBins()}
+          {stage === STAGES.TRANSFER_ACTIVE && renderTransferActive()}
         </>
       ) : (
         renderHistory()
@@ -381,4 +440,14 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, fontSize: 12, fontWeight: 'bold' },
   sessionDetail: { fontSize: 14, color: colors.text.secondary, marginBottom: 5 },
   emptyText: { textAlign: 'center', marginTop: 50, color: colors.text.secondary, fontSize: 16 },
+  timerCard: { padding: 20, alignItems: 'center', marginBottom: 16, backgroundColor: '#f8f9fa' },
+  timerLabel: { fontSize: 14, color: colors.text.secondary, marginBottom: 5 },
+  timerText: { fontSize: 36, fontWeight: 'bold', color: colors.primary, marginBottom: 15 },
+  detailsRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: '#dee2e6', paddingTop: 15 },
+  detailCol: { alignItems: 'center' },
+  detailLabel: { fontSize: 12, color: colors.text.secondary },
+  detailValue: { fontSize: 16, fontWeight: 'bold', color: colors.text.primary },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  actionButton: { flex: 0.48, paddingVertical: 15, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

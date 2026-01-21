@@ -47,19 +47,19 @@ class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
-    status: Optional[TransferRecordingStatusEnum] = TransferRecordingStatusEnum.PLANNED
+    status: Optional[str] = "PLANNED"
     branch_id: Optional[int] = None
 
 class Transfer12HourRecordUpdate(BaseModel):
     quantity_transferred: Optional[float] = None
-    status: Optional[TransferRecordingStatusEnum] = None
+    status: Optional[str] = None
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
     transfer_end_time: Optional[datetime] = None
 
 class Transfer12HourRecord(Transfer12HourRecordBase):
     id: int
-    status: TransferRecordingStatusEnum
+    status: str
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
