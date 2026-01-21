@@ -545,6 +545,12 @@ class TransferRecordingStatus(str, enum.Enum):
     COMPLETED = "COMPLETED"
     DIVERTED = "DIVERTED"
 
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self.value)
+
 class TransferRecording(Base):
     __tablename__ = "24hours_transfer_records"
 
