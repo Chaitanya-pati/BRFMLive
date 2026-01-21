@@ -80,6 +80,8 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const handleSelectOrder = async (order) => {
+    debugger;
+    console.log("DEBUG: handleSelectOrder triggered with order:", order);
     setSelectedOrder(order);
     setLoading(true);
     try {
@@ -92,14 +94,20 @@ export default function Transfer12HourScreen({ navigation }) {
       const allBins = binsResponse.data || [];
       const transferRecords = transferRecordsResponse.data || [];
       
+      console.log("DEBUG: Data fetched. Bins count:", allBins.length, "Transfer records count:", transferRecords.length);
+      
       // 1. Get unique destination bin IDs from 24-hour transfer records for this production order where status is COMPLETED
       // The filter must use the production order's DATABASE ID (order.id), not the human-readable order_number.
       const validSourceBinIds = transferRecords
-        .filter(record => 
-          Number(record.production_order_id) === Number(order.id) &&
-          record.status === "COMPLETED"
-        )
+        .filter(record => {
+          const isMatch = Number(record.production_order_id) === Number(order.id) &&
+                         record.status === "COMPLETED";
+          if (isMatch) console.log("DEBUG: Found matching 24h record for order:", record);
+          return isMatch;
+        })
         .map(record => Number(record.destination_bin_id));
+
+      console.log("DEBUG: Valid Source Bin IDs derived:", validSourceBinIds);
 
       // 2. Source bins: Must be "24 hours bin", status "Active", and linked to this order via the DATABASE ID check above
       const filteredSource = allBins.filter(bin => {
@@ -107,8 +115,14 @@ export default function Transfer12HourScreen({ navigation }) {
         const isActive = bin.status === "Active";
         const isLinked = validSourceBinIds.includes(Number(bin.id));
         
+        if (is24h && isActive) {
+            console.log(`DEBUG: Checking Active 24h Bin ${bin.bin_number} (ID: ${bin.id}). Linked=${isLinked}`);
+        }
+        
         return is24h && isActive && isLinked;
       });
+
+      console.log("DEBUG: Final filtered source bins:", filteredSource);
       
       // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
       const filteredDest = allBins.filter(bin => 
