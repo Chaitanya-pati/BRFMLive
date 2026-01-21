@@ -7,6 +7,7 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
@@ -43,7 +44,6 @@ export default function Transfer12HourScreen({ navigation }) {
   
   const [specialSourceBin, setSpecialSourceBin] = useState(null);
   const [specialDestinationBin, setSpecialDestinationBin] = useState(null);
-  const [manualQuantity, setManualQuantity] = useState("");
 
   const [transferQuantity, setTransferQuantity] = useState("");
   const [waterAdded, setWaterAdded] = useState("");
@@ -52,13 +52,17 @@ export default function Transfer12HourScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState("TRANSFER");
   
   const [currentRecordId, setCurrentRecordId] = useState(null);
-  const [startTime, setStartTime] = useState(null);
   const [timer, setTimer] = useState(0);
   const timerRef = useRef(null);
+
+  // Modal state
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
 
   useEffect(() => {
     fetchProductionOrders();
     fetchSessions();
+    fetchAllBins(); // Ensure we have all bins for name lookup
     return () => clearInterval(timerRef.current);
   }, []);
 
@@ -72,6 +76,19 @@ export default function Transfer12HourScreen({ navigation }) {
       setTimer(0);
     }
   }, [stage]);
+
+  const fetchAllBins = async () => {
+    try {
+      const client = getApiClient();
+      const response = await client.get("/bins");
+      const allBins = response.data || [];
+      // We need these for display names regardless of current stage filters
+      setSourceBins(prev => prev.length > 0 ? prev : allBins);
+      setDestinationBins(prev => prev.length > 0 ? prev : allBins);
+    } catch (error) {
+      console.error("Failed to fetch all bins:", error);
+    }
+  };
 
   const formatTimer = (seconds) => {
     const h = Math.floor(seconds / 3600);
@@ -157,7 +174,6 @@ export default function Transfer12HourScreen({ navigation }) {
       });
 
       setCurrentRecordId(response.data.id);
-      setStartTime(new Date());
       setStage(STAGES.TRANSFER_ACTIVE);
       showToast("Success", "Transfer started");
     } catch (error) {
@@ -167,7 +183,12 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
-  const handleStopOrDivert = async (status) => {
+  const initiateStopOrDivert = (status) => {
+    setPendingStatus(status);
+    setShowDataModal(true);
+  };
+
+  const handleSaveAndAction = async () => {
     if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
       showAlert("Validation Error", "Please enter quantity transferred");
       return;
@@ -180,13 +201,31 @@ export default function Transfer12HourScreen({ navigation }) {
         quantity_transferred: parseFloat(transferQuantity),
         water_added: waterAdded ? parseFloat(waterAdded) : 0,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
-        status: status,
+        status: pendingStatus,
         transfer_end_time: new Date().toISOString()
       });
 
-      showToast("Success", `Transfer ${status.toLowerCase()}`);
-      handleGoBack();
-      fetchSessions();
+      showToast("Success", `Transfer ${pendingStatus.toLowerCase()}`);
+      
+      const statusWasDiverted = pendingStatus === "DIVERTED";
+      
+      // Reset data entry fields
+      setTransferQuantity("");
+      setWaterAdded("");
+      setMoistureLevel("");
+      setShowDataModal(false);
+      
+      if (statusWasDiverted) {
+        // If diverted, go back to configuration to select NEW destination
+        // Keep selected order and source bin, but reset destination
+        setSelectedDestinationBin(null);
+        setSpecialDestinationBin(null);
+        setStage(STAGES.CONFIGURE_BINS);
+      } else {
+        // If completed, go back to order selection or records
+        handleGoBack();
+        fetchSessions();
+      }
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to update transfer");
     } finally {
@@ -200,12 +239,10 @@ export default function Transfer12HourScreen({ navigation }) {
     setSelectedDestinationBin(null);
     setSpecialSourceBin(null);
     setSpecialDestinationBin(null);
-    setManualQuantity("");
     setTransferQuantity("");
     setWaterAdded("");
     setMoistureLevel("");
     setCurrentRecordId(null);
-    setStartTime(null);
     setStage(STAGES.SELECT_ORDER);
   };
 
@@ -282,8 +319,10 @@ export default function Transfer12HourScreen({ navigation }) {
     const isManualSpecial = transferType === "SPECIAL";
     const sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
     const destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-    const sourceBinName = sourceBins.find(b => b.id === sourceBinId)?.bin_number || "Unknown";
-    const destBinName = destinationBins.find(b => b.id === destBinId)?.bin_number || "Unknown";
+    
+    // Improved lookup to avoid "Unknown"
+    const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
+    const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || "Bin #" + destBinId;
 
     return (
       <ScrollView style={styles.container}>
@@ -307,39 +346,60 @@ export default function Transfer12HourScreen({ navigation }) {
           </View>
         </Card>
 
-        <Card style={styles.mappingCard}>
-          <Text style={styles.cardSectionTitle}>Enter Current Data</Text>
-          <InputField
-            label="Quantity transferred"
-            value={transferQuantity}
-            onChangeText={setTransferQuantity}
-            keyboardType="decimal-pad"
-            placeholder="Enter quantity"
-          />
-          <InputField
-            label="Water Added"
-            value={waterAdded}
-            onChangeText={setWaterAdded}
-            keyboardType="decimal-pad"
-            placeholder="Optional"
-          />
-          <InputField
-            label="Moisture Level"
-            value={moistureLevel}
-            onChangeText={setMoistureLevel}
-            keyboardType="decimal-pad"
-            placeholder="Optional"
-          />
-        </Card>
-
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#fbbc05'}]} onPress={() => handleStopOrDivert("DIVERTED")}>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#fbbc05'}]} onPress={() => initiateStopOrDivert("DIVERTED")}>
             <Text style={styles.buttonText}>Divert Transfer</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ea4335'}]} onPress={() => handleStopOrDivert("COMPLETED")}>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ea4335'}]} onPress={() => initiateStopOrDivert("COMPLETED")}>
             <Text style={styles.buttonText}>Stop Transfer</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal visible={showDataModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Enter Transfer Data</Text>
+              <Text style={styles.modalSubtitle}>Please enter details before {pendingStatus?.toLowerCase()} the transfer.</Text>
+              
+              <InputField
+                label="Quantity transferred"
+                value={transferQuantity}
+                onChangeText={setTransferQuantity}
+                keyboardType="decimal-pad"
+                placeholder="Enter quantity"
+              />
+              <InputField
+                label="Water Added"
+                value={waterAdded}
+                onChangeText={setWaterAdded}
+                keyboardType="decimal-pad"
+                placeholder="Optional"
+              />
+              <InputField
+                label="Moisture Level"
+                value={moistureLevel}
+                onChangeText={setMoistureLevel}
+                keyboardType="decimal-pad"
+                placeholder="Optional"
+              />
+
+              <View style={styles.modalActions}>
+                <Button 
+                  title="Cancel" 
+                  onPress={() => setShowDataModal(false)} 
+                  variant="secondary" 
+                  style={{flex: 1, marginRight: 8}}
+                />
+                <Button 
+                  title="Save & Proceed" 
+                  onPress={handleSaveAndAction} 
+                  loading={loading}
+                  style={{flex: 1}}
+                />
+              </View>
+            </Card>
+          </View>
+        </Modal>
       </ScrollView>
     );
   };
@@ -450,4 +510,9 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
   actionButton: { flex: 0.48, paddingVertical: 15, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { padding: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, color: colors.text.secondary, marginBottom: 16 },
+  modalActions: { flexDirection: 'row', marginTop: 20 },
 });
