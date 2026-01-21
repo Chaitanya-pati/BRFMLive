@@ -108,14 +108,20 @@ export default function Transfer12HourScreen({ navigation }) {
 
       console.log("DEBUG: Valid Source Bin IDs for 12h Stage:", validSourceBinIds);
 
-      // Source bins: 24 hours bin, Active, and present in 24h transfer records for this order
-      // Removed current_quantity > 0 check to show bins that were part of this order
+      // Source bins: 24 hours bin, Active
       const filteredSource = allBins.filter(bin => {
-        const isMatch = bin.bin_type === "24 hours bin" && 
-          bin.status === "Active" && 
-          (validSourceBinIds.includes(bin.id) || validSourceBinIds.includes(bin.id?.toString()));
-        if (isMatch) console.log("DEBUG: Found valid source bin:", bin.bin_number, "(ID:", bin.id, ")");
-        return isMatch;
+        const isCorrectType = bin.bin_type === "24 hours bin" && bin.status === "Active";
+        
+        // If we have 24h transfer records for this order, prioritize those bins
+        if (validSourceBinIds.length > 0) {
+            const isMatch = isCorrectType && (validSourceBinIds.includes(bin.id) || validSourceBinIds.includes(bin.id?.toString()));
+            if (isMatch) console.log("DEBUG: Found matched source bin from 24h record:", bin.bin_number);
+            return isMatch;
+        }
+        
+        // Fallback: Show all active 24h bins if no records are found (helps debug data issues)
+        if (isCorrectType) console.log("DEBUG: Showing 24h bin as fallback (no records found):", bin.bin_number);
+        return isCorrectType;
       });
 
       console.log("DEBUG: Final Filtered Source Bins:", filteredSource.length);
