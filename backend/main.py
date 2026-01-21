@@ -2986,36 +2986,83 @@ def get_12hour_transfer_records(
         query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
     return query.order_by(models.Transfer12HourRecord.created_at.desc()).offset(skip).limit(limit).all()
 
-@app.patch("/api/12hour-transfer/records/{record_id}", response_model=schemas.Transfer12HourRecord)
-def update_12hour_transfer_record(
+@app.post("/api/12hour-transfer/records/{record_id}/complete", response_model=schemas.Transfer12HourRecord)
+def complete_12hour_transfer(
     record_id: int,
-    record_update: schemas.Transfer12HourRecordUpdate,
-    db: Session = Depends(get_db)
+    data: schemas.Transfer12HourRecordUpdate,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None)
 ):
-    """Update an existing 12-hour transfer record"""
+    """Complete 12-hour transfer (Stop logic)"""
     db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
     if not db_record:
         raise HTTPException(status_code=404, detail="Record not found")
-        
-    update_data = record_update.dict(exclude_unset=True)
     
-    # If quantity is being updated, adjust bin balances
+    # Update data
+    update_data = data.dict(exclude_unset=True)
+    
+    # Handle bin quantity updates if quantity is provided/changed
     if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
         diff = update_data["quantity_transferred"] - db_record.quantity_transferred
         source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()
         dest_bin = db.query(models.Bin).filter(models.Bin.id == db_record.destination_bin_id).first()
-        
-        if source_bin:
-            source_bin.current_quantity -= diff
-        if dest_bin:
-            dest_bin.current_quantity += diff
-            
+        if source_bin: source_bin.current_quantity -= diff
+        if dest_bin: dest_bin.current_quantity += diff
+
     for key, value in update_data.items():
         setattr(db_record, key, value)
-        
+    
+    db_record.status = "COMPLETED"
+    db_record.transfer_end_time = get_utc_now()
+    
     db.commit()
     db.refresh(db_record)
     return db_record
+
+@app.post("/api/12hour-transfer/records/{record_id}/divert/{next_bin_id}", response_model=schemas.Transfer12HourRecord)
+def divert_12hour_transfer(
+    record_id: int,
+    next_bin_id: int,
+    data: schemas.Transfer12HourRecordUpdate,
+    db: Session = Depends(get_db),
+    user_id: Optional[int] = Header(None),
+    branch_id: Optional[int] = Depends(get_branch_id)
+):
+    """Divert 12-hour transfer (completes current, starts new)"""
+    # 1. Complete current
+    db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    update_data = data.dict(exclude_unset=True)
+    if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
+        diff = update_data["quantity_transferred"] - db_record.quantity_transferred
+        source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == db_record.destination_bin_id).first()
+        if source_bin: source_bin.current_quantity -= diff
+        if dest_bin: dest_bin.current_quantity += diff
+
+    for key, value in update_data.items():
+        setattr(db_record, key, value)
+    
+    db_record.status = "COMPLETED"
+    db_record.transfer_end_time = get_utc_now()
+    
+    # 2. Start new
+    new_record = models.Transfer12HourRecord(
+        source_bin_id=db_record.source_bin_id,
+        destination_bin_id=next_bin_id,
+        production_order_id=db_record.production_order_id,
+        status="IN_PROGRESS",
+        transfer_start_time=get_utc_now(),
+        created_by=user_id,
+        branch_id=branch_id or db_record.branch_id,
+        transfer_type=db_record.transfer_type
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+    return new_record
 
 if __name__ == "__main__":
     import uvicorn
