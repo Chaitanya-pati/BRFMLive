@@ -92,10 +92,6 @@ export default function Transfer12HourScreen({ navigation }) {
       const allBins = binsResponse.data || [];
       const transferRecords = transferRecordsResponse.data || [];
       
-      console.log("DEBUG: All Bins from API:", JSON.stringify(allBins, null, 2));
-      console.log("DEBUG: 24h Transfer Records from API:", JSON.stringify(transferRecords, null, 2));
-      console.log("DEBUG: Selected Order ID:", order.id);
-      
       // 1. Get unique destination bin IDs from 24-hour transfer records for this production order where status is COMPLETED
       // The filter must use the production order's DATABASE ID (order.id), not the human-readable order_number.
       const validSourceBinIds = transferRecords
@@ -104,10 +100,6 @@ export default function Transfer12HourScreen({ navigation }) {
           record.status === "COMPLETED"
         )
         .map(record => Number(record.destination_bin_id));
-
-      console.log("DEBUG: Selected Order ID (DATABASE ID):", order.id);
-      console.log("DEBUG: Selected Order Number:", order.order_number);
-      console.log("DEBUG: Valid Source Bin IDs from Records:", validSourceBinIds);
 
       // 2. Source bins: Must be "24 hours bin", status "Active", and linked to this order via the DATABASE ID check above
       const filteredSource = allBins.filter(bin => {
