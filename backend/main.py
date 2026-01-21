@@ -2986,6 +2986,44 @@ def get_12hour_transfer_records(
         query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
     return query.order_by(models.Transfer12HourRecord.created_at.desc()).offset(skip).limit(limit).all()
 
+@app.patch("/api/12hour-transfer/records/{record_id}", response_model=schemas.Transfer12HourRecord)
+def update_12hour_transfer_record(
+    record_id: int,
+    record_update: schemas.Transfer12HourRecordUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update an existing 12-hour transfer record (Legacy Support)"""
+    db_record = db.query(models.Transfer12HourRecord).filter(models.Transfer12HourRecord.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="Record not found")
+        
+    update_data = record_update.dict(exclude_unset=True)
+    
+    # Check if this is a "DIVERTED" or "COMPLETED" status update from the frontend
+    if update_data.get("status") == "DIVERTED":
+        # We don't have the next_bin_id in a PATCH request typically, 
+        # so we'll just handle the status update for now to avoid the 404.
+        # Ideally the frontend should use the /divert endpoint.
+        pass
+
+    # If quantity is being updated, adjust bin balances
+    if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
+        diff = update_data["quantity_transferred"] - db_record.quantity_transferred
+        source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == db_record.destination_bin_id).first()
+        
+        if source_bin:
+            source_bin.current_quantity -= diff
+        if dest_bin:
+            dest_bin.current_quantity += diff
+            
+    for key, value in update_data.items():
+        setattr(db_record, key, value)
+        
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
 @app.post("/api/12hour-transfer/records/{record_id}/complete", response_model=schemas.Transfer12HourRecord)
 def complete_12hour_transfer(
     record_id: int,
