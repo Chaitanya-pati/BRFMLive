@@ -703,19 +703,6 @@ class ProductionOrderUpdate(BaseModel):
     target_finish_date: Optional[datetime] = None
     status: Optional[ProductionOrderStatusEnum] = None
 
-class ProductionOrderWithProduct(ProductionOrderBase):
-    id: int
-    branch_id: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
-    raw_product: RawProduct
-
-class ProductionOrder(ProductionOrderBase):
-    id: int
-    branch_id: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
-
 # Production Order Source Bin Schemas (Blend Configuration)
 class ProductionOrderSourceBinBase(BaseModel):
     bin_id: int
@@ -771,10 +758,36 @@ class ProductionOrderDestinationBinWithDetails(ProductionOrderDestinationBinBase
     class Config:
         from_attributes = True
 
+class ProductionOrderWithProduct(ProductionOrderBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    raw_product: RawProduct
+
+class ProductionOrderWithPlanning(ProductionOrderWithProduct):
+    source_bins: List[ProductionOrderSourceBinWithDetails] = []
+    destination_bins: List[ProductionOrderDestinationBinWithDetails] = []
+
+class ProductionOrder(ProductionOrderBase):
+    id: int
+    branch_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
 # Planning Configuration Schema
 class ProductionOrderPlanningCreate(BaseModel):
     source_bins: List[ProductionOrderSourceBinCreate]
     destination_bins: List[ProductionOrderDestinationBinCreate]
+
+class TransferRecordingStartTransfer(BaseModel):
+    production_order_id: int
+    destination_bin_id: int
+
+class TransferRecordingCompleteTransfer(BaseModel):
+    water_added: float
+    moisture_level: float
+    quantity_transferred: float
 
 class TransferRecordingBase(ISTModel):
     production_order_id: int
