@@ -543,6 +543,7 @@ class TransferRecordingStatus(str, enum.Enum):
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
+    DIVERTED = "DIVERTED"
 
 class TransferRecording(Base):
     __tablename__ = "24hours_transfer_records"

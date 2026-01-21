@@ -34,6 +34,7 @@ class TransferRecordingStatusEnum(str, Enum):
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
+    DIVERTED = "DIVERTED"
 
 # 12-Hour Transfer Schemas (Simplified)
 class Transfer12HourRecordBase(ISTModel):
@@ -775,64 +776,27 @@ class ProductionOrderPlanningCreate(BaseModel):
     source_bins: List[ProductionOrderSourceBinCreate]
     destination_bins: List[ProductionOrderDestinationBinCreate]
 
-class ProductionOrderWithPlanning(ProductionOrderBase):
+class TransferRecordingBase(ISTModel):
+    production_order_id: int
+    destination_bin_id: int
+    status: TransferRecordingStatusEnum = TransferRecordingStatusEnum.PLANNED
+    quantity_planned: float = 0.0
+    quantity_transferred: float = 0.0
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+    transfer_start_time: Optional[datetime] = None
+    transfer_end_time: Optional[datetime] = None
+
+class TransferRecordingCreate(TransferRecordingBase):
+    branch_id: Optional[int] = None
+
+class TransferRecording(TransferRecordingBase):
     id: int
     branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
-    raw_product: RawProduct
-    source_bins: List[ProductionOrderSourceBinWithDetails] = []
-    destination_bins: List[ProductionOrderDestinationBinWithDetails] = []
-
-# Transfer Recording Schemas
-class TransferRecordingStatusEnum(str, Enum):
-    PLANNED = "PLANNED"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-
-class TransferRecordingBase(ISTModel):
-    production_order_id: int
-    destination_bin_id: int
-    quantity_planned: float
-
-class TransferRecordingCreate(TransferRecordingBase):
-    pass
-
-class TransferRecordingStartTransfer(BaseModel):
-    production_order_id: int
-    destination_bin_id: int
-
-class TransferRecordingCompleteTransfer(BaseModel):
-    water_added: Optional[float] = None
-    moisture_level: Optional[float] = None
-    quantity_transferred: Optional[float] = None
-
-class TransferRecording(TransferRecordingBase):
-    id: int
-    status: TransferRecordingStatusEnum
-    quantity_transferred: Optional[float] = None
-    transfer_start_time: Optional[datetime] = None
-    transfer_end_time: Optional[datetime] = None
-    duration_minutes: Optional[int] = None
-    water_added: Optional[float] = None
-    moisture_level: Optional[float] = None
-    created_at: datetime
-    updated_at: datetime
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
-
-    class Config:
-        from_attributes = True
 
 class TransferRecordingWithDetails(TransferRecording):
+    production_order: ProductionOrder
     destination_bin: Bin
-    production_order: ProductionOrderWithPlanning
-
-    class Config:
-        from_attributes = True
-
-# Resolve forward references
-VehicleEntryWithLabTests.model_rebuild()
-BinTransferWithBin.model_rebuild()
-TransferSessionWithDetails.model_rebuild()
-WasteEntryWithDetails.model_rebuild()
+    created_by_user: Optional[User] = None
