@@ -186,6 +186,7 @@ export default function TransferRecordingScreen({ navigation }) {
       setCurrentTransfer(null);
       setWaterAdded("");
       setMoistureLevel("");
+      setQuantityTransferred("");
       setErrors({});
       setStage(STAGES.SELECT_BIN);
     } catch (error) {
@@ -222,6 +223,7 @@ export default function TransferRecordingScreen({ navigation }) {
       setTimer(0);
       setWaterAdded("");
       setMoistureLevel("");
+      setQuantityTransferred("");
       setErrors({});
       setSelectedBin(nextBin);
       
@@ -398,7 +400,7 @@ export default function TransferRecordingScreen({ navigation }) {
     );
   }
 
-  // STAGE: TRANSFER IN PROGRESS
+  // STAGE: TRANSFER_IN_PROGRESS
   if (stage === STAGES.TRANSFER_IN_PROGRESS && currentTransfer) {
     return (
       <Layout>
@@ -415,10 +417,6 @@ export default function TransferRecordingScreen({ navigation }) {
               <View style={styles.detailRow}>
                 <Text style={styles.label}>To Bin:</Text>
                 <Text style={styles.value}>{currentTransfer?.destination_bin?.bin_number}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Qty Transferred:</Text>
-                <Text style={styles.value}>{currentTransfer?.quantity_transferred || 0} kg</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.label}>Qty Planned:</Text>
@@ -447,29 +445,47 @@ export default function TransferRecordingScreen({ navigation }) {
             <Button
               title="Stop Transfer"
               onPress={handleCompleteTransfer}
-              style={styles.actionBtn}
+              style={[styles.actionBtn, { backgroundColor: colors.danger || "#ef4444" }]}
             />
+            {availableBinsForDivert.length > 0 && (
+              <Button
+                title="Divert Transfer"
+                onPress={handleCompleteTransfer}
+                variant="secondary"
+                style={styles.actionBtn}
+              />
+            )}
           </View>
         </ScrollView>
       </Layout>
     );
   }
 
-  // STAGE: PARAMETERS INPUT
+  // STAGE: PARAMETERS_INPUT
   if (stage === STAGES.PARAMETERS_INPUT) {
     return (
       <Layout>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
           <ScrollView style={styles.container}>
-            <Text style={styles.title}>Complete Transfer</Text>
+            <Text style={styles.title}>Record Parameters</Text>
 
             <View style={styles.infoCard}>
-              <Text style={styles.infoText}>Enter parameters before stopping or diverting</Text>
+              <Text style={styles.infoText}>Capture data before stopping or diverting</Text>
             </View>
 
             <View style={styles.binContext}>
               <Text style={styles.binContextLabel}>Current Bin: {currentTransfer?.destination_bin?.bin_number}</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>Duration: {formatTime(timer)}</Text>
             </View>
+
+            <InputField
+              label="Quantity Transferred (kg)"
+              placeholder="Enter quantity"
+              value={quantityTransferred}
+              onChangeText={setQuantityTransferred}
+              keyboardType="decimal-pad"
+              error={errors.quantityTransferred}
+            />
 
             <InputField
               label="Water Added (Litres)"
@@ -489,44 +505,31 @@ export default function TransferRecordingScreen({ navigation }) {
               error={errors.moistureLevel}
             />
 
-            <InputField
-              label="Quantity Transferred (kg)"
-              placeholder="Enter quantity"
-              value={quantityTransferred}
-              onChangeText={setQuantityTransferred}
-              keyboardType="decimal-pad"
-              error={errors.quantityTransferred}
-            />
-
             <View style={styles.actionButtons}>
-              {availableBinsForDivert.length > 0 && (
-                <View>
-                  <Text style={styles.divertLabel}>Divert to Next Bin:</Text>
-                  <FlatList
-                    data={availableBinsForDivert}
-                    scrollEnabled={false}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item }) => (
-                      <Button
-                        title={`Divert to ${item.bin.bin_number}`}
-                        onPress={() => handleDivertBin(item)}
-                        loading={loading}
-                        style={styles.divertBtn}
-                      />
-                    )}
-                  />
-                </View>
-              )}
-
               <Button
-                title="Stop Transfer"
+                title="Save & Stop Transfer"
                 onPress={handleStopTransfer}
                 loading={loading}
                 style={styles.stopBtn}
               />
 
+              {availableBinsForDivert.length > 0 && (
+                <View style={styles.divertSection}>
+                  <Text style={styles.divertLabel}>Or Divert to:</Text>
+                  {availableBinsForDivert.map((item) => (
+                    <Button
+                      key={item.id.toString()}
+                      title={`Save & Divert to ${item.bin.bin_number}`}
+                      onPress={() => handleDivertBin(item)}
+                      loading={loading}
+                      style={styles.divertBtn}
+                    />
+                  ))}
+                </View>
+              )}
+
               <Button
-                title="Back"
+                title="Cancel"
                 onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
                 variant="secondary"
                 style={styles.backBtn}
@@ -823,4 +826,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#10b981",
     paddingVertical: 14,
   },
+  divertSection: {
+    marginVertical: 12,
+    padding: 10,
+    backgroundColor: colors.lightGray,
+    borderRadius: 8,
+  }
 });
