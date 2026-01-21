@@ -551,13 +551,16 @@ class TransferRecordingStatus(str, enum.Enum):
     def __repr__(self):
         return str(self.value)
 
+# Update the column definitions to use String if Enum is failing
+# search for the columns and ensure they use a fallback or explicit string cast if needed
+
 class TransferRecording(Base):
     __tablename__ = "24hours_transfer_records"
 
     id = Column(Integer, primary_key=True, index=True)
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
-    status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False)
+    status = Column(String(50), default="PLANNED", nullable=False)
     quantity_planned = Column(Float, nullable=False, default=0.0)
     quantity_transferred = Column(Float, default=0.0)
     transfer_start_time = Column(DateTime)
@@ -588,7 +591,7 @@ class Transfer12HourRecord(Base):
     source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     quantity_transferred = Column(Float, nullable=False, default=0.0)
-    status = Column(Enum(TransferRecordingStatus), default=TransferRecordingStatus.PLANNED, nullable=False, index=True)
+    status = Column(String(50), default="PLANNED", nullable=False, index=True)
     water_added = Column(Float)
     moisture_level = Column(Float)
     transfer_start_time = Column(DateTime)
