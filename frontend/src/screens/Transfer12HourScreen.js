@@ -99,18 +99,19 @@ export default function Transfer12HourScreen({ navigation }) {
       // 1. Get unique destination bin IDs from 24-hour transfer records for this production order where status is COMPLETED
       const validSourceBinIds = transferRecords
         .filter(record => 
-          (record.production_order_id === order.id || 
-           record.production_order_id?.toString() === order.id?.toString()) &&
+          Number(record.production_order_id) === Number(order.id) &&
           record.status === "COMPLETED"
         )
-        .map(record => record.destination_bin_id);
+        .map(record => Number(record.destination_bin_id));
 
       // 2. Source bins: Must be "24 hours bin", status "Active", and linked to this order via the transfer records above
-      const filteredSource = allBins.filter(bin => 
-        bin.bin_type === "24 hours bin" && 
-        bin.status === "Active" && 
-        (validSourceBinIds.includes(bin.id) || validSourceBinIds.includes(bin.id?.toString()))
-      );
+      const filteredSource = allBins.filter(bin => {
+        const is24h = bin.bin_type === "24 hours bin";
+        const isActive = bin.status === "Active";
+        const isLinked = validSourceBinIds.includes(Number(bin.id));
+        
+        return is24h && isActive && isLinked;
+      });
       
       // Destination bins: 12 hours bin, Active, and has available space (current_quantity < capacity)
       const filteredDest = allBins.filter(bin => 
