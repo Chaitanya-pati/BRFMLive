@@ -81,16 +81,28 @@ export default function GrindingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
+      
+      // Filter out empty lines before submitting
+      const validDetails = productionDetails
+        .filter(d => d.finished_good_id && d.bag_size_id)
+        .map(d => ({
+          ...d,
+          quantity_bags: parseInt(d.quantity_bags) || 0
+        }));
+
+      if (validDetails.length === 0) {
+        showAlert("Validation", "Please add at least one finished good entry with product and bag size");
+        setLoading(false);
+        return;
+      }
+
       await client.post("/grinding/hourly-production", {
         production_order_id: selectedBin.production_order_id,
         production_date: productionDate,
         production_time: productionTime,
         b1_scale_reading: parseFloat(b1Reading),
         load_per_hour_tons: parseFloat(loadPerHour) || 0,
-        details: productionDetails.map(d => ({
-          ...d,
-          quantity_bags: parseInt(d.quantity_bags) || 0
-        }))
+        details: validDetails
       });
       showToast("Success", "Hourly production recorded");
       navigation.navigate('GrindingExcelView');
@@ -168,42 +180,123 @@ export default function GrindingScreen({ navigation }) {
 
             <Card style={styles.card}>
               <Text style={styles.cardTitle}>Hourly Production Entry</Text>
-              <View style={styles.grid}>
-                <InputField label="Time" value={productionTime} onChangeText={setProductionTime} placeholder="e.g. 10:00 AM" />
-                <InputField label="B1 Scale Reading" value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" />
-                <InputField label="Load/Hour (Tons)" value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" />
+              
+              <ScrollView horizontal>
+                <View>
+                  <View style={styles.excelHeaderRow}>
+                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Time</Text>
+                    <Text style={[styles.excelHeaderText, { width: 100 }]}>B1 Scale</Text>
+                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Load/Hr</Text>
+                    <Text style={[styles.excelHeaderText, { width: 150 }]}>Product</Text>
+                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Bag Size</Text>
+                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Qty</Text>
+                    <Text style={[styles.excelHeaderText, { width: 80 }]}></Text>
+                  </View>
+
+                  <View style={styles.excelRow}>
+                    <View style={{ width: 100 }}>
+                      <InputField value={productionTime} onChangeText={setProductionTime} placeholder="10:00 AM" dense />
+                    </View>
+                    <View style={{ width: 100 }}>
+                      <InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense />
+                    </View>
+                    <View style={{ width: 100 }}>
+                      <InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense />
+                    </View>
+                    <View style={{ width: 150 }}>
+                      <SelectDropdown
+                        value={productionDetails[0]?.finished_good_id}
+                        onValueChange={(v) => {
+                          if (productionDetails.length === 0) {
+                            setProductionDetails([{ finished_good_id: v, bag_size_id: "", quantity_bags: "" }]);
+                          } else {
+                            updateDetail(0, 'finished_good_id', v);
+                          }
+                        }}
+                        options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
+                        dense
+                      />
+                    </View>
+                    <View style={{ width: 100 }}>
+                      <SelectDropdown
+                        value={productionDetails[0]?.bag_size_id}
+                        onValueChange={(v) => {
+                          if (productionDetails.length === 0) {
+                            setProductionDetails([{ finished_good_id: "", bag_size_id: v, quantity_bags: "" }]);
+                          } else {
+                            updateDetail(0, 'bag_size_id', v);
+                          }
+                        }}
+                        options={bagSizes.map(bs => ({ label: `${bs.weight_kg}kg`, value: bs.id }))}
+                        dense
+                      />
+                    </View>
+                    <View style={{ width: 100 }}>
+                      <InputField
+                        value={productionDetails[0]?.quantity_bags}
+                        onChangeText={(v) => {
+                          if (productionDetails.length === 0) {
+                            setProductionDetails([{ finished_good_id: "", bag_size_id: "", quantity_bags: v }]);
+                          } else {
+                            updateDetail(0, 'quantity_bags', v);
+                          }
+                        }}
+                        keyboardType="numeric"
+                        dense
+                      />
+                    </View>
+                    <View style={{ width: 80 }}></View>
+                  </View>
+
+                  {productionDetails.slice(1).map((detail, index) => {
+                    const actualIndex = index + 1;
+                    return (
+                      <View key={actualIndex} style={styles.excelRow}>
+                        <View style={{ width: 100 }} />
+                        <View style={{ width: 100 }} />
+                        <View style={{ width: 100 }} />
+                        <View style={{ width: 150 }}>
+                          <SelectDropdown
+                            value={detail.finished_good_id}
+                            onValueChange={(v) => updateDetail(actualIndex, 'finished_good_id', v)}
+                            options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
+                            dense
+                          />
+                        </View>
+                        <View style={{ width: 100 }}>
+                          <SelectDropdown
+                            value={detail.bag_size_id}
+                            onValueChange={(v) => updateDetail(actualIndex, 'bag_size_id', v)}
+                            options={bagSizes.map(bs => ({ label: `${bs.weight_kg}kg`, value: bs.id }))}
+                            dense
+                          />
+                        </View>
+                        <View style={{ width: 100 }}>
+                          <InputField
+                            value={detail.quantity_bags}
+                            onChangeText={(v) => updateDetail(actualIndex, 'quantity_bags', v)}
+                            keyboardType="numeric"
+                            dense
+                          />
+                        </View>
+                        <TouchableOpacity 
+                          onPress={() => setProductionDetails(productionDetails.filter((_, i) => i !== actualIndex))}
+                          style={[styles.removeBtn, { width: 80, alignItems: 'center' }]}
+                        >
+                          <Text style={styles.removeText}>✖</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+                <TouchableOpacity style={styles.addGridBtn} onPress={handleAddDetail}>
+                  <Text style={styles.addGridBtnText}>+ Add Product Row</Text>
+                </TouchableOpacity>
               </View>
 
-              <Text style={[styles.cardTitle, { marginTop: 20 }]}>Finished Goods Production</Text>
-              {productionDetails.map((detail, index) => (
-                <View key={index} style={styles.detailRow}>
-                  <SelectDropdown
-                    label="Product"
-                    value={detail.finished_good_id}
-                    onValueChange={(v) => updateDetail(index, 'finished_good_id', v)}
-                    options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
-                  />
-                  <SelectDropdown
-                    label="Bag Size"
-                    value={detail.bag_size_id}
-                    onValueChange={(v) => updateDetail(index, 'bag_size_id', v)}
-                    options={bagSizes.map(bs => ({ label: `${bs.weight_kg}kg`, value: bs.id }))}
-                  />
-                  <InputField
-                    label="Quantity (Bags)"
-                    value={detail.quantity_bags}
-                    onChangeText={(v) => updateDetail(index, 'quantity_bags', v)}
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity 
-                    onPress={() => setProductionDetails(productionDetails.filter((_, i) => i !== index))}
-                    style={styles.removeBtn}
-                  >
-                    <Text style={styles.removeText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <Button title="+ Add Product Line" variant="secondary" onPress={handleAddDetail} />
               <View style={{ marginTop: 20 }}>
                 <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
               </View>
@@ -264,5 +357,10 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   detailRow: { borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 15, marginTop: 15 },
   removeBtn: { alignSelf: 'flex-end', marginTop: 5 },
-  removeText: { color: '#F44336', fontWeight: 'bold' }
+  removeText: { color: '#F44336', fontWeight: 'bold' },
+  excelHeaderRow: { flexDirection: 'row', backgroundColor: '#F0F0F0', paddingVertical: 8, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomWidth: 1, borderBottomColor: '#DDD' },
+  excelHeaderText: { fontSize: 12, fontWeight: 'bold', color: '#666', textAlign: 'center' },
+  excelRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#EEE' },
+  addGridBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.primary, backgroundColor: '#FFF' },
+  addGridBtnText: { color: colors.primary, fontWeight: 'bold', fontSize: 13 }
 });
