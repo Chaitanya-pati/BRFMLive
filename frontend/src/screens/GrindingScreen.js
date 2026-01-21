@@ -62,6 +62,51 @@ export default function GrindingScreen({ navigation }) {
     showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
 
+  const handleGridUpdate = (productCode, value) => {
+    const newDetails = [...productionDetails];
+    const index = newDetails.findIndex(d => d.product_code === productCode);
+    
+    // Find correct FG and Bag Size IDs based on productCode
+    let finishedGoodId = null;
+    let bagSizeId = null;
+
+    if (productCode === 'TA_30') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Tandoori'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
+    } else if (productCode === 'TA_50') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Tandoori'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 50)?.id;
+    } else if (productCode === 'DP_30') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('DP'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
+    } else if (productCode === 'DP_50') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('DP'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 50)?.id;
+    } else if (productCode === 'DB_45') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Deluxe'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 45)?.id;
+    } else if (productCode === 'RB_49') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Rough'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 49)?.id;
+    } else if (productCode === 'FL_30') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Flakes'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
+    } else if (productCode === 'FL_34') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Flakes'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 34)?.id;
+    } else if (productCode === 'REPROCESS') {
+      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Reprocess'))?.id;
+      bagSizeId = bagSizes.find(bs => bs.weight_kg == 1)?.id; // Default or small unit
+    }
+
+    if (index > -1) {
+      newDetails[index].quantity_bags = value;
+    } else {
+      newDetails.push({ product_code: productCode, finished_good_id: finishedGoodId, bag_size_id: bagSizeId, quantity_bags: value });
+    }
+    setProductionDetails(newDetails);
+  };
+
   const handleAddDetail = () => {
     setProductionDetails([...productionDetails, { finished_good_id: "", bag_size_id: "", quantity_bags: "" }]);
   };
@@ -181,121 +226,118 @@ export default function GrindingScreen({ navigation }) {
             <Card style={styles.card}>
               <Text style={styles.cardTitle}>Hourly Production Entry</Text>
               
+              <View style={styles.excelTopHeader}>
+                <View style={styles.topHeaderBox}>
+                  <Text style={styles.topHeaderLabel}>Date</Text>
+                  <Text style={styles.topHeaderValue}>{productionDate}</Text>
+                </View>
+                <View style={styles.topHeaderBox}>
+                  <Text style={styles.topHeaderLabel}>Batch No</Text>
+                  <Text style={styles.topHeaderValue}>{selectedBin?.order_number?.split('-').pop() || 'N/A'}</Text>
+                </View>
+                <View style={styles.topHeaderBox}>
+                  <Text style={styles.topHeaderLabel}>Product</Text>
+                  <Text style={styles.topHeaderValue}>Wheat</Text>
+                </View>
+                <View style={styles.topHeaderBox}>
+                  <Text style={styles.topHeaderLabel}>Start Date</Text>
+                  <Text style={styles.topHeaderValue}>{productionDate}</Text>
+                </View>
+              </View>
+
               <ScrollView horizontal>
                 <View>
-                  <View style={styles.excelHeaderRow}>
-                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Time</Text>
-                    <Text style={[styles.excelHeaderText, { width: 100 }]}>B1 Scale</Text>
-                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Load/Hr</Text>
-                    <Text style={[styles.excelHeaderText, { width: 150 }]}>Product</Text>
-                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Bag Size</Text>
-                    <Text style={[styles.excelHeaderText, { width: 100 }]}>Qty</Text>
-                    <Text style={[styles.excelHeaderText, { width: 80 }]}></Text>
-                  </View>
-
-                  <View style={styles.excelRow}>
-                    <View style={{ width: 100 }}>
-                      <InputField value={productionTime} onChangeText={setProductionTime} placeholder="10:00 AM" dense />
-                    </View>
-                    <View style={{ width: 100 }}>
-                      <InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense />
-                    </View>
-                    <View style={{ width: 100 }}>
-                      <InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense />
-                    </View>
-                    <View style={{ width: 150 }}>
-                      <SelectDropdown
-                        value={productionDetails[0]?.finished_good_id}
-                        onValueChange={(v) => {
-                          if (productionDetails.length === 0) {
-                            setProductionDetails([{ finished_good_id: v, bag_size_id: "", quantity_bags: "" }]);
-                          } else {
-                            updateDetail(0, 'finished_good_id', v);
-                          }
-                        }}
-                        options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
-                        dense
-                      />
-                    </View>
-                    <View style={{ width: 100 }}>
-                      <SelectDropdown
-                        value={productionDetails[0]?.bag_size_id}
-                        onValueChange={(v) => {
-                          if (productionDetails.length === 0) {
-                            setProductionDetails([{ finished_good_id: "", bag_size_id: v, quantity_bags: "" }]);
-                          } else {
-                            updateDetail(0, 'bag_size_id', v);
-                          }
-                        }}
-                        options={bagSizes.map(bs => ({ label: `${bs.weight_kg}kg`, value: bs.id }))}
-                        dense
-                      />
-                    </View>
-                    <View style={{ width: 100 }}>
-                      <InputField
-                        value={productionDetails[0]?.quantity_bags}
-                        onChangeText={(v) => {
-                          if (productionDetails.length === 0) {
-                            setProductionDetails([{ finished_good_id: "", bag_size_id: "", quantity_bags: v }]);
-                          } else {
-                            updateDetail(0, 'quantity_bags', v);
-                          }
-                        }}
-                        keyboardType="numeric"
-                        dense
-                      />
-                    </View>
-                    <View style={{ width: 80 }}></View>
-                  </View>
-
-                  {productionDetails.slice(1).map((detail, index) => {
-                    const actualIndex = index + 1;
-                    return (
-                      <View key={actualIndex} style={styles.excelRow}>
-                        <View style={{ width: 100 }} />
-                        <View style={{ width: 100 }} />
-                        <View style={{ width: 100 }} />
-                        <View style={{ width: 150 }}>
-                          <SelectDropdown
-                            value={detail.finished_good_id}
-                            onValueChange={(v) => updateDetail(actualIndex, 'finished_good_id', v)}
-                            options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
-                            dense
-                          />
-                        </View>
-                        <View style={{ width: 100 }}>
-                          <SelectDropdown
-                            value={detail.bag_size_id}
-                            onValueChange={(v) => updateDetail(actualIndex, 'bag_size_id', v)}
-                            options={bagSizes.map(bs => ({ label: `${bs.weight_kg}kg`, value: bs.id }))}
-                            dense
-                          />
-                        </View>
-                        <View style={{ width: 100 }}>
-                          <InputField
-                            value={detail.quantity_bags}
-                            onChangeText={(v) => updateDetail(actualIndex, 'quantity_bags', v)}
-                            keyboardType="numeric"
-                            dense
-                          />
-                        </View>
-                        <TouchableOpacity 
-                          onPress={() => setProductionDetails(productionDetails.filter((_, i) => i !== actualIndex))}
-                          style={[styles.removeBtn, { width: 80, alignItems: 'center' }]}
-                        >
-                          <Text style={styles.removeText}>✖</Text>
-                        </TouchableOpacity>
+                  {/* Complex Header */}
+                  <View style={styles.excelMainHeaderRow}>
+                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
+                    <View style={[styles.mainHeaderCell, { width: 80 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
+                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
+                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
+                    
+                    {/* Tandoori Atta */}
+                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
+                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>Tandoori Atta (Bags)</Text></View>
+                      <View style={{ flexDirection: 'row' }}>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>50 Kg</Text></View>
                       </View>
-                    );
-                  })}
+                    </View>
+
+                    {/* DP Atta */}
+                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
+                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>DP Atta (Bags)</Text></View>
+                      <View style={{ flexDirection: 'row' }}>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>50 Kg</Text></View>
+                      </View>
+                    </View>
+
+                    {/* Bran/Flakes */}
+                    <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>Deluxe Bran 45Kg</Text></View>
+                    <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>Rough Bran 49Kg</Text></View>
+                    
+                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
+                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>Flakes (Bags)</Text></View>
+                      <View style={{ flexDirection: 'row' }}>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
+                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>34 Kg</Text></View>
+                      </View>
+                    </View>
+
+                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
+                  </View>
+
+                  {/* Data Input Row */}
+                  <View style={styles.excelDataRow}>
+                    <View style={{ width: 100, padding: 2 }}><InputField value={productionDate} disabled dense /></View>
+                    <View style={{ width: 80, padding: 2 }}><InputField value={productionTime} onChangeText={setProductionTime} placeholder="8am" dense /></View>
+                    <View style={{ width: 100, padding: 2 }}><InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense /></View>
+                    <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
+                    
+                    {/* Tandoori Atta Inputs - Mapping to productionDetails */}
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#E1BEE7' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'TA_30')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('TA_30', v)} keyboardType="numeric" dense />
+                    </View>
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#E1BEE7' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'TA_50')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('TA_50', v)} keyboardType="numeric" dense />
+                    </View>
+
+                    {/* DP Atta Inputs */}
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFE0B2' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'DP_30')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('DP_30', v)} keyboardType="numeric" dense />
+                    </View>
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFE0B2' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'DP_50')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('DP_50', v)} keyboardType="numeric" dense />
+                    </View>
+
+                    {/* Bran/Flakes Inputs */}
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#E0E0E0' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'DB_45')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('DB_45', v)} keyboardType="numeric" dense />
+                    </View>
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFCCBC' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'RB_49')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('RB_49', v)} keyboardType="numeric" dense />
+                    </View>
+
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#C5CAE9' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'FL_30')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('FL_30', v)} keyboardType="numeric" dense />
+                    </View>
+                    <View style={{ width: 80, padding: 2, backgroundColor: '#C5CAE9' }}>
+                      <InputField value={productionDetails.find(d => d.product_code === 'FL_34')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('FL_34', v)} keyboardType="numeric" dense />
+                    </View>
+
+                    <View style={{ width: 100, padding: 2 }}><InputField value={productionDetails.find(d => d.product_code === 'REPROCESS')?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate('REPROCESS', v)} keyboardType="numeric" dense /></View>
+                  </View>
                 </View>
               </ScrollView>
-
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
-                <TouchableOpacity style={styles.addGridBtn} onPress={handleAddDetail}>
-                  <Text style={styles.addGridBtnText}>+ Add Product Row</Text>
-                </TouchableOpacity>
-              </View>
 
               <View style={{ marginTop: 20 }}>
                 <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
@@ -362,5 +404,16 @@ const styles = StyleSheet.create({
   excelHeaderText: { fontSize: 12, fontWeight: 'bold', color: '#666', textAlign: 'center' },
   excelRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#EEE' },
   addGridBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.primary, backgroundColor: '#FFF' },
-  addGridBtnText: { color: colors.primary, fontWeight: 'bold', fontSize: 13 }
+  addGridBtnText: { color: colors.primary, fontWeight: 'bold', fontSize: 13 },
+  excelTopHeader: { flexDirection: 'row', backgroundColor: '#FFFAD2', borderWidth: 1, borderColor: '#CCC', marginBottom: 15 },
+  topHeaderBox: { flex: 1, padding: 8, borderRightWidth: 1, borderColor: '#CCC', alignItems: 'center' },
+  topHeaderLabel: { fontSize: 10, fontWeight: 'bold', color: '#666', marginBottom: 4 },
+  topHeaderValue: { fontSize: 14, fontWeight: 'bold', color: '#000' },
+  excelMainHeaderRow: { flexDirection: 'row', backgroundColor: '#FFFAD2' },
+  mainHeaderCell: { padding: 10, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#CCC', justifyContent: 'center', alignItems: 'center' },
+  mainHeaderText: { fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  subHeaderTitle: { padding: 5, borderBottomWidth: 1, borderColor: '#CCC', alignItems: 'center', backgroundColor: '#FFFAD2' },
+  subHeaderCell: { flex: 1, padding: 5, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#CCC', alignItems: 'center', backgroundColor: '#FFFAD2', minWidth: 80 },
+  subHeaderText: { fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#CCC' }
 });
