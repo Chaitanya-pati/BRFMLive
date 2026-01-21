@@ -197,7 +197,7 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      await client.put(`/12hour-transfer/records/${currentRecordId}`, {
+      await client.patch(`/12hour-transfer/records/${currentRecordId}`, {
         quantity_transferred: parseFloat(transferQuantity),
         water_added: waterAdded ? parseFloat(waterAdded) : 0,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
