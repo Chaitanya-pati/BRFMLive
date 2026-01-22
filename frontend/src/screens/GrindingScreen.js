@@ -76,10 +76,15 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       const res = await client.get("/grinding/hourly-production");
+      
+      // Filter data for the current production order
       const existingData = (res.data || []).filter(row => row.production_order_id === orderId);
       
-      if (existingData.length > 0) {
-        const formattedRows = existingData.map(row => ({
+      // Sort existing data by created_at or production_time to maintain order
+      const sortedData = existingData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+      if (sortedData.length > 0) {
+        const formattedRows = sortedData.map(row => ({
           id: row.id,
           productionDate: row.production_date,
           productionTime: row.production_time,
