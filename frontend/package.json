@@ -33,8 +33,10 @@
   },
   "private": true,
   "devDependencies": {
+    "@babel/preset-flow": "^7.27.1",
+    "@babel/preset-react": "^7.28.5",
     "@expo/cli": "^0.24.22",
-    "babel-preset-expo": "^54.0.9",
+    "babel-preset-expo": "^54.0.10",
     "react-refresh": "^0.18.0"
   }
 }
