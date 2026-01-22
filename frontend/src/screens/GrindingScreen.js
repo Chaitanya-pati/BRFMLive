@@ -42,6 +42,9 @@ export default function GrindingScreen({ navigation }) {
         client.get("/bag-sizes"),
         client.get("/finished-goods")
       ]);
+      
+      // The available-bins endpoint returns Transfer12HourRecord with production_order relationship
+      // Ensure we include raw product name if available in the response
       setAvailableBins(binsRes.data || []);
       setBagSizes(bagsRes.data || []);
       setFinishedGoods(fgRes.data || []);
@@ -132,7 +135,7 @@ export default function GrindingScreen({ navigation }) {
                   return (
                     <View key={bsIdx} style={{ width: 80, padding: 2, backgroundColor: getBgColor(catIdx) }}>
                       <InputField 
-                        value={detail?.quantity_bags} 
+                        value={detail?.quantity_bags?.toString() || ""} 
                         onChangeText={(v) => handleGridUpdate(fg.id, bs.id, v)} 
                         keyboardType="numeric" 
                         dense 

@@ -702,19 +702,26 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
         
         production_order_id = None
         order_number = None
+        raw_product_name = None
+        created_at = None
         
         if latest_transfer:
             production_order_id = latest_transfer.production_order_id
             order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == production_order_id).first()
             if order:
                 order_number = order.order_number
+                created_at = order.created_at.isoformat() if order.created_at else None
+                if order.raw_product:
+                    raw_product_name = order.raw_product.product_name
         
         result.append({
             "id": bin_obj.id,
             "bin_number": bin_obj.bin_number,
             "status": bin_obj.status,
             "production_order_id": production_order_id,
-            "order_number": order_number
+            "order_number": order_number,
+            "raw_product_name": raw_product_name,
+            "created_at": created_at
         })
             
     return result
