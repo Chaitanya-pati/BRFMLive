@@ -23,13 +23,17 @@ export default function GrindingScreen({ navigation }) {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [productBagSizeMap, setProductBagSizeMap] = useState({});
 
-  // Hourly Data Form
-  const [productionDate, setProductionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [productionTime, setProductionTime] = useState("");
-  const [b1Reading, setB1Reading] = useState("");
-  const [loadPerHour, setLoadPerHour] = useState("");
-  
-  const [productionDetails, setProductionDetails] = useState([]);
+  // Hourly Data Form - Multiple Rows
+  const [productionRows, setProductionRows] = useState([
+    {
+      id: Date.now(),
+      productionDate: new Date().toISOString().split('T')[0],
+      productionTime: "",
+      b1Reading: "",
+      loadPerHour: "",
+      productionDetails: []
+    }
+  ]);
 
   useEffect(() => {
     fetchInitialData();
@@ -68,6 +72,51 @@ export default function GrindingScreen({ navigation }) {
     }
   };
 
+  const fetchExistingProductionData = async (orderId) => {
+    try {
+      const client = getApiClient();
+      const res = await client.get("/grinding/hourly-production");
+      const existingData = (res.data || []).filter(row => row.production_order_id === orderId);
+      
+      if (existingData.length > 0) {
+        const formattedRows = existingData.map(row => ({
+          id: row.id,
+          productionDate: row.production_date,
+          productionTime: row.production_time,
+          b1Reading: row.b1_scale_reading?.toString(),
+          loadPerHour: row.load_per_hour_tons?.toString(),
+          productionDetails: row.details || [],
+          isSubmitted: true
+        }));
+        
+        // Add one empty row for new entry
+        formattedRows.push({
+          id: Date.now(),
+          productionDate: new Date().toISOString().split('T')[0],
+          productionTime: "",
+          b1Reading: "",
+          loadPerHour: "",
+          productionDetails: [],
+          isSubmitted: false
+        });
+        
+        setProductionRows(formattedRows);
+      } else {
+        setProductionRows([{
+          id: Date.now(),
+          productionDate: new Date().toISOString().split('T')[0],
+          productionTime: "",
+          b1Reading: "",
+          loadPerHour: "",
+          productionDetails: [],
+          isSubmitted: false
+        }]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch existing production data", error);
+    }
+  };
+
   const handleBinSelect = (bin) => {
     if (!bin.production_order_id) {
       showAlert("Error", "No Production Order found for this bin in transfer records");
@@ -75,19 +124,48 @@ export default function GrindingScreen({ navigation }) {
     }
     setSelectedBin(bin);
     setIsGrindingStarted(true);
+    fetchExistingProductionData(bin.production_order_id);
     showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
 
-  const handleGridUpdate = (fgId, bsId, value) => {
-    const newDetails = [...productionDetails];
-    const index = newDetails.findIndex(d => d.finished_good_id === fgId && d.bag_size_id === bsId);
-    
-    if (index > -1) {
-      newDetails[index].quantity_bags = value;
-    } else {
-      newDetails.push({ finished_good_id: fgId, bag_size_id: bsId, quantity_bags: value });
+  const handleAddRow = () => {
+    setProductionRows([...productionRows, {
+      id: Date.now(),
+      productionDate: new Date().toISOString().split('T')[0],
+      productionTime: "",
+      b1Reading: "",
+      loadPerHour: "",
+      productionDetails: [],
+      isSubmitted: false
+    }]);
+  };
+
+  const handleRemoveRow = (rowId) => {
+    if (productionRows.length > 1) {
+      setProductionRows(productionRows.filter(r => r.id !== rowId));
     }
-    setProductionDetails(newDetails);
+  };
+
+  const handleRowUpdate = (rowId, field, value) => {
+    setProductionRows(productionRows.map(row => 
+      row.id === rowId ? { ...row, [field]: value } : row
+    ));
+  };
+
+  const handleGridUpdate = (rowId, fgId, bsId, value) => {
+    setProductionRows(productionRows.map(row => {
+      if (row.id !== rowId) return row;
+      
+      const newDetails = [...row.productionDetails];
+      const index = newDetails.findIndex(d => d.finished_good_id === fgId && d.bag_size_id === bsId);
+      
+      if (index > -1) {
+        newDetails[index].quantity_bags = value;
+      } else {
+        newDetails.push({ finished_good_id: fgId, bag_size_id: bsId, quantity_bags: value });
+      }
+      return { ...row, productionDetails: newDetails };
+    }));
   };
 
   const toggleProduct = (id) => {
@@ -144,6 +222,7 @@ export default function GrindingScreen({ navigation }) {
 
         {/* Dynamic Header */}
         <View style={styles.excelMainHeaderRow}>
+          <View style={[styles.mainHeaderCell, { width: 40 }]}><Text style={styles.mainHeaderText}>#</Text></View>
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
           <View style={[styles.mainHeaderCell, { width: 80 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
@@ -169,47 +248,66 @@ export default function GrindingScreen({ navigation }) {
             );
           })}
           <View style={[styles.mainHeaderCell, { width: 100, backgroundColor: '#FFFAD2' }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 50 }]}><Text style={styles.mainHeaderText}>Act</Text></View>
         </View>
 
-        {/* Dynamic Data Row */}
-        <View style={styles.excelDataRow}>
-          <View style={{ width: 100, padding: 2 }}><InputField value={productionDate} disabled dense /></View>
-          <View style={{ width: 80, padding: 2 }}><InputField value={productionTime} onChangeText={setProductionTime} placeholder="8am" dense /></View>
-          <View style={{ width: 100, padding: 2 }}><InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense /></View>
-          <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
-          
-          {activeFgs.map((fg, fgIdx) => {
-            const activeBagIds = productBagSizeMap[fg.id] || [];
-            const relevantBags = bagSizes.filter(bs => activeBagIds.includes(bs.id));
-            if (relevantBags.length === 0) return null;
+        {/* Dynamic Data Rows */}
+        {productionRows.map((row, rowIdx) => (
+          <View key={row.id} style={[styles.excelDataRow, row.isSubmitted && { backgroundColor: '#F0F0F0' }]}>
+            <View style={{ width: 40, justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderColor: '#CCC' }}>
+              <Text style={{ fontSize: 10 }}>{rowIdx + 1}</Text>
+            </View>
+            <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 80, padding: 2 }}><InputField value={row.productionTime} onChangeText={(v) => handleRowUpdate(row.id, 'productionTime', v)} placeholder="8am" disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 100, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
+            
+            {activeFgs.map((fg, fgIdx) => {
+              const activeBagIds = productBagSizeMap[fg.id] || [];
+              const relevantBags = bagSizes.filter(bs => activeBagIds.includes(bs.id));
+              if (relevantBags.length === 0) return null;
 
-            return (
-              <View key={fg.id} style={{ flexDirection: 'row' }}>
-                {relevantBags.map((bs) => {
-                  const detail = productionDetails.find(d => d.finished_good_id === fg.id && d.bag_size_id === bs.id);
-                  return (
-                    <View key={bs.id} style={{ width: 80, padding: 2, backgroundColor: getBgColor(fgIdx) }}>
-                      <InputField 
-                        value={detail?.quantity_bags?.toString() || ""} 
-                        onChangeText={(v) => handleGridUpdate(fg.id, bs.id, v)} 
-                        keyboardType="numeric" 
-                        dense 
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-            );
-          })}
-          <View style={{ width: 100, padding: 2, backgroundColor: '#FFFAD2' }}>
-            <InputField 
-              value={productionDetails.find(d => d.finished_good_id === 'REPROCESS')?.quantity_bags} 
-              onChangeText={(v) => handleGridUpdate('REPROCESS', null, v)} 
-              keyboardType="numeric" 
-              dense 
-            />
+              return (
+                <View key={fg.id} style={{ flexDirection: 'row' }}>
+                  {relevantBags.map((bs) => {
+                    const detail = row.productionDetails.find(d => d.finished_good_id === fg.id && d.bag_size_id === bs.id);
+                    return (
+                      <View key={bs.id} style={{ width: 80, padding: 2, backgroundColor: getBgColor(fgIdx) }}>
+                        <InputField 
+                          value={detail?.quantity_bags?.toString() || ""} 
+                          onChangeText={(v) => handleGridUpdate(row.id, fg.id, bs.id, v)} 
+                          keyboardType="numeric" 
+                          disabled={row.isSubmitted}
+                          dense 
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
+            <View style={{ width: 100, padding: 2, backgroundColor: '#FFFAD2' }}>
+              <InputField 
+                value={row.productionDetails.find(d => d.finished_good_id === 'REPROCESS')?.quantity_bags?.toString() || ""} 
+                onChangeText={(v) => handleGridUpdate(row.id, 'REPROCESS', null, v)} 
+                keyboardType="numeric" 
+                disabled={row.isSubmitted}
+                dense 
+              />
+            </View>
+            <View style={{ width: 50, padding: 2, justifyContent: 'center', alignItems: 'center' }}>
+              {!row.isSubmitted && (
+                <TouchableOpacity onPress={() => handleRemoveRow(row.id)}>
+                  <Text style={{ color: '#F44336', fontSize: 18 }}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
+        ))}
+        
+        <TouchableOpacity style={styles.addRowBtn} onPress={handleAddRow}>
+          <Text style={styles.addRowBtnText}>+ Add New Entry Row</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -219,19 +317,11 @@ export default function GrindingScreen({ navigation }) {
     return colors[idx % colors.length];
   };
 
-  const handleAddDetail = () => {
-    setProductionDetails([...productionDetails, { finished_good_id: "", bag_size_id: "", quantity_bags: "" }]);
-  };
-
-  const updateDetail = (index, field, value) => {
-    const newDetails = [...productionDetails];
-    newDetails[index][field] = value;
-    setProductionDetails(newDetails);
-  };
-
   const handleSubmitHourly = async () => {
-    if (!productionTime || !b1Reading) {
-      showAlert("Validation", "Please enter Time and B1 Reading");
+    const newRows = productionRows.filter(r => !r.isSubmitted);
+    
+    if (newRows.length === 0) {
+      showAlert("Info", "All rows are already submitted");
       return;
     }
 
@@ -239,35 +329,30 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       
-      // Filter out empty lines before submitting
-      const validDetails = productionDetails
-        .filter(d => d.finished_good_id && d.bag_size_id)
-        .map(d => ({
-          ...d,
-          quantity_bags: parseInt(d.quantity_bags) || 0
-        }));
+      for (const row of newRows) {
+        if (!row.productionTime || !row.b1Reading) continue;
 
-      if (validDetails.length === 0) {
-        showAlert("Validation", "Please add at least one finished good entry with product and bag size");
-        setLoading(false);
-        return;
+        const validDetails = row.productionDetails
+          .filter(d => d.finished_good_id)
+          .map(d => ({
+            ...d,
+            quantity_bags: parseInt(d.quantity_bags) || 0
+          }));
+
+        if (validDetails.length === 0) continue;
+
+        await client.post("/grinding/hourly-production", {
+          production_order_id: selectedBin.production_order_id,
+          production_date: row.productionDate,
+          production_time: row.productionTime,
+          b1_scale_reading: parseFloat(row.b1Reading),
+          load_per_hour_tons: parseFloat(row.loadPerHour) || 0,
+          details: validDetails
+        });
       }
 
-      await client.post("/grinding/hourly-production", {
-        production_order_id: selectedBin.production_order_id,
-        production_date: productionDate,
-        production_time: productionTime,
-        b1_scale_reading: parseFloat(b1Reading),
-        load_per_hour_tons: parseFloat(loadPerHour) || 0,
-        details: validDetails
-      });
       showToast("Success", "Hourly production recorded");
-      navigation.navigate('GrindingExcelView');
-      // Reset form
-      setProductionTime("");
-      setB1Reading("");
-      setLoadPerHour("");
-      setProductionDetails([]);
+      fetchExistingProductionData(selectedBin.production_order_id);
     } catch (error) {
       showAlert("Error", "Failed to save hourly production");
     } finally {
@@ -460,5 +545,16 @@ const styles = StyleSheet.create({
   miniChipText: { fontSize: 9, color: '#666' },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 11, color: '#666' },
-  chipTextActive: { color: '#FFF', fontWeight: 'bold' }
+  chipTextActive: { color: '#FFF', fontWeight: 'bold' },
+  addRowBtn: { 
+    marginVertical: 15, 
+    padding: 12, 
+    borderWidth: 1, 
+    borderColor: colors.primary, 
+    borderStyle: 'dashed', 
+    borderRadius: 8, 
+    alignItems: 'center',
+    backgroundColor: '#fff'
+  },
+  addRowBtnText: { color: colors.primary, fontWeight: 'bold' }
 });
