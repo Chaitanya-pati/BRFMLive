@@ -164,7 +164,7 @@ export default function GrindingScreen({ navigation }) {
               </View>
             );
           })}
-          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 100, backgroundColor: '#FFFAD2' }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
         </View>
 
         {/* Dynamic Data Row */}
@@ -196,7 +196,7 @@ export default function GrindingScreen({ navigation }) {
               </View>
             );
           })}
-          <View style={{ width: 100, padding: 2 }}>
+          <View style={{ width: 100, padding: 2, backgroundColor: '#FFFAD2' }}>
             <InputField 
               value={productionDetails.find(d => d.product_code === 'REPROCESS')?.quantity_bags} 
               onChangeText={(v) => handleGridUpdate('REPROCESS', null, v)} 

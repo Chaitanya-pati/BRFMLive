@@ -40,7 +40,8 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
     try {
       setLoading(true);
       const response = await finishedGoodApi.getAll();
-      setProducts(response.data);
+      console.log('Finished goods data:', response.data);
+      setProducts(response.data || []);
     } catch (error) {
       console.error('Error loading finished goods:', error);
       showError('Failed to load finished goods');
@@ -117,39 +118,29 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'product_name', title: 'Product Name', width: 200 },
-    { key: 'product_initial', title: 'Initial', width: 100 },
-    { key: 'created_at', title: 'Created', width: 150, render: (item) => formatISTDate(item.created_at) },
+    { label: 'Product Name', field: 'product_name', flex: 1.5 },
+    { label: 'Short Code', field: 'product_initial', flex: 1 },
+    { label: 'Branch ID', field: 'branch_id', flex: 0.8 },
+    { label: 'Date Created', field: 'created_at', type: 'datetime', flex: 1.2 },
   ];
 
-  const renderActions = (item) => (
-    <View style={styles.actionButtons}>
-      <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
-        <Text style={styles.buttonText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-        <Text style={styles.buttonText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderActions = (item) => {
+    // This function is no longer needed since DataTable uses its own internal action rendering
+    return null;
+  };
 
   return (
     <Layout title="Finished Goods Master" navigation={navigation}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Finished Goods</Text>
-          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-            <Text style={styles.addButtonText}>+ Add Finished Good</Text>
-          </TouchableOpacity>
-        </View>
-
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <DataTable
             columns={columns}
             data={products}
-            renderActions={renderActions}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            onAdd={openAddModal}
           />
         )}
 
