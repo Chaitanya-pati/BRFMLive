@@ -62,49 +62,103 @@ export default function GrindingScreen({ navigation }) {
     showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
 
-  const handleGridUpdate = (productCode, value) => {
+  const handleGridUpdate = (fgId, bsId, value) => {
     const newDetails = [...productionDetails];
-    const index = newDetails.findIndex(d => d.product_code === productCode);
+    const index = newDetails.findIndex(d => d.finished_good_id === fgId && d.bag_size_id === bsId);
     
-    // Find correct FG and Bag Size IDs based on productCode
-    let finishedGoodId = null;
-    let bagSizeId = null;
-
-    if (productCode === 'TA_30') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Tandoori'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
-    } else if (productCode === 'TA_50') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Tandoori'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 50)?.id;
-    } else if (productCode === 'DP_30') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('DP'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
-    } else if (productCode === 'DP_50') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('DP'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 50)?.id;
-    } else if (productCode === 'DB_45') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Deluxe'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 45)?.id;
-    } else if (productCode === 'RB_49') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Rough'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 49)?.id;
-    } else if (productCode === 'FL_30') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Flakes'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 30)?.id;
-    } else if (productCode === 'FL_34') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Flakes'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 34)?.id;
-    } else if (productCode === 'REPROCESS') {
-      finishedGoodId = finishedGoods.find(fg => fg.product_name.includes('Reprocess'))?.id;
-      bagSizeId = bagSizes.find(bs => bs.weight_kg == 1)?.id; // Default or small unit
-    }
-
     if (index > -1) {
       newDetails[index].quantity_bags = value;
     } else {
-      newDetails.push({ product_code: productCode, finished_good_id: finishedGoodId, bag_size_id: bagSizeId, quantity_bags: value });
+      newDetails.push({ finished_good_id: fgId, bag_size_id: bsId, quantity_bags: value });
     }
     setProductionDetails(newDetails);
+  };
+
+  const renderDynamicGrid = () => {
+    // Group finished goods by name to create categories like "Tandoori Atta"
+    const categories = {};
+    finishedGoods.forEach(fg => {
+      const name = fg.product_name;
+      if (!categories[name]) categories[name] = [];
+      categories[name].push(fg);
+    });
+
+    return (
+      <View>
+        {/* Dynamic Header */}
+        <View style={styles.excelMainHeaderRow}>
+          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 80 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
+          
+          {Object.keys(categories).map((catName, catIdx) => {
+            const catFgs = categories[catName];
+            const relevantBagSizes = bagSizes.filter(bs => true); // In a real app, maybe filter by what's allowed for this FG
+            
+            // For now, let's assume we want to show all bag sizes for each product if they exist
+            // Or better: show columns for each unique bag size associated with this product name
+            return (
+              <View key={catIdx} style={{ borderRightWidth: 1, borderColor: '#CCC' }}>
+                <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>{catName} (Bags)</Text></View>
+                <View style={{ flexDirection: 'row' }}>
+                  {bagSizes.map((bs, bsIdx) => (
+                    <View key={bsIdx} style={styles.subHeaderCell}>
+                      <Text style={styles.subHeaderText}>{bs.weight_kg} Kg</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
+        </View>
+
+        {/* Dynamic Data Row */}
+        <View style={styles.excelDataRow}>
+          <View style={{ width: 100, padding: 2 }}><InputField value={productionDate} disabled dense /></View>
+          <View style={{ width: 80, padding: 2 }}><InputField value={productionTime} onChangeText={setProductionTime} placeholder="8am" dense /></View>
+          <View style={{ width: 100, padding: 2 }}><InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense /></View>
+          <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
+          
+          {Object.keys(categories).map((catName, catIdx) => {
+            const catFgs = categories[catName];
+            return (
+              <View key={catIdx} style={{ flexDirection: 'row' }}>
+                {bagSizes.map((bs, bsIdx) => {
+                  // Find the FG that matches this category name
+                  const fg = catFgs[0]; // Assuming one FG per name for simplicity in this grid
+                  const detail = productionDetails.find(d => d.finished_good_id === fg.id && d.bag_size_id === bs.id);
+                  return (
+                    <View key={bsIdx} style={{ width: 80, padding: 2, backgroundColor: getBgColor(catIdx) }}>
+                      <InputField 
+                        value={detail?.quantity_bags} 
+                        onChangeText={(v) => handleGridUpdate(fg.id, bs.id, v)} 
+                        keyboardType="numeric" 
+                        dense 
+                      />
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+          <View style={{ width: 100, padding: 2 }}>
+            <InputField 
+              value={productionDetails.find(d => d.product_code === 'REPROCESS')?.quantity_bags} 
+              onChangeText={(v) => handleGridUpdate('REPROCESS', null, v)} 
+              keyboardType="numeric" 
+              dense 
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const getBgColor = (idx) => {
+    const colors = ['#E1BEE7', '#FFE0B2', '#E0E0E0', '#FFCCBC', '#C5CAE9', '#F0F4C3'];
+    return colors[idx % colors.length];
   };
 
   const handleAddDetail = () => {
@@ -229,114 +283,24 @@ export default function GrindingScreen({ navigation }) {
               <View style={styles.excelTopHeader}>
                 <View style={styles.topHeaderBox}>
                   <Text style={styles.topHeaderLabel}>Date</Text>
-                  <Text style={styles.topHeaderValue}>{productionDate}</Text>
+                  <Text style={styles.topHeaderValue}>{selectedBin?.created_at ? new Date(selectedBin.created_at).toISOString().split('T')[0] : productionDate}</Text>
                 </View>
                 <View style={styles.topHeaderBox}>
                   <Text style={styles.topHeaderLabel}>Batch No</Text>
-                  <Text style={styles.topHeaderValue}>{selectedBin?.order_number?.split('-').pop() || 'N/A'}</Text>
+                  <Text style={styles.topHeaderValue}>{selectedBin?.order_number || 'N/A'}</Text>
                 </View>
                 <View style={styles.topHeaderBox}>
                   <Text style={styles.topHeaderLabel}>Product</Text>
-                  <Text style={styles.topHeaderValue}>Wheat</Text>
+                  <Text style={styles.topHeaderValue}>{selectedBin?.raw_product_name || 'Wheat'}</Text>
                 </View>
                 <View style={styles.topHeaderBox}>
                   <Text style={styles.topHeaderLabel}>Start Date</Text>
-                  <Text style={styles.topHeaderValue}>{productionDate}</Text>
+                  <Text style={styles.topHeaderValue}>{selectedBin?.created_at ? new Date(selectedBin.created_at).toISOString().split('T')[0] : productionDate}</Text>
                 </View>
               </View>
 
               <ScrollView horizontal>
-                <View>
-                  {/* Complex Header */}
-                  <View style={styles.excelMainHeaderRow}>
-                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
-                    <View style={[styles.mainHeaderCell, { width: 80 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
-                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
-                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
-                    
-                    {/* Tandoori Atta */}
-                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
-                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>Tandoori Atta (Bags)</Text></View>
-                      <View style={{ flexDirection: 'row' }}>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>50 Kg</Text></View>
-                      </View>
-                    </View>
-
-                    {/* DP Atta */}
-                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
-                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>DP Atta (Bags)</Text></View>
-                      <View style={{ flexDirection: 'row' }}>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>50 Kg</Text></View>
-                      </View>
-                    </View>
-
-                    {/* Bran/Flakes */}
-                    <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>Deluxe Bran 45Kg</Text></View>
-                    <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>Rough Bran 49Kg</Text></View>
-                    
-                    <View style={{ width: 160, borderRightWidth: 1, borderColor: '#CCC' }}>
-                      <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>Flakes (Bags)</Text></View>
-                      <View style={{ flexDirection: 'row' }}>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>30 Kg</Text></View>
-                        <View style={styles.subHeaderCell}><Text style={styles.subHeaderText}>34 Kg</Text></View>
-                      </View>
-                    </View>
-
-                    <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Reprocess Kgs/Hr</Text></View>
-                  </View>
-
-                  {/* Data Input Row */}
-                  <View style={styles.excelDataRow}>
-                    <View style={{ width: 100, padding: 2 }}><InputField value={productionDate} disabled dense /></View>
-                    <View style={{ width: 80, padding: 2 }}><InputField value={productionTime} onChangeText={setProductionTime} placeholder="8am" dense /></View>
-                    <View style={{ width: 100, padding: 2 }}><InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense /></View>
-                    <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
-                    
-                    {/* Tandoori Atta Inputs - Mapping to productionDetails */}
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#E1BEE7' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'TA_30')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('TA_30', v)} keyboardType="numeric" dense />
-                    </View>
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#E1BEE7' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'TA_50')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('TA_50', v)} keyboardType="numeric" dense />
-                    </View>
-
-                    {/* DP Atta Inputs */}
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFE0B2' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'DP_30')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('DP_30', v)} keyboardType="numeric" dense />
-                    </View>
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFE0B2' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'DP_50')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('DP_50', v)} keyboardType="numeric" dense />
-                    </View>
-
-                    {/* Bran/Flakes Inputs */}
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#E0E0E0' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'DB_45')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('DB_45', v)} keyboardType="numeric" dense />
-                    </View>
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#FFCCBC' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'RB_49')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('RB_49', v)} keyboardType="numeric" dense />
-                    </View>
-
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#C5CAE9' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'FL_30')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('FL_30', v)} keyboardType="numeric" dense />
-                    </View>
-                    <View style={{ width: 80, padding: 2, backgroundColor: '#C5CAE9' }}>
-                      <InputField value={productionDetails.find(d => d.product_code === 'FL_34')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('FL_34', v)} keyboardType="numeric" dense />
-                    </View>
-
-                    <View style={{ width: 100, padding: 2 }}><InputField value={productionDetails.find(d => d.product_code === 'REPROCESS')?.quantity_bags} 
-                        onChangeText={(v) => handleGridUpdate('REPROCESS', v)} keyboardType="numeric" dense /></View>
-                  </View>
-                </View>
+                {renderDynamicGrid()}
               </ScrollView>
 
               <View style={{ marginTop: 20 }}>
