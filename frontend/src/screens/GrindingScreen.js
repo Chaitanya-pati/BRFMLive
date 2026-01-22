@@ -86,9 +86,11 @@ export default function GrindingScreen({ navigation }) {
   };
 
   const toggleProduct = (id) => {
-    setSelectedProductIds(prev => 
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setSelectedProductIds(prev => {
+      const newIds = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+      // When a product is selected, ensure we update the productionDetails for its specific bag sizes if needed
+      return newIds;
+    });
   };
 
   const toggleBagSize = (id) => {
@@ -101,20 +103,16 @@ export default function GrindingScreen({ navigation }) {
     const activeFgs = finishedGoods.filter(fg => selectedProductIds.includes(fg.id));
     const activeBags = bagSizes.filter(bs => selectedBagSizeIds.includes(bs.id));
 
-    // Group finished goods by name to create categories
-    const categories = {};
-    activeFgs.forEach(fg => {
-      const name = fg.product_name;
-      if (!categories[name]) categories[name] = [];
-      categories[name].push(fg);
-    });
+    // Grouping is not strictly necessary if we want to show each FG individually
+    // but the user wants to handle different bag sizes for each product.
+    // Let's ensure the grid correctly maps FG -> BagSize
 
     return (
       <View>
         <View style={styles.columnSelector}>
           <Text style={styles.selectorLabel}>Show Products:</Text>
           <View style={styles.chipContainer}>
-            {finishedGoods.map(fg => (
+            {finishedGoods.length > 0 ? finishedGoods.map(fg => (
               <TouchableOpacity 
                 key={fg.id} 
                 onPress={() => toggleProduct(fg.id)}
@@ -122,12 +120,12 @@ export default function GrindingScreen({ navigation }) {
               >
                 <Text style={[styles.chipText, selectedProductIds.includes(fg.id) && styles.chipTextActive]}>{fg.product_name}</Text>
               </TouchableOpacity>
-            ))}
+            )) : <Text style={{fontSize: 12, color: '#999'}}>No finished goods found</Text>}
           </View>
           
           <Text style={styles.selectorLabel}>Show Bag Sizes:</Text>
           <View style={styles.chipContainer}>
-            {bagSizes.map(bs => (
+            {bagSizes.length > 0 ? bagSizes.map(bs => (
               <TouchableOpacity 
                 key={bs.id} 
                 onPress={() => toggleBagSize(bs.id)}
@@ -135,7 +133,7 @@ export default function GrindingScreen({ navigation }) {
               >
                 <Text style={[styles.chipText, selectedBagSizeIds.includes(bs.id) && styles.chipTextActive]}>{bs.weight_kg}kg</Text>
               </TouchableOpacity>
-            ))}
+            )) : <Text style={{fontSize: 12, color: '#999'}}>No bag sizes found</Text>}
           </View>
         </View>
 
@@ -146,13 +144,19 @@ export default function GrindingScreen({ navigation }) {
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
           
-          {Object.keys(categories).map((catName, catIdx) => {
+          {activeFgs.map((fg, fgIdx) => {
+            // Group bag sizes by product to handle different bag sizes for each product
+            // Since activeBags are global, we display all selected bag sizes for each product
+            const relevantBags = activeBags;
+            
+            if (relevantBags.length === 0) return null;
+
             return (
-              <View key={catIdx} style={{ borderRightWidth: 1, borderColor: '#CCC' }}>
-                <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>{catName}</Text></View>
+              <View key={fg.id} style={{ borderRightWidth: 1, borderColor: '#CCC' }}>
+                <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>{fg.product_name}</Text></View>
                 <View style={{ flexDirection: 'row' }}>
-                  {activeBags.map((bs, bsIdx) => (
-                    <View key={bsIdx} style={styles.subHeaderCell}>
+                  {relevantBags.map((bs) => (
+                    <View key={bs.id} style={styles.subHeaderCell}>
                       <Text style={styles.subHeaderText}>{bs.weight_kg} Kg</Text>
                     </View>
                   ))}
@@ -170,15 +174,16 @@ export default function GrindingScreen({ navigation }) {
           <View style={{ width: 100, padding: 2 }}><InputField value={b1Reading} onChangeText={setB1Reading} keyboardType="decimal-pad" dense /></View>
           <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
           
-          {Object.keys(categories).map((catName, catIdx) => {
-            const catFgs = categories[catName];
+          {activeFgs.map((fg, fgIdx) => {
+            const relevantBags = activeBags;
+            if (relevantBags.length === 0) return null;
+
             return (
-              <View key={catIdx} style={{ flexDirection: 'row' }}>
-                {activeBags.map((bs, bsIdx) => {
-                  const fg = catFgs[0];
+              <View key={fg.id} style={{ flexDirection: 'row' }}>
+                {relevantBags.map((bs) => {
                   const detail = productionDetails.find(d => d.finished_good_id === fg.id && d.bag_size_id === bs.id);
                   return (
-                    <View key={bsIdx} style={{ width: 80, padding: 2, backgroundColor: getBgColor(catIdx) }}>
+                    <View key={bs.id} style={{ width: 80, padding: 2, backgroundColor: getBgColor(fgIdx) }}>
                       <InputField 
                         value={detail?.quantity_bags?.toString() || ""} 
                         onChangeText={(v) => handleGridUpdate(fg.id, bs.id, v)} 
