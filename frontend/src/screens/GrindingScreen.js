@@ -21,7 +21,7 @@ export default function GrindingScreen({ navigation }) {
   const [selectedBin, setSelectedBin] = useState(null);
   const [isGrindingStarted, setIsGrindingStarted] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [selectedBagSizeIds, setSelectedBagSizeIds] = useState([]);
+  const [productBagSizeMap, setProductBagSizeMap] = useState({});
 
   // Hourly Data Form
   const [productionDate, setProductionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -53,9 +53,14 @@ export default function GrindingScreen({ navigation }) {
       setBagSizes(bags);
       setFinishedGoods(fgs);
       
-      // Default: select all products and bag sizes
+      // Default: select all products and all bag sizes for each
       setSelectedProductIds(fgs.map(f => f.id));
-      setSelectedBagSizeIds(bags.map(b => b.id));
+      
+      const initialMap = {};
+      fgs.forEach(fg => {
+        initialMap[fg.id] = bags.map(b => b.id);
+      });
+      setProductBagSizeMap(initialMap);
     } catch (error) {
       showAlert("Error", "Failed to fetch grinding data");
     } finally {
@@ -88,52 +93,52 @@ export default function GrindingScreen({ navigation }) {
   const toggleProduct = (id) => {
     setSelectedProductIds(prev => {
       const newIds = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
-      // When a product is selected, ensure we update the productionDetails for its specific bag sizes if needed
       return newIds;
     });
   };
 
-  const toggleBagSize = (id) => {
-    setSelectedBagSizeIds(prev => 
-      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
-    );
+  const toggleBagSizeForProduct = (fgId, bsId) => {
+    setProductBagSizeMap(prev => {
+      const currentBags = prev[fgId] || [];
+      const newBags = currentBags.includes(bsId) 
+        ? currentBags.filter(id => id !== bsId) 
+        : [...currentBags, bsId];
+      return { ...prev, [fgId]: newBags };
+    });
   };
 
   const renderDynamicGrid = () => {
     const activeFgs = finishedGoods.filter(fg => selectedProductIds.includes(fg.id));
-    const activeBags = bagSizes.filter(bs => selectedBagSizeIds.includes(bs.id));
-
-    // Grouping is not strictly necessary if we want to show each FG individually
-    // but the user wants to handle different bag sizes for each product.
-    // Let's ensure the grid correctly maps FG -> BagSize
 
     return (
       <View>
         <View style={styles.columnSelector}>
-          <Text style={styles.selectorLabel}>Show Products:</Text>
-          <View style={styles.chipContainer}>
+          <Text style={styles.selectorLabel}>Select Products & Bag Sizes:</Text>
+          <View style={styles.productBagConfigContainer}>
             {finishedGoods.length > 0 ? finishedGoods.map(fg => (
-              <TouchableOpacity 
-                key={fg.id} 
-                onPress={() => toggleProduct(fg.id)}
-                style={[styles.chip, selectedProductIds.includes(fg.id) && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, selectedProductIds.includes(fg.id) && styles.chipTextActive]}>{fg.product_name}</Text>
-              </TouchableOpacity>
+              <View key={fg.id} style={styles.productConfigCard}>
+                <TouchableOpacity 
+                  onPress={() => toggleProduct(fg.id)}
+                  style={[styles.productChip, selectedProductIds.includes(fg.id) && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, selectedProductIds.includes(fg.id) && styles.chipTextActive]}>{fg.product_name}</Text>
+                </TouchableOpacity>
+                
+                {selectedProductIds.includes(fg.id) && (
+                  <View style={styles.bagSizeChipContainer}>
+                    {bagSizes.map(bs => (
+                      <TouchableOpacity 
+                        key={bs.id} 
+                        onPress={() => toggleBagSizeForProduct(fg.id, bs.id)}
+                        style={[styles.miniChip, productBagSizeMap[fg.id]?.includes(bs.id) && styles.chipActive]}
+                      >
+                        <Text style={[styles.miniChipText, productBagSizeMap[fg.id]?.includes(bs.id) && styles.chipTextActive]}>{bs.weight_kg}k</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
             )) : <Text style={{fontSize: 12, color: '#999'}}>No finished goods found</Text>}
-          </View>
-          
-          <Text style={styles.selectorLabel}>Show Bag Sizes:</Text>
-          <View style={styles.chipContainer}>
-            {bagSizes.length > 0 ? bagSizes.map(bs => (
-              <TouchableOpacity 
-                key={bs.id} 
-                onPress={() => toggleBagSize(bs.id)}
-                style={[styles.chip, selectedBagSizeIds.includes(bs.id) && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, selectedBagSizeIds.includes(bs.id) && styles.chipTextActive]}>{bs.weight_kg}kg</Text>
-              </TouchableOpacity>
-            )) : <Text style={{fontSize: 12, color: '#999'}}>No bag sizes found</Text>}
           </View>
         </View>
 
@@ -145,9 +150,8 @@ export default function GrindingScreen({ navigation }) {
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
           
           {activeFgs.map((fg, fgIdx) => {
-            // Group bag sizes by product to handle different bag sizes for each product
-            // Since activeBags are global, we display all selected bag sizes for each product
-            const relevantBags = activeBags;
+            const activeBagIds = productBagSizeMap[fg.id] || [];
+            const relevantBags = bagSizes.filter(bs => activeBagIds.includes(bs.id));
             
             if (relevantBags.length === 0) return null;
 
@@ -175,7 +179,8 @@ export default function GrindingScreen({ navigation }) {
           <View style={{ width: 100, padding: 2 }}><InputField value={loadPerHour} onChangeText={setLoadPerHour} keyboardType="decimal-pad" dense /></View>
           
           {activeFgs.map((fg, fgIdx) => {
-            const relevantBags = activeBags;
+            const activeBagIds = productBagSizeMap[fg.id] || [];
+            const relevantBags = bagSizes.filter(bs => activeBagIds.includes(bs.id));
             if (relevantBags.length === 0) return null;
 
             return (
@@ -198,7 +203,7 @@ export default function GrindingScreen({ navigation }) {
           })}
           <View style={{ width: 100, padding: 2, backgroundColor: '#FFFAD2' }}>
             <InputField 
-              value={productionDetails.find(d => d.product_code === 'REPROCESS')?.quantity_bags} 
+              value={productionDetails.find(d => d.finished_good_id === 'REPROCESS')?.quantity_bags} 
               onChangeText={(v) => handleGridUpdate('REPROCESS', null, v)} 
               keyboardType="numeric" 
               dense 
@@ -433,10 +438,26 @@ const styles = StyleSheet.create({
   subHeaderCell: { flex: 1, padding: 5, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#CCC', alignItems: 'center', backgroundColor: '#FFFAD2', minWidth: 80 },
   subHeaderText: { fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
   excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#CCC' },
-  columnSelector: { padding: 10, backgroundColor: '#F9F9F9', borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
-  selectorLabel: { fontSize: 12, fontWeight: 'bold', color: '#555', marginBottom: 8 },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, backgroundColor: '#EEE', borderWidth: 1, borderColor: '#DDD' },
+  columnSelector: { padding: 12, backgroundColor: '#F9F9F9', borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
+  selectorLabel: { fontSize: 13, fontWeight: 'bold', color: '#555', marginBottom: 10 },
+  productBagConfigContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  productConfigCard: { 
+    backgroundColor: '#FFF', 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: '#DDD', 
+    padding: 8, 
+    minWidth: 150,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  productChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#EEE', marginBottom: 8 },
+  bagSizeChipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingLeft: 5 },
+  miniChip: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: '#F0F0F0', borderWidth: 0.5, borderColor: '#CCC' },
+  miniChipText: { fontSize: 9, color: '#666' },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 11, color: '#666' },
   chipTextActive: { color: '#FFF', fontWeight: 'bold' }
