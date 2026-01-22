@@ -20,6 +20,8 @@ export default function GrindingScreen({ navigation }) {
 
   const [selectedBin, setSelectedBin] = useState(null);
   const [isGrindingStarted, setIsGrindingStarted] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [selectedBagSizeIds, setSelectedBagSizeIds] = useState([]);
 
   // Hourly Data Form
   const [productionDate, setProductionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -43,11 +45,17 @@ export default function GrindingScreen({ navigation }) {
         client.get("/finished-goods")
       ]);
       
-      // The available-bins endpoint returns Transfer12HourRecord with production_order relationship
-      // Ensure we include raw product name if available in the response
-      setAvailableBins(binsRes.data || []);
-      setBagSizes(bagsRes.data || []);
-      setFinishedGoods(fgRes.data || []);
+      const bins = binsRes.data || [];
+      const bags = bagsRes.data || [];
+      const fgs = fgRes.data || [];
+      
+      setAvailableBins(bins);
+      setBagSizes(bags);
+      setFinishedGoods(fgs);
+      
+      // Default: select all products and bag sizes
+      setSelectedProductIds(fgs.map(f => f.id));
+      setSelectedBagSizeIds(bags.map(b => b.id));
     } catch (error) {
       showAlert("Error", "Failed to fetch grinding data");
     } finally {
@@ -77,10 +85,25 @@ export default function GrindingScreen({ navigation }) {
     setProductionDetails(newDetails);
   };
 
+  const toggleProduct = (id) => {
+    setSelectedProductIds(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
+  const toggleBagSize = (id) => {
+    setSelectedBagSizeIds(prev => 
+      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
+    );
+  };
+
   const renderDynamicGrid = () => {
-    // Group finished goods by name to create categories like "Tandoori Atta"
+    const activeFgs = finishedGoods.filter(fg => selectedProductIds.includes(fg.id));
+    const activeBags = bagSizes.filter(bs => selectedBagSizeIds.includes(bs.id));
+
+    // Group finished goods by name to create categories
     const categories = {};
-    finishedGoods.forEach(fg => {
+    activeFgs.forEach(fg => {
       const name = fg.product_name;
       if (!categories[name]) categories[name] = [];
       categories[name].push(fg);
@@ -88,6 +111,34 @@ export default function GrindingScreen({ navigation }) {
 
     return (
       <View>
+        <View style={styles.columnSelector}>
+          <Text style={styles.selectorLabel}>Show Products:</Text>
+          <View style={styles.chipContainer}>
+            {finishedGoods.map(fg => (
+              <TouchableOpacity 
+                key={fg.id} 
+                onPress={() => toggleProduct(fg.id)}
+                style={[styles.chip, selectedProductIds.includes(fg.id) && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, selectedProductIds.includes(fg.id) && styles.chipTextActive]}>{fg.product_name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          <Text style={styles.selectorLabel}>Show Bag Sizes:</Text>
+          <View style={styles.chipContainer}>
+            {bagSizes.map(bs => (
+              <TouchableOpacity 
+                key={bs.id} 
+                onPress={() => toggleBagSize(bs.id)}
+                style={[styles.chip, selectedBagSizeIds.includes(bs.id) && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, selectedBagSizeIds.includes(bs.id) && styles.chipTextActive]}>{bs.weight_kg}kg</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Dynamic Header */}
         <View style={styles.excelMainHeaderRow}>
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
@@ -96,16 +147,11 @@ export default function GrindingScreen({ navigation }) {
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
           
           {Object.keys(categories).map((catName, catIdx) => {
-            const catFgs = categories[catName];
-            const relevantBagSizes = bagSizes.filter(bs => true); // In a real app, maybe filter by what's allowed for this FG
-            
-            // For now, let's assume we want to show all bag sizes for each product if they exist
-            // Or better: show columns for each unique bag size associated with this product name
             return (
               <View key={catIdx} style={{ borderRightWidth: 1, borderColor: '#CCC' }}>
-                <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>{catName} (Bags)</Text></View>
+                <View style={styles.subHeaderTitle}><Text style={styles.subHeaderText}>{catName}</Text></View>
                 <View style={{ flexDirection: 'row' }}>
-                  {bagSizes.map((bs, bsIdx) => (
+                  {activeBags.map((bs, bsIdx) => (
                     <View key={bsIdx} style={styles.subHeaderCell}>
                       <Text style={styles.subHeaderText}>{bs.weight_kg} Kg</Text>
                     </View>
@@ -128,9 +174,8 @@ export default function GrindingScreen({ navigation }) {
             const catFgs = categories[catName];
             return (
               <View key={catIdx} style={{ flexDirection: 'row' }}>
-                {bagSizes.map((bs, bsIdx) => {
-                  // Find the FG that matches this category name
-                  const fg = catFgs[0]; // Assuming one FG per name for simplicity in this grid
+                {activeBags.map((bs, bsIdx) => {
+                  const fg = catFgs[0];
                   const detail = productionDetails.find(d => d.finished_good_id === fg.id && d.bag_size_id === bs.id);
                   return (
                     <View key={bsIdx} style={{ width: 80, padding: 2, backgroundColor: getBgColor(catIdx) }}>
@@ -382,5 +427,12 @@ const styles = StyleSheet.create({
   subHeaderTitle: { padding: 5, borderBottomWidth: 1, borderColor: '#CCC', alignItems: 'center', backgroundColor: '#FFFAD2' },
   subHeaderCell: { flex: 1, padding: 5, borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#CCC', alignItems: 'center', backgroundColor: '#FFFAD2', minWidth: 80 },
   subHeaderText: { fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
-  excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#CCC' }
+  excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#CCC' },
+  columnSelector: { padding: 10, backgroundColor: '#F9F9F9', borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
+  selectorLabel: { fontSize: 12, fontWeight: 'bold', color: '#555', marginBottom: 8 },
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, backgroundColor: '#EEE', borderWidth: 1, borderColor: '#DDD' },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 11, color: '#666' },
+  chipTextActive: { color: '#FFF', fontWeight: 'bold' }
 });
