@@ -196,6 +196,12 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
+      name: "Customer Master",
+      route: "CustomerMaster",
+      icon: SvgUserShieldIcon,
+      section: "Operations",
+    },
+    {
       name: "Route Configuration",
       route: "RouteConfiguration",
       icon: SvgRouteIcon,
