@@ -26,6 +26,98 @@ class BagSize(Base):
     created_at = Column(DateTime, default=get_utc_now)
     
     branch = relationship("Branch")
+    order_items = relationship("OrderItem", back_populates="bag_size")
+
+class Customer(Base):
+    __tablename__ = "customers"
+    customer_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    customer_name = Column(String(150), nullable=False)
+    contact_person = Column(String(150))
+    contact_person_mobile = Column(String(15))
+    phone = Column(String(20))
+    email = Column(String(150))
+    address = Column(Text)
+    city = Column(String(100))
+    state = Column(String(100))
+    pin_code = Column(String(10))
+    gst_number = Column(String(20))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=get_utc_now)
+
+    branch = relationship("Branch")
+    orders = relationship("CustomerOrder", back_populates="customer")
+
+class CustomerOrder(Base):
+    __tablename__ = "customer_orders"
+    order_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    order_code = Column(String(50), unique=True, nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable=False)
+    order_status = Column(String(30), default='PENDING')
+    order_date = Column(DateTime, default=get_utc_now)
+    completed_time = Column(DateTime)
+    remarks = Column(Text)
+
+    branch = relationship("Branch")
+    customer = relationship("Customer", back_populates="orders")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    dispatches = relationship("Dispatch", back_populates="order")
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    order_item_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    quantity_ton = Column(Float)
+    price_per_ton = Column(Float)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"))
+    number_of_bags = Column(Integer)
+    price_per_bag = Column(Float)
+    created_at = Column(DateTime, default=get_utc_now)
+
+    branch = relationship("Branch")
+    order = relationship("CustomerOrder", back_populates="items")
+    finished_good = relationship("FinishedGood")
+    bag_size = relationship("BagSize", back_populates="order_items")
+
+class Driver(Base):
+    __tablename__ = "drivers"
+    driver_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    driver_name = Column(String(150), nullable=False)
+    phone = Column(String(20))
+    license_number = Column(String(50), unique=True)
+    address = Column(Text)
+    city = Column(String(100))
+    state = Column(String(100))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=get_utc_now)
+
+    branch = relationship("Branch")
+    dispatches = relationship("Dispatch", back_populates="driver")
+
+class Dispatch(Base):
+    __tablename__ = "dispatch"
+    dispatch_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=False)
+    driver_id = Column(Integer, ForeignKey("drivers.driver_id"), nullable=False)
+    dispatched_quantity_ton = Column(Float, nullable=False)
+    state = Column(String(100))
+    city = Column(String(100))
+    warehouse_loader = Column(String(150))
+    actual_dispatch_date = Column(DateTime, nullable=False)
+    delivery_date = Column(DateTime)
+    status = Column(String(30), default='DISPATCHED')
+    driver_photo = Column(Text)
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=get_utc_now)
+
+    branch = relationship("Branch")
+    order = relationship("CustomerOrder", back_populates="dispatches")
+    driver = relationship("Driver", back_populates="dispatches")
 
 class HourlyProduction(Base):
     __tablename__ = "hourly_productions"

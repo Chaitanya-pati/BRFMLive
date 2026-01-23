@@ -682,6 +682,109 @@ class FinishedGood(FinishedGoodBase):
     created_at: datetime
     updated_at: datetime
 
+# --- Sales & Dispatch Schemas ---
+
+class CustomerBase(ISTModel):
+    customer_name: str
+    contact_person: Optional[str] = None
+    contact_person_mobile: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pin_code: Optional[str] = None
+    gst_number: Optional[str] = None
+    is_active: bool = True
+
+class CustomerCreate(CustomerBase):
+    branch_id: Optional[int] = None
+
+class Customer(CustomerBase):
+    customer_id: int
+    branch_id: int
+    created_at: datetime
+
+class OrderItemBase(ISTModel):
+    finished_good_id: int
+    quantity_ton: Optional[float] = None
+    price_per_ton: Optional[float] = None
+    bag_size_id: Optional[int] = None
+    number_of_bags: Optional[int] = None
+    price_per_bag: Optional[float] = None
+
+class OrderItemCreate(OrderItemBase):
+    pass
+
+class OrderItem(OrderItemBase):
+    order_item_id: int
+    order_id: int
+    branch_id: int
+    created_at: datetime
+
+class CustomerOrderBase(ISTModel):
+    order_code: str
+    customer_id: int
+    order_status: Optional[str] = 'PENDING'
+    order_date: Optional[datetime] = None
+    completed_time: Optional[datetime] = None
+    remarks: Optional[str] = None
+
+    @validator('order_date', 'completed_time', pre=True)
+    def _parse_order_dates(cls, v):
+        return parse_datetime(v)
+
+class CustomerOrderCreate(CustomerOrderBase):
+    branch_id: Optional[int] = None
+    items: List[OrderItemCreate]
+
+class CustomerOrder(CustomerOrderBase):
+    order_id: int
+    branch_id: int
+    items: List[OrderItem] = []
+
+class DriverBase(ISTModel):
+    driver_name: str
+    phone: Optional[str] = None
+    license_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    is_active: bool = True
+
+class DriverCreate(DriverBase):
+    branch_id: Optional[int] = None
+
+class Driver(DriverBase):
+    driver_id: int
+    branch_id: int
+    created_at: datetime
+
+class DispatchBase(ISTModel):
+    order_id: int
+    driver_id: int
+    dispatched_quantity_ton: float
+    state: Optional[str] = None
+    city: Optional[str] = None
+    warehouse_loader: Optional[str] = None
+    actual_dispatch_date: datetime
+    delivery_date: Optional[datetime] = None
+    status: Optional[str] = 'DISPATCHED'
+    driver_photo: Optional[str] = None
+    remarks: Optional[str] = None
+
+    @validator('actual_dispatch_date', 'delivery_date', pre=True)
+    def _parse_dispatch_dates(cls, v):
+        return parse_datetime(v)
+
+class DispatchCreate(DispatchBase):
+    branch_id: Optional[int] = None
+
+class Dispatch(DispatchBase):
+    dispatch_id: int
+    branch_id: int
+    created_at: datetime
+
 class ProductionOrderBase(ISTModel):
     order_number: str
     raw_product_id: int
