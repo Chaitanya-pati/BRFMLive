@@ -546,6 +546,8 @@ def create_customer(customer: schemas.CustomerCreate,
     customer_data = customer.dict()
     if branch_id and not customer_data.get('branch_id'):
         customer_data['branch_id'] = branch_id
+    
+    # Ensure created_at and updated_at are populated if not handled by DB defaults
     db_customer = models.Customer(**customer_data)
     db.add(db_customer)
     db.commit()
