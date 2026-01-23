@@ -539,6 +539,70 @@ def get_vehicle_photo(vehicle_id: int, db: Session = Depends(get_db)):
     raise HTTPException(status_code=404, detail="Vehicle photo not found")
 
 
+@app.post("/api/customers", response_model=schemas.Customer)
+def create_customer(customer: schemas.CustomerCreate,
+                    db: Session = Depends(get_db),
+                    branch_id: Optional[int] = Depends(get_branch_id)):
+    customer_data = customer.dict()
+    if branch_id and not customer_data.get('branch_id'):
+        customer_data['branch_id'] = branch_id
+    db_customer = models.Customer(**customer_data)
+    db.add(db_customer)
+    db.commit()
+    db.refresh(db_customer)
+    return db_customer
+
+
+@app.get("/api/customers", response_model=List[schemas.Customer])
+def get_all_customers(skip: int = 0,
+                      limit: int = 100,
+                      branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
+                      db: Session = Depends(get_db)):
+    query = db.query(models.Customer)
+    if branch_id:
+        query = query.filter(models.Customer.branch_id == branch_id)
+    customers = query.order_by(models.Customer.customer_id.desc()).offset(skip).limit(limit).all()
+    return customers
+
+
+@app.get("/api/customers/{customer_id}", response_model=schemas.Customer)
+def get_customer(customer_id: int, db: Session = Depends(get_db)):
+    customer = db.query(
+        models.Customer).filter(models.Customer.customer_id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+
+@app.put("/api/customers/{customer_id}", response_model=schemas.Customer)
+def update_customer(customer_id: int,
+                    customer: schemas.CustomerCreate,
+                    db: Session = Depends(get_db)):
+    db_customer = db.query(
+        models.Customer).filter(models.Customer.customer_id == customer_id).first()
+    if not db_customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    for key, value in customer.dict().items():
+        setattr(db_customer, key, value)
+
+    db.commit()
+    db.refresh(db_customer)
+    return db_customer
+
+
+@app.delete("/api/customers/{customer_id}")
+def delete_customer(customer_id: int, db: Session = Depends(get_db)):
+    db_customer = db.query(
+        models.Customer).filter(models.Customer.customer_id == customer_id).first()
+    if not db_customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    db.delete(db_customer)
+    db.commit()
+    return {"message": "Customer deleted successfully"}
+
+
 @app.post("/api/lab-tests", response_model=schemas.LabTest)
 def create_lab_test(lab_test: schemas.LabTestCreate,
                     db: Session = Depends(get_db),

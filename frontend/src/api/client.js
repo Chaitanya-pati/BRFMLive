@@ -102,6 +102,14 @@ export const supplierApi = {
   delete: (id) => api.delete(`/suppliers/${id}`),
 };
 
+export const customerApi = {
+  getAll: () => api.get("/customers"),
+  getById: (id) => api.get(`/customers/${id}`),
+  create: (data) => api.post("/customers", data),
+  update: (id, data) => api.put(`/customers/${id}`, data),
+  delete: (id) => api.delete(`/customers/${id}`),
+};
+
 export const vehicleApi = {
   getAll: () => api.get("/vehicles"),
   getById: (id) => api.get(`/vehicles/${id}`),

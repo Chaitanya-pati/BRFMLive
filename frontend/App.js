@@ -13,6 +13,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import SupplierMasterScreen from './src/screens/SupplierMasterScreen';
 import VehicleEntryScreen from './src/screens/VehicleEntryScreen';
 import LabTestScreen from './src/screens/LabTestScreen';
+import CustomerMasterScreen from './src/screens/CustomerMasterScreen';
 import ClaimTrackingScreen from './src/screens/ClaimTrackingScreen';
 import MasterViewScreen from './src/screens/MasterViewScreen';
 import UnloadingEntryScreen from './src/screens/UnloadingEntryScreen';
@@ -125,6 +126,7 @@ export default function App() {
           <Stack.Screen name="SupplierMaster" component={SupplierMasterScreen} />
           <Stack.Screen name="VehicleEntry" component={VehicleEntryScreen} />
           <Stack.Screen name="LabTest" component={LabTestScreen} />
+          <Stack.Screen name="CustomerMaster" component={CustomerMasterScreen} />
           <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} />
           <Stack.Screen name="MasterView" component={MasterViewScreen} />
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />

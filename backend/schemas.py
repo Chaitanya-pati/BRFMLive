@@ -704,6 +704,7 @@ class Customer(CustomerBase):
     customer_id: int
     branch_id: int
     created_at: datetime
+    updated_at: datetime
 
 class OrderItemBase(ISTModel):
     finished_good_id: int
