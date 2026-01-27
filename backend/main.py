@@ -602,7 +602,12 @@ def update_customer(customer_id: int,
     if not db_customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    for key, value in customer.dict().items():
+    update_data = customer.dict(exclude_unset=True)
+    # Ensure branch_id is not overwritten if not provided
+    if 'branch_id' in update_data and update_data['branch_id'] is None:
+        del update_data['branch_id']
+        
+    for key, value in update_data.items():
         setattr(db_customer, key, value)
 
     db.commit()
