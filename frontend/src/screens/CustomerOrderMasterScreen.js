@@ -32,7 +32,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     customer_id: '',
     order_status: 'PENDING',
     remarks: '',
-    items: [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+    items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
   });
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
@@ -83,7 +83,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: [...formData.items, { finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
   };
 
@@ -106,7 +106,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       customer_id: '',
       order_status: 'PENDING',
       remarks: '',
-      items: [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -121,13 +121,13 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       remarks: order.remarks || '',
       items: order.items.length > 0 ? order.items.map(item => ({
         finished_good_id: item.finished_good_id,
-        quantity_type: item.quantity_type || 'ton',
+        quantity_type: item.quantity_type || 'bag',
         quantity_ton: (item.quantity_ton || '').toString(),
         bag_size_id: item.bag_size_id || '',
         number_of_bags: (item.number_of_bags || '').toString(),
         price_per_ton: (item.price_per_ton || '').toString(),
         price_per_bag: (item.price_per_bag || '').toString()
-      })) : [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      })) : [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -271,8 +271,8 @@ export default function CustomerOrderMasterScreen({ navigation }) {
                     selectedValue={item.quantity_type}
                     onValueChange={(val) => updateItem(index, 'quantity_type', val)}
                   >
-                    <Picker.Item label="Ton" value="ton" />
                     <Picker.Item label="Bag" value="bag" />
+                    <Picker.Item label="Ton" value="ton" />
                   </Picker>
                 </View>
                 <TouchableOpacity onPress={() => removeItem(index)} style={styles.removeBtn}>
