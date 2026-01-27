@@ -18,6 +18,7 @@ from database import engine, get_db, Base
 import models
 import schemas
 import drivers
+import customer_orders
 from utils.image_utils import get_image_url, save_image_path
 
 
@@ -128,6 +129,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(drivers.router)
+app.include_router(customer_orders.router)
 
 
 @app.get("/")
