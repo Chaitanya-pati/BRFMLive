@@ -44,7 +44,8 @@ class Customer(Base):
     gst_number = Column(String(20))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    # Removing updated_at temporarily to fix persistent DB error
+    # updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     branch = relationship("Branch")
     orders = relationship("CustomerOrder", back_populates="customer")

@@ -547,12 +547,29 @@ def create_customer(customer: schemas.CustomerCreate,
     if branch_id and not customer_data.get('branch_id'):
         customer_data['branch_id'] = branch_id
     
-    # Ensure created_at and updated_at are populated if not handled by DB defaults
-    db_customer = models.Customer(**customer_data)
+    # Ensure created_at is handled
+    db_customer = models.Customer(
+        branch_id=customer_data.get('branch_id'),
+        customer_name=customer_data.get('customer_name'),
+        contact_person=customer_data.get('contact_person'),
+        contact_person_mobile=customer_data.get('contact_person_mobile'),
+        phone=customer_data.get('phone'),
+        email=customer_data.get('email'),
+        address=customer_data.get('address'),
+        city=customer_data.get('city'),
+        state=customer_data.get('state'),
+        pin_code=customer_data.get('pin_code'),
+        gst_number=customer_data.get('gst_number'),
+        is_active=customer_data.get('is_active', True)
+    )
     db.add(db_customer)
-    db.commit()
-    db.refresh(db_customer)
-    return db_customer
+    try:
+        db.commit()
+        db.refresh(db_customer)
+        return db_customer
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 @app.get("/api/customers", response_model=List[schemas.Customer])
