@@ -108,13 +108,13 @@ def seed_master_data():
         # Seed Godowns
         print("\nSeeding Godowns...")
         godowns_data = [
-            {"name": "Godown-G1", "capacity": 10000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-G2", "capacity": 15000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-G3", "capacity": 12000, "type": "Silo", "current_storage": 0},
-            {"name": "Godown-G4", "capacity": 8000, "type": "Storage", "current_storage": 0},
-            {"name": "Godown-G5", "capacity": 20000, "type": "Warehouse", "current_storage": 0},
-            {"name": "Godown-G6", "capacity": 18000, "type": "Silo", "current_storage": 0},
-            {"name": "Godown-G7", "capacity": 16000, "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G1", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G2", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G3", "type": "Silo", "current_storage": 0},
+            {"name": "Godown-G4", "type": "Storage", "current_storage": 0},
+            {"name": "Godown-G5", "type": "Warehouse", "current_storage": 0},
+            {"name": "Godown-G6", "type": "Silo", "current_storage": 0},
+            {"name": "Godown-G7", "type": "Warehouse", "current_storage": 0},
             {"name": "Godown-G8", "type": "Cold Storage", "current_storage": 0},
             {"name": "Godown-G9", "type": "Storage", "current_storage": 0},
             {"name": "Godown-G10", "type": "Warehouse", "current_storage": 0}
