@@ -202,6 +202,12 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
+      name: "Driver Management",
+      route: "DriverMaster",
+      icon: SvgTruckIcon,
+      section: "Operations",
+    },
+    {
       name: "Route Configuration",
       route: "RouteConfiguration",
       icon: SvgRouteIcon,
