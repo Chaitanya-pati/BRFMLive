@@ -35,9 +35,11 @@ def create_order(order: schemas.CustomerOrderCreate,
         item_data['order_id'] = db_order.order_id
         item_data['branch_id'] = db_order.branch_id
         
-        # Ensure database constraints are met
-        if item_data.get('quantity_type') == 'bag':
-            # Bag-based order: must have number_of_bags and price_per_bag
+        # Determine quantity type logic from data presence
+        is_bag_order = item_data.get('number_of_bags', 0) > 0 or item_data.get('bag_size_weight') is not None
+        
+        if is_bag_order:
+            # Bag-based logic
             bag_weight = item_data.pop('bag_size_weight', None)
             if bag_weight:
                 # Find or create BagSize
@@ -51,25 +53,11 @@ def create_order(order: schemas.CustomerOrderCreate,
                     db.flush()
                 item_data['bag_size_id'] = bag_size.id
             
-            if not item_data.get('bag_size_id'):
-                raise HTTPException(status_code=400, detail="bag_size_id or weight is required for bag-based orders")
-            if item_data.get('number_of_bags') is None:
-                item_data['number_of_bags'] = 0
-            if item_data.get('price_per_bag') is None:
-                item_data['price_per_bag'] = 0.0
-            # Optional: calculate quantity_ton if bag_size weight is known, 
-            # but for now we just ensure defaults to satisfy DB if needed
-            if item_data.get('quantity_ton') is None:
-                item_data['quantity_ton'] = 0.0
-            if item_data.get('price_per_ton') is None:
-                item_data['price_per_ton'] = 0.0
+            # Ensure tons fields are 0 for bag orders
+            item_data['quantity_ton'] = 0.0
+            item_data['price_per_ton'] = 0.0
         else:
-            # Loose order (ton-based): must have quantity_ton and price_per_ton
-            if item_data.get('quantity_ton') is None:
-                item_data['quantity_ton'] = 0.0
-            if item_data.get('price_per_ton') is None:
-                item_data['price_per_ton'] = 0.0
-            # Ensure bag-related fields are consistent
+            # Ton-based logic
             item_data['bag_size_id'] = None
             item_data['number_of_bags'] = 0
             item_data['price_per_bag'] = 0.0
@@ -121,9 +109,11 @@ def update_order(order_id: int,
         item_data['order_id'] = db_order.order_id
         item_data['branch_id'] = db_order.branch_id
         
-        # Ensure database constraints are met
-        if item_data.get('quantity_type') == 'bag':
-            # Bag-based order: must have number_of_bags and price_per_bag
+        # Determine quantity type logic from data presence
+        is_bag_order = item_data.get('number_of_bags', 0) > 0 or item_data.get('bag_size_weight') is not None
+        
+        if is_bag_order:
+            # Bag-based logic
             bag_weight = item_data.pop('bag_size_weight', None)
             if bag_weight:
                 # Find or create BagSize
@@ -137,25 +127,11 @@ def update_order(order_id: int,
                     db.flush()
                 item_data['bag_size_id'] = bag_size.id
             
-            if not item_data.get('bag_size_id'):
-                raise HTTPException(status_code=400, detail="bag_size_id or weight is required for bag-based orders")
-            if item_data.get('number_of_bags') is None:
-                item_data['number_of_bags'] = 0
-            if item_data.get('price_per_bag') is None:
-                item_data['price_per_bag'] = 0.0
-            # Optional: calculate quantity_ton if bag_size weight is known, 
-            # but for now we just ensure defaults to satisfy DB if needed
-            if item_data.get('quantity_ton') is None:
-                item_data['quantity_ton'] = 0.0
-            if item_data.get('price_per_ton') is None:
-                item_data['price_per_ton'] = 0.0
+            # Ensure tons fields are 0 for bag orders
+            item_data['quantity_ton'] = 0.0
+            item_data['price_per_ton'] = 0.0
         else:
-            # Loose order (ton-based): must have quantity_ton and price_per_ton
-            if item_data.get('quantity_ton') is None:
-                item_data['quantity_ton'] = 0.0
-            if item_data.get('price_per_ton') is None:
-                item_data['price_per_ton'] = 0.0
-            # Ensure bag-related fields are consistent
+            # Ton-based logic
             item_data['bag_size_id'] = None
             item_data['number_of_bags'] = 0
             item_data['price_per_bag'] = 0.0
