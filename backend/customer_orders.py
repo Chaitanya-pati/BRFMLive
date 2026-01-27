@@ -61,6 +61,7 @@ def create_order(order: schemas.CustomerOrderCreate,
             item_data['price_per_ton'] = 0.0
         else:
             # Ton-based logic
+            item_data.pop('bag_size_weight', None)
             item_data['bag_size_id'] = None
             item_data['number_of_bags'] = 0
             item_data['price_per_bag'] = 0.0
@@ -138,6 +139,7 @@ def update_order(order_id: int,
             item_data['price_per_ton'] = 0.0
         else:
             # Ton-based logic
+            item_data.pop('bag_size_weight', None)
             item_data['bag_size_id'] = None
             item_data['number_of_bags'] = 0
             item_data['price_per_bag'] = 0.0
