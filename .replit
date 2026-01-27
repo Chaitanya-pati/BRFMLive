@@ -66,16 +66,12 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && npx expo start --web --port 5000 --non-interactive"
+args = "cd frontend && CI=1 npx expo start --web --port 5000"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
