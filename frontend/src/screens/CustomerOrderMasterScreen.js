@@ -12,7 +12,7 @@ import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import { customerOrderApi, customerApi, finishedGoodApi } from '../api/client';
+import { customerOrderApi, customerApi, finishedGoodApi, bagSizeApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { useFormSubmission } from '../utils/useFormSubmission';
@@ -22,6 +22,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
+  const [bagSizes, setBagSizes] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
@@ -31,7 +32,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     customer_id: '',
     order_status: 'PENDING',
     remarks: '',
-    items: [{ finished_good_id: '', quantity_ton: '' }]
+    items: [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
   });
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
@@ -40,6 +41,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     loadOrders();
     loadCustomers();
     loadFinishedGoods();
+    loadBagSizes();
   }, []);
 
   const loadOrders = async () => {
@@ -69,10 +71,19 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     }
   };
 
+  const loadBagSizes = async () => {
+    try {
+      const response = await bagSizeApi.getAll();
+      setBagSizes(response.data);
+    } catch (error) {
+      console.error('Error loading bag sizes:', error);
+    }
+  };
+
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { finished_good_id: '', quantity_ton: '' }]
+      items: [...formData.items, { finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
   };
 
@@ -95,7 +106,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       customer_id: '',
       order_status: 'PENDING',
       remarks: '',
-      items: [{ finished_good_id: '', quantity_ton: '' }]
+      items: [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -110,8 +121,13 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       remarks: order.remarks || '',
       items: order.items.length > 0 ? order.items.map(item => ({
         finished_good_id: item.finished_good_id,
-        quantity_ton: item.quantity_ton.toString()
-      })) : [{ finished_good_id: '', quantity_ton: '' }]
+        quantity_type: item.quantity_type || 'ton',
+        quantity_ton: (item.quantity_ton || '').toString(),
+        bag_size_id: item.bag_size_id || '',
+        number_of_bags: (item.number_of_bags || '').toString(),
+        price_per_ton: (item.price_per_ton || '').toString(),
+        price_per_bag: (item.price_per_bag || '').toString()
+      })) : [{ finished_good_id: '', quantity_type: 'ton', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -122,9 +138,15 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       return;
     }
 
-    const validItems = formData.items.filter(item => item.finished_good_id && item.quantity_ton);
+    const validItems = formData.items.filter(item => {
+      if (!item.finished_good_id) return false;
+      if (item.quantity_type === 'ton') return item.quantity_ton;
+      if (item.quantity_type === 'bag') return item.number_of_bags && item.bag_size_id;
+      return false;
+    });
+
     if (validItems.length === 0) {
-      await showAlert('Validation Error', 'Please add at least one item with quantity', 'error');
+      await showAlert('Validation Error', 'Please add at least one item with valid quantity', 'error');
       return;
     }
 
@@ -136,7 +158,12 @@ export default function CustomerOrderMasterScreen({ navigation }) {
         remarks: formData.remarks,
         items: validItems.map(item => ({
           finished_good_id: parseInt(item.finished_good_id),
-          quantity_ton: parseFloat(item.quantity_ton)
+          quantity_type: item.quantity_type,
+          quantity_ton: item.quantity_type === 'ton' ? parseFloat(item.quantity_ton) : 0,
+          price_per_ton: item.quantity_type === 'ton' ? parseFloat(item.price_per_ton || 0) : 0,
+          bag_size_id: item.quantity_type === 'bag' ? parseInt(item.bag_size_id) : null,
+          number_of_bags: item.quantity_type === 'bag' ? parseInt(item.number_of_bags) : 0,
+          price_per_bag: item.quantity_type === 'bag' ? parseFloat(item.price_per_bag || 0) : 0
         }))
       };
 
@@ -226,28 +253,79 @@ export default function CustomerOrderMasterScreen({ navigation }) {
 
           <Text style={styles.sectionHeader}>Order Items</Text>
           {formData.items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <View style={[styles.pickerContainer, { flex: 2 }]}>
-                <Picker
-                  selectedValue={item.finished_good_id}
-                  onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
-                >
-                  <Picker.Item label="Select Product" value="" />
-                  {finishedGoods.map(fg => (
-                    <Picker.Item key={fg.id} label={fg.product_name} value={fg.id} />
-                  ))}
-                </Picker>
+            <View key={index} style={styles.itemContainer}>
+              <View style={styles.itemRow}>
+                <View style={[styles.pickerContainer, { flex: 2 }]}>
+                  <Picker
+                    selectedValue={item.finished_good_id}
+                    onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
+                  >
+                    <Picker.Item label="Select Product" value="" />
+                    {finishedGoods.map(fg => (
+                      <Picker.Item key={fg.id} label={fg.product_name} value={fg.id} />
+                    ))}
+                  </Picker>
+                </View>
+                <View style={[styles.pickerContainer, { flex: 1, marginLeft: 10 }]}>
+                  <Picker
+                    selectedValue={item.quantity_type}
+                    onValueChange={(val) => updateItem(index, 'quantity_type', val)}
+                  >
+                    <Picker.Item label="Ton" value="ton" />
+                    <Picker.Item label="Bag" value="bag" />
+                  </Picker>
+                </View>
+                <TouchableOpacity onPress={() => removeItem(index)} style={styles.removeBtn}>
+                  <Text style={{ color: colors.error }}>✕</Text>
+                </TouchableOpacity>
               </View>
-              <TextInput
-                style={[styles.input, { flex: 1, marginLeft: 10 }]}
-                placeholder="Qty (Ton)"
-                value={item.quantity_ton}
-                onChangeText={(val) => updateItem(index, 'quantity_ton', val)}
-                keyboardType="numeric"
-              />
-              <TouchableOpacity onPress={() => removeItem(index)} style={styles.removeBtn}>
-                <Text style={{ color: colors.error }}>✕</Text>
-              </TouchableOpacity>
+
+              {item.quantity_type === 'ton' ? (
+                <View style={styles.itemRow}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    placeholder="Qty (Ton)"
+                    value={item.quantity_ton}
+                    onChangeText={(val) => updateItem(index, 'quantity_ton', val)}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
+                    placeholder="Price/Ton"
+                    value={item.price_per_ton}
+                    onChangeText={(val) => updateItem(index, 'price_per_ton', val)}
+                    keyboardType="numeric"
+                  />
+                </View>
+              ) : (
+                <View style={styles.itemRow}>
+                  <View style={[styles.pickerContainer, { flex: 1 }]}>
+                    <Picker
+                      selectedValue={item.bag_size_id}
+                      onValueChange={(val) => updateItem(index, 'bag_size_id', val)}
+                    >
+                      <Picker.Item label="Bag Size" value="" />
+                      {bagSizes.map(bs => (
+                        <Picker.Item key={bs.id} label={`${bs.weight_kg}kg`} value={bs.id} />
+                      ))}
+                    </Picker>
+                  </View>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
+                    placeholder="Bags"
+                    value={item.number_of_bags}
+                    onChangeText={(val) => updateItem(index, 'number_of_bags', val)}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
+                    placeholder="Price/Bag"
+                    value={item.price_per_bag}
+                    onChangeText={(val) => updateItem(index, 'price_per_bag', val)}
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
             </View>
           ))}
           <TouchableOpacity onPress={addItem} style={styles.addBtn}>
@@ -282,6 +360,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10, backgroundColor: '#fff' },
   pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, backgroundColor: '#fff' },
   sectionHeader: { fontSize: 16, fontWeight: '700', marginTop: 25, marginBottom: 10, color: colors.primary },
+  itemContainer: { marginBottom: 15, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 5, borderLeftWidth: 3, borderLeftColor: colors.primary },
   itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   removeBtn: { padding: 10, marginLeft: 5 },
   addBtn: { padding: 10, backgroundColor: '#f0f0f0', borderRadius: 5, alignSelf: 'flex-start', marginTop: 5 },

@@ -118,6 +118,10 @@ export const driverApi = {
   delete: (id) => api.delete(`/drivers/${id}`),
 };
 
+export const bagSizeApi = {
+  getAll: () => api.get("/bag-sizes"),
+};
+
 export const customerOrderApi = {
   getAll: () => api.get("/customer-orders"),
   getById: (id) => api.get(`/customer-orders/${id}`),

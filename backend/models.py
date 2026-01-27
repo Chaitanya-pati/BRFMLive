@@ -85,6 +85,18 @@ class OrderItem(Base):
     finished_good = relationship("FinishedGood")
     bag_size = relationship("BagSize", back_populates="order_items")
 
+class RawProduct(Base):
+    __tablename__ = "raw_products"
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(255), nullable=False)
+    product_initial = Column(String(50), nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+    branch = relationship("Branch")
+    production_orders = relationship("ProductionOrder", back_populates="raw_product")
+
 class Driver(Base):
     __tablename__ = "drivers"
     driver_id = Column(Integer, primary_key=True, index=True)

@@ -2537,6 +2537,13 @@ def create_finished_good(product: schemas.FinishedGoodCreate, branch_id: Optiona
     db.refresh(db_product)
     return db_product
 
+@app.get("/api/bag-sizes", response_model=List[schemas.BagSize])
+def get_bag_sizes(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
+    query = db.query(models.BagSize)
+    if branch_id:
+        query = query.filter(models.BagSize.branch_id == branch_id)
+    return query.all()
+
 @app.get("/api/finished-goods", response_model=List[schemas.FinishedGood])
 def get_finished_goods(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
     query = db.query(models.FinishedGood)
