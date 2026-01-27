@@ -41,6 +41,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     loadOrders();
     loadCustomers();
     loadFinishedGoods();
+    loadBagSizes();
   }, []);
 
   const loadOrders = async () => {
@@ -298,13 +299,17 @@ export default function CustomerOrderMasterScreen({ navigation }) {
                 </View>
               ) : (
                 <View style={styles.itemRow}>
-                  <TextInput
-                    style={[styles.input, { flex: 1 }]}
-                    placeholder="Bag Size (kg)"
-                    value={item.bag_size_kg}
-                    onChangeText={(val) => updateItem(index, 'bag_size_kg', val)}
-                    keyboardType="numeric"
-                  />
+                  <View style={[styles.pickerContainer, { flex: 1 }]}>
+                    <Picker
+                      selectedValue={item.bag_size_kg}
+                      onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
+                    >
+                      <Picker.Item label="Select Bag Size" value="" />
+                      {bagSizes.map(bs => (
+                        <Picker.Item key={bs.id} label={`${bs.weight_kg} kg`} value={bs.weight_kg.toString()} />
+                      ))}
+                    </Picker>
+                  </View>
                   <TextInput
                     style={[styles.input, { flex: 1, marginLeft: 10 }]}
                     placeholder="Bags"
