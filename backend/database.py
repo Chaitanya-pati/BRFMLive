@@ -3,11 +3,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Use environment variable if available, otherwise fallback to hardcoded URL
-DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-summer-brook-af6opqny-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+# Priority: Environment Variable > Hardcoded Fallback
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
 if not DATABASE_URL:
-    # Fallback for local development if needed, but Replit should provide DATABASE_URL
+    # This was the previously hardcoded URL which might be out of sync
     DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-summer-brook-af6opqny-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
 if not DATABASE_URL:
     raise ValueError(
         "DATABASE_URL environment variable is not set. Please configure PostgreSQL database in Replit."
