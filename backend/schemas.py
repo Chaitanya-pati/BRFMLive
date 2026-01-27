@@ -708,11 +708,11 @@ class Customer(CustomerBase):
 
 class OrderItemBase(ISTModel):
     finished_good_id: int
-    quantity_ton: Optional[float] = None
-    price_per_ton: Optional[float] = None
+    quantity_ton: Optional[float] = 0.0
+    price_per_ton: Optional[float] = 0.0
     bag_size_id: Optional[int] = None
-    number_of_bags: Optional[int] = None
-    price_per_bag: Optional[float] = None
+    number_of_bags: Optional[int] = 0
+    price_per_bag: Optional[float] = 0.0
 
 class OrderItemCreate(OrderItemBase):
     pass
