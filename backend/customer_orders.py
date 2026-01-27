@@ -35,6 +35,9 @@ def create_order(order: schemas.CustomerOrderCreate,
         item_data['order_id'] = db_order.order_id
         item_data['branch_id'] = db_order.branch_id
         
+        # Remove quantity_type from item_data as it's not in the database
+        item_data.pop('quantity_type', None)
+        
         # Determine quantity type logic from data presence
         is_bag_order = item_data.get('number_of_bags', 0) > 0 or item_data.get('bag_size_weight') is not None
         
@@ -108,6 +111,9 @@ def update_order(order_id: int,
         item_data = item.dict()
         item_data['order_id'] = db_order.order_id
         item_data['branch_id'] = db_order.branch_id
+        
+        # Remove quantity_type from item_data as it's not in the database
+        item_data.pop('quantity_type', None)
         
         # Determine quantity type logic from data presence
         is_bag_order = item_data.get('number_of_bags', 0) > 0 or item_data.get('bag_size_weight') is not None

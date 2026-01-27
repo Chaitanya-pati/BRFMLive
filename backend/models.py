@@ -77,7 +77,6 @@ class OrderItem(Base):
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"))
     number_of_bags = Column(Integer)
     price_per_bag = Column(Float)
-    quantity_type = Column(String(10), default="ton") # "ton" or "bag"
     created_at = Column(DateTime, default=get_utc_now)
 
     branch = relationship("Branch")
