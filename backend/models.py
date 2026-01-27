@@ -568,19 +568,6 @@ class User(Base):
 
     branches = relationship("Branch", secondary="user_branches", back_populates="users")
 
-class RawProduct(Base):
-    __tablename__ = "raw_products"
-
-    id = Column(Integer, primary_key=True, index=True)
-    product_name = Column(String(255), nullable=False)
-    product_initial = Column(String(10), nullable=False)
-    branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
-
-    branch = relationship("Branch")
-    production_orders = relationship("ProductionOrder", back_populates="raw_product")
-
 class FinishedGood(Base):
     __tablename__ = "finished_goods"
 
