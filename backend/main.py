@@ -17,6 +17,7 @@ import pytz
 from database import engine, get_db, Base
 import models
 import schemas
+import drivers
 from utils.image_utils import get_image_url, save_image_path
 
 
@@ -125,6 +126,8 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+app.include_router(drivers.router)
 
 
 @app.get("/")

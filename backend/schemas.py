@@ -760,6 +760,7 @@ class Driver(DriverBase):
     driver_id: int
     branch_id: int
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
 class DispatchBase(ISTModel):
     order_id: int
