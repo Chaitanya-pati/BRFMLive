@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
@@ -19,6 +21,8 @@ import { useFormSubmission } from '../utils/useFormSubmission';
 import { formatISTDate } from '../utils/dateUtils';
 
 export default function CustomerOrderMasterScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
@@ -198,18 +202,18 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'Order Code', field: 'order_code', width: 150 },
+    { label: 'Order Code', field: 'order_code', width: isMobile ? 120 : 150 },
     { 
       label: 'Customer', 
       field: 'customer_id', 
-      width: 200,
+      width: isMobile ? 150 : 200,
       render: (id) => customers.find(c => c.customer_id === id)?.customer_name || `ID: ${id}`
     },
-    { label: 'Status', field: 'order_status', width: 120 },
+    { label: 'Status', field: 'order_status', width: 100 },
     { 
       label: 'Date', 
       field: 'order_date', 
-      width: 150,
+      width: 120,
       render: (v) => formatISTDate(v)
     },
   ];
@@ -228,109 +232,144 @@ export default function CustomerOrderMasterScreen({ navigation }) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editMode ? 'Edit Order' : 'New Customer Order'}
-        width="80%"
+        width={isMobile ? "95%" : "80%"}
       >
-        <ScrollView style={styles.form}>
-          <Text style={styles.label}>Order Code *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.order_code}
-            onChangeText={(text) => setFormData({ ...formData, order_code: text })}
-          />
+        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          <View style={isMobile ? styles.mobileGrid : styles.grid}>
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Order Code *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.order_code}
+                onChangeText={(text) => setFormData({ ...formData, order_code: text })}
+              />
+            </View>
 
-          <Text style={styles.label}>Customer *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.customer_id}
-              onValueChange={(val) => setFormData({ ...formData, customer_id: val })}
-            >
-              <Picker.Item label="Select Customer" value="" />
-              {customers.map(c => (
-                <Picker.Item key={c.customer_id} label={c.customer_name} value={c.customer_id} />
-              ))}
-            </Picker>
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Customer *</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={formData.customer_id}
+                  onValueChange={(val) => setFormData({ ...formData, customer_id: val })}
+                >
+                  <Picker.Item label="Select Customer" value="" />
+                  {customers.map(c => (
+                    <Picker.Item key={c.customer_id} label={c.customer_name} value={c.customer_id} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
           </View>
 
-          <Text style={styles.sectionHeader}>Order Items</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <Text style={styles.sectionHeader}>Order Items</Text>
+            <TouchableOpacity onPress={addItem} style={styles.addBtn}>
+              <Text style={styles.addBtnText}>+ Add Item</Text>
+            </TouchableOpacity>
+          </View>
+
           {formData.items.map((item, index) => (
-            <View key={index} style={styles.itemContainer}>
-              <View style={styles.itemRow}>
-                <View style={[styles.pickerContainer, { flex: 2 }]}>
-                  <Picker
-                    selectedValue={item.finished_good_id}
-                    onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
-                  >
-                    <Picker.Item label="Select Product" value="" />
-                    {finishedGoods.map(fg => (
-                      <Picker.Item key={fg.id} label={fg.product_name} value={fg.id} />
-                    ))}
-                  </Picker>
-                </View>
-                <View style={[styles.pickerContainer, { flex: 1, marginLeft: 10 }]}>
-                  <Picker
-                    selectedValue={item.quantity_type}
-                    onValueChange={(val) => updateItem(index, 'quantity_type', val)}
-                  >
-                    <Picker.Item label="Bag" value="bag" />
-                    <Picker.Item label="Ton" value="ton" />
-                  </Picker>
-                </View>
+            <View key={index} style={styles.itemCard}>
+              <View style={styles.itemCardHeader}>
+                <Text style={styles.itemIndex}>Item #{index + 1}</Text>
                 <TouchableOpacity onPress={() => removeItem(index)} style={styles.removeBtn}>
-                  <Text style={{ color: colors.error }}>✕</Text>
+                  <Text style={{ color: colors.error }}>Remove ✕</Text>
                 </TouchableOpacity>
               </View>
 
-              {item.quantity_type === 'ton' ? (
-                <View style={styles.itemRow}>
-                  <TextInput
-                    style={[styles.input, { flex: 1 }]}
-                    placeholder="Qty (Ton)"
-                    value={item.quantity_ton}
-                    onChangeText={(val) => updateItem(index, 'quantity_ton', val)}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
-                    placeholder="Price/Ton"
-                    value={item.price_per_ton}
-                    onChangeText={(val) => updateItem(index, 'price_per_ton', val)}
-                    keyboardType="numeric"
-                  />
-                </View>
-              ) : (
-                <View style={styles.itemRow}>
-                  <View style={[styles.pickerContainer, { flex: 1 }]}>
+              <View style={isMobile ? styles.mobileGrid : styles.grid}>
+                <View style={[styles.gridItem, { flex: 2 }]}>
+                  <Text style={styles.subLabel}>Product</Text>
+                  <View style={styles.pickerContainer}>
                     <Picker
-                      selectedValue={item.bag_size_kg}
-                      onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
+                      selectedValue={item.finished_good_id}
+                      onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
                     >
-                      <Picker.Item label="Select Bag Size" value="" />
-                      {bagSizes.map(bs => (
-                        <Picker.Item key={bs.id} label={`${bs.weight_kg} kg`} value={bs.weight_kg.toString()} />
+                      <Picker.Item label="Select Product" value="" />
+                      {finishedGoods.map(fg => (
+                        <Picker.Item key={fg.id} label={fg.product_name} value={fg.id} />
                       ))}
                     </Picker>
                   </View>
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
-                    placeholder="Bags"
-                    value={item.number_of_bags}
-                    onChangeText={(val) => updateItem(index, 'number_of_bags', val)}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginLeft: 10 }]}
-                    placeholder="Price/Bag"
-                    value={item.price_per_bag}
-                    onChangeText={(val) => updateItem(index, 'price_per_bag', val)}
-                    keyboardType="numeric"
-                  />
+                </View>
+
+                <View style={[styles.gridItem, { flex: 1 }]}>
+                  <Text style={styles.subLabel}>Unit Type</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={item.quantity_type}
+                      onValueChange={(val) => updateItem(index, 'quantity_type', val)}
+                    >
+                      <Picker.Item label="Bag" value="bag" />
+                      <Picker.Item label="Ton" value="ton" />
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+
+              {item.quantity_type === 'ton' ? (
+                <View style={isMobile ? styles.mobileGrid : styles.grid}>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.subLabel}>Quantity (Ton)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0.00"
+                      value={item.quantity_ton}
+                      onChangeText={(val) => updateItem(index, 'quantity_ton', val)}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.subLabel}>Price / Ton</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0.00"
+                      value={item.price_per_ton}
+                      onChangeText={(val) => updateItem(index, 'price_per_ton', val)}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={isMobile ? styles.mobileGrid : styles.grid}>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.subLabel}>Bag Size</Text>
+                    <View style={styles.pickerContainer}>
+                      <Picker
+                        selectedValue={item.bag_size_kg}
+                        onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
+                      >
+                        <Picker.Item label="Select Size" value="" />
+                        {bagSizes.map(bs => (
+                          <Picker.Item key={bs.id} label={`${bs.weight_kg} kg`} value={bs.weight_kg.toString()} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.subLabel}>Number of Bags</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0"
+                      value={item.number_of_bags}
+                      onChangeText={(val) => updateItem(index, 'number_of_bags', val)}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.subLabel}>Price / Bag</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0.00"
+                      value={item.price_per_bag}
+                      onChangeText={(val) => updateItem(index, 'price_per_bag', val)}
+                      keyboardType="numeric"
+                    />
+                  </View>
                 </View>
               )}
             </View>
           ))}
-          <TouchableOpacity onPress={addItem} style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+ Add Item</Text>
-          </TouchableOpacity>
 
           <Text style={styles.label}>Remarks</Text>
           <TextInput
@@ -338,14 +377,15 @@ export default function CustomerOrderMasterScreen({ navigation }) {
             value={formData.remarks}
             onChangeText={(text) => setFormData({ ...formData, remarks: text })}
             multiline
+            placeholder="Additional notes..."
           />
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-              <Text>Cancel</Text>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} disabled={isSubmitting}>
-              <Text style={styles.saveBtnText}>{isSubmitting ? 'Saving...' : 'Save Order'}</Text>
+              <Text style={styles.saveBtnText}>{isSubmitting ? 'Saving...' : (editMode ? 'Update Order' : 'Create Order')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -355,19 +395,140 @@ export default function CustomerOrderMasterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  form: { paddingBottom: 20 },
-  label: { fontWeight: '600', marginTop: 15, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10, backgroundColor: '#fff' },
-  pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, backgroundColor: '#fff' },
-  sectionHeader: { fontSize: 16, fontWeight: '700', marginTop: 25, marginBottom: 10, color: colors.primary },
-  itemContainer: { marginBottom: 15, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 5, borderLeftWidth: 3, borderLeftColor: colors.primary },
-  itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  removeBtn: { padding: 10, marginLeft: 5 },
-  addBtn: { padding: 10, backgroundColor: '#f0f0f0', borderRadius: 5, alignSelf: 'flex-start', marginTop: 5 },
-  addBtnText: { color: colors.primary, fontWeight: '600' },
-  textArea: { height: 60, textAlignVertical: 'top' },
-  buttonContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 30, gap: 15 },
-  cancelBtn: { padding: 15, borderRadius: 5, borderWidth: 1, borderColor: '#ddd' },
-  saveBtn: { padding: 15, borderRadius: 5, backgroundColor: colors.primary },
-  saveBtnText: { color: '#fff', fontWeight: '700' }
+  form: { 
+    paddingBottom: 20,
+    maxHeight: Platform.OS === 'web' ? '80vh' : 'auto',
+  },
+  grid: {
+    flexDirection: 'row',
+    gap: 15,
+    marginBottom: 10,
+  },
+  mobileGrid: {
+    flexDirection: 'column',
+    gap: 10,
+    marginBottom: 10,
+  },
+  gridItem: {
+    flex: 1,
+  },
+  label: { 
+    fontWeight: '600', 
+    marginTop: 15, 
+    marginBottom: 8,
+    color: '#374151',
+    fontSize: 14,
+  },
+  subLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#d1d5db', 
+    borderRadius: 6, 
+    padding: 10, 
+    backgroundColor: '#fff',
+    fontSize: 14,
+  },
+  pickerContainer: { 
+    borderWidth: 1, 
+    borderColor: '#d1d5db', 
+    borderRadius: 6, 
+    backgroundColor: '#fff',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    })
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 25,
+    marginBottom: 15,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  sectionHeader: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: colors.primary 
+  },
+  itemCard: { 
+    marginBottom: 20, 
+    padding: 15, 
+    backgroundColor: '#fff', 
+    borderRadius: 8, 
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    ...Platform.select({
+      web: { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
+      default: { elevation: 2 }
+    })
+  },
+  itemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  itemIndex: {
+    fontWeight: '700',
+    color: colors.primary,
+    fontSize: 14,
+  },
+  removeBtn: { 
+    padding: 5,
+  },
+  addBtn: { 
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    backgroundColor: '#f3f4f6', 
+    borderRadius: 6, 
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  addBtnText: { 
+    color: colors.primary, 
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  textArea: { 
+    height: 80, 
+    textAlignVertical: 'top' 
+  },
+  buttonContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    marginTop: 30, 
+    gap: 12,
+    marginBottom: 20,
+  },
+  cancelBtn: { 
+    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    borderRadius: 6, 
+    borderWidth: 1, 
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
+  },
+  cancelBtnText: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  saveBtn: { 
+    paddingVertical: 12,
+    paddingHorizontal: 25, 
+    borderRadius: 6, 
+    backgroundColor: colors.primary,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  saveBtnText: { 
+    color: '#fff', 
+    fontWeight: '700' 
+  }
 });
