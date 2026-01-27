@@ -711,6 +711,7 @@ class OrderItemBase(ISTModel):
     quantity_ton: Optional[float] = 0.0
     price_per_ton: Optional[float] = 0.0
     bag_size_id: Optional[int] = None
+    bag_size_weight: Optional[int] = None
     number_of_bags: Optional[int] = 0
     price_per_bag: Optional[float] = 0.0
     quantity_type: str = "ton" # "ton" or "bag"

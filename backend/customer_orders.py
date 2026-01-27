@@ -38,8 +38,21 @@ def create_order(order: schemas.CustomerOrderCreate,
         # Ensure database constraints are met
         if item_data.get('quantity_type') == 'bag':
             # Bag-based order: must have number_of_bags and price_per_bag
+            bag_weight = item_data.pop('bag_size_weight', None)
+            if bag_weight:
+                # Find or create BagSize
+                bag_size = db.query(models.BagSize).filter(
+                    models.BagSize.weight_kg == bag_weight,
+                    models.BagSize.branch_id == db_order.branch_id
+                ).first()
+                if not bag_size:
+                    bag_size = models.BagSize(weight_kg=bag_weight, branch_id=db_order.branch_id)
+                    db.add(bag_size)
+                    db.flush()
+                item_data['bag_size_id'] = bag_size.id
+            
             if not item_data.get('bag_size_id'):
-                raise HTTPException(status_code=400, detail="bag_size_id is required for bag-based orders")
+                raise HTTPException(status_code=400, detail="bag_size_id or weight is required for bag-based orders")
             if item_data.get('number_of_bags') is None:
                 item_data['number_of_bags'] = 0
             if item_data.get('price_per_bag') is None:
@@ -111,8 +124,21 @@ def update_order(order_id: int,
         # Ensure database constraints are met
         if item_data.get('quantity_type') == 'bag':
             # Bag-based order: must have number_of_bags and price_per_bag
+            bag_weight = item_data.pop('bag_size_weight', None)
+            if bag_weight:
+                # Find or create BagSize
+                bag_size = db.query(models.BagSize).filter(
+                    models.BagSize.weight_kg == bag_weight,
+                    models.BagSize.branch_id == db_order.branch_id
+                ).first()
+                if not bag_size:
+                    bag_size = models.BagSize(weight_kg=bag_weight, branch_id=db_order.branch_id)
+                    db.add(bag_size)
+                    db.flush()
+                item_data['bag_size_id'] = bag_size.id
+            
             if not item_data.get('bag_size_id'):
-                raise HTTPException(status_code=400, detail="bag_size_id is required for bag-based orders")
+                raise HTTPException(status_code=400, detail="bag_size_id or weight is required for bag-based orders")
             if item_data.get('number_of_bags') is None:
                 item_data['number_of_bags'] = 0
             if item_data.get('price_per_bag') is None:

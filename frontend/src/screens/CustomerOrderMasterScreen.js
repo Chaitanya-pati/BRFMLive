@@ -32,7 +32,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     customer_id: '',
     order_status: 'PENDING',
     remarks: '',
-    items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+    items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
   });
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
@@ -41,7 +41,6 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     loadOrders();
     loadCustomers();
     loadFinishedGoods();
-    loadBagSizes();
   }, []);
 
   const loadOrders = async () => {
@@ -83,7 +82,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: [...formData.items, { finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
   };
 
@@ -106,7 +105,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       customer_id: '',
       order_status: 'PENDING',
       remarks: '',
-      items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -123,11 +122,11 @@ export default function CustomerOrderMasterScreen({ navigation }) {
         finished_good_id: item.finished_good_id,
         quantity_type: item.quantity_type || 'bag',
         quantity_ton: (item.quantity_ton || '').toString(),
-        bag_size_id: item.bag_size_id || '',
+        bag_size_kg: item.bag_size ? item.bag_size.weight_kg.toString() : '50',
         number_of_bags: (item.number_of_bags || '').toString(),
         price_per_ton: (item.price_per_ton || '').toString(),
         price_per_bag: (item.price_per_bag || '').toString()
-      })) : [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_id: '', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      })) : [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
     });
     setModalVisible(true);
   };
@@ -141,7 +140,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     const validItems = formData.items.filter(item => {
       if (!item.finished_good_id) return false;
       if (item.quantity_type === 'ton') return item.quantity_ton;
-      if (item.quantity_type === 'bag') return item.number_of_bags && item.bag_size_id;
+      if (item.quantity_type === 'bag') return item.number_of_bags && item.bag_size_kg;
       return false;
     });
 
@@ -161,7 +160,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
           quantity_type: item.quantity_type,
           quantity_ton: item.quantity_type === 'ton' ? parseFloat(item.quantity_ton) : 0,
           price_per_ton: item.quantity_type === 'ton' ? parseFloat(item.price_per_ton || 0) : 0,
-          bag_size_id: item.quantity_type === 'bag' ? parseInt(item.bag_size_id) : null,
+          bag_size_weight: item.quantity_type === 'bag' ? parseInt(item.bag_size_kg) : null,
           number_of_bags: item.quantity_type === 'bag' ? parseInt(item.number_of_bags) : 0,
           price_per_bag: item.quantity_type === 'bag' ? parseFloat(item.price_per_bag || 0) : 0
         }))
@@ -299,17 +298,13 @@ export default function CustomerOrderMasterScreen({ navigation }) {
                 </View>
               ) : (
                 <View style={styles.itemRow}>
-                  <View style={[styles.pickerContainer, { flex: 1 }]}>
-                    <Picker
-                      selectedValue={item.bag_size_id}
-                      onValueChange={(val) => updateItem(index, 'bag_size_id', val)}
-                    >
-                      <Picker.Item label="Bag Size" value="" />
-                      {bagSizes.map(bs => (
-                        <Picker.Item key={bs.id} label={`${bs.weight_kg}kg`} value={bs.id} />
-                      ))}
-                    </Picker>
-                  </View>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    placeholder="Bag Size (kg)"
+                    value={item.bag_size_kg}
+                    onChangeText={(val) => updateItem(index, 'bag_size_kg', val)}
+                    keyboardType="numeric"
+                  />
                   <TextInput
                     style={[styles.input, { flex: 1, marginLeft: 10 }]}
                     placeholder="Bags"
