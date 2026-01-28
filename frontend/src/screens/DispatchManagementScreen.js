@@ -240,7 +240,30 @@ export default function DispatchManagementScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
-          <DataTable data={dispatches} columns={columns} />
+          <DataTable 
+            data={dispatches} 
+            columns={columns}
+            onEdit={(item) => {
+              setEditingDispatch(item);
+              setDispatchType(item.dispatched_bags > 0 ? "BAGS" : "TONS");
+              setFormData({
+                order_id: item.order_id.toString(),
+                driver_id: item.driver_id.toString(),
+                dispatched_quantity_ton: (item.dispatched_quantity_ton || 0).toString(),
+                dispatched_bags: (item.dispatched_bags || 0).toString(),
+                bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
+                state: item.state || "",
+                city: item.city || "",
+                warehouse_loader: item.warehouse_loader || "",
+                actual_dispatch_date: new Date(item.actual_dispatch_date),
+                delivery_date: item.delivery_date ? new Date(item.delivery_date) : new Date(),
+                status: item.status,
+                remarks: item.remarks || "",
+              });
+              setModalVisible(true);
+            }}
+            onDelete={(item) => handleDelete(item.dispatch_id)}
+          />
         )}
 
         <Modal
