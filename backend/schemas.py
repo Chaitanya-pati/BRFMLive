@@ -794,9 +794,12 @@ class DispatchItem(DispatchItemBase):
     ordered_qty_ton: Optional[float] = 0.0
     remaining_qty_ton: Optional[float] = 0.0
 
-class DispatchCreate(ISTModel):
+class DispatchBase(ISTModel):
     order_id: int
     driver_id: int
+    dispatched_quantity_ton: float = 0.0
+    dispatched_bags: Optional[int] = 0
+    bag_size_id: Optional[int] = None
     state: Optional[str] = None
     city: Optional[str] = None
     warehouse_loader: Optional[str] = None
@@ -804,6 +807,8 @@ class DispatchCreate(ISTModel):
     delivery_date: Optional[datetime] = None
     status: Optional[str] = "DISPATCHED"
     remarks: Optional[str] = None
+
+class DispatchCreate(DispatchBase):
     branch_id: Optional[int] = None
     dispatch_items: List[DispatchItemCreate]
 
@@ -819,20 +824,8 @@ class DispatchUpdate(ISTModel):
     remarks: Optional[str] = None
     dispatch_items: Optional[List[DispatchItemCreate]] = None
 
-class Dispatch(ISTModel):
+class Dispatch(DispatchBase):
     dispatch_id: int
-    order_id: int
-    driver_id: int
-    dispatched_quantity_ton: float
-    dispatched_bags: Optional[int] = 0
-    bag_size_id: Optional[int] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    warehouse_loader: Optional[str] = None
-    actual_dispatch_date: datetime
-    delivery_date: Optional[datetime] = None
-    status: str
-    remarks: Optional[str] = None
     branch_id: int
     created_at: datetime
 
