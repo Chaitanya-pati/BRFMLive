@@ -1,0 +1,127 @@
+You are fixing remaining bugs in item-wise dispatch UI.
+
+File: DispatchManagementScreen.jsx
+
+Current issues seen in UI (DO NOT IGNORE):
+
+------------------------------------------------
+ISSUE 1️⃣: PRODUCT NAME SHOWS "Unknown Product"
+------------------------------------------------
+Cause:
+- Wrong property mapping
+
+Fix:
+Product name MUST be resolved in this order:
+
+const productName =
+  item.finished_good?.product_name ||
+  item.finished_good?.name ||
+  item.product?.product_name ||
+  item.product?.name ||
+  "Unknown Product";
+
+Never hardcode "Unknown Product" if any of the above exists.
+
+------------------------------------------------
+ISSUE 2️⃣: ORDERED TONS SHOWS 0.00t FOR BAG ITEMS
+------------------------------------------------
+Cause:
+- quantity_ton is NULL for Bag-based items
+
+Fix:
+Ordered quantity calculation MUST be:
+
+if (item.quantity_ton && item.quantity_ton > 0) {
+  orderedTons = item.quantity_ton;
+} else if (item.number_of_bags && item.bag_size?.weight_kg) {
+  orderedTons = (item.number_of_bags * item.bag_size.weight_kg) / 1000;
+} else {
+  orderedTons = 0;
+}
+
+Ordered Bags:
+orderedBags = item.number_of_bags || 0;
+
+------------------------------------------------
+ISSUE 3️⃣: REMAINING QUANTITY ALWAYS 0.00
+------------------------------------------------
+Cause:
+- dispatched quantity not calculated per item
+
+Fix:
+Dispatched quantity MUST be calculated per item:
+
+dispatchedTons =
+  item.dispatched_qty_ton ||
+  sum(dispatch_items where order_item_id == item.order_item_id);
+
+Remaining:
+remainingTons = orderedTons - dispatchedTons;
+remainingBags = orderedBags - dispatchedBags;
+
+Remaining must NEVER be negative.
+
+------------------------------------------------
+ISSUE 4️⃣: WRONG INPUT SHOWN FOR ITEM TYPE
+------------------------------------------------
+Fix:
+If item.unit_type === "Bag" OR item.number_of_bags > 0:
+- Show:
+  - Bag Size (read-only or selectable)
+  - Dispatched Bags input
+- DO NOT show Qty (Tons) input
+
+Else:
+- Show ONLY Qty (Tons) input
+
+------------------------------------------------
+ISSUE 5️⃣: PAYLOAD MUST MATCH ITEM-WISE DISPATCH
+------------------------------------------------
+handleSave() MUST send:
+
+{
+  order_id,
+  driver_id,
+  actual_dispatch_date,
+  delivery_date,
+  status,
+  remarks,
+  dispatch_items: orderItems
+    .filter(item => dispatched_qty_ton > 0 OR dispatched_bags > 0)
+    .map(item => ({
+      order_item_id,
+      finished_good_id,
+      dispatched_qty_ton,
+      bag_size_id,
+      dispatched_bags
+    }))
+}
+
+DO NOT send total quantity manually.
+
+------------------------------------------------
+ISSUE 6️⃣: UI VALIDATION (MANDATORY)
+------------------------------------------------
+Before save:
+- dispatchedTons <= remainingTons
+- dispatchedBags <= remainingBags
+- At least ONE item must have dispatch quantity > 0
+
+If invalid → Alert + STOP.
+
+------------------------------------------------
+CONSTRAINTS
+------------------------------------------------
+❌ Do NOT change API routes
+❌ Do NOT redesign UI
+❌ Do NOT remove existing fields
+✅ Only FIX logic & bindings
+
+------------------------------------------------
+EXPECTED RESULT
+------------------------------------------------
+✔ Product names show correctly
+✔ Bag items show correct ordered tons
+✔ Remaining quantity updates correctly
+✔ Cannot dispatch more than remaining
+✔ Payload matches backend expectations

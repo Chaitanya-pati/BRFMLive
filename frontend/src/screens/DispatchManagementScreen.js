@@ -48,28 +48,39 @@ export default function DispatchManagementScreen({ navigation }) {
     if (selectedOrder && !editingDispatch) {
       const items = (selectedOrder.items || []).map(item => {
         const weightKg = item.bag_size?.weight_kg || item.bag_size_weight || 0;
-        const orderedQty = item.quantity_ton > 0 
-          ? item.quantity_ton 
-          : (item.number_of_bags * weightKg) / 1000;
         
-        const dispatchedSoFar = item.dispatched_qty || 0;
-        const remainingQty = item.remaining_qty !== undefined 
-          ? item.remaining_qty 
-          : (orderedQty - dispatchedSoFar);
+        let orderedTons = 0;
+        if (item.quantity_ton && item.quantity_ton > 0) {
+          orderedTons = item.quantity_ton;
+        } else if (item.number_of_bags && weightKg) {
+          orderedTons = (item.number_of_bags * weightKg) / 1000;
+        }
 
         const orderedBags = item.number_of_bags || 0;
-        const dispatchedBagsSoFar = item.dispatched_bags_total || 0; // Assuming backend provides this
-        const remainingBags = orderedBags - dispatchedBagsSoFar;
+        const dispatchedTons = item.dispatched_qty || 0;
+        const dispatchedBags = item.dispatched_bags_total || 0;
+
+        const remainingTons = Math.max(0, orderedTons - dispatchedTons);
+        const remainingBags = Math.max(0, orderedBags - dispatchedBags);
+
+        const productName =
+          item.finished_good?.product_name ||
+          item.finished_good?.name ||
+          item.product?.product_name ||
+          item.product?.name ||
+          item.product_name ||
+          "Unknown Product";
 
         return {
           order_item_id: item.order_item_id,
           finished_good_id: item.finished_good_id,
-          product_name: item.finished_good?.product_name || item.product?.product_name || item.product?.name || item.finished_good?.name || item.product_name || "Unknown Product",
+          product_name: productName,
           unit_type: item.unit_type || (item.number_of_bags > 0 ? 'Bag' : 'Ton'),
-          ordered_qty: orderedQty,
-          dispatched_so_far: dispatchedSoFar,
-          remaining_qty: remainingQty,
+          ordered_qty: orderedTons,
           ordered_bags: orderedBags,
+          dispatched_so_far: dispatchedTons,
+          dispatched_bags_so_far: dispatchedBags,
+          remaining_qty: remainingTons,
           remaining_bags: remainingBags,
           dispatched_qty_ton: "0",
           bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
@@ -157,7 +168,8 @@ export default function DispatchManagementScreen({ navigation }) {
         return;
       }
       
-      if (item.unit_type === 'Bag' && bags > item.remaining_bags) {
+      const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
+      if (isBagType && bags > item.remaining_bags) {
         Alert.alert("Error", `Bag count for ${item.product_name} exceeds remaining bags (${item.remaining_bags})`);
         return;
       }
@@ -376,67 +388,59 @@ export default function DispatchManagementScreen({ navigation }) {
             {selectedOrder && dispatchItems.length > 0 && (
               <View style={styles.itemsContainer}>
                 <Text style={styles.sectionTitle}>Item-wise Dispatch</Text>
-                {dispatchItems.map((item, index) => (
-                  <View key={index} style={styles.itemRow}>
-                    <Text style={styles.itemName}>{item.product_name}</Text>
-                    <Text style={styles.itemDetail}>
-                      Ordered: {item.ordered_qty.toFixed(2)}t {item.unit_type === 'Bag' ? `(${item.ordered_bags} Bags)` : ''} | 
-                      Remaining: {item.remaining_qty.toFixed(2)}t {item.unit_type === 'Bag' ? `(${item.remaining_bags} Bags)` : ''}
-                    </Text>
-                    <View style={styles.itemInputs}>
-                      {item.unit_type === 'Bag' ? (
-                        <>
-                          <View style={{ flex: 1, marginRight: 10 }}>
-                            <SelectDropdown
-                              label="Bag Size"
-                              options={bagSizes.map(b => ({ label: `${b.weight_kg} kg`, value: b.id.toString() }))}
-                              value={item.bag_size_id}
-                              onValueChange={(val) => {
-                                const newItems = [...dispatchItems];
-                                newItems[index].bag_size_id = val;
-                                // Auto-calculate tons if bags entered
-                                const bSize = bagSizes.find(b => b.id.toString() === val);
-                                if (bSize && newItems[index].dispatched_bags > 0) {
-                                  newItems[index].dispatched_qty_ton = ((parseInt(newItems[index].dispatched_bags) * bSize.weight_kg) / 1000).toString();
-                                }
-                                setDispatchItems(newItems);
-                              }}
-                            />
-                          </View>
+                {dispatchItems.map((item, index) => {
+                  const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
+                  return (
+                    <View key={index} style={styles.itemRow}>
+                      <Text style={styles.itemName}>{item.product_name}</Text>
+                      <Text style={styles.itemDetail}>
+                        Ordered: {item.ordered_qty.toFixed(2)}t {isBagType ? `(${item.ordered_bags} Bags)` : ''} | 
+                        Remaining: {item.remaining_qty.toFixed(2)}t {isBagType ? `(${item.remaining_bags} Bags)` : ''}
+                      </Text>
+                      <View style={styles.itemInputs}>
+                        {isBagType ? (
+                          <>
+                            <View style={{ flex: 1, marginRight: 10 }}>
+                              <InputField
+                                label="Bag Size"
+                                value={`${item.weight_kg} kg`}
+                                editable={false}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <InputField
+                                label="Bags To Dispatch"
+                                value={item.dispatched_bags}
+                                onChangeText={(val) => {
+                                  const newItems = [...dispatchItems];
+                                  newItems[index].dispatched_bags = val;
+                                  if (item.weight_kg) {
+                                    newItems[index].dispatched_qty_ton = ((parseInt(val || 0) * item.weight_kg) / 1000).toString();
+                                  }
+                                  setDispatchItems(newItems);
+                                }}
+                                keyboardType="numeric"
+                              />
+                            </View>
+                          </>
+                        ) : (
                           <View style={{ flex: 1 }}>
                             <InputField
-                              label="Bags"
-                              value={item.dispatched_bags}
+                              label="Qty (Tons) To Dispatch"
+                              value={item.dispatched_qty_ton}
                               onChangeText={(val) => {
                                 const newItems = [...dispatchItems];
-                                newItems[index].dispatched_bags = val;
-                                const bSize = bagSizes.find(b => b.id.toString() === item.bag_size_id);
-                                if (bSize) {
-                                  newItems[index].dispatched_qty_ton = ((parseInt(val || 0) * bSize.weight_kg) / 1000).toString();
-                                }
+                                newItems[index].dispatched_qty_ton = val;
                                 setDispatchItems(newItems);
                               }}
                               keyboardType="numeric"
                             />
                           </View>
-                        </>
-                      ) : (
-                        <View style={{ flex: 1 }}>
-                          <InputField
-                            label="Qty (Tons)"
-                            value={item.dispatched_qty_ton}
-                            onChangeText={(val) => {
-                              const newItems = [...dispatchItems];
-                              newItems[index].dispatched_qty_ton = val;
-                              setDispatchItems(newItems);
-                            }}
-                            keyboardType="numeric"
-                          />
-                        </View>
-                      )}
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
