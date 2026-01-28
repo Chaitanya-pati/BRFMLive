@@ -475,6 +475,14 @@ export const planningBinsApi = {
   getDestinationBins: () => api.get("/bins/destination"),
 };
 
+export const dispatchApi = {
+  getAll: () => api.get("/dispatches"),
+  getById: (id) => api.get(`/dispatches/${id}`),
+  create: (data) => api.post("/dispatches", data),
+  update: (id, data) => api.put(`/dispatches/${id}`, data),
+  delete: (id) => api.delete(`/dispatches/${id}`),
+};
+
 export const stateCityApi = {
   getStates: async () => {
     try {

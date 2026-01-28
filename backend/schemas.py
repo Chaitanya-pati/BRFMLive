@@ -783,7 +783,34 @@ class DispatchBase(ISTModel):
 class DispatchCreate(DispatchBase):
     branch_id: Optional[int] = None
 
+class DispatchUpdate(ISTModel):
+    order_id: Optional[int] = None
+    driver_id: Optional[int] = None
+    dispatched_quantity_ton: Optional[float] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    warehouse_loader: Optional[str] = None
+    actual_dispatch_date: Optional[datetime] = None
+    delivery_date: Optional[datetime] = None
+    status: Optional[str] = None
+    driver_photo: Optional[str] = None
+    remarks: Optional[str] = None
+
+    @validator('actual_dispatch_date', 'delivery_date', pre=True)
+    def _parse_dispatch_dates(cls, v):
+        return parse_datetime(v)
+
 class Dispatch(DispatchBase):
+    dispatch_id: int
+    branch_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DispatchWithDetails(Dispatch):
+    order: CustomerOrder
+    driver: Driver
     dispatch_id: int
     branch_id: int
     created_at: datetime

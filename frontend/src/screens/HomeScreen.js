@@ -182,6 +182,13 @@ export default function HomeScreen({ navigation }) {
 
   const allQuickActions = [
     {
+      title: "Dispatch Management",
+      route: "DispatchManagement",
+      icon: "truck",
+      color: "#f59e0b",
+      adminOnly: false,
+    },
+    {
       title: "Branch Master",
       route: "BranchMaster",
       icon: "storefront",

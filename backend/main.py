@@ -128,8 +128,73 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-app.include_router(drivers.router)
 app.include_router(customer_orders.router)
+app.include_router(drivers.router)
+
+# --- Dispatch Endpoints ---
+
+@app.post("/api/dispatches", response_model=schemas.Dispatch)
+def create_dispatch(dispatch: schemas.DispatchCreate,
+                    db: Session = Depends(get_db),
+                    branch_id: Optional[int] = Depends(get_branch_id)):
+    dispatch_data = dispatch.dict()
+    if branch_id and not dispatch_data.get('branch_id'):
+        dispatch_data['branch_id'] = branch_id
+    
+    if not dispatch_data.get('branch_id'):
+        raise HTTPException(status_code=400, detail="branch_id is required")
+        
+    db_dispatch = models.Dispatch(**dispatch_data)
+    db.add(db_dispatch)
+    try:
+        db.commit()
+        db.refresh(db_dispatch)
+        return db_dispatch
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/api/dispatches", response_model=List[schemas.DispatchWithDetails])
+def get_dispatches(skip: int = 0,
+                  limit: int = 100,
+                  branch_id: Optional[int] = Depends(get_branch_id),
+                  db: Session = Depends(get_db)):
+    query = db.query(models.Dispatch)
+    if branch_id:
+        query = query.filter(models.Dispatch.branch_id == branch_id)
+    return query.order_by(models.Dispatch.dispatch_id.desc()).offset(skip).limit(limit).all()
+
+@app.get("/api/dispatches/{dispatch_id}", response_model=schemas.DispatchWithDetails)
+def get_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
+    dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not dispatch:
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+    return dispatch
+
+@app.put("/api/dispatches/{dispatch_id}", response_model=schemas.Dispatch)
+def update_dispatch(dispatch_id: int,
+                    dispatch_update: schemas.DispatchUpdate,
+                    db: Session = Depends(get_db)):
+    db_dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not db_dispatch:
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+    
+    update_data = dispatch_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_dispatch, key, value)
+    
+    db.commit()
+    db.refresh(db_dispatch)
+    return db_dispatch
+
+@app.delete("/api/dispatches/{dispatch_id}")
+def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
+    db_dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not db_dispatch:
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+    db.delete(db_dispatch)
+    db.commit()
+    return {"message": "Dispatch deleted successfully"}
 
 
 @app.get("/")
