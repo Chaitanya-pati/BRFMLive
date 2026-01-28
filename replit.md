@@ -86,6 +86,13 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### January 28, 2026
+- Implemented Dispatch Management system.
+- Added backend CRUD endpoints for `Dispatch` in `main.py`.
+- Created `DispatchManagementScreen.js` in the frontend with data table and modal forms.
+- Integrated dispatch management with customer orders and driver data.
+- Added dispatch management to the dashboard navigation.
+
 ### November 19, 2025
 - Successfully imported and set up the project in Replit environment
 - Installed all frontend dependencies (750 npm packages)
