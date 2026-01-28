@@ -723,6 +723,8 @@ class OrderItem(OrderItemBase):
     order_id: int
     branch_id: int
     created_at: datetime
+    dispatched_qty: Optional[float] = 0.0
+    remaining_qty: Optional[float] = 0.0
 
 class CustomerOrderBase(ISTModel):
     order_code: str

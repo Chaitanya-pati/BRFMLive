@@ -92,6 +92,15 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Calculate dispatched and remaining quantities for each item
+    for item in order.items:
+        dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
+            models.DispatchItem.order_item_id == item.order_item_id
+        ).scalar() or 0.0
+        item.dispatched_qty = dispatched
+        item.remaining_qty = max(0, item.quantity_ton - dispatched)
+        
     return order
 
 @router.put("/{order_id}", response_model=schemas.CustomerOrder)
