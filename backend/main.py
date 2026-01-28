@@ -176,7 +176,6 @@ def update_order_statuses(order_id: int, db: Session):
         else:
             order.order_status = 'PENDING'
 
-@app.post("/api/dispatches", response_model=schemas.Dispatch)
 def update_dispatch_status(dispatch_id: int, db: Session):
     dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
     if not dispatch:
@@ -293,7 +292,7 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
         if order:
             order.order_status = 'DISPATCHED'
             db.commit()
-        
+
         db.refresh(db_dispatch)
         return db_dispatch
     except Exception as e:
