@@ -766,7 +766,9 @@ class Driver(DriverBase):
 class DispatchBase(ISTModel):
     order_id: int
     driver_id: int
-    dispatched_quantity_ton: float
+    dispatched_quantity_ton: float = 0.0
+    dispatched_bags: Optional[int] = 0
+    bag_size_id: Optional[int] = None
     state: Optional[str] = None
     city: Optional[str] = None
     warehouse_loader: Optional[str] = None
@@ -787,6 +789,8 @@ class DispatchUpdate(ISTModel):
     order_id: Optional[int] = None
     driver_id: Optional[int] = None
     dispatched_quantity_ton: Optional[float] = None
+    dispatched_bags: Optional[int] = None
+    bag_size_id: Optional[int] = None
     state: Optional[str] = None
     city: Optional[str] = None
     warehouse_loader: Optional[str] = None

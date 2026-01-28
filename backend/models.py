@@ -118,13 +118,15 @@ class Dispatch(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=False)
     driver_id = Column(Integer, ForeignKey("drivers.driver_id"), nullable=False)
-    dispatched_quantity_ton = Column(Float, nullable=False)
+    dispatched_quantity_ton = Column(Float, nullable=False, default=0.0)
+    dispatched_bags = Column(Integer, nullable=True, default=0)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=True)
     state = Column(String(100))
     city = Column(String(100))
     warehouse_loader = Column(String(150))
     actual_dispatch_date = Column(DateTime, nullable=False)
     delivery_date = Column(DateTime)
-    status = Column(String(30), default='DISPATCHED')
+    status = Column(String(30), default='DISPATCHED') # DISPATCHED, DELIVERED, PARTIAL, CANCELLED
     driver_photo = Column(Text)
     remarks = Column(Text)
     created_at = Column(DateTime, default=get_utc_now)
@@ -132,6 +134,7 @@ class Dispatch(Base):
     branch = relationship("Branch")
     order = relationship("CustomerOrder", back_populates="dispatches")
     driver = relationship("Driver", back_populates="dispatches")
+    bag_size = relationship("BagSize")
 
 class HourlyProduction(Base):
     __tablename__ = "hourly_productions"

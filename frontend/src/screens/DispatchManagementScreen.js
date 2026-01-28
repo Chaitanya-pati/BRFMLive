@@ -23,13 +23,17 @@ export default function DispatchManagementScreen({ navigation }) {
   const [dispatches, setDispatches] = useState([]);
   const [orders, setOrders] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [bagSizes, setBagSizes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
+  const [dispatchType, setDispatchType] = useState("TONS"); // TONS or BAGS
   const [formData, setFormData] = useState({
     order_id: "",
     driver_id: "",
-    dispatched_quantity_ton: "",
+    dispatched_quantity_ton: "0",
+    dispatched_bags: "0",
+    bag_size_id: "",
     state: "",
     city: "",
     warehouse_loader: "",
@@ -46,14 +50,16 @@ export default function DispatchManagementScreen({ navigation }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [disRes, orderRes, driverRes] = await Promise.all([
+      const [disRes, orderRes, driverRes, bagSizeRes] = await Promise.all([
         dispatchApi.getAll(),
         customerOrderApi.getAll(),
         driverApi.getAll(),
+        api.get("/bag-sizes"),
       ]);
       setDispatches(disRes.data);
       setOrders(orderRes.data);
       setDrivers(driverRes.data);
+      setBagSizes(bagSizeRes.data);
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
       Alert.alert("Error", "Failed to fetch data");
@@ -63,7 +69,7 @@ export default function DispatchManagementScreen({ navigation }) {
   };
 
   const handleSave = async () => {
-    if (!formData.order_id || !formData.driver_id || !formData.dispatched_quantity_ton) {
+    if (!formData.order_id || !formData.driver_id) {
       Alert.alert("Error", "Please fill required fields");
       return;
     }
@@ -73,7 +79,9 @@ export default function DispatchManagementScreen({ navigation }) {
         ...formData,
         order_id: parseInt(formData.order_id),
         driver_id: parseInt(formData.driver_id),
-        dispatched_quantity_ton: parseFloat(formData.dispatched_quantity_ton),
+        dispatched_quantity_ton: parseFloat(formData.dispatched_quantity_ton || 0),
+        dispatched_bags: parseInt(formData.dispatched_bags || 0),
+        bag_size_id: formData.bag_size_id ? parseInt(formData.bag_size_id) : null,
         actual_dispatch_date: formData.actual_dispatch_date.toISOString(),
         delivery_date: formData.delivery_date.toISOString(),
       };
@@ -121,7 +129,17 @@ export default function DispatchManagementScreen({ navigation }) {
       label: "Driver", 
       render: (item) => item.driver?.driver_name || "N/A" 
     },
-    { key: "dispatched_quantity_ton", label: "Qty (Tons)" },
+    { 
+      key: "quantity", 
+      label: "Quantity",
+      render: (item) => {
+        if (item.dispatched_bags > 0) {
+          const bagSizeStr = item.bag_size ? ` (${item.bag_size.weight_kg}kg)` : "";
+          return `${item.dispatched_bags} Bags${bagSizeStr}`;
+        }
+        return `${item.dispatched_quantity_ton} Tons`;
+      }
+    },
     { key: "status", label: "Status" },
     {
       key: "actions",
@@ -130,10 +148,13 @@ export default function DispatchManagementScreen({ navigation }) {
         <View style={styles.actionButtons}>
           <TouchableOpacity onPress={() => {
             setEditingDispatch(item);
+            setDispatchType(item.dispatched_bags > 0 ? "BAGS" : "TONS");
             setFormData({
               order_id: item.order_id.toString(),
               driver_id: item.driver_id.toString(),
-              dispatched_quantity_ton: item.dispatched_quantity_ton.toString(),
+              dispatched_quantity_ton: (item.dispatched_quantity_ton || 0).toString(),
+              dispatched_bags: (item.dispatched_bags || 0).toString(),
+              bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
               state: item.state || "",
               city: item.city || "",
               warehouse_loader: item.warehouse_loader || "",
@@ -163,10 +184,13 @@ export default function DispatchManagementScreen({ navigation }) {
             title="Add Dispatch"
             onPress={() => {
               setEditingDispatch(null);
+              setDispatchType("TONS");
               setFormData({
                 order_id: "",
                 driver_id: "",
-                dispatched_quantity_ton: "",
+                dispatched_quantity_ton: "0",
+                dispatched_bags: "0",
+                bag_size_id: "",
                 state: "",
                 city: "",
                 warehouse_loader: "",
@@ -193,6 +217,21 @@ export default function DispatchManagementScreen({ navigation }) {
           title={editingDispatch ? "Edit Dispatch" : "New Dispatch"}
         >
           <ScrollView>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, dispatchType === "TONS" && styles.activeTab]}
+                onPress={() => setDispatchType("TONS")}
+              >
+                <Text style={[styles.tabText, dispatchType === "TONS" && styles.activeTabText]}>By Tons</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, dispatchType === "BAGS" && styles.activeTab]}
+                onPress={() => setDispatchType("BAGS")}
+              >
+                <Text style={[styles.tabText, dispatchType === "BAGS" && styles.activeTabText]}>By Bags</Text>
+              </TouchableOpacity>
+            </View>
+
             <SelectDropdown
               label="Select Order *"
               options={orders.map(o => ({ label: o.order_code, value: o.order_id.toString() }))}
@@ -205,11 +244,41 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.driver_id}
               onSelect={(val) => setFormData({ ...formData, driver_id: val })}
             />
-            <InputField
-              label="Quantity (Tons) *"
-              value={formData.dispatched_quantity_ton}
-              onChangeText={(val) => setFormData({ ...formData, dispatched_quantity_ton: val })}
-              keyboardType="numeric"
+            
+            {dispatchType === "TONS" ? (
+              <InputField
+                label="Quantity (Tons) *"
+                value={formData.dispatched_quantity_ton}
+                onChangeText={(val) => setFormData({ ...formData, dispatched_quantity_ton: val, dispatched_bags: "0", bag_size_id: "" })}
+                keyboardType="numeric"
+              />
+            ) : (
+              <View>
+                <SelectDropdown
+                  label="Bag Size"
+                  options={bagSizes.map(b => ({ label: `${b.weight_kg} kg`, value: b.id.toString() }))}
+                  value={formData.bag_size_id}
+                  onSelect={(val) => setFormData({ ...formData, bag_size_id: val })}
+                />
+                <InputField
+                  label="Number of Bags *"
+                  value={formData.dispatched_bags}
+                  onChangeText={(val) => setFormData({ ...formData, dispatched_bags: val, dispatched_quantity_ton: "0" })}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
+            <SelectDropdown
+              label="Status"
+              options={[
+                { label: "Dispatched", value: "DISPATCHED" },
+                { label: "Delivered", value: "DELIVERED" },
+                { label: "Partially Delivered", value: "PARTIAL" },
+                { label: "Cancelled", value: "CANCELLED" },
+              ]}
+              value={formData.status}
+              onSelect={(val) => setFormData({ ...formData, status: val })}
             />
             <InputField
               label="Warehouse Loader"
@@ -260,4 +329,33 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: "bold" },
   actionButtons: { flexDirection: "row", gap: 15 },
+  tabContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 6,
+  },
+  activeTab: {
+    backgroundColor: "#fff",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  tabText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "600",
+  },
+  activeTabText: {
+    color: colors.primary,
+  },
 });
