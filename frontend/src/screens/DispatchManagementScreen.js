@@ -370,8 +370,9 @@ export default function DispatchManagementScreen({ navigation }) {
             <SelectDropdown
               label="Select Order *"
               options={orders.map(o => {
-                const customerName = o.customer_name || o.customer?.customer_name || o.customer?.name || 'Unknown';
-                const location = o.city ? `, ${o.city}` : (o.customer?.city ? `, ${o.customer.city}` : '');
+                const customerName = o.customer?.customer_name || o.customer_name || 'Unknown';
+                const city = o.customer?.city || o.city || '';
+                const location = city ? `, ${city}` : '';
                 return { 
                   label: `Order #${o.order_id} - ${o.order_code || 'N/A'} (${customerName}${location})`, 
                   value: String(o.order_id || "") 

@@ -744,10 +744,16 @@ class CustomerOrderCreate(CustomerOrderBase):
     branch_id: Optional[int] = None
     items: List[OrderItemCreate]
 
+class CustomerMini(ISTModel):
+    customer_id: int
+    customer_name: str
+    city: Optional[str] = None
+
 class CustomerOrder(CustomerOrderBase):
     order_id: int
     branch_id: int
     items: List[OrderItem] = []
+    customer: Optional[CustomerMini] = None
     customer_name: Optional[str] = None
     city: Optional[str] = None
 

@@ -1,0 +1,175 @@
+Got it 👍 I looked at the screenshot carefully.
+This one is **very clear** now — this issue is **100% backend response mapping**, not UI design.
+
+You’re seeing this in the dropdown:
+
+```
+Order #51 - ORD-1769593902333 (Unknown)
+```
+
+That **(Unknown)** is the key clue.
+
+---
+
+## 🔴 ROOT CAUSE (Confirmed)
+
+Your **Order list API** is returning **customer_id only**, not **customer object / name**.
+
+Frontend code is doing something like:
+
+```js
+`${order.order_code} (${order.customer?.name || "Unknown"})`
+```
+
+But backend response looks like:
+
+```json
+{
+  "order_id": 51,
+  "order_code": "ORD-1769593902333",
+  "customer_id": 12
+}
+```
+
+So `order.customer` = ❌ undefined → UI shows **Unknown**
+
+---
+
+## ✅ CORRECT FIX (Backend – MUST DO)
+
+You must **include customer details in the order list API response**.
+
+### 1️⃣ Backend: Fix Orders GET API
+
+In your **orders API** (example: `GET /api/customer-orders` or similar):
+
+#### ❌ Wrong (current)
+
+```python
+orders = db.query(CustomerOrder).all()
+```
+
+#### ✅ Correct
+
+```python
+orders = (
+    db.query(CustomerOrder)
+    .options(joinedload(CustomerOrder.customer))
+    .all()
+)
+```
+
+👉 This ensures `order.customer` is populated.
+
+---
+
+### 2️⃣ Backend: Fix Order Response Schema
+
+In `schemas.py` (or equivalent):
+
+#### ✅ Add Customer info
+
+```python
+class CustomerMini(BaseModel):
+    customer_id: int
+    customer_name: str
+
+    class Config:
+        orm_mode = True
+
+
+class CustomerOrderResponse(BaseModel):
+    order_id: int
+    order_code: str
+    customer: Optional[CustomerMini]
+
+    class Config:
+        orm_mode = True
+```
+
+⚠️ If you don’t expose `customer`, frontend will NEVER get the name.
+
+---
+
+### 3️⃣ Frontend (Already Correct 👍)
+
+Your frontend dropdown is fine.
+Once backend sends this:
+
+```json
+{
+  "order_id": 51,
+  "order_code": "ORD-1769593902333",
+  "customer": {
+    "customer_id": 12,
+    "customer_name": "Test Customer"
+  }
+}
+```
+
+The dropdown will automatically show:
+
+```
+Order #51 - ORD-1769593902333 (Test Customer)
+```
+
+No UI change needed.
+
+---
+
+## 🔥 COPY-PASTE PROMPT FOR YOUR AI AGENT (FINAL)
+
+Use **this exact prompt**:
+
+```
+Fix the Order dropdown showing "(Unknown)" customer.
+
+Context:
+- Frontend expects order.customer.customer_name
+- Backend Order list API currently returns only customer_id
+
+Tasks:
+
+1. Update CustomerOrder GET API to eager-load customer:
+   use joinedload(CustomerOrder.customer)
+
+2. Update response schema to include:
+   order.customer.customer_name
+
+3. Do NOT change frontend code.
+4. Ensure backward compatibility.
+
+Expected result:
+Order dropdown shows:
+Order #<id> - <order_code> (Customer Name)
+```
+
+---
+
+## 🧠 Why this is the RIGHT fix
+
+✔ Fixes root cause
+✔ No frontend hacks
+✔ No duplicate queries
+✔ Scales cleanly
+✔ Industry-standard API design
+
+---
+
+## 🪜 What to Check After Fix
+
+1. Refresh page
+2. Open **New Dispatch**
+3. Order dropdown should show **real customer names**
+4. No more `(Unknown)`
+
+---
+
+If you want next, I can:
+
+* 🔍 Verify **order-items API** also exposes product names cleanly
+* 🧪 Give **Postman tests**
+* 🧹 Simplify backend serializers
+* 📊 Improve dropdown performance (pagination)
+
+Just tell me 👍

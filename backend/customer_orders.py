@@ -86,7 +86,7 @@ def get_orders(skip: int = 0,
     query = db.query(models.CustomerOrder)
     if branch_id:
         query = query.filter(models.CustomerOrder.branch_id == branch_id)
-    # Eagerly load customer and finished_good relationships
+    # Eagerly load customer and items with their related models
     from sqlalchemy.orm import joinedload
     query = query.options(
         joinedload(models.CustomerOrder.customer),
@@ -95,9 +95,9 @@ def get_orders(skip: int = 0,
     )
     orders = query.order_by(models.CustomerOrder.order_id.desc()).offset(skip).limit(limit).all()
     
-    # Enrich orders with item details including product names
+    # Enrich orders with resolved data for the frontend
     for order in orders:
-        # Flatten customer data for frontend
+        # Standardize customer data for frontend dropdowns
         if order.customer:
             order.customer_name = order.customer.customer_name
             order.city = order.customer.city
@@ -106,7 +106,7 @@ def get_orders(skip: int = 0,
             order.city = ""
 
         for item in order.items:
-            # Use same product name resolution logic
+            # Resolve product name
             if item.finished_good:
                 item.product_name = item.finished_good.product_name
             elif hasattr(item, 'product') and item.product:
@@ -114,20 +114,18 @@ def get_orders(skip: int = 0,
             else:
                 item.product_name = "Unknown Product"
                 
-            # Basic dispatched calculation if not already present
-            if not hasattr(item, 'dispatched_qty'):
-                dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-                    models.DispatchItem.order_item_id == item.order_item_id
-                ).scalar() or 0.0
-                item.dispatched_qty = dispatched
-                
-            if not hasattr(item, 'dispatched_bags_total'):
-                dispatched_bags = db.query(func.sum(models.DispatchItem.dispatched_bags)).filter(
-                    models.DispatchItem.order_item_id == item.order_item_id
-                ).scalar() or 0
-                item.dispatched_bags_total = dispatched_bags
+            # Calculate dispatch statistics
+            dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
+                models.DispatchItem.order_item_id == item.order_item_id
+            ).scalar() or 0.0
+            item.dispatched_qty = dispatched
+            
+            dispatched_bags = db.query(func.sum(models.DispatchItem.dispatched_bags)).filter(
+                models.DispatchItem.order_item_id == item.order_item_id
+            ).scalar() or 0
+            item.dispatched_bags_total = dispatched_bags
 
-            # Weight kg calculation
+            # Quantity and remaining weight logic
             weight_kg = item.bag_size.weight_kg if item.bag_size else (getattr(item, 'bag_size_weight', 0) or 0)
             ordered_qty = item.quantity_ton if (item.quantity_ton and item.quantity_ton > 0) else ((item.number_of_bags * weight_kg / 1000.0) if (item.number_of_bags and weight_kg) else 0.0)
             item.remaining_qty = max(0, ordered_qty - item.dispatched_qty)
