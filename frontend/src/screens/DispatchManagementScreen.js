@@ -232,7 +232,7 @@ export default function DispatchManagementScreen({ navigation }) {
               label="Select Order *"
               options={orders.map(o => ({ label: `Order #${o.order_id} - ${o.order_code || 'N/A'}`, value: String(o.order_id || "") }))}
               value={formData.order_id}
-              onSelect={(val) => {
+              onValueChange={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
                 const isBags = order?.total_bags > 0;
                 setDispatchType(isBags ? "BAGS" : "TONS");
@@ -276,7 +276,7 @@ export default function DispatchManagementScreen({ navigation }) {
               label="Select Driver *"
               options={drivers.map(d => ({ label: String(d.driver_name || "Unknown Driver"), value: String(d.driver_id || "") }))}
               value={formData.driver_id}
-              onSelect={(val) => setFormData({ ...formData, driver_id: val })}
+              onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
             />
             
             {dispatchType === "TONS" ? (
@@ -292,7 +292,7 @@ export default function DispatchManagementScreen({ navigation }) {
                   label="Bag Size"
                   options={bagSizes.map(b => ({ label: `${b.weight_kg} kg`, value: b.id.toString() }))}
                   value={formData.bag_size_id}
-                  onSelect={(val) => setFormData({ ...formData, bag_size_id: val })}
+                  onValueChange={(val) => setFormData({ ...formData, bag_size_id: val })}
                 />
                 <InputField
                   label="Number of Bags *"
@@ -312,7 +312,7 @@ export default function DispatchManagementScreen({ navigation }) {
                 { label: "Cancelled", value: "CANCELLED" },
               ]}
               value={formData.status}
-              onSelect={(val) => setFormData({ ...formData, status: val })}
+              onValueChange={(val) => setFormData({ ...formData, status: val })}
             />
             <InputField
               label="Warehouse Loader"
