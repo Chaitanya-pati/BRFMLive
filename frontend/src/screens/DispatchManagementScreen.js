@@ -262,13 +262,13 @@ export default function DispatchManagementScreen({ navigation }) {
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Total Quantity:</Text>
                   <Text style={styles.summaryValue}>
-                    {selectedOrder.total_quantity_ton} Tons
+                    {(selectedOrder.items?.reduce((acc, item) => acc + (parseFloat(item.quantity_ton) || 0), 0) || 0).toFixed(2)} Tons
                   </Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Total Bags:</Text>
                   <Text style={styles.summaryValue}>
-                    {selectedOrder.total_bags} Bags
+                    {selectedOrder.items?.reduce((acc, item) => acc + (parseInt(item.number_of_bags) || 0), 0) || 0} Bags
                   </Text>
                 </View>
                 {selectedOrder.order_date && (
@@ -283,12 +283,21 @@ export default function DispatchManagementScreen({ navigation }) {
                   <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#bae6fd', paddingTop: 8 }}>
                     <Text style={[styles.summaryLabel, { fontWeight: 'bold', marginBottom: 4 }]}>Items:</Text>
                     {selectedOrder.items.map((item, index) => (
-                      <View key={index} style={styles.summaryRow}>
-                        <Text style={[styles.summaryValue, { flex: 1 }]}>
-                          • {item.product?.name || 'Product'} ({item.unit_type})
-                        </Text>
+                      <View key={index} style={[styles.summaryRow, { marginBottom: 6 }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.summaryValue}>
+                            • {item.product?.name || item.finished_good?.name || 'Product'} 
+                          </Text>
+                          {item.unit_type === 'Bag' && item.bag_size_weight && (
+                            <Text style={[styles.summaryValue, { fontSize: 10, marginLeft: 10, color: '#0c4a6e' }]}>
+                              Weight: {item.bag_size_weight} kg
+                            </Text>
+                          )}
+                        </View>
                         <Text style={styles.summaryValue}>
-                          {item.unit_type === 'Bag' ? `${item.number_of_bags} Bags` : `${item.quantity_ton} Tons`}
+                          {item.unit_type === 'Bag' || item.number_of_bags > 0 
+                            ? `${item.number_of_bags} Bags` 
+                            : `${item.quantity_ton} Tons`}
                         </Text>
                       </View>
                     ))}
