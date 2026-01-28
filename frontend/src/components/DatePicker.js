@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal as RNModal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import colors from '../theme/colors';
@@ -14,6 +14,14 @@ export default function DatePicker({
   maximumDate,
 }) {
   const [show, setShow] = useState(false);
+  const [internalValue, setInternalValue] = useState('');
+
+  // Update internal value whenever the external value changes
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setInternalValue(formatDateForWeb(value));
+    }
+  }, [value]);
 
   const handleChange = (event, selectedDate) => {
     if (Platform.OS !== 'ios') {
@@ -26,7 +34,7 @@ export default function DatePicker({
 
   const formatDateForWeb = (date) => {
     if (!date) return '';
-    const d = new Date(date);
+    const d = (date instanceof Date) ? date : new Date(date);
     if (isNaN(d.getTime())) return '';
     
     const year = d.getFullYear();
@@ -44,7 +52,7 @@ export default function DatePicker({
 
   const formatDate = (date) => {
     if (!date) return placeholder;
-    const d = new Date(date);
+    const d = (date instanceof Date) ? date : new Date(date);
     if (isNaN(d.getTime())) return placeholder;
     
     if (mode === 'time') {
@@ -80,11 +88,15 @@ export default function DatePicker({
       {Platform.OS === 'web' ? (
         <input
           type={mode === 'time' ? 'time' : mode === 'datetime' ? 'datetime-local' : 'date'}
-          value={formatDateForWeb(value)}
+          value={internalValue}
           onChange={(e) => {
             const val = e.target.value;
+            setInternalValue(val); // Immediate UI feedback
             if (val) {
-              onChange(new Date(val));
+              const dateObj = new Date(val);
+              if (!isNaN(dateObj.getTime())) {
+                onChange(dateObj);
+              }
             }
           }}
           style={{
@@ -96,7 +108,8 @@ export default function DatePicker({
             color: colors.onSurface || '#333',
             width: '100%',
             boxSizing: 'border-box',
-            fontFamily: 'inherit'
+            fontFamily: 'inherit',
+            outline: 'none'
           }}
         />
       ) : (

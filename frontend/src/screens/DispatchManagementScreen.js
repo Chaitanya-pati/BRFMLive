@@ -408,12 +408,12 @@ export default function DispatchManagementScreen({ navigation }) {
             />
             <DatePicker
               label="Dispatch Date"
-              date={formData.actual_dispatch_date}
+              value={formData.actual_dispatch_date}
               onChange={(date) => setFormData({ ...formData, actual_dispatch_date: date })}
             />
             <DatePicker
               label="Delivery Date"
-              date={formData.delivery_date}
+              value={formData.delivery_date}
               onChange={(date) => setFormData({ ...formData, delivery_date: date })}
             />
             <InputField
