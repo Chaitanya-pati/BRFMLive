@@ -86,6 +86,13 @@ def get_orders(skip: int = 0,
     query = db.query(models.CustomerOrder)
     if branch_id:
         query = query.filter(models.CustomerOrder.branch_id == branch_id)
+    # Eagerly load customer and finished_good relationships
+    from sqlalchemy.orm import joinedload
+    query = query.options(
+        joinedload(models.CustomerOrder.customer),
+        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.finished_good),
+        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.bag_size)
+    )
     orders = query.order_by(models.CustomerOrder.order_id.desc()).offset(skip).limit(limit).all()
     
     # Enrich orders with item details including product names
