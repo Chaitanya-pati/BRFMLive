@@ -47,8 +47,9 @@ export default function DispatchManagementScreen({ navigation }) {
   useEffect(() => {
     if (selectedOrder && !editingDispatch) {
       const items = (selectedOrder.items || []).map(item => {
+        // Try to get weight from item directly or from populated bag_size object or fallback to bagSizes list
         const bagSize = item.bag_size || bagSizes.find(bs => bs.id === item.bag_size_id);
-        const weightKg = bagSize?.weight_kg || item.bag_size_weight || 0;
+        const weightKg = item.bag_size_weight || bagSize?.weight_kg || 0;
         
         let orderedTons = 0;
         if (item.quantity_ton && item.quantity_ton > 0) {
