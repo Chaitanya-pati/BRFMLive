@@ -64,7 +64,7 @@ export default function DispatchManagementScreen({ navigation }) {
         return {
           order_item_id: item.order_item_id,
           finished_good_id: item.finished_good_id,
-          product_name: item.finished_good?.product_name || item.product?.product_name || item.product_name || "Unknown Product",
+          product_name: item.finished_good?.product_name || item.product?.product_name || item.product?.name || item.finished_good?.name || item.product_name || "Unknown Product",
           unit_type: item.unit_type || (item.number_of_bags > 0 ? 'Bag' : 'Ton'),
           ordered_qty: orderedQty,
           dispatched_so_far: dispatchedSoFar,
@@ -267,7 +267,7 @@ export default function DispatchManagementScreen({ navigation }) {
                 return {
                   order_item_id: di.order_item_id,
                   finished_good_id: di.finished_good_id,
-                  product_name: di.finished_good?.product_name || di.order_item?.product_name || "Unknown Product",
+                  product_name: di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
                   unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
                   ordered_qty: orderedQty,
                   dispatched_so_far: 0, 
