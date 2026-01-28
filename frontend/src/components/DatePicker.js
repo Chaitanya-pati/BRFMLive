@@ -24,13 +24,34 @@ export default function DatePicker({
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return placeholder;
+  const formatDateForWeb = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    
     if (mode === 'time') {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
     if (mode === 'datetime') {
-      return date.toLocaleString([], { 
+      return `${year}-${month}-${day}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return placeholder;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return placeholder;
+    
+    if (mode === 'time') {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (mode === 'datetime') {
+      return d.toLocaleString([], { 
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -38,12 +59,12 @@ export default function DatePicker({
         minute: '2-digit'
       });
     }
-    return date.toLocaleDateString();
+    return d.toLocaleDateString();
   };
 
   const renderPicker = () => (
     <DateTimePicker
-      value={value || new Date()}
+      value={value instanceof Date ? value : new Date()}
       mode={mode}
       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
       onChange={handleChange}
@@ -59,20 +80,23 @@ export default function DatePicker({
       {Platform.OS === 'web' ? (
         <input
           type={mode === 'time' ? 'time' : mode === 'datetime' ? 'datetime-local' : 'date'}
-          value={value ? (mode === 'time' ? value.toTimeString().split(' ')[0] : value.toISOString().split('T')[0]) : ''}
+          value={formatDateForWeb(value)}
           onChange={(e) => {
-            const date = e.target.value ? new Date(e.target.value) : new Date();
-            onChange(date);
+            const val = e.target.value;
+            if (val) {
+              onChange(new Date(val));
+            }
           }}
           style={{
             backgroundColor: colors.inputBackground || '#fff',
-            borderWidth: 1,
-            borderColor: colors.border || '#ccc',
-            borderRadius: 8,
-            padding: 12,
-            fontSize: 16,
+            border: `1px solid ${error ? (colors.error || '#f44336') : (colors.border || '#ccc')}`,
+            borderRadius: '8px',
+            padding: '12px',
+            fontSize: '16px',
             color: colors.onSurface || '#333',
             width: '100%',
+            boxSizing: 'border-box',
+            fontFamily: 'inherit'
           }}
         />
       ) : (
@@ -116,6 +140,7 @@ export default function DatePicker({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
+    width: '100%',
   },
   label: {
     fontSize: 14,
