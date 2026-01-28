@@ -16,7 +16,7 @@ import SelectDropdown from "../components/SelectDropdown";
 import DatePicker from "../components/DatePicker";
 import Button from "../components/Button";
 import colors from "../theme/colors";
-import { dispatchApi, customerOrderApi, driverApi, bagSizeApi } from "../api/client";
+import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, stateCityApi } from "../api/client";
 import { FaTruck, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
@@ -24,6 +24,8 @@ export default function DispatchManagementScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
@@ -47,7 +49,16 @@ export default function DispatchManagementScreen({ navigation }) {
 
   useEffect(() => {
     fetchData();
+    fetchStates();
   }, []);
+
+  useEffect(() => {
+    if (formData.state) {
+      fetchCities(formData.state);
+    } else {
+      setCities([]);
+    }
+  }, [formData.state]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -59,23 +70,33 @@ export default function DispatchManagementScreen({ navigation }) {
         bagSizeApi.getAll(),
       ]);
       
-      console.log("Fetched Orders:", orderRes.data);
-      console.log("Fetched Drivers:", driverRes.data);
-      
       setDispatches(disRes.data || []);
       setOrders(orderRes.data || []);
       setDrivers(driverRes.data || []);
       setBagSizes(bagSizeRes.data || []);
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
-      // Fallback to empty arrays on error to prevent UI from being stuck
-      setDispatches([]);
-      setOrders([]);
-      setDrivers([]);
-      setBagSizes([]);
       Alert.alert("Error", "Failed to fetch data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStates = async () => {
+    try {
+      const stateList = await stateCityApi.getStates();
+      setStates(stateList || []);
+    } catch (error) {
+      console.error("Error fetching states:", error);
+    }
+  };
+
+  const fetchCities = async (stateId) => {
+    try {
+      const cityList = await stateCityApi.getCities(stateId);
+      setCities(cityList || []);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
     }
   };
 
@@ -374,15 +395,18 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.warehouse_loader}
               onChangeText={(val) => setFormData({ ...formData, warehouse_loader: val })}
             />
-            <InputField
+            <SelectDropdown
               label="State"
+              options={states.map(s => ({ label: s.state_name, value: s.state_id.toString() }))}
               value={formData.state}
-              onChangeText={(val) => setFormData({ ...formData, state: val })}
+              onValueChange={(val) => setFormData({ ...formData, state: val, city: "" })}
             />
-            <InputField
+            <SelectDropdown
               label="City"
+              options={cities.map(c => ({ label: c.district_name, value: c.district_name }))}
               value={formData.city}
-              onChangeText={(val) => setFormData({ ...formData, city: val })}
+              onValueChange={(val) => setFormData({ ...formData, city: val })}
+              enabled={cities.length > 0}
             />
             <DatePicker
               label="Dispatch Date"
