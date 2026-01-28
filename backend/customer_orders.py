@@ -97,6 +97,14 @@ def get_orders(skip: int = 0,
     
     # Enrich orders with item details including product names
     for order in orders:
+        # Flatten customer data for frontend
+        if order.customer:
+            order.customer_name = order.customer.customer_name
+            order.city = order.customer.city
+        else:
+            order.customer_name = "Unknown"
+            order.city = ""
+
         for item in order.items:
             # Use same product name resolution logic
             if item.finished_good:
