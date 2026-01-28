@@ -83,6 +83,7 @@ class OrderItem(Base):
     order = relationship("CustomerOrder", back_populates="items")
     finished_good = relationship("FinishedGood")
     bag_size = relationship("BagSize", back_populates="order_items")
+    dispatch_items = relationship("DispatchItem", back_populates="order_item")
 
 class RawProduct(Base):
     __tablename__ = "raw_products"
@@ -134,6 +135,24 @@ class Dispatch(Base):
     branch = relationship("Branch")
     order = relationship("CustomerOrder", back_populates="dispatches")
     driver = relationship("Driver", back_populates="dispatches")
+    bag_size = relationship("BagSize")
+    items = relationship("DispatchItem", back_populates="dispatch", cascade="all, delete-orphan")
+
+class DispatchItem(Base):
+    __tablename__ = "dispatch_items"
+    id = Column(Integer, primary_key=True, index=True)
+    dispatch_id = Column(Integer, ForeignKey("dispatch.dispatch_id"), nullable=False)
+    order_item_id = Column(Integer, ForeignKey("order_items.order_item_id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    dispatched_qty_ton = Column(Float, nullable=False)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=True)
+    dispatched_bags = Column(Integer, nullable=True)
+    item_status = Column(String(30), default='DELIVERED') # Status of this specific dispatch item
+    created_at = Column(DateTime, default=get_utc_now)
+
+    dispatch = relationship("Dispatch", back_populates="items")
+    order_item = relationship("OrderItem", back_populates="dispatch_items")
+    finished_good = relationship("FinishedGood")
     bag_size = relationship("BagSize")
 
 class HourlyProduction(Base):
