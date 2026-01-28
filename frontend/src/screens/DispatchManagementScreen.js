@@ -252,14 +252,24 @@ export default function DispatchManagementScreen({ navigation }) {
               <View style={styles.orderSummary}>
                 <Text style={styles.summaryTitle}>Order Summary</Text>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Ordered:</Text>
-                  <Text style={styles.summaryValue}>
-                    {selectedOrder.total_quantity_ton} Tons ({selectedOrder.total_bags} Bags)
-                  </Text>
+                  <Text style={styles.summaryLabel}>Order Code:</Text>
+                  <Text style={styles.summaryValue}>{selectedOrder.order_code}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Customer:</Text>
                   <Text style={styles.summaryValue}>{selectedOrder.customer?.name}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Quantity:</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedOrder.total_quantity_ton} Tons
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Bags:</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedOrder.total_bags} Bags
+                  </Text>
                 </View>
                 {selectedOrder.order_date && (
                   <View style={styles.summaryRow}>
@@ -267,6 +277,21 @@ export default function DispatchManagementScreen({ navigation }) {
                     <Text style={styles.summaryValue}>
                       {new Date(selectedOrder.order_date).toLocaleDateString()}
                     </Text>
+                  </View>
+                )}
+                {selectedOrder.items && selectedOrder.items.length > 0 && (
+                  <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#bae6fd', paddingTop: 8 }}>
+                    <Text style={[styles.summaryLabel, { fontWeight: 'bold', marginBottom: 4 }]}>Items:</Text>
+                    {selectedOrder.items.map((item, index) => (
+                      <View key={index} style={styles.summaryRow}>
+                        <Text style={[styles.summaryValue, { flex: 1 }]}>
+                          • {item.product?.name || 'Product'} ({item.unit_type})
+                        </Text>
+                        <Text style={styles.summaryValue}>
+                          {item.unit_type === 'Bag' ? `${item.number_of_bags} Bags` : `${item.quantity_ton} Tons`}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>
