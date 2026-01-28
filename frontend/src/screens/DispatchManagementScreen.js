@@ -58,6 +58,10 @@ export default function DispatchManagementScreen({ navigation }) {
         driverApi.getAll(),
         bagSizeApi.getAll(),
       ]);
+      
+      console.log("Fetched Orders:", orderRes.data);
+      console.log("Fetched Drivers:", driverRes.data);
+      
       setDispatches(disRes.data || []);
       setOrders(orderRes.data || []);
       setDrivers(driverRes.data || []);
@@ -226,10 +230,10 @@ export default function DispatchManagementScreen({ navigation }) {
           <ScrollView>
             <SelectDropdown
               label="Select Order *"
-              options={orders.map(o => ({ label: o.order_code, value: o.order_id?.toString() || "" }))}
+              options={orders.map(o => ({ label: String(o.order_code || `Order #${o.order_id}`), value: String(o.order_id || "") }))}
               value={formData.order_id}
               onSelect={(val) => {
-                const order = orders.find(o => o.order_id?.toString() === val);
+                const order = orders.find(o => String(o.order_id) === val);
                 const isBags = order?.total_bags > 0;
                 setDispatchType(isBags ? "BAGS" : "TONS");
                 setFormData({ 
@@ -270,7 +274,7 @@ export default function DispatchManagementScreen({ navigation }) {
 
             <SelectDropdown
               label="Select Driver *"
-              options={drivers.map(d => ({ label: d.driver_name, value: d.driver_id?.toString() || "" }))}
+              options={drivers.map(d => ({ label: String(d.driver_name || "Unknown Driver"), value: String(d.driver_id || "") }))}
               value={formData.driver_id}
               onSelect={(val) => setFormData({ ...formData, driver_id: val })}
             />
