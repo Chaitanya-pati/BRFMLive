@@ -369,10 +369,13 @@ export default function DispatchManagementScreen({ navigation }) {
           <ScrollView>
             <SelectDropdown
               label="Select Order *"
-              options={orders.map(o => ({ 
-                label: `Order #${o.order_id} - ${o.order_code || 'N/A'} (${o.customer?.customer_name || o.customer?.name || 'Unknown'})`, 
-                value: String(o.order_id || "") 
-              }))}
+              options={orders.map(o => {
+                const customerName = o.customer?.customer_name || o.customer?.name || 'Unknown';
+                return { 
+                  label: `Order #${o.order_id} - ${o.order_code || 'N/A'} (${customerName})`, 
+                  value: String(o.order_id || "") 
+                };
+              })}
               value={formData.order_id}
               onValueChange={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
