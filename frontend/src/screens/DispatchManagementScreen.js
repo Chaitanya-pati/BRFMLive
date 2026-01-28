@@ -56,7 +56,7 @@ export default function DispatchManagementScreen({ navigation }) {
         dispatchApi.getAll(),
         customerOrderApi.getAll(),
         driverApi.getAll(),
-        api.get("/bag-sizes"),
+        bagSizeApi.getAll(),
       ]);
       setDispatches(disRes.data);
       setOrders(orderRes.data);

@@ -197,6 +197,14 @@ def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
     return {"message": "Dispatch deleted successfully"}
 
 
+@app.get("/api/bag-sizes", response_model=List[schemas.BagSize])
+def get_bag_sizes(db: Session = Depends(get_db),
+                  branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.BagSize)
+    if branch_id:
+        query = query.filter(models.BagSize.branch_id == branch_id)
+    return query.all()
+
 @app.get("/")
 @app.head("/")
 def read_root():
