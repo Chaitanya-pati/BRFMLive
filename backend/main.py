@@ -176,8 +176,8 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
                     if abs(expected_weight_ton - item_data['dispatched_qty_ton']) > 0.05: # 50kg tolerance
                          raise HTTPException(status_code=400, detail=f"Bag count/size weight does not match dispatched quantity for item {order_item.order_item_id}")
 
-            total_qty += item_data['dispatched_qty_ton']
-            total_bags += item_data.get('dispatched_bags', 0)
+            total_qty += item_data.get('dispatched_qty_ton') or 0.0
+            total_bags += item_data.get('dispatched_bags') or 0
             
         dispatch_data['dispatched_quantity_ton'] = total_qty
         dispatch_data['dispatched_bags'] = total_bags
