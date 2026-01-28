@@ -234,16 +234,22 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.order_id}
               onValueChange={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
-                const isBags = order?.total_bags > 0;
-                setDispatchType(isBags ? "BAGS" : "TONS");
+                // Check if any item in the order is bag-based
+                const hasBags = order?.items?.some(item => item.unit_type === 'Bag' || item.number_of_bags > 0);
+                setDispatchType(hasBags ? "BAGS" : "TONS");
+                
+                // Calculate defaults
+                const totalTons = order?.items?.reduce((acc, item) => acc + (parseFloat(item.quantity_ton) || 0), 0) || 0;
+                const totalBags = order?.items?.reduce((acc, item) => acc + (parseInt(item.number_of_bags) || 0), 0) || 0;
+                
                 setFormData({ 
                   ...formData, 
                   order_id: val,
                   state: order?.customer?.state || formData.state,
                   city: order?.customer?.city || formData.city,
-                  dispatched_quantity_ton: isBags ? "0" : (order?.total_quantity_ton || 0).toString(),
-                  dispatched_bags: isBags ? (order?.total_bags || 0).toString() : "0",
-                  bag_size_id: order?.bag_size_id ? order.bag_size_id.toString() : "",
+                  dispatched_quantity_ton: totalTons.toString(),
+                  dispatched_bags: totalBags.toString(),
+                  bag_size_id: order?.items?.find(item => item.bag_size_id)?.bag_size_id?.toString() || "",
                 });
               }}
             />
@@ -313,11 +319,26 @@ export default function DispatchManagementScreen({ navigation }) {
               onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
             />
             
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, dispatchType === "TONS" && styles.activeTab]} 
+                onPress={() => setDispatchType("TONS")}
+              >
+                <Text style={[styles.tabText, dispatchType === "TONS" && styles.activeTabText]}>Tons</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, dispatchType === "BAGS" && styles.activeTab]} 
+                onPress={() => setDispatchType("BAGS")}
+              >
+                <Text style={[styles.tabText, dispatchType === "BAGS" && styles.activeTabText]}>Bags</Text>
+              </TouchableOpacity>
+            </View>
+
             {dispatchType === "TONS" ? (
               <InputField
                 label="Quantity (Tons) *"
                 value={formData.dispatched_quantity_ton}
-                onChangeText={(val) => setFormData({ ...formData, dispatched_quantity_ton: val, dispatched_bags: "0", bag_size_id: "" })}
+                onChangeText={(val) => setFormData({ ...formData, dispatched_quantity_ton: val })}
                 keyboardType="numeric"
               />
             ) : (
@@ -331,7 +352,7 @@ export default function DispatchManagementScreen({ navigation }) {
                 <InputField
                   label="Number of Bags *"
                   value={formData.dispatched_bags}
-                  onChangeText={(val) => setFormData({ ...formData, dispatched_bags: val, dispatched_quantity_ton: "0" })}
+                  onChangeText={(val) => setFormData({ ...formData, dispatched_bags: val })}
                   keyboardType="numeric"
                 />
               </View>
