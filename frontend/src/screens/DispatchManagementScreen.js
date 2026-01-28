@@ -152,14 +152,14 @@ export default function DispatchManagementScreen({ navigation }) {
   const columns = [
     { key: "dispatch_id", label: "ID" },
     { 
-      key: "order", 
+      key: "order_id", 
       label: "Order", 
-      render: (item) => item.order?.order_code || "N/A" 
+      render: (item) => item.order?.order_code || `Order #${item.order_id}`
     },
     { 
-      key: "driver", 
+      key: "driver_id", 
       label: "Driver", 
-      render: (item) => item.driver?.driver_name || "N/A" 
+      render: (item) => item.driver?.driver_name || `Driver #${item.driver_id}`
     },
     { 
       key: "quantity", 
