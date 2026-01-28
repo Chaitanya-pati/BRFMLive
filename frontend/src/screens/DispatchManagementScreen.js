@@ -219,32 +219,22 @@ export default function DispatchManagementScreen({ navigation }) {
           title={editingDispatch ? "Edit Dispatch" : "New Dispatch"}
         >
           <ScrollView>
-            <View style={styles.tabContainer}>
-              <TouchableOpacity 
-                style={[styles.tab, dispatchType === "TONS" && styles.activeTab]}
-                onPress={() => setDispatchType("TONS")}
-              >
-                <Text style={[styles.tabText, dispatchType === "TONS" && styles.activeTabText]}>By Tons</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tab, dispatchType === "BAGS" && styles.activeTab]}
-                onPress={() => setDispatchType("BAGS")}
-              >
-                <Text style={[styles.tabText, dispatchType === "BAGS" && styles.activeTabText]}>By Bags</Text>
-              </TouchableOpacity>
-            </View>
-
             <SelectDropdown
               label="Select Order *"
               options={orders.map(o => ({ label: o.order_code, value: o.order_id.toString() }))}
               value={formData.order_id}
               onSelect={(val) => {
                 const order = orders.find(o => o.order_id.toString() === val);
+                const isBags = order?.total_bags > 0;
+                setDispatchType(isBags ? "BAGS" : "TONS");
                 setFormData({ 
                   ...formData, 
                   order_id: val,
                   state: order?.customer?.state || formData.state,
                   city: order?.customer?.city || formData.city,
+                  dispatched_quantity_ton: isBags ? "0" : (order?.total_quantity_ton || 0).toString(),
+                  dispatched_bags: isBags ? (order?.total_bags || 0).toString() : "0",
+                  bag_size_id: order?.bag_size_id ? order.bag_size_id.toString() : "",
                 });
               }}
             />
