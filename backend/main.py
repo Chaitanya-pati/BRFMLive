@@ -177,6 +177,49 @@ def update_order_statuses(order_id: int, db: Session):
             order.order_status = 'PENDING'
 
 @app.post("/api/dispatches", response_model=schemas.Dispatch)
+def update_dispatch_status(dispatch_id: int, db: Session):
+    dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not dispatch:
+        return
+
+    # If no delivery date, it's just DISPATCHED
+    if not dispatch.delivery_date:
+        dispatch.status = "DISPATCHED"
+        db.commit()
+        return
+
+    # Check order items to see if everything is delivered
+    order = dispatch.order
+    if not order:
+        return
+
+    all_delivered = True
+    any_delivered = False
+
+    for item in order.items:
+        # Calculate total dispatched for this item across all dispatches
+        total_dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
+            models.DispatchItem.order_item_id == item.order_item_id
+        ).scalar() or 0.0
+
+        weight_kg = item.bag_size.weight_kg if item.bag_size else (item.bag_size_weight or 0)
+        ordered_qty = item.quantity_ton if (item.quantity_ton and item.quantity_ton > 0) else ((item.number_of_bags * weight_kg / 1000.0) if (item.number_of_bags and weight_kg) else 0.0)
+
+        if total_dispatched < ordered_qty - 0.0001:
+            all_delivered = False
+        if total_dispatched > 0:
+            any_delivered = True
+
+    if all_delivered:
+        dispatch.status = "DELIVERED"
+    elif any_delivered:
+        dispatch.status = "PARTIALLY DELIVERED"
+    else:
+        dispatch.status = "DISPATCHED"
+    
+    db.commit()
+
+@app.post("/api/dispatches", response_model=schemas.Dispatch)
 def create_dispatch(dispatch: schemas.DispatchCreate,
                     db: Session = Depends(get_db),
                     branch_id: Optional[int] = Depends(get_branch_id)):
@@ -189,6 +232,9 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
     if not dispatch_data.get('branch_id'):
         raise HTTPException(status_code=400, detail="branch_id is required")
         
+    # Auto-set status to DISPATCHED on creation
+    dispatch_data['status'] = "DISPATCHED"
+
     # Validation and calculation if items are provided
     if dispatch_items_data:
         total_qty = 0.0
@@ -243,10 +289,9 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
         db.commit()
         
         # Update statuses after commit to ensure all dispatches are counted
-        if dispatch_items_data:
-            order_id = db_dispatch.order_id
-            update_order_statuses(order_id, db)
-            db.commit()
+        update_order_statuses(db_dispatch.order_id, db)
+        update_dispatch_status(db_dispatch.dispatch_id, db)
+        db.commit()
 
         db.refresh(db_dispatch)
         return db_dispatch
