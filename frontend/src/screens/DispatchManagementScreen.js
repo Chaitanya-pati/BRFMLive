@@ -47,7 +47,8 @@ export default function DispatchManagementScreen({ navigation }) {
   useEffect(() => {
     if (selectedOrder && !editingDispatch) {
       const items = (selectedOrder.items || []).map(item => {
-        const weightKg = item.bag_size?.weight_kg || item.bag_size_weight || 0;
+        const bagSize = item.bag_size || bagSizes.find(bs => bs.id === item.bag_size_id);
+        const weightKg = bagSize?.weight_kg || item.bag_size_weight || 0;
         
         let orderedTons = 0;
         if (item.quantity_ton && item.quantity_ton > 0) {
@@ -90,7 +91,7 @@ export default function DispatchManagementScreen({ navigation }) {
       });
       setDispatchItems(items);
     }
-  }, [selectedOrder, editingDispatch]);
+  }, [selectedOrder, editingDispatch, bagSizes]);
 
   useEffect(() => {
     fetchData();
