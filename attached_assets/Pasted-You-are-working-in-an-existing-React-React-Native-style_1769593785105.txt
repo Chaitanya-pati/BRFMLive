@@ -1,0 +1,122 @@
+You are working in an existing React / React-Native style codebase.
+
+File: DispatchManagementScreen.jsx
+
+Current behavior:
+- Dispatch is created at ORDER level
+- UI collects total tons / total bags
+- POST /api/dispatches sends order-level quantities
+
+Backend has changed:
+- Dispatch still exists (header)
+- NEW table: dispatch_items
+- Dispatch now supports ITEM-WISE dispatch (partial & multiple)
+
+GOAL:
+Extend this screen to support ITEM-WISE DISPATCH
+WITHOUT breaking existing dispatch behavior.
+
+------------------------------------------------
+WHAT YOU MUST CHANGE
+------------------------------------------------
+
+1️⃣ DO NOT REMOVE existing fields
+- order_id
+- driver_id
+- dispatch header fields (dates, status, remarks, etc.)
+
+2️⃣ ADD item-wise dispatch UI AFTER order selection
+
+When an order is selected:
+- Load order.items
+- Show each item in a list
+- For EACH item show:
+  - Product name
+  - Ordered quantity
+  - Already dispatched quantity
+  - Remaining quantity
+  - Input fields:
+      dispatched_qty_ton
+      OR
+      bag_size_id + dispatched_bags
+
+Use a local state:
+dispatchItems = [
+  {
+    order_item_id,
+    finished_good_id,
+    dispatched_qty_ton,
+    bag_size_id,
+    dispatched_bags
+  }
+]
+
+------------------------------------------------
+3️⃣ VALIDATION IN UI
+------------------------------------------------
+Before Save:
+- dispatched_qty_ton ≤ remaining_qty
+- dispatched_bags ≥ 0
+- At least ONE item must have quantity > 0
+
+Show alert if validation fails.
+
+------------------------------------------------
+4️⃣ PAYLOAD FORMAT CHANGE (IMPORTANT)
+------------------------------------------------
+Modify handleSave():
+
+POST /api/dispatches payload must be:
+
+{
+  order_id,
+  driver_id,
+  actual_dispatch_date,
+  delivery_date,
+  status,
+  remarks,
+  dispatch_items: [
+    {
+      order_item_id,
+      finished_good_id,
+      dispatched_qty_ton,
+      bag_size_id,
+      dispatched_bags
+    }
+  ]
+}
+
+DO NOT send total quantity manually.
+Backend will calculate totals.
+
+------------------------------------------------
+5️⃣ BACKWARD COMPATIBILITY
+------------------------------------------------
+If backend returns dispatch without dispatch_items:
+- UI should still display total quantity
+- Editing old dispatches must still work
+
+------------------------------------------------
+6️⃣ READ VIEW UPDATE
+------------------------------------------------
+In DataTable:
+- Replace "Quantity" column
+- Show:
+  - "3 items | 12.5 Tons"
+OR
+  - Expandable item-wise quantities
+
+------------------------------------------------
+CONSTRAINTS
+------------------------------------------------
+❌ Do NOT refactor entire screen
+❌ Do NOT change navigation
+❌ Do NOT break Add / Edit / Delete flows
+✅ Extend only where needed
+
+------------------------------------------------
+DELIVERABLES
+------------------------------------------------
+- Updated UI for item-wise dispatch
+- Updated handleSave payload
+- Validation logic

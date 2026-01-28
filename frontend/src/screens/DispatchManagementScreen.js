@@ -29,13 +29,9 @@ export default function DispatchManagementScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
-  const [dispatchType, setDispatchType] = useState("TONS"); // TONS or BAGS
   const [formData, setFormData] = useState({
     order_id: "",
     driver_id: "",
-    dispatched_quantity_ton: "0",
-    dispatched_bags: "0",
-    bag_size_id: "",
     state: "",
     city: "",
     warehouse_loader: "",
@@ -44,8 +40,27 @@ export default function DispatchManagementScreen({ navigation }) {
     status: "DISPATCHED",
     remarks: "",
   });
+  const [dispatchItems, setDispatchItems] = useState([]);
 
   const selectedOrder = orders.find(o => o.order_id.toString() === formData.order_id);
+
+  useEffect(() => {
+    if (selectedOrder && !editingDispatch) {
+      const items = (selectedOrder.items || []).map(item => ({
+        order_item_id: item.order_item_id,
+        finished_good_id: item.finished_good_id,
+        product_name: item.finished_good?.product_name || item.product_name || "Product",
+        ordered_qty: item.quantity_ton || 0,
+        dispatched_so_far: item.dispatched_qty || 0,
+        remaining_qty: item.remaining_qty || (item.quantity_ton - (item.dispatched_qty || 0)),
+        dispatched_qty_ton: "0",
+        bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
+        dispatched_bags: "0",
+        weight_kg: item.bag_size?.weight_kg || item.bag_size_weight || 0
+      }));
+      setDispatchItems(items);
+    }
+  }, [selectedOrder, editingDispatch]);
 
   useEffect(() => {
     fetchData();
@@ -106,16 +121,36 @@ export default function DispatchManagementScreen({ navigation }) {
       return;
     }
 
+    const itemsToDispatch = dispatchItems.filter(item => parseFloat(item.dispatched_qty_ton) > 0 || parseInt(item.dispatched_bags) > 0);
+    
+    if (itemsToDispatch.length === 0) {
+      Alert.alert("Error", "At least ONE item must have quantity > 0");
+      return;
+    }
+
+    // Validation
+    for (const item of itemsToDispatch) {
+      const qty = parseFloat(item.dispatched_qty_ton);
+      if (qty > item.remaining_qty + 0.0001) {
+        Alert.alert("Error", `Quantity for ${item.product_name} exceeds remaining amount`);
+        return;
+      }
+    }
+
     try {
       const payload = {
         ...formData,
         order_id: parseInt(formData.order_id),
         driver_id: parseInt(formData.driver_id),
-        dispatched_quantity_ton: parseFloat(formData.dispatched_quantity_ton || 0),
-        dispatched_bags: parseInt(formData.dispatched_bags || 0),
-        bag_size_id: formData.bag_size_id ? parseInt(formData.bag_size_id) : null,
         actual_dispatch_date: formData.actual_dispatch_date.toISOString(),
-        delivery_date: formData.delivery_date.toISOString(),
+        delivery_date: formData.delivery_date ? formData.delivery_date.toISOString() : null,
+        dispatch_items: itemsToDispatch.map(item => ({
+          order_item_id: item.order_item_id,
+          finished_good_id: item.finished_good_id,
+          dispatched_qty_ton: parseFloat(item.dispatched_qty_ton || 0),
+          bag_size_id: item.bag_size_id ? parseInt(item.bag_size_id) : null,
+          dispatched_bags: parseInt(item.dispatched_bags || 0)
+        }))
       };
 
       if (editingDispatch) {
@@ -165,6 +200,10 @@ export default function DispatchManagementScreen({ navigation }) {
       key: "quantity", 
       label: "Quantity",
       render: (item) => {
+        if (item.items && item.items.length > 0) {
+          const totalTons = item.items.reduce((acc, i) => acc + (i.dispatched_qty_ton || 0), 0);
+          return `${item.items.length} items | ${totalTons.toFixed(2)} Tons`;
+        }
         if (item.dispatched_bags > 0) {
           const bagSizeStr = item.bag_size ? ` (${item.bag_size.weight_kg}kg)` : "";
           return `${item.dispatched_bags} Bags${bagSizeStr}`;
@@ -180,13 +219,9 @@ export default function DispatchManagementScreen({ navigation }) {
         <View style={styles.actionButtons}>
           <TouchableOpacity onPress={() => {
             setEditingDispatch(item);
-            setDispatchType(item.dispatched_bags > 0 ? "BAGS" : "TONS");
             setFormData({
               order_id: item.order_id.toString(),
               driver_id: item.driver_id.toString(),
-              dispatched_quantity_ton: (item.dispatched_quantity_ton || 0).toString(),
-              dispatched_bags: (item.dispatched_bags || 0).toString(),
-              bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
               state: item.state || "",
               city: item.city || "",
               warehouse_loader: item.warehouse_loader || "",
@@ -195,6 +230,21 @@ export default function DispatchManagementScreen({ navigation }) {
               status: item.status,
               remarks: item.remarks || "",
             });
+            // Map existing items if any
+            if (item.items && item.items.length > 0) {
+              setDispatchItems(item.items.map(di => ({
+                order_item_id: di.order_item_id,
+                finished_good_id: di.finished_good_id,
+                product_name: di.finished_good?.product_name || "Product",
+                ordered_qty: di.order_item?.quantity_ton || 0,
+                dispatched_so_far: 0, // Simplified for edit
+                remaining_qty: di.order_item?.quantity_ton || 0,
+                dispatched_qty_ton: di.dispatched_qty_ton.toString(),
+                bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
+                dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
+                weight_kg: di.bag_size?.weight_kg || 0
+              })));
+            }
             setModalVisible(true);
           }}>
             <FaEdit color={colors.primary} size={18} />
@@ -212,17 +262,14 @@ export default function DispatchManagementScreen({ navigation }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Dispatch Records</Text>
-          <Button
+            <Button
             title="Add Dispatch"
             onPress={() => {
               setEditingDispatch(null);
-              setDispatchType("TONS");
+              setDispatchItems([]);
               setFormData({
                 order_id: "",
                 driver_id: "",
-                dispatched_quantity_ton: "0",
-                dispatched_bags: "0",
-                bag_size_id: "",
                 state: "",
                 city: "",
                 warehouse_loader: "",
@@ -278,81 +325,52 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.order_id}
               onValueChange={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
-                // Check if any item in the order is bag-based
-                const hasBags = order?.items?.some(item => item.unit_type === 'Bag' || item.number_of_bags > 0);
-                setDispatchType(hasBags ? "BAGS" : "TONS");
-                
-                // Calculate defaults
-                const totalTons = order?.items?.reduce((acc, item) => acc + (parseFloat(item.quantity_ton) || 0), 0) || 0;
-                const totalBags = order?.items?.reduce((acc, item) => acc + (parseInt(item.number_of_bags) || 0), 0) || 0;
-                
                 setFormData({ 
                   ...formData, 
                   order_id: val,
                   state: order?.customer?.state || formData.state,
                   city: order?.customer?.city || formData.city,
-                  dispatched_quantity_ton: totalTons.toString(),
-                  dispatched_bags: totalBags.toString(),
-                  bag_size_id: order?.items?.find(item => item.bag_size_id)?.bag_size_id?.toString() || "",
                 });
               }}
             />
 
-            {selectedOrder && (
-              <View style={styles.orderSummary}>
-                <Text style={styles.summaryTitle}>Order Summary</Text>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Order Code:</Text>
-                  <Text style={styles.summaryValue}>{selectedOrder.order_code}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Customer:</Text>
-                  <Text style={styles.summaryValue}>{selectedOrder.customer?.name}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Quantity:</Text>
-                  <Text style={styles.summaryValue}>
-                    {(selectedOrder.items?.reduce((acc, item) => acc + (parseFloat(item.quantity_ton) || 0), 0) || 0).toFixed(2)} Tons
-                  </Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Bags:</Text>
-                  <Text style={styles.summaryValue}>
-                    {selectedOrder.items?.reduce((acc, item) => acc + (parseInt(item.number_of_bags) || 0), 0) || 0} Bags
-                  </Text>
-                </View>
-                {selectedOrder.order_date && (
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Order Date:</Text>
-                    <Text style={styles.summaryValue}>
-                      {new Date(selectedOrder.order_date).toLocaleDateString()}
+            {selectedOrder && dispatchItems.length > 0 && (
+              <View style={styles.itemsContainer}>
+                <Text style={styles.sectionTitle}>Item-wise Dispatch</Text>
+                {dispatchItems.map((item, index) => (
+                  <View key={index} style={styles.itemRow}>
+                    <Text style={styles.itemName}>{item.product_name}</Text>
+                    <Text style={styles.itemDetail}>
+                      Ordered: {item.ordered_qty}t | Dispatched: {item.dispatched_so_far}t | Remaining: {item.remaining_qty.toFixed(2)}t
                     </Text>
-                  </View>
-                )}
-                {selectedOrder.items && selectedOrder.items.length > 0 && (
-                  <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#bae6fd', paddingTop: 8 }}>
-                    <Text style={[styles.summaryLabel, { fontWeight: 'bold', marginBottom: 4 }]}>Items:</Text>
-                    {selectedOrder.items.map((item, index) => (
-                      <View key={index} style={[styles.summaryRow, { marginBottom: 6 }]}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.summaryValue}>
-                            • {item.product?.name || item.finished_good?.name || 'Product'} 
-                          </Text>
-                          {item.unit_type === 'Bag' && item.bag_size_weight && (
-                            <Text style={[styles.summaryValue, { fontSize: 10, marginLeft: 10, color: '#0c4a6e' }]}>
-                              Weight: {item.bag_size_weight} kg
-                            </Text>
-                          )}
-                        </View>
-                        <Text style={styles.summaryValue}>
-                          {item.unit_type === 'Bag' || item.number_of_bags > 0 
-                            ? `${item.number_of_bags} Bags` 
-                            : `${item.quantity_ton} Tons`}
-                        </Text>
+                    <View style={styles.itemInputs}>
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <InputField
+                          label="Qty (Tons)"
+                          value={item.dispatched_qty_ton}
+                          onChangeText={(val) => {
+                            const newItems = [...dispatchItems];
+                            newItems[index].dispatched_qty_ton = val;
+                            setDispatchItems(newItems);
+                          }}
+                          keyboardType="numeric"
+                        />
                       </View>
-                    ))}
+                      <View style={{ flex: 1 }}>
+                        <InputField
+                          label="Bags"
+                          value={item.dispatched_bags}
+                          onChangeText={(val) => {
+                            const newItems = [...dispatchItems];
+                            newItems[index].dispatched_bags = val;
+                            setDispatchItems(newItems);
+                          }}
+                          keyboardType="numeric"
+                        />
+                      </View>
+                    </View>
                   </View>
-                )}
+                ))}
               </View>
             )}
 
@@ -362,45 +380,6 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.driver_id}
               onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
             />
-            
-            <View style={styles.tabContainer}>
-              <TouchableOpacity 
-                style={[styles.tab, dispatchType === "TONS" && styles.activeTab]} 
-                onPress={() => setDispatchType("TONS")}
-              >
-                <Text style={[styles.tabText, dispatchType === "TONS" && styles.activeTabText]}>Tons</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tab, dispatchType === "BAGS" && styles.activeTab]} 
-                onPress={() => setDispatchType("BAGS")}
-              >
-                <Text style={[styles.tabText, dispatchType === "BAGS" && styles.activeTabText]}>Bags</Text>
-              </TouchableOpacity>
-            </View>
-
-            {dispatchType === "TONS" ? (
-              <InputField
-                label="Quantity (Tons) *"
-                value={formData.dispatched_quantity_ton}
-                onChangeText={(val) => setFormData({ ...formData, dispatched_quantity_ton: val })}
-                keyboardType="numeric"
-              />
-            ) : (
-              <View>
-                <SelectDropdown
-                  label="Bag Size"
-                  options={bagSizes.map(b => ({ label: `${b.weight_kg} kg`, value: b.id.toString() }))}
-                  value={formData.bag_size_id}
-                  onValueChange={(val) => setFormData({ ...formData, bag_size_id: val })}
-                />
-                <InputField
-                  label="Number of Bags *"
-                  value={formData.dispatched_bags}
-                  onChangeText={(val) => setFormData({ ...formData, dispatched_bags: val })}
-                  keyboardType="numeric"
-                />
-              </View>
-            )}
 
             <SelectDropdown
               label="Status"
@@ -520,5 +499,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#0369a1",
     fontWeight: "600",
+  },
+  itemsContainer: {
+    backgroundColor: "#f0f9ff",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginBottom: 12,
+  },
+  itemRow: {
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0f2fe",
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  itemDetail: {
+    fontSize: 11,
+    color: "#64748b",
+    marginVertical: 4,
+  },
+  itemInputs: {
+    flexDirection: "row",
+    marginTop: 5,
   },
 });
