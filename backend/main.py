@@ -133,6 +133,49 @@ app.include_router(drivers.router)
 
 # --- Dispatch Endpoints ---
 
+def get_order_item_qty_ton(order_item):
+    if order_item.quantity_ton and order_item.quantity_ton > 0:
+        return float(order_item.quantity_ton)
+    if order_item.number_of_bags and order_item.bag_size:
+        return (order_item.number_of_bags * order_item.bag_size.weight_kg) / 1000.0
+    return 0.0
+
+def update_order_statuses(order_id: int, db: Session):
+    order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
+    if not order:
+        return
+
+    all_items_delivered = True
+    any_item_partial = False
+    
+    for item in order.items:
+        dispatched_total = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
+            models.DispatchItem.order_item_id == item.order_item_id
+        ).scalar() or 0.0
+        
+        ordered_qty = get_order_item_qty_ton(item)
+        
+        if dispatched_total >= ordered_qty - 0.0001:
+            # Fully delivered
+            pass 
+        elif dispatched_total > 0:
+            all_items_delivered = False
+            any_item_partial = True
+        else:
+            all_items_delivered = False
+
+    if all_items_delivered:
+        order.order_status = 'DELIVERED'
+    elif any_item_partial:
+        order.order_status = 'PARTIAL'
+    else:
+        # Check if any dispatch exists for this order at all
+        any_dispatch = db.query(models.Dispatch).filter(models.Dispatch.order_id == order_id).first()
+        if any_dispatch:
+            order.order_status = 'PARTIAL'
+        else:
+            order.order_status = 'PENDING'
+
 @app.post("/api/dispatches", response_model=schemas.Dispatch)
 def create_dispatch(dispatch: schemas.DispatchCreate,
                     db: Session = Depends(get_db),
@@ -159,22 +202,26 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
             if not order_item:
                 raise HTTPException(status_code=400, detail=f"Order item {item_data['order_item_id']} not found")
             
-            # 2. Calculate remaining qty
+            # 2. Calculate remaining qty using bag-aware helper
             dispatched_so_far = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
                 models.DispatchItem.order_item_id == item_data['order_item_id']
             ).scalar() or 0.0
             
-            remaining_qty = order_item.quantity_ton - dispatched_so_far
+            ordered_qty_ton = get_order_item_qty_ton(order_item)
+            remaining_qty = ordered_qty_ton - dispatched_so_far
+            
             if item_data['dispatched_qty_ton'] > remaining_qty + 0.0001: # Small epsilon for float comparison
-                raise HTTPException(status_code=400, detail=f"Dispatched quantity {item_data['dispatched_qty_ton']} exceeds remaining {remaining_qty} for item {order_item.order_item_id}")
+                raise HTTPException(status_code=400, detail=f"Dispatched quantity {item_data['dispatched_qty_ton']} exceeds remaining {remaining_qty:.2f} for item {order_item.order_item_id}")
             
             # 3. Bag validation
-            if item_data.get('bag_size_id') and item_data.get('dispatched_bags'):
-                bag_size = db.query(models.BagSize).filter(models.BagSize.id == item_data['bag_size_id']).first()
-                if bag_size:
-                    expected_weight_ton = (bag_size.weight_kg * item_data['dispatched_bags']) / 1000.0
-                    if abs(expected_weight_ton - item_data['dispatched_qty_ton']) > 0.05: # 50kg tolerance
-                         raise HTTPException(status_code=400, detail=f"Bag count/size weight does not match dispatched quantity for item {order_item.order_item_id}")
+            if item_data.get('dispatched_bags'):
+                bag_size_id = item_data.get('bag_size_id') or order_item.bag_size_id
+                if bag_size_id:
+                    bag_size = db.query(models.BagSize).filter(models.BagSize.id == bag_size_id).first()
+                    if bag_size:
+                        expected_weight_ton = (bag_size.weight_kg * item_data['dispatched_bags']) / 1000.0
+                        if abs(expected_weight_ton - item_data['dispatched_qty_ton']) > 0.05: # 50kg tolerance
+                             raise HTTPException(status_code=400, detail=f"Bag count/size weight does not match dispatched quantity for item {order_item.order_item_id}")
 
             total_qty += item_data.get('dispatched_qty_ton') or 0.0
             total_bags += item_data.get('dispatched_bags') or 0
@@ -193,10 +240,6 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
             db_item = models.DispatchItem(dispatch_id=db_dispatch.dispatch_id, **item_data)
             db.add(db_item)
             
-            # Trigger OrderItem status update
-            order_item = db.query(models.OrderItem).filter(models.OrderItem.order_item_id == item_data['order_item_id']).first()
-            # Status will be handled by the update_order_statuses helper below
-            
         db.commit()
         
         # Update statuses after commit to ensure all dispatches are counted
@@ -213,38 +256,6 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
             raise e
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-def update_order_statuses(order_id: int, db: Session):
-    order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
-    if not order:
-        return
-
-    all_items_delivered = True
-    any_item_partial = False
-    
-    for item in order.items:
-        dispatched_total = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-            models.DispatchItem.order_item_id == item.order_item_id
-        ).scalar() or 0.0
-        
-        if dispatched_total >= item.quantity_ton - 0.0001:
-            # Fully delivered
-            pass 
-        elif dispatched_total > 0:
-            all_items_delivered = False
-            any_item_partial = True
-        else:
-            all_items_delivered = False
-
-    if all_items_delivered:
-        order.order_status = 'DELIVERED'
-    elif any_item_partial or not all_items_delivered:
-        # Check if any dispatch exists for this order at all
-        any_dispatch = db.query(models.Dispatch).filter(models.Dispatch.order_id == order_id).first()
-        if any_dispatch:
-            order.order_status = 'PARTIAL'
-        else:
-            order.order_status = 'PENDING'
-
 @app.get("/api/dispatches", response_model=List[schemas.DispatchWithDetails])
 def get_dispatches(skip: int = 0,
                   limit: int = 100,
@@ -253,7 +264,28 @@ def get_dispatches(skip: int = 0,
     query = db.query(models.Dispatch)
     if branch_id:
         query = query.filter(models.Dispatch.branch_id == branch_id)
-    return query.order_by(models.Dispatch.dispatch_id.desc()).offset(skip).limit(limit).all()
+    
+    dispatches = query.order_by(models.Dispatch.dispatch_id.desc()).offset(skip).limit(limit).all()
+    
+    # Compute totals for items
+    for d in dispatches:
+        for di in d.items:
+            # Use same bag-aware logic
+            order_item = di.order_item
+            if order_item:
+                weight_kg = order_item.bag_size.weight_kg if order_item.bag_size else (order_item.bag_size_weight or 0)
+                ordered_qty = order_item.quantity_ton if (order_item.quantity_ton and order_item.quantity_ton > 0) else ((order_item.number_of_bags * weight_kg / 1000.0) if (order_item.number_of_bags and weight_kg) else 0.0)
+                
+                # Cumulative dispatch for this order_item
+                total_dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
+                    models.DispatchItem.order_item_id == di.order_item_id
+                ).scalar() or 0.0
+                
+                di.ordered_qty_ton = ordered_qty
+                di.remaining_qty_ton = max(0, ordered_qty - total_dispatched)
+                di.product_name = order_item.finished_good.product_name if order_item.finished_good else "Unknown Product"
+                
+    return dispatches
 
 @app.get("/api/dispatches/{dispatch_id}", response_model=schemas.DispatchWithDetails)
 def get_dispatch(dispatch_id: int, db: Session = Depends(get_db)):

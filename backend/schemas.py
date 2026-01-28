@@ -725,6 +725,8 @@ class OrderItem(OrderItemBase):
     created_at: datetime
     dispatched_qty: Optional[float] = 0.0
     remaining_qty: Optional[float] = 0.0
+    product_name: Optional[str] = None
+    dispatched_bags_total: Optional[int] = 0
 
 class CustomerOrderBase(ISTModel):
     order_code: str
@@ -831,10 +833,18 @@ class Dispatch(DispatchBase):
     class Config:
         from_attributes = True
 
+class DispatchItemWithDetails(DispatchItem):
+    order_item: Optional[OrderItem] = None
+    finished_good: Optional[FinishedGood] = None
+    ordered_qty_ton: Optional[float] = 0.0
+    remaining_qty_ton: Optional[float] = 0.0
+    product_name: Optional[str] = None
+
 class DispatchWithDetails(Dispatch):
     order: Optional[CustomerOrder] = None
     driver: Optional[Driver] = None
-    items: List[DispatchItem] = []
+    bag_size: Optional[BagSize] = None
+    items: List[DispatchItemWithDetails] = []
 
 class ProductionOrderBase(ISTModel):
     order_number: str

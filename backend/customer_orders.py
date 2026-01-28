@@ -96,11 +96,26 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     
     # Calculate dispatched and remaining quantities for each item
     for item in order.items:
+        # Use the same bag-aware logic as main.py
+        weight_kg = item.bag_size.weight_kg if item.bag_size else (item.bag_size_weight or 0)
+        ordered_qty = item.quantity_ton if (item.quantity_ton and item.quantity_ton > 0) else ((item.number_of_bags * weight_kg / 1000.0) if (item.number_of_bags and weight_kg) else 0.0)
+        
         dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
             models.DispatchItem.order_item_id == item.order_item_id
         ).scalar() or 0.0
+        
+        dispatched_bags = db.query(func.sum(models.DispatchItem.dispatched_bags)).filter(
+            models.DispatchItem.order_item_id == item.order_item_id
+        ).scalar() or 0
+
+        # Enhance the item object for schema serialization
         item.dispatched_qty = dispatched
-        item.remaining_qty = max(0, item.quantity_ton - dispatched)
+        item.remaining_qty = max(0, ordered_qty - dispatched)
+        item.dispatched_bags_total = dispatched_bags
+        item.product_name = (
+            item.finished_good.product_name if item.finished_good 
+            else (item.product.name if hasattr(item, 'product') and item.product else "Unknown Product")
+        )
         
     return order
 
