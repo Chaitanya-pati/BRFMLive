@@ -273,7 +273,7 @@ def get_dispatches(skip: int = 0,
             # Use same bag-aware logic
             order_item = di.order_item
             if order_item:
-                weight_kg = order_item.bag_size.weight_kg if order_item.bag_size else (order_item.bag_size_weight or 0)
+                weight_kg = order_item.bag_size.weight_kg if order_item.bag_size else 0
                 ordered_qty = order_item.quantity_ton if (order_item.quantity_ton and order_item.quantity_ton > 0) else ((order_item.number_of_bags * weight_kg / 1000.0) if (order_item.number_of_bags and weight_kg) else 0.0)
                 
                 # Cumulative dispatch for this order_item
