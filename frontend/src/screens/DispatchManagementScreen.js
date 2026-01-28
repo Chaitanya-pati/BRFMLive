@@ -16,7 +16,7 @@ import SelectDropdown from "../components/SelectDropdown";
 import DatePicker from "../components/DatePicker";
 import Button from "../components/Button";
 import colors from "../theme/colors";
-import { dispatchApi, customerOrderApi, driverApi } from "../api/client";
+import { dispatchApi, customerOrderApi, driverApi, bagSizeApi } from "../api/client";
 import { FaTruck, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
@@ -230,7 +230,7 @@ export default function DispatchManagementScreen({ navigation }) {
           <ScrollView>
             <SelectDropdown
               label="Select Order *"
-              options={orders.map(o => ({ label: String(o.order_code || `Order #${o.order_id}`), value: String(o.order_id || "") }))}
+              options={orders.map(o => ({ label: `Order #${o.order_id} - ${o.order_code || 'N/A'}`, value: String(o.order_id || "") }))}
               value={formData.order_id}
               onSelect={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
