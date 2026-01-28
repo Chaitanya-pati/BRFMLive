@@ -283,7 +283,13 @@ def get_dispatches(skip: int = 0,
                 
                 di.ordered_qty_ton = ordered_qty
                 di.remaining_qty_ton = max(0, ordered_qty - total_dispatched)
-                di.product_name = order_item.finished_good.product_name if order_item.finished_good else "Unknown Product"
+                # Resolve product name correctly
+                if order_item.finished_good:
+                    di.product_name = order_item.finished_good.product_name
+                elif hasattr(order_item, 'product') and order_item.product:
+                    di.product_name = getattr(order_item.product, 'product_name', getattr(order_item.product, 'name', "Unknown Product"))
+                else:
+                    di.product_name = "Unknown Product"
                 
     return dispatches
 
