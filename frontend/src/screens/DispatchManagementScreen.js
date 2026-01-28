@@ -340,13 +340,9 @@ export default function DispatchManagementScreen({ navigation }) {
             columns={columns}
             onEdit={(item) => {
               setEditingDispatch(item);
-              setDispatchType(item.dispatched_bags > 0 ? "BAGS" : "TONS");
               setFormData({
                 order_id: item.order_id.toString(),
                 driver_id: item.driver_id.toString(),
-                dispatched_quantity_ton: (item.dispatched_quantity_ton || 0).toString(),
-                dispatched_bags: (item.dispatched_bags || 0).toString(),
-                bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
                 state: item.state || "",
                 city: item.city || "",
                 warehouse_loader: item.warehouse_loader || "",
@@ -355,6 +351,32 @@ export default function DispatchManagementScreen({ navigation }) {
                 status: item.status,
                 remarks: item.remarks || "",
               });
+              
+              // Map existing items
+              if (item.items && item.items.length > 0) {
+                setDispatchItems(item.items.map(di => {
+                  const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
+                  const orderedQty = di.order_item?.quantity_ton > 0 
+                    ? di.order_item.quantity_ton 
+                    : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
+
+                  return {
+                    order_item_id: di.order_item_id,
+                    finished_good_id: di.finished_good_id,
+                    product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
+                    unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
+                    ordered_qty: orderedQty,
+                    dispatched_so_far: 0, 
+                    remaining_qty: orderedQty,
+                    ordered_bags: di.order_item?.number_of_bags || 0,
+                    remaining_bags: di.order_item?.number_of_bags || 0,
+                    dispatched_qty_ton: di.dispatched_qty_ton.toString(),
+                    bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
+                    dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
+                    weight_kg: weightKg
+                  };
+                }));
+              }
               setModalVisible(true);
             }}
             onDelete={(item) => handleDelete(item.dispatch_id)}
