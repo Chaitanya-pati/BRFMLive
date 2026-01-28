@@ -1,0 +1,129 @@
+You are fixing an existing React / React-Native style frontend.
+
+File: DispatchManagementScreen.jsx
+
+Current state:
+- Item-wise dispatch UI is visible
+- Order items load correctly
+- But quantities, labels, and bindings are WRONG
+
+You must FIX the issues below WITHOUT redesigning the screen.
+
+------------------------------------------------
+ISSUES TO FIX (MANDATORY)
+------------------------------------------------
+
+1️⃣ WRONG QUANTITY CALCULATION
+Problem:
+- Order items are BAG-based
+- UI shows Ordered: 0t, Remaining: 0.00t
+
+Fix:
+- If item.quantity_ton > 0 → use it
+- ELSE calculate tons from bags:
+
+ordered_tons =
+(item.number_of_bags × item.bag_size.weight_kg) / 1000
+
+remaining_tons =
+ordered_tons − dispatched_tons
+
+Never assume quantity_ton exists.
+
+------------------------------------------------
+2️⃣ SHOW INPUTS BASED ON UNIT TYPE
+------------------------------------------------
+Problem:
+- UI shows both Qty(Tons) and Bags for every product
+
+Fix:
+- If item.unit_type === "Bag":
+    show bag_size + dispatched_bags input
+- Else:
+    show dispatched_qty_ton input ONLY
+
+------------------------------------------------
+3️⃣ FIX [object Object] DISPLAY
+------------------------------------------------
+Problem:
+- Customer list shows "[object Object]"
+
+Fix:
+- Always render:
+  order.customer.customer_name
+  OR order.customer.name
+
+Never render objects directly in JSX.
+
+------------------------------------------------
+4️⃣ FIX PRODUCT NAME DISPLAY
+------------------------------------------------
+Problem:
+- Product name shows as "Product"
+
+Fix:
+Use this fallback logic:
+
+productName =
+item.finished_good?.product_name
+|| item.product?.product_name
+|| "Unknown Product"
+
+------------------------------------------------
+5️⃣ BLOCK INVALID DISPATCH QTY (UI VALIDATION)
+------------------------------------------------
+Before Save:
+- dispatched_qty_ton MUST NOT exceed remaining_tons
+- dispatched_bags MUST NOT exceed remaining bags
+- At least ONE item must have qty > 0
+
+Show Alert and STOP save if invalid.
+
+------------------------------------------------
+6️⃣ BUILD CORRECT PAYLOAD
+------------------------------------------------
+Modify handleSave() payload:
+
+{
+  order_id,
+  driver_id,
+  actual_dispatch_date,
+  delivery_date,
+  status,
+  remarks,
+  dispatch_items: [
+    {
+      order_item_id,
+      finished_good_id,
+      dispatched_qty_ton,
+      bag_size_id,
+      dispatched_bags
+    }
+  ]
+}
+
+DO NOT send total tons manually.
+Backend calculates totals.
+
+------------------------------------------------
+7️⃣ BACKWARD COMPATIBILITY
+------------------------------------------------
+- Editing old dispatches must still work
+- If dispatch_items not present, fallback to order-level display
+- Do NOT remove existing fields
+
+------------------------------------------------
+CONSTRAINTS
+------------------------------------------------
+❌ Do NOT refactor entire file
+❌ Do NOT change API routes
+❌ Do NOT change navigation
+✅ Fix calculations, bindings, validation ONLY
+
+------------------------------------------------
+DELIVERABLE
+------------------------------------------------
+- Correct item-wise UI
+- Correct calculations
+- Correct payload
+- No [object Object] anywhere
