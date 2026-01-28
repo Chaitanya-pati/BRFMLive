@@ -43,6 +43,8 @@ export default function DispatchManagementScreen({ navigation }) {
     remarks: "",
   });
 
+  const selectedOrder = orders.find(o => o.order_id.toString() === formData.order_id);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -236,8 +238,41 @@ export default function DispatchManagementScreen({ navigation }) {
               label="Select Order *"
               options={orders.map(o => ({ label: o.order_code, value: o.order_id.toString() }))}
               value={formData.order_id}
-              onSelect={(val) => setFormData({ ...formData, order_id: val })}
+              onSelect={(val) => {
+                const order = orders.find(o => o.order_id.toString() === val);
+                setFormData({ 
+                  ...formData, 
+                  order_id: val,
+                  state: order?.customer?.state || formData.state,
+                  city: order?.customer?.city || formData.city,
+                });
+              }}
             />
+
+            {selectedOrder && (
+              <View style={styles.orderSummary}>
+                <Text style={styles.summaryTitle}>Order Summary</Text>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Ordered:</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedOrder.total_quantity_ton} Tons ({selectedOrder.total_bags} Bags)
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Customer:</Text>
+                  <Text style={styles.summaryValue}>{selectedOrder.customer?.name}</Text>
+                </View>
+                {selectedOrder.order_date && (
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Order Date:</Text>
+                    <Text style={styles.summaryValue}>
+                      {new Date(selectedOrder.order_date).toLocaleDateString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             <SelectDropdown
               label="Select Driver *"
               options={drivers.map(d => ({ label: d.driver_name, value: d.driver_id.toString() }))}
@@ -357,5 +392,34 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: colors.primary,
+  },
+  orderSummary: {
+    backgroundColor: "#e0f2fe",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#0369a1",
+    marginBottom: 8,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#0c4a6e",
+    fontWeight: "500",
+  },
+  summaryValue: {
+    fontSize: 12,
+    color: "#0369a1",
+    fontWeight: "600",
   },
 });
