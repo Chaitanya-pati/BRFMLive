@@ -748,6 +748,8 @@ class CustomerOrder(CustomerOrderBase):
     order_id: int
     branch_id: int
     items: List[OrderItem] = []
+    customer_name: Optional[str] = None
+    city: Optional[str] = None
 
 class DriverBase(ISTModel):
     driver_name: str
