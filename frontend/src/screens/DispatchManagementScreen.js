@@ -399,14 +399,12 @@ export default function DispatchManagementScreen({ navigation }) {
               label="State"
               options={states.map(s => ({ label: s.state_name, value: s.state_id.toString() }))}
               value={formData.state}
-              onValueChange={(val) => setFormData({ ...formData, state: val, city: "" })}
+              onValueChange={(val) => setFormData({ ...formData, state: val })}
             />
-            <SelectDropdown
+            <InputField
               label="City"
-              options={cities.map(c => ({ label: c.district_name, value: c.district_name }))}
               value={formData.city}
-              onValueChange={(val) => setFormData({ ...formData, city: val })}
-              enabled={cities.length > 0}
+              onChangeText={(val) => setFormData({ ...formData, city: val })}
             />
             <DatePicker
               label="Dispatch Date"
