@@ -58,12 +58,17 @@ export default function DispatchManagementScreen({ navigation }) {
         driverApi.getAll(),
         bagSizeApi.getAll(),
       ]);
-      setDispatches(disRes.data);
-      setOrders(orderRes.data);
-      setDrivers(driverRes.data);
-      setBagSizes(bagSizeRes.data);
+      setDispatches(disRes.data || []);
+      setOrders(orderRes.data || []);
+      setDrivers(driverRes.data || []);
+      setBagSizes(bagSizeRes.data || []);
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
+      // Fallback to empty arrays on error to prevent UI from being stuck
+      setDispatches([]);
+      setOrders([]);
+      setDrivers([]);
+      setBagSizes([]);
       Alert.alert("Error", "Failed to fetch data");
     } finally {
       setLoading(false);
@@ -221,10 +226,10 @@ export default function DispatchManagementScreen({ navigation }) {
           <ScrollView>
             <SelectDropdown
               label="Select Order *"
-              options={orders.map(o => ({ label: o.order_code, value: o.order_id.toString() }))}
+              options={orders.map(o => ({ label: o.order_code, value: o.order_id?.toString() || "" }))}
               value={formData.order_id}
               onSelect={(val) => {
-                const order = orders.find(o => o.order_id.toString() === val);
+                const order = orders.find(o => o.order_id?.toString() === val);
                 const isBags = order?.total_bags > 0;
                 setDispatchType(isBags ? "BAGS" : "TONS");
                 setFormData({ 
@@ -265,7 +270,7 @@ export default function DispatchManagementScreen({ navigation }) {
 
             <SelectDropdown
               label="Select Driver *"
-              options={drivers.map(d => ({ label: d.driver_name, value: d.driver_id.toString() }))}
+              options={drivers.map(d => ({ label: d.driver_name, value: d.driver_id?.toString() || "" }))}
               value={formData.driver_id}
               onSelect={(val) => setFormData({ ...formData, driver_id: val })}
             />
