@@ -782,8 +782,25 @@ class DispatchBase(ISTModel):
     def _parse_dispatch_dates(cls, v):
         return parse_datetime(v)
 
+class DispatchItemBase(ISTModel):
+    order_item_id: int
+    finished_good_id: int
+    dispatched_qty_ton: float
+    bag_size_id: Optional[int] = None
+    dispatched_bags: Optional[int] = None
+
+class DispatchItemCreate(DispatchItemBase):
+    pass
+
+class DispatchItem(DispatchItemBase):
+    id: int
+    dispatch_id: int
+    item_status: str
+    created_at: datetime
+
 class DispatchCreate(DispatchBase):
     branch_id: Optional[int] = None
+    dispatch_items: Optional[List[DispatchItemCreate]] = []
 
 class DispatchUpdate(ISTModel):
     order_id: Optional[int] = None
@@ -813,11 +830,9 @@ class Dispatch(DispatchBase):
         from_attributes = True
 
 class DispatchWithDetails(Dispatch):
-    order: CustomerOrder
-    driver: Driver
-    dispatch_id: int
-    branch_id: int
-    created_at: datetime
+    order: Optional[CustomerOrder] = None
+    driver: Optional[Driver] = None
+    items: List[DispatchItem] = []
 
 class ProductionOrderBase(ISTModel):
     order_number: str
