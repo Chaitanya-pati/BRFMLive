@@ -417,21 +417,48 @@ export default function DispatchManagementScreen({ navigation }) {
                 <Text style={styles.sectionTitle}>Item-wise Dispatch</Text>
                 {dispatchItems.map((item, index) => {
                   const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
+                  
+                  // Calculate delivered and pending
+                  const deliveredQty = item.dispatched_so_far || 0;
+                  const deliveredBags = item.dispatched_bags_so_far || 0;
+                  const pendingQty = Math.max(0, item.ordered_qty - deliveredQty);
+                  const pendingBags = Math.max(0, item.ordered_bags - deliveredBags);
+
                   return (
                     <View key={index} style={styles.itemRow}>
                       <Text style={styles.itemName}>{item.product_name}</Text>
-                      <Text style={styles.itemDetail}>
-                        Ordered: {item.ordered_qty.toFixed(2)}t {isBagType ? `(${item.ordered_bags} Bags)` : ''} | 
-                        Remaining: {item.remaining_qty.toFixed(2)}t {isBagType ? `(${item.remaining_bags} Bags)` : ''}
-                      </Text>
+                      <View style={styles.infoGrid}>
+                        <View style={styles.infoCol}>
+                          <Text style={styles.infoLabel}>Ordered</Text>
+                          <Text style={styles.infoValue}>{item.ordered_qty.toFixed(2)}t {isBagType ? `(${item.ordered_bags} Bags)` : ''}</Text>
+                        </View>
+                        <View style={styles.infoCol}>
+                          <Text style={styles.infoLabel}>Delivered</Text>
+                          <Text style={styles.infoValue}>{deliveredQty.toFixed(2)}t {isBagType ? `(${deliveredBags} Bags)` : ''}</Text>
+                        </View>
+                        <View style={styles.infoCol}>
+                          <Text style={[styles.infoLabel, { color: colors.error }]}>Pending</Text>
+                          <Text style={[styles.infoValue, { color: colors.error }]}>{pendingQty.toFixed(2)}t {isBagType ? `(${pendingBags} Bags)` : ''}</Text>
+                        </View>
+                      </View>
                       <View style={styles.itemInputs}>
                         {isBagType ? (
                           <>
                             <View style={{ flex: 1, marginRight: 10 }}>
-                              <InputField
+                              <SelectDropdown
                                 label="Bag Size"
-                                value={`${item.weight_kg} kg`}
-                                editable={false}
+                                options={bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: String(bs.id) }))}
+                                value={item.bag_size_id}
+                                onValueChange={(val) => {
+                                  const newItems = [...dispatchItems];
+                                  newItems[index].bag_size_id = val;
+                                  const selectedBag = bagSizes.find(bs => String(bs.id) === val);
+                                  if (selectedBag) {
+                                    newItems[index].weight_kg = selectedBag.weight_kg;
+                                    newItems[index].dispatched_qty_ton = ((parseInt(newItems[index].dispatched_bags || 0) * selectedBag.weight_kg) / 1000).toString();
+                                  }
+                                  setDispatchItems(newItems);
+                                }}
                               />
                             </View>
                             <View style={{ flex: 1 }}>
@@ -621,11 +648,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#0f172a",
+    marginBottom: 5,
   },
-  itemDetail: {
-    fontSize: 11,
+  infoGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#e0f2fe",
+  },
+  infoCol: {
+    alignItems: "center",
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 10,
     color: "#64748b",
-    marginVertical: 4,
+    textTransform: "uppercase",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 11,
+    color: "#0f172a",
+    fontWeight: "700",
   },
   itemInputs: {
     flexDirection: "row",

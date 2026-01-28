@@ -775,10 +775,72 @@ class Driver(DriverBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-class DispatchBase(ISTModel):
+class DispatchItemBase(ISTModel):
+    order_item_id: int
+    finished_good_id: int
+    dispatched_qty_ton: float
+    bag_size_id: Optional[int] = None
+    dispatched_bags: Optional[int] = 0
+    item_status: Optional[str] = "DELIVERED"
+
+class DispatchItemCreate(DispatchItemBase):
+    pass
+
+class DispatchItem(DispatchItemBase):
+    id: int
+    dispatch_id: int
+    created_at: datetime
+    product_name: Optional[str] = None
+    ordered_qty_ton: Optional[float] = 0.0
+    remaining_qty_ton: Optional[float] = 0.0
+
+class DispatchCreate(ISTModel):
     order_id: int
     driver_id: int
-    dispatched_quantity_ton: float = 0.0
+    state: Optional[str] = None
+    city: Optional[str] = None
+    warehouse_loader: Optional[str] = None
+    actual_dispatch_date: datetime
+    delivery_date: Optional[datetime] = None
+    status: Optional[str] = "DISPATCHED"
+    remarks: Optional[str] = None
+    branch_id: Optional[int] = None
+    dispatch_items: List[DispatchItemCreate]
+
+class DispatchUpdate(ISTModel):
+    order_id: Optional[int] = None
+    driver_id: Optional[int] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    warehouse_loader: Optional[str] = None
+    actual_dispatch_date: Optional[datetime] = None
+    delivery_date: Optional[datetime] = None
+    status: Optional[str] = None
+    remarks: Optional[str] = None
+    dispatch_items: Optional[List[DispatchItemCreate]] = None
+
+class Dispatch(ISTModel):
+    dispatch_id: int
+    order_id: int
+    driver_id: int
+    dispatched_quantity_ton: float
+    dispatched_bags: Optional[int] = 0
+    bag_size_id: Optional[int] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    warehouse_loader: Optional[str] = None
+    actual_dispatch_date: datetime
+    delivery_date: Optional[datetime] = None
+    status: str
+    remarks: Optional[str] = None
+    branch_id: int
+    created_at: datetime
+
+class DispatchWithDetails(Dispatch):
+    order: Optional[CustomerOrder] = None
+    driver: Optional[Driver] = None
+    items: List[DispatchItem] = []
+    bag_size: Optional[BagSize] = None
     dispatched_bags: Optional[int] = 0
     bag_size_id: Optional[int] = None
     state: Optional[str] = None
