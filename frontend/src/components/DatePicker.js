@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal as RNModal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import colors from '../theme/colors';
 
@@ -16,7 +16,9 @@ export default function DatePicker({
   const [show, setShow] = useState(false);
 
   const handleChange = (event, selectedDate) => {
-    setShow(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+    }
     if (selectedDate) {
       onChange(selectedDate);
     }
@@ -39,31 +41,74 @@ export default function DatePicker({
     return date.toLocaleDateString();
   };
 
+  const renderPicker = () => (
+    <DateTimePicker
+      value={value || new Date()}
+      mode={mode}
+      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+      onChange={handleChange}
+      minimumDate={minimumDate}
+      maximumDate={maximumDate}
+    />
+  );
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TouchableOpacity
-        style={[styles.button, error && styles.buttonError]}
-        onPress={() => setShow(true)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.buttonText, !value && styles.placeholderText]}>
-          {formatDate(value)}
-        </Text>
-        <Text style={styles.icon}>📅</Text>
-      </TouchableOpacity>
-      {error && <Text style={styles.errorText}>{error}</Text>}
       
-      {show && (
-        <DateTimePicker
-          value={value || new Date()}
-          mode={mode}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleChange}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
+      {Platform.OS === 'web' ? (
+        <input
+          type={mode === 'time' ? 'time' : mode === 'datetime' ? 'datetime-local' : 'date'}
+          value={value ? (mode === 'time' ? value.toTimeString().split(' ')[0] : value.toISOString().split('T')[0]) : ''}
+          onChange={(e) => {
+            const date = e.target.value ? new Date(e.target.value) : new Date();
+            onChange(date);
+          }}
+          style={{
+            backgroundColor: colors.inputBackground || '#fff',
+            borderWidth: 1,
+            borderColor: colors.border || '#ccc',
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 16,
+            color: colors.onSurface || '#333',
+            width: '100%',
+          }}
         />
+      ) : (
+        <>
+          <TouchableOpacity
+            style={[styles.button, error && styles.buttonError]}
+            onPress={() => setShow(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.buttonText, !value && styles.placeholderText]}>
+              {formatDate(value)}
+            </Text>
+            <Text style={styles.icon}>📅</Text>
+          </TouchableOpacity>
+
+          {show && Platform.OS === 'ios' && (
+            <RNModal transparent visible={show} animationType="slide">
+              <View style={styles.iosModalContainer}>
+                <View style={styles.iosModalContent}>
+                  <TouchableOpacity 
+                    style={styles.doneButton}
+                    onPress={() => setShow(false)}
+                  >
+                    <Text style={styles.doneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                  {renderPicker()}
+                </View>
+              </View>
+            </RNModal>
+          )}
+
+          {show && Platform.OS !== 'ios' && renderPicker()}
+        </>
       )}
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -75,13 +120,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.onSurface,
+    color: colors.onSurface || '#333',
     marginBottom: 8,
   },
   button: {
-    backgroundColor: colors.inputBackground,
+    backgroundColor: colors.inputBackground || '#fff',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border || '#ccc',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -90,21 +135,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonError: {
-    borderColor: colors.error,
+    borderColor: colors.error || '#f44336',
   },
   buttonText: {
     fontSize: 16,
-    color: colors.onSurface,
+    color: colors.onSurface || '#333',
   },
   placeholderText: {
-    color: colors.placeholder,
+    color: colors.placeholder || '#999',
   },
   icon: {
     fontSize: 20,
   },
   errorText: {
-    color: colors.error,
+    color: colors.error || '#f44336',
     fontSize: 12,
     marginTop: 4,
+  },
+  iosModalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  iosModalContent: {
+    backgroundColor: '#fff',
+    paddingBottom: 20,
+  },
+  doneButton: {
+    padding: 16,
+    alignItems: 'flex-end',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  doneButtonText: {
+    color: colors.primary || '#2196F3',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
