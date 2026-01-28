@@ -288,11 +288,12 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
             
         db.commit()
         
-        # Update statuses after commit to ensure all dispatches are counted
-        update_order_statuses(db_dispatch.order_id, db)
-        update_dispatch_status(db_dispatch.dispatch_id, db)
-        db.commit()
-
+        # Update order status to DISPATCHED
+        order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == db_dispatch.order_id).first()
+        if order:
+            order.order_status = 'DISPATCHED'
+            db.commit()
+        
         db.refresh(db_dispatch)
         return db_dispatch
     except Exception as e:
