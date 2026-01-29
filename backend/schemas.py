@@ -10,6 +10,42 @@ class ISTModel(BaseModel):
         json_encoders = {datetime: format_ist_iso}
         from_attributes = True
 
+class SiloMasterBase(ISTModel):
+    bin_no: str
+    silo_name: str
+    capacity_kg: float
+    current_stock_kg: Optional[float] = 0.0
+    current_moisture_percent: Optional[float] = None
+    status: str = 'Active'
+    last_cleaning_date: Optional[datetime] = None
+    remarks: Optional[str] = None
+
+    @validator('last_cleaning_date', pre=True)
+    def _parse_last_cleaning_date(cls, v):
+        return parse_datetime(v)
+
+class SiloMasterCreate(SiloMasterBase):
+    pass
+
+class SiloMasterUpdate(ISTModel):
+    bin_no: Optional[str] = None
+    silo_name: Optional[str] = None
+    capacity_kg: Optional[float] = None
+    current_stock_kg: Optional[float] = None
+    current_moisture_percent: Optional[float] = None
+    status: Optional[str] = None
+    last_cleaning_date: Optional[datetime] = None
+    remarks: Optional[str] = None
+
+    @validator('last_cleaning_date', pre=True)
+    def _parse_last_cleaning_date(cls, v):
+        return parse_datetime(v)
+
+class SiloMaster(SiloMasterBase):
+    silo_id: int
+    created_at: datetime
+    updated_at: datetime
+
 class ClaimStatusEnum(str, Enum):
     OPEN = "Open"
     IN_PROGRESS = "In Progress"

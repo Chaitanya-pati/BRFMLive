@@ -131,6 +131,58 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(customer_orders.router)
 app.include_router(drivers.router)
 
+# --- Silo Master Endpoints ---
+
+@app.post("/api/silos", response_model=schemas.SiloMaster)
+def create_silo(silo: schemas.SiloMasterCreate, db: Session = Depends(get_db)):
+    db_silo = models.SiloMaster(**silo.dict())
+    db.add(db_silo)
+    try:
+        db.commit()
+        db.refresh(db_silo)
+        return db_silo
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/silos", response_model=List[schemas.SiloMaster])
+def get_silos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(models.SiloMaster).offset(skip).limit(limit).all()
+
+@app.get("/api/silos/{silo_id}", response_model=schemas.SiloMaster)
+def get_silo(silo_id: int, db: Session = Depends(get_db)):
+    db_silo = db.query(models.SiloMaster).filter(models.SiloMaster.silo_id == silo_id).first()
+    if not db_silo:
+        raise HTTPException(status_code=404, detail="Silo not found")
+    return db_silo
+
+@app.put("/api/silos/{silo_id}", response_model=schemas.SiloMaster)
+def update_silo(silo_id: int, silo_update: schemas.SiloMasterUpdate, db: Session = Depends(get_db)):
+    db_silo = db.query(models.SiloMaster).filter(models.SiloMaster.silo_id == silo_id).first()
+    if not db_silo:
+        raise HTTPException(status_code=404, detail="Silo not found")
+    
+    update_data = silo_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_silo, key, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_silo)
+        return db_silo
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/silos/{silo_id}")
+def delete_silo(silo_id: int, db: Session = Depends(get_db)):
+    db_silo = db.query(models.SiloMaster).filter(models.SiloMaster.silo_id == silo_id).first()
+    if not db_silo:
+        raise HTTPException(status_code=404, detail="Silo not found")
+    db.delete(db_silo)
+    db.commit()
+    return {"message": "Silo deleted successfully"}
+
 # --- Dispatch Endpoints ---
 
 def get_order_item_qty_ton(order_item):

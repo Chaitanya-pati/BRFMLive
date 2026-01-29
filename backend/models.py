@@ -339,6 +339,21 @@ class GodownMaster(Base):
     branch = relationship("Branch")
     unloading_entries = relationship("UnloadingEntry", back_populates="godown")
 
+class SiloMaster(Base):
+    __tablename__ = "silo_master"
+
+    silo_id = Column(Integer, primary_key=True, index=True)
+    bin_no = Column(String(50), nullable=False, unique=True)
+    silo_name = Column(String(100), nullable=False)
+    capacity_kg = Column(Float, nullable=False)
+    current_stock_kg = Column(Float, nullable=False, default=0.0)
+    current_moisture_percent = Column(Float)
+    status = Column(String(20), nullable=False, default='Active')
+    last_cleaning_date = Column(DateTime)
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
 class UnloadingEntry(Base):
     __tablename__ = "unloading_entries"
 
