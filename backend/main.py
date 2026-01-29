@@ -217,6 +217,9 @@ def update_dispatch_status(dispatch_id: int, db: Session):
         dispatch.status = "DISPATCHED"
     
     db.commit()
+    
+    # Also update the parent order status
+    update_order_statuses(order.order_id, db)
 
 @app.post("/api/dispatches", response_model=schemas.Dispatch)
 def create_dispatch(dispatch: schemas.DispatchCreate,
@@ -356,10 +359,31 @@ def update_dispatch(dispatch_id: int,
         raise HTTPException(status_code=404, detail="Dispatch not found")
     
     update_data = dispatch_update.dict(exclude_unset=True)
+    
+    # Handle dispatch_items update if provided
+    items_data = update_data.pop('dispatch_items', None)
+    
     for key, value in update_data.items():
         setattr(db_dispatch, key, value)
     
+    if items_data is not None:
+        # Clear existing items and re-add or update (simplified for now: replace)
+        db.query(models.DispatchItem).filter(models.DispatchItem.dispatch_id == dispatch_id).delete()
+        total_qty = 0.0
+        total_bags = 0
+        for item_data in items_data:
+            db_item = models.DispatchItem(dispatch_id=dispatch_id, **item_data)
+            db.add(db_item)
+            total_qty += item_data.get('dispatched_qty_ton') or 0.0
+            total_bags += item_data.get('dispatched_bags') or 0
+        db_dispatch.dispatched_quantity_ton = total_qty
+        db_dispatch.dispatched_bags = total_bags
+
     db.commit()
+    
+    # Trigger status updates
+    update_dispatch_status(dispatch_id, db)
+    
     db.refresh(db_dispatch)
     return db_dispatch
 

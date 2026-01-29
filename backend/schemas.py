@@ -881,8 +881,8 @@ class DispatchUpdate(ISTModel):
     actual_dispatch_date: Optional[datetime] = None
     delivery_date: Optional[datetime] = None
     status: Optional[str] = None
-    driver_photo: Optional[str] = None
     remarks: Optional[str] = None
+    dispatch_items: Optional[List[DispatchItemCreate]] = None
 
     @validator('actual_dispatch_date', 'delivery_date', pre=True)
     def _parse_dispatch_dates(cls, v):
