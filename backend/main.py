@@ -1160,17 +1160,21 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
 def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     data = prod.dict()
     details_data = data.pop('details', [])
+    silo_details_data = data.pop('silo_details', [])
     if branch_id and not data.get('branch_id'):
         data['branch_id'] = branch_id
     
     db_prod = models.HourlyProduction(**data)
     db.add(db_prod)
-    db.commit()
-    db.refresh(db_prod)
+    db.flush()
     
     for detail in details_data:
         db_detail = models.HourlyProductionDetail(**detail, hourly_production_id=db_prod.id)
         db.add(db_detail)
+
+    for silo_detail in silo_details_data:
+        db_silo_detail = models.HourlyProductionSilo(**silo_detail, hourly_production_id=db_prod.id)
+        db.add(db_silo_detail)
     
     db.commit()
     db.refresh(db_prod)
