@@ -7,7 +7,8 @@ import SelectDropdown from "./SelectDropdown";
 import Button from "./Button";
 import colors from "../theme/colors";
 import { siloApi } from "../api/client";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus } from "react-icons/fa";
+import { showSuccess, showError } from "../utils/toastUtils";
 
 export default function SiloMasterView() {
   const [silos, setSilos] = useState([]);
@@ -58,16 +59,16 @@ export default function SiloMasterView() {
 
       if (editMode && currentSiloId) {
         await siloApi.update(currentSiloId, payload);
-        Alert.alert("Success", "Silo updated successfully");
+        showSuccess("Silo updated successfully");
       } else {
         await siloApi.create(payload);
-        Alert.alert("Success", "Silo added successfully");
+        showSuccess("Silo added successfully");
       }
       setModalVisible(false);
       loadSilos();
     } catch (error) {
       console.error("Error saving silo:", error);
-      Alert.alert("Error", "Failed to save silo");
+      showError("Failed to save silo");
     }
   };
 
@@ -80,9 +81,11 @@ export default function SiloMasterView() {
         onPress: async () => {
           try {
             await siloApi.delete(id);
+            showSuccess("Silo deleted successfully");
             loadSilos();
           } catch (error) {
             console.error("Error deleting silo:", error);
+            showError("Failed to delete silo");
           }
         },
       },
@@ -90,39 +93,11 @@ export default function SiloMasterView() {
   };
 
   const columns = [
-    { field: "bin_no", label: "Bin No", flex: 1 },
-    { field: "silo_name", label: "Silo Name", flex: 1.5 },
-    { field: "capacity_kg", label: "Capacity (kg)", flex: 1 },
-    { field: "current_stock_kg", label: "Current Stock (kg)", flex: 1.2 },
-    { field: "status", label: "Status", flex: 0.8 },
-    {
-      field: "actions",
-      label: "Actions",
-      flex: 0.8,
-      render: (item) => (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={() => {
-            setEditMode(true);
-            setCurrentSiloId(item.silo_id);
-            setFormData({
-              bin_no: item.bin_no,
-              silo_name: item.silo_name,
-              capacity_kg: item.capacity_kg.toString(),
-              current_stock_kg: item.current_stock_kg.toString(),
-              current_moisture_percent: item.current_moisture_percent ? item.current_moisture_percent.toString() : "",
-              status: item.status,
-              remarks: item.remarks || ""
-            });
-            setModalVisible(true);
-          }}>
-            <FaEdit color={colors.primary} size={18} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDelete(item.silo_id)}>
-            <FaTrash color={colors.error} size={18} />
-          </TouchableOpacity>
-        </View>
-      )
-    }
+    { key: "bin_no", label: "Bin No", flex: 1 },
+    { key: "silo_name", label: "Silo Name", flex: 1.5 },
+    { key: "capacity_kg", label: "Capacity (kg)", flex: 1 },
+    { key: "current_stock_kg", label: "Current Stock (kg)", flex: 1.2 },
+    { key: "status", label: "Status", flex: 0.8 },
   ];
 
   return (
@@ -151,7 +126,25 @@ export default function SiloMasterView() {
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (
-        <DataTable data={silos} columns={columns} />
+        <DataTable 
+          data={silos} 
+          columns={columns}
+          onEdit={(item) => {
+            setEditMode(true);
+            setCurrentSiloId(item.silo_id);
+            setFormData({
+              bin_no: item.bin_no,
+              silo_name: item.silo_name,
+              capacity_kg: item.capacity_kg.toString(),
+              current_stock_kg: item.current_stock_kg.toString(),
+              current_moisture_percent: item.current_moisture_percent ? item.current_moisture_percent.toString() : "",
+              status: item.status,
+              remarks: item.remarks || ""
+            });
+            setModalVisible(true);
+          }}
+          onDelete={(item) => handleDelete(item.silo_id)}
+        />
       )}
 
       <Modal
