@@ -61,6 +61,7 @@ export default function SiloMasterView() {
         await siloApi.update(currentSiloId, payload);
         showSuccess("Silo updated successfully");
       } else {
+        // payload may not have branch_id, but the backend get_branch_id dependency handles it if passed in header
         await siloApi.create(payload);
         showSuccess("Silo added successfully");
       }

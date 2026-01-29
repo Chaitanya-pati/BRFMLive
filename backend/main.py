@@ -146,7 +146,7 @@ def create_silo(silo: schemas.SiloMasterCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/silos", response_model=List[schemas.SiloMaster])
-def get_silos(skip: int = 0, limit: int = 100, branch_id: int = None, db: Session = Depends(get_db)):
+def get_silos(skip: int = 0, limit: int = 100, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
     query = db.query(models.SiloMaster)
     if branch_id is not None:
         query = query.filter(models.SiloMaster.branch_id == branch_id)
