@@ -801,6 +801,7 @@ export default function MasterViewScreen({ navigation }) {
 
   const tabs = [
     { key: "godown", label: "Godown Master" },
+    { key: "silo", label: "Silo Master" },
     { key: "supplier", label: "Supplier Master" },
     { key: "bins", label: "Bins" },
     { key: "magnets", label: "Magnets" },
@@ -976,6 +977,9 @@ export default function MasterViewScreen({ navigation }) {
           )}
         </View>
 
+        {activeTab === "silo" && (
+          <SiloMasterView />
+        )}
         {activeTab === "godown" && (
           <DataTable
             columns={godownColumns}
