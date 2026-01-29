@@ -195,31 +195,35 @@ export default function ClaimTrackingScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'Claim ID', field: 'id', width: 100 },
+    { label: 'Claim ID', field: 'id', width: 100, key: 'id' },
     {
       label: 'Vehicle No',
       field: 'lab_test',
       width: 140,
+      key: 'lab_test',
       render: (labTest) => labTest?.vehicle_entry?.vehicle_number || '-'
     },
     {
       label: 'Supplier Name',
       field: 'lab_test',
       width: 200,
+      key: 'lab_test_supplier',
       render: (labTest) => labTest?.vehicle_entry?.supplier?.supplier_name || '-'
     },
-    { label: 'Description', field: 'description', width: 250 },
+    { label: 'Description', field: 'description', width: 250, key: 'description' },
     {
       label: 'Claim Type',
       field: 'claim_type',
       width: 120,
+      key: 'claim_type',
       render: (type) => type ? (type === 'percentage' ? 'Percentage (%)' : 'Per KG (₹/kg)') : '-'
     },
-    { label: 'Amount', field: 'claim_amount', width: 100 },
+    { label: 'Amount', field: 'claim_amount', width: 100, key: 'claim_amount' },
     {
       label: 'Claim Status',
       field: 'claim_status',
       width: 150,
+      key: 'claim_status',
       render: (status) => (
         <View style={styles.statusContainer}>
           <Text style={styles.statusEmoji}>{getStatusEmoji(status)}</Text>
@@ -233,12 +237,14 @@ export default function ClaimTrackingScreen({ navigation }) {
       label: 'Claim Date',
       field: 'claim_date',
       width: 200,
+      key: 'claim_date',
       render: (value) => formatISTDateTime(value)
     },
     {
       label: 'Action',
       field: 'action',
       width: 100,
+      key: 'action',
       render: (rowData) => (
         <TouchableOpacity
           style={styles.updateButton}

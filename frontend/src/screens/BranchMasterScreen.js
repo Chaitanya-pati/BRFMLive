@@ -119,8 +119,8 @@ export default function BranchMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'Branch Name', field: 'name' },
-    { label: 'Description', field: 'description' },
+    { label: 'Branch Name', field: 'name', key: 'name' },
+    { label: 'Description', field: 'description', key: 'description' },
   ];
 
   if (loading) {

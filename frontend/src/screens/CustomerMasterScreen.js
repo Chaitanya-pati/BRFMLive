@@ -193,17 +193,18 @@ export default function CustomerMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'ID', field: 'customer_id', width: 80 },
-    { label: 'Customer Name', field: 'customer_name', width: 200 },
-    { label: 'Contact Person', field: 'contact_person', width: 180 },
-    { label: 'Mobile', field: 'contact_person_mobile', width: 130 },
-    { label: 'GSTIN', field: 'gst_number', width: 150 },
-    { label: 'State', field: 'state', width: 130 },
-    { label: 'City', field: 'city', width: 130 },
+    { label: 'ID', field: 'customer_id', width: 80, key: 'customer_id' },
+    { label: 'Customer Name', field: 'customer_name', width: 200, key: 'customer_name' },
+    { label: 'Contact Person', field: 'contact_person', width: 180, key: 'contact_person' },
+    { label: 'Mobile', field: 'contact_person_mobile', width: 130, key: 'contact_person_mobile' },
+    { label: 'GSTIN', field: 'gst_number', width: 150, key: 'gst_number' },
+    { label: 'State', field: 'state', width: 130, key: 'state' },
+    { label: 'City', field: 'city', width: 130, key: 'city' },
     {
       label: 'Created',
       field: 'created_at',
       width: 150,
+      key: 'created_at',
       render: (value) => formatISTDate(value)
     },
   ];

@@ -202,18 +202,20 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'Order Code', field: 'order_code', width: isMobile ? 120 : 150 },
+    { label: 'Order Code', field: 'order_code', width: isMobile ? 120 : 150, key: 'order_code' },
     { 
       label: 'Customer', 
       field: 'customer_id', 
       width: isMobile ? 150 : 200,
+      key: 'customer_id',
       render: (id) => customers.find(c => c.customer_id === id)?.customer_name || `ID: ${id}`
     },
-    { label: 'Status', field: 'order_status', width: 100 },
+    { label: 'Status', field: 'order_status', width: 100, key: 'order_status' },
     { 
       label: 'Date', 
       field: 'order_date', 
       width: 120,
+      key: 'order_date',
       render: (v) => formatISTDate(v)
     },
   ];

@@ -179,16 +179,17 @@ export default function DriverMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'ID', field: 'driver_id', width: 80 },
-    { label: 'Driver Name', field: 'driver_name', width: 200 },
-    { label: 'Phone', field: 'phone', width: 130 },
-    { label: 'License', field: 'license_number', width: 150 },
-    { label: 'State', field: 'state', width: 130 },
-    { label: 'City', field: 'city', width: 130 },
+    { label: 'ID', field: 'driver_id', width: 80, key: 'driver_id' },
+    { label: 'Driver Name', field: 'driver_name', width: 200, key: 'driver_name' },
+    { label: 'Phone', field: 'phone', width: 130, key: 'phone' },
+    { label: 'License', field: 'license_number', width: 150, key: 'license_number' },
+    { label: 'State', field: 'state', width: 130, key: 'state' },
+    { label: 'City', field: 'city', width: 130, key: 'city' },
     {
       label: 'Created',
       field: 'created_at',
       width: 150,
+      key: 'created_at',
       render: (value) => formatISTDate(value)
     },
   ];
