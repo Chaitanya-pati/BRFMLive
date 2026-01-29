@@ -278,16 +278,30 @@ export default function DispatchManagementScreen({ navigation }) {
                   ? di.order_item.quantity_ton 
                   : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
 
+                // Get the total dispatched for this order item from the order, minus current dispatch's qty
+                const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
+                const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
+                const currentDispatchQty = di.dispatched_qty_ton || 0;
+                const currentDispatchBags = di.dispatched_bags || 0;
+                
+                // Dispatched by OTHER dispatches (not this one being edited)
+                const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
+                const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
+                
+                const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
+                const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
+
                 return {
                   order_item_id: di.order_item_id,
                   finished_good_id: di.finished_good_id,
                   product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
                   unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
                   ordered_qty: orderedQty,
-                  dispatched_so_far: 0, 
-                  remaining_qty: orderedQty,
+                  dispatched_so_far: dispatchedByOthers, 
+                  dispatched_bags_so_far: dispatchedBagsByOthers,
+                  remaining_qty: remainingQty,
                   ordered_bags: di.order_item?.number_of_bags || 0,
-                  remaining_bags: di.order_item?.number_of_bags || 0,
+                  remaining_bags: remainingBags,
                   dispatched_qty_ton: di.dispatched_qty_ton.toString(),
                   bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
                   dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
@@ -362,16 +376,30 @@ export default function DispatchManagementScreen({ navigation }) {
                     ? di.order_item.quantity_ton 
                     : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
 
+                  // Get the total dispatched for this order item from the order, minus current dispatch's qty
+                  const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
+                  const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
+                  const currentDispatchQty = di.dispatched_qty_ton || 0;
+                  const currentDispatchBags = di.dispatched_bags || 0;
+                  
+                  // Dispatched by OTHER dispatches (not this one being edited)
+                  const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
+                  const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
+                  
+                  const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
+                  const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
+
                   return {
                     order_item_id: di.order_item_id,
                     finished_good_id: di.finished_good_id,
                     product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
                     unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
                     ordered_qty: orderedQty,
-                    dispatched_so_far: 0, 
-                    remaining_qty: orderedQty,
+                    dispatched_so_far: dispatchedByOthers, 
+                    dispatched_bags_so_far: dispatchedBagsByOthers,
+                    remaining_qty: remainingQty,
                     ordered_bags: di.order_item?.number_of_bags || 0,
-                    remaining_bags: di.order_item?.number_of_bags || 0,
+                    remaining_bags: remainingBags,
                     dispatched_qty_ton: di.dispatched_qty_ton.toString(),
                     bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
                     dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
