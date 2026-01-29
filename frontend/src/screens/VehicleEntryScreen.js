@@ -301,19 +301,21 @@ export default function VehicleEntryScreen() {
   };
 
   const columns = [
-    { label: "ID", field: "id", flex: 0.5 },
-    { label: "Vehicle Number", field: "vehicle_number", flex: 1 },
+    { label: "ID", field: "id", flex: 0.5, key: "id" },
+    { label: "Vehicle Number", field: "vehicle_number", flex: 1, key: "vehicle_number" },
     {
       label: "Supplier",
       field: "supplier",
       flex: 1.5,
+      key: "supplier",
       render: (supplier) => supplier?.supplier_name || "-",
     },
-    { label: "Bill No", field: "bill_no", flex: 1 },
+    { label: "Bill No", field: "bill_no", flex: 1, key: "bill_no" },
     {
       label: "Arrival Time",
       field: "arrival_time",
       flex: 1.8,
+      key: "arrival_time",
       type: "datetime",
     },
   ];

@@ -1036,43 +1036,49 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const columns = [
-    { label: "ID", field: "id", width: 80 },
+    { label: "ID", field: "id", width: 80, key: "id" },
     {
       label: "Bill Number",
       field: "bill_number",
       width: 120,
+      key: "bill_number",
       render: (value) => value || "-",
     },
     {
       label: "Vehicle",
       field: "vehicle_entry",
       width: 150,
+      key: "vehicle_number",
       render: (vehicle) => vehicle?.vehicle_number || "-",
     },
     {
       label: "Supplier",
       field: "vehicle_entry",
       width: 180,
+      key: "supplier_name",
       render: (vehicle) => vehicle?.supplier?.supplier_name || "-",
     },
     {
       label: "Wheat Variety",
       field: "wheat_variety",
       width: 150,
+      key: "wheat_variety",
       render: (value) => value || "-",
     },
-    { label: "Moisture %", field: "moisture", width: 120 },
-    { label: "Total Impurities %", field: "total_impurities", width: 150 },
+    { label: "Moisture %", field: "moisture", width: 120, key: "moisture" },
+    { label: "Total Impurities %", field: "total_impurities", width: 150, key: "total_impurities" },
     {
       label: "Test Date",
       field: "test_date",
       width: 180,
+      key: "test_date",
       type: "date",
     },
     {
       label: "Actions",
       field: "id",
       width: 150,
+      key: "actions",
       render: (value, labTest) => {
         const hasClaim = labTest.has_claim;
         return (

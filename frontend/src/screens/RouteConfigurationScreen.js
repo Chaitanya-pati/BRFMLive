@@ -275,10 +275,10 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'ID', field: 'id', flex: 0.5 },
-    { label: 'Name', field: 'name', flex: 1.5 },
-    { label: 'Description', field: 'description', flex: 2 },
-    { label: 'Stages', field: 'stages', flex: 0.8, render: (value, row) => row.stages?.length || 0 },
+    { label: 'ID', field: 'id', flex: 0.5, key: 'id' },
+    { label: 'Name', field: 'name', flex: 1.5, key: 'name' },
+    { label: 'Description', field: 'description', flex: 2, key: 'description' },
+    { label: 'Stages', field: 'stages', flex: 0.8, key: 'stages_count', render: (value, row) => row.stages?.length || 0 },
   ];
 
   const renderStage = (stage, index) => {
