@@ -134,8 +134,17 @@ app.include_router(drivers.router)
 # --- Silo Master Endpoints ---
 
 @app.post("/api/silos", response_model=schemas.SiloMaster)
-def create_silo(silo: schemas.SiloMasterCreate, db: Session = Depends(get_db)):
-    db_silo = models.SiloMaster(**silo.dict())
+def create_silo(silo: schemas.SiloMasterCreate,
+                db: Session = Depends(get_db),
+                branch_id: Optional[int] = Depends(get_branch_id)):
+    silo_data = silo.dict()
+    if branch_id and not silo_data.get('branch_id'):
+        silo_data['branch_id'] = branch_id
+    
+    if not silo_data.get('branch_id'):
+        raise HTTPException(status_code=400, detail="branch_id is required")
+        
+    db_silo = models.SiloMaster(**silo_data)
     db.add(db_silo)
     try:
         db.commit()
