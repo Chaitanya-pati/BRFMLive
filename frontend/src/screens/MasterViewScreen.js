@@ -12,6 +12,7 @@ import { Picker } from "@react-native-picker/picker";
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
+import SiloMasterView from "../components/SiloMasterView";
 import {
   godownApi,
   supplierApi,

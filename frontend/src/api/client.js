@@ -238,6 +238,14 @@ export const machineApi = {
   delete: (id) => api.delete(`/machines/${id}`),
 };
 
+export const siloApi = {
+  getAll: (skip = 0, limit = 100) => api.get(`/silos?skip=${skip}&limit=${limit}`),
+  getOne: (id) => api.get(`/silos/${id}`),
+  create: (data) => api.post("/silos", data),
+  update: (id, data) => api.put(`/silos/${id}`, data),
+  delete: (id) => api.delete(`/silos/${id}`),
+};
+
 export const routeMagnetMappingApi = {
   getAll: () => api.get("/route-magnet-mappings"),
   getById: (id) => api.get(`/route-magnet-mappings/${id}`),
