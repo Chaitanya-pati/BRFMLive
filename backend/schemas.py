@@ -133,6 +133,20 @@ class HourlyProductionDetail(HourlyProductionDetailBase):
     id: int
     hourly_production_id: int
 
+class HourlyProductionSiloBase(BaseModel):
+    finished_good_id: int
+    silo_id: int
+    quantity_kg: float
+    moisture_percent: Optional[float] = None
+
+class HourlyProductionSiloCreate(HourlyProductionSiloBase):
+    pass
+
+class HourlyProductionSilo(HourlyProductionSiloBase):
+    id: int
+    hourly_production_id: int
+    created_at: datetime
+
 class HourlyProductionBase(ISTModel):
     production_order_id: int
     production_date: datetime
@@ -149,12 +163,14 @@ class HourlyProductionBase(ISTModel):
 class HourlyProductionCreate(HourlyProductionBase):
     branch_id: Optional[int] = None
     details: List[HourlyProductionDetailCreate]
+    silo_details: Optional[List[HourlyProductionSiloCreate]] = []
 
 class HourlyProduction(HourlyProductionBase):
     id: int
     branch_id: Optional[int] = None
     created_at: datetime
     details: List[HourlyProductionDetail] = []
+    silo_details: List[HourlyProductionSilo] = []
 
 class SupplierBase(ISTModel):
     supplier_name: str
