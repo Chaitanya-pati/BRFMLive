@@ -19,6 +19,7 @@ class SiloMasterBase(ISTModel):
     status: str = 'Active'
     last_cleaning_date: Optional[datetime] = None
     remarks: Optional[str] = None
+    branch_id: Optional[int] = None
 
     @validator('last_cleaning_date', pre=True)
     def _parse_last_cleaning_date(cls, v):
@@ -36,6 +37,7 @@ class SiloMasterUpdate(ISTModel):
     status: Optional[str] = None
     last_cleaning_date: Optional[datetime] = None
     remarks: Optional[str] = None
+    branch_id: Optional[int] = None
 
     @validator('last_cleaning_date', pre=True)
     def _parse_last_cleaning_date(cls, v):
@@ -45,6 +47,7 @@ class SiloMaster(SiloMasterBase):
     silo_id: int
     created_at: datetime
     updated_at: datetime
+    branch_id: Optional[int] = None
 
 class ClaimStatusEnum(str, Enum):
     OPEN = "Open"

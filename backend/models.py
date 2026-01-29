@@ -353,6 +353,7 @@ class SiloMaster(Base):
     remarks = Column(Text)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    branch_id = Column(Integer, ForeignKey("branches.id"))
 
 class UnloadingEntry(Base):
     __tablename__ = "unloading_entries"
