@@ -270,7 +270,7 @@ export default function DispatchManagementScreen({ navigation }) {
               status: item.status,
               remarks: item.remarks || "",
             });
-            // Map existing items if any
+            // Map existing items
             if (item.items && item.items.length > 0) {
               setDispatchItems(item.items.map(di => {
                 const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
@@ -278,7 +278,7 @@ export default function DispatchManagementScreen({ navigation }) {
                   ? di.order_item.quantity_ton 
                   : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
 
-                // Get the total dispatched for this order item from the order, minus current dispatch's qty
+                // Get the total dispatched for this order item from the order_item's aggregates
                 const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
                 const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
                 const currentDispatchQty = di.dispatched_qty_ton || 0;
@@ -295,7 +295,7 @@ export default function DispatchManagementScreen({ navigation }) {
                   order_item_id: di.order_item_id,
                   finished_good_id: di.finished_good_id,
                   product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
-                  unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
+                  unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? 'Bag' : 'Ton'),
                   ordered_qty: orderedQty,
                   dispatched_so_far: dispatchedByOthers, 
                   dispatched_bags_so_far: dispatchedBagsByOthers,
@@ -376,7 +376,7 @@ export default function DispatchManagementScreen({ navigation }) {
                     ? di.order_item.quantity_ton 
                     : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
 
-                  // Get the total dispatched for this order item from the order, minus current dispatch's qty
+                  // Get the total dispatched for this order item from the order_item's aggregates
                   const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
                   const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
                   const currentDispatchQty = di.dispatched_qty_ton || 0;
@@ -393,7 +393,7 @@ export default function DispatchManagementScreen({ navigation }) {
                     order_item_id: di.order_item_id,
                     finished_good_id: di.finished_good_id,
                     product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
-                    unit_type: di.order_item?.unit_type || (di.dispatched_bags > 0 ? 'Bag' : 'Ton'),
+                    unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? 'Bag' : 'Ton'),
                     ordered_qty: orderedQty,
                     dispatched_so_far: dispatchedByOthers, 
                     dispatched_bags_so_far: dispatchedBagsByOthers,
