@@ -455,46 +455,46 @@ export default function MasterViewScreen({ navigation }) {
   };
 
   const godownColumns = [
-    { field: "id", label: "ID", flex: 0.5 },
-    { field: "name", label: "Name", flex: 1.5 },
-    { field: "type", label: "Type", flex: 1 },
-    { field: "current_storage", label: "Current Storage (tons)", flex: 1.2 },
+    { field: "id", label: "ID", flex: 0.5, key: "id" },
+    { field: "name", label: "Name", flex: 1.5, key: "name" },
+    { field: "type", label: "Type", flex: 1, key: "type" },
+    { field: "current_storage", label: "Current Storage (tons)", flex: 1.2, key: "current_storage" },
   ];
 
   const supplierColumns = [
-    { field: "id", label: "ID", flex: 0.5 },
-    { field: "supplier_name", label: "Supplier Name", flex: 1.5 },
-    { field: "contact_person", label: "Contact Person", flex: 1.2 },
-    { field: "phone", label: "Phone", flex: 1 },
-    { field: "gstin", label: "GSTIN", flex: 1.2 },
-    { field: "state", label: "State", flex: 1 },
-    { field: "city", label: "City", flex: 1 },
+    { field: "id", label: "ID", flex: 0.5, key: "id" },
+    { field: "supplier_name", label: "Supplier Name", flex: 1.5, key: "supplier_name" },
+    { field: "contact_person", label: "Contact Person", flex: 1.2, key: "contact_person" },
+    { field: "phone", label: "Phone", flex: 1, key: "phone" },
+    { field: "gstin", label: "GSTIN", flex: 1.2, key: "gstin" },
+    { field: "state", label: "State", flex: 1, key: "state" },
+    { field: "city", label: "City", flex: 1, key: "city" },
   ];
 
   const binColumns = [
-    { field: "id", label: "ID", flex: 0.5 },
-    { field: "bin_number", label: "Bin Number", flex: 1 },
-    { field: "capacity", label: "Capacity (tons)", flex: 1 },
-    { field: "current_quantity", label: "Current Quantity (tons)", flex: 1.2 },
-    { field: "bin_type", label: "Bin Type", flex: 1.2 },
-    { field: "status", label: "Status", flex: 1 },
+    { field: "id", label: "ID", flex: 0.5, key: "id" },
+    { field: "bin_number", label: "Bin Number", flex: 1, key: "bin_number" },
+    { field: "capacity", label: "Capacity (tons)", flex: 1, key: "capacity" },
+    { field: "current_quantity", label: "Current Quantity (tons)", flex: 1.2, key: "current_quantity" },
+    { field: "bin_type", label: "Bin Type", flex: 1.2, key: "bin_type" },
+    { field: "status", label: "Status", flex: 1, key: "status" },
   ];
 
   const magnetColumns = [
-    { field: "id", label: "ID", flex: 0.5 },
-    { field: "name", label: "Magnet Name", flex: 1.5 },
-    { field: "description", label: "Description", flex: 2 },
-    { field: "status", label: "Status", flex: 1 },
+    { field: "id", label: "ID", flex: 0.5, key: "id" },
+    { field: "name", label: "Magnet Name", flex: 1.5, key: "name" },
+    { field: "description", label: "Description", flex: 2, key: "description" },
+    { field: "status", label: "Status", flex: 1, key: "status" },
   ];
 
   const machineColumns = [
-    { field: "id", label: "ID", flex: 0.5 },
-    { field: "name", label: "Name", flex: 1.2 },
-    { field: "machine_type", label: "Type", flex: 0.8 },
-    { field: "make", label: "Make", flex: 0.8 },
-    { field: "serial_number", label: "Serial No.", flex: 0.8 },
-    { field: "description", label: "Description", flex: 1.5 },
-    { field: "status", label: "Status", flex: 0.6 },
+    { field: "id", label: "ID", flex: 0.5, key: "id" },
+    { field: "name", label: "Name", flex: 1.2, key: "name" },
+    { field: "machine_type", label: "Type", flex: 0.8, key: "machine_type" },
+    { field: "make", label: "Make", flex: 0.8, key: "make" },
+    { field: "serial_number", label: "Serial No.", flex: 0.8, key: "serial_number" },
+    { field: "description", label: "Description", flex: 1.5, key: "description" },
+    { field: "status", label: "Status", flex: 0.6, key: "status" },
   ];
 
   const machineTypes = ["Separator", "Drum Shield", "Other"];
