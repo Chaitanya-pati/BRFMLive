@@ -8,7 +8,7 @@ import Button from "./Button";
 import colors from "../theme/colors";
 import { siloApi } from "../api/client";
 import { FaPlus } from "react-icons/fa";
-import { showSuccess, showError } from "../utils/toastUtils";
+import { showSuccess, showError } from "../utils/customAlerts";
 
 export default function SiloMasterView() {
   const [silos, setSilos] = useState([]);
