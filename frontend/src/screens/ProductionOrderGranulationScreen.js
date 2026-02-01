@@ -384,8 +384,7 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 15, fontWeight: '700', color: colors.text },
   recordButton: { backgroundColor: colors.success, padding: 14, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 80, fontSize: 17 }
-});
+  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 80, fontSize: 17 },
   orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
   orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
