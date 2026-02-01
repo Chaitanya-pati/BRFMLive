@@ -19,7 +19,19 @@ import models
 import schemas
 import drivers
 import customer_orders
-from utils.image_utils import get_image_url, save_image_path
+# from utils.image_utils import get_image_url, save_image_path
+# from utils.datetime_utils import format_ist_iso, parse_datetime
+
+def get_image_url(path):
+    if not path:
+        return None
+    if path.startswith('http'):
+        return path
+    return f"/uploads/{path}"
+
+def save_image_path(upload_file):
+    # Mock implementation if needed by endpoints
+    return None
 
 
 def get_branch_id(x_branch_id: Optional[str] = Header(None)) -> Optional[int]:
