@@ -737,7 +737,61 @@ class FinishedGood(FinishedGoodBase):
     created_at: datetime
     updated_at: datetime
 
-# --- Sales & Dispatch Schemas ---
+class ExtractionBase(ISTModel):
+    production_order_id: int
+    finished_good_id: int
+    extraction_percent: float
+
+class ExtractionCreate(ExtractionBase):
+    branch_id: Optional[int] = None
+
+class Extraction(ExtractionBase):
+    id: int
+    branch_id: int
+    created_at: datetime
+
+class MaidaResultBase(ISTModel):
+    production_order_id: int
+    finished_good_id: int
+    moisture_percent: Optional[float] = None
+    ash_percent: Optional[float] = None
+    dry_gluten_percent: Optional[float] = None
+    wet_gluten_percent: Optional[float] = None
+    sv_value: Optional[float] = None
+
+class MaidaResultCreate(MaidaResultBase):
+    branch_id: Optional[int] = None
+
+class MaidaResult(MaidaResultBase):
+    id: int
+    branch_id: int
+    created_at: datetime
+
+class GranulationTemplateBase(ISTModel):
+    finished_good_id: int
+    columns_definition: dict
+    is_active: bool = True
+
+class GranulationTemplateCreate(GranulationTemplateBase):
+    branch_id: Optional[int] = None
+
+class GranulationTemplate(GranulationTemplateBase):
+    id: int
+    branch_id: int
+    created_at: datetime
+
+class GranulationResultBase(ISTModel):
+    production_order_id: int
+    finished_good_id: int
+    granulation_values: dict
+
+class GranulationResultCreate(GranulationResultBase):
+    branch_id: Optional[int] = None
+
+class GranulationResult(GranulationResultBase):
+    id: int
+    branch_id: int
+    created_at: datetime
 
 class CustomerBase(ISTModel):
     customer_name: str

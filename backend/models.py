@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, LargeBinary, Float, Enum, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, LargeBinary, Float, Enum, Boolean, JSON, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -6,6 +6,71 @@ import enum
 import pytz
 
 # IST timezone helper
+IST = pytz.timezone('Asia/Kolkata')
+UTC = pytz.timezone('UTC')
+
+def get_ist_now():
+    """Get current IST time as naive datetime"""
+    return datetime.now(IST).replace(tzinfo=None)
+
+def get_utc_now():
+    """Get current UTC time as naive datetime"""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+class FinishedGoodGranulationTemplate(Base):
+    __tablename__ = "finished_good_granulation_template"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    columns_definition = Column(JSON, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    finished_good = relationship("FinishedGood")
+
+class ProductionOrderGranulation(Base):
+    __tablename__ = "production_order_granulation"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    granulation_values = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    production_order = relationship("ProductionOrder")
+    finished_good = relationship("FinishedGood")
+
+class ProductionOrderMaidaResult(Base):
+    __tablename__ = "production_order_maida_result"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    moisture_percent = Column(Numeric(5, 2))
+    ash_percent = Column(Numeric(6, 3))
+    dry_gluten_percent = Column(Numeric(6, 2))
+    wet_gluten_percent = Column(Numeric(6, 2))
+    sv_value = Column(Numeric(6, 2))
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    production_order = relationship("ProductionOrder")
+    finished_good = relationship("FinishedGood")
+
+class ProductionOrderExtraction(Base):
+    __tablename__ = "production_order_extraction"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    extraction_percent = Column(Numeric(6, 2), nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    production_order = relationship("ProductionOrder")
+    finished_good = relationship("FinishedGood")
 IST = pytz.timezone('Asia/Kolkata')
 UTC = pytz.timezone('UTC')
 
