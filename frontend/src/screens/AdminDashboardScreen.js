@@ -49,7 +49,7 @@ export default function AdminDashboardScreen({ navigation }) {
   );
 
   return (
-    <Layout navigation={navigation} title="Admin Dashboard">
+    <Layout navigation={navigation} title="Administrator Settings">
       <View style={styles.container}>
         <View style={styles.tabBar}>
           <TouchableOpacity 

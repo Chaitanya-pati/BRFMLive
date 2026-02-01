@@ -232,9 +232,9 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
-      name: "Granulation Template",
+      name: "Administrator Settings",
       route: "AdminDashboard",
-      icon: SvgClipboardIcon,
+      icon: SvgCogIcon,
       section: "Operations",
     },
     {

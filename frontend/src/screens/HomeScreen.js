@@ -315,9 +315,9 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
-      title: "Granulation Template",
+      title: "Administrator Settings",
       route: "AdminDashboard",
-      icon: "tasks",
+      icon: "cogs",
       color: "#4CAF50",
       adminOnly: true,
     },
