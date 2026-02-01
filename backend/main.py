@@ -142,7 +142,9 @@ def get_template_by_fg(fg_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/production-orders/{order_id}/granulation", response_model=List[schemas.ProductionOrderGranulation])
 def get_order_granulation(order_id: int, db: Session = Depends(get_db)):
-    return db.query(models.ProductionOrderGranulation).filter(
+    return db.query(models.ProductionOrderGranulation).options(
+        joinedload(models.ProductionOrderGranulation.finished_good)
+    ).filter(
         models.ProductionOrderGranulation.production_order_id == order_id
     ).all()
 

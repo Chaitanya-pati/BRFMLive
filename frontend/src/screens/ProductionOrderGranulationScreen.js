@@ -79,7 +79,9 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       if (recordsRes.data && recordsRes.data.length > 0) {
         setGranulationRecords(recordsRes.data.map(r => ({
           ...r,
-          id: r.id || Date.now() + Math.random()
+          id: r.id || Date.now() + Math.random(),
+          finished_good_name: r.finished_good?.product_name || r.finished_good_name || "Product",
+          values: r.granulation_values || {}
         })));
       } else {
         const initialRecords = destBins.map(db => ({
