@@ -19,6 +19,8 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   const [templates, setTemplates] = useState({});
   const [granulationRecords, setGranulationRecords] = useState([]);
 
+  const [globalRows, setGlobalRows] = useState([]);
+
   useEffect(() => {
     loadOrders();
   }, []);
@@ -53,7 +55,6 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
       setOrder(orderRes.data);
 
-      // Fetch ALL templates instead of just those in the order
       const templatesRes = await client.get(`/granulation-templates`);
       const allTemplates = templatesRes.data || [];
       
@@ -73,31 +74,31 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
 
       if (recordsRes.data && recordsRes.data.length > 0) {
-        setGranulationRecords(recordsRes.data.map(r => ({
-          ...r,
-          id: r.id || Date.now() + Math.random(),
-          finished_good_name: r.finished_good?.product_name || r.finished_good_name || "Product",
-          values: r.granulation_values || {}
-        })));
-      } else {
-        // Create initial records for ALL finished goods that have a template
-        const initialRecords = allTemplates
-          .filter(t => t.is_active && t.finished_good)
-          .map(t => {
-            const defaultValues = {};
-            // The JSON column contains a "columns" key with the list of strings
-            const columns = t.columns_definition?.columns || [];
-            columns.forEach(col => {
-              defaultValues[col] = "";
-            });
-            return {
-              id: Date.now() + Math.random(),
-              finished_good_id: t.finished_good_id,
-              finished_good_name: t.finished_good.product_name || "Product",
-              values: defaultValues
-            };
+        // Group existing records by a unique identifier (like created_at or a batch id if available)
+        // Since we don't have a batch ID, we'll group by index if they were saved together, 
+        // but it's safer to reconstruct them. 
+        // For simplicity, let's assume records are saved in groups.
+        const groupedByFg = {};
+        recordsRes.data.forEach(r => {
+          if (!groupedByFg[r.finished_good_id]) groupedByFg[r.finished_good_id] = [];
+          groupedByFg[r.finished_good_id].push(r);
+        });
+
+        const maxRows = Math.max(...Object.values(groupedByFg).map(arr => arr.length), 5);
+        const initialGlobalRows = Array.from({ length: maxRows }).map((_, rowIndex) => {
+          const rowData = {};
+          Object.keys(groupedByFg).forEach(fgId => {
+            rowData[fgId] = groupedByFg[fgId][rowIndex]?.granulation_values || {};
           });
-        setGranulationRecords(initialRecords);
+          return { id: Date.now() + Math.random() + rowIndex, data: rowData };
+        });
+        setGlobalRows(initialGlobalRows);
+      } else {
+        const initialGlobalRows = Array.from({ length: 5 }).map((_, i) => ({
+          id: Date.now() + Math.random() + i,
+          data: {}
+        }));
+        setGlobalRows(initialGlobalRows);
       }
     } catch (error) {
       console.error("Failed to fetch data", error);
@@ -108,23 +109,23 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     }
   };
 
-  const addRow = (fgId, fgName) => {
-    setGranulationRecords([...granulationRecords, {
+  const addGlobalRow = () => {
+    setGlobalRows([...globalRows, {
       id: Date.now() + Math.random(),
-      finished_good_id: fgId,
-      finished_good_name: fgName,
-      values: {}
+      data: {}
     }]);
   };
 
-  const removeRow = (id) => {
-    setGranulationRecords(granulationRecords.filter(r => r.id !== id));
-  };
-
-  const updateValue = (id, col, val) => {
-    setGranulationRecords(granulationRecords.map(r => 
-      r.id === id ? { ...r, values: { ...r.values, [col]: val } } : r
-    ));
+  const updateGlobalValue = (rowId, fgId, col, val) => {
+    setGlobalRows(globalRows.map(r => {
+      if (r.id === rowId) {
+        const newData = { ...r.data };
+        if (!newData[fgId]) newData[fgId] = {};
+        newData[fgId] = { ...newData[fgId], [col]: val };
+        return { ...r, data: newData };
+      }
+      return r;
+    }));
   };
 
   const handleSave = async () => {
@@ -132,15 +133,22 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     try {
       const client = getApiClient();
       
-      // Separate records by finished good to ensure clean structure if needed, 
-      // but the backend currently expects a flat list of records.
-      // However, we should only save the actual data.
+      const recordsToSave = [];
+      globalRows.forEach(row => {
+        Object.keys(row.data).forEach(fgId => {
+          const values = row.data[fgId];
+          // Only save if at least one value is entered for this product in this row
+          if (Object.values(values).some(v => v !== "" && v !== null)) {
+            recordsToSave.push({
+              finished_good_id: parseInt(fgId),
+              granulation_values: values
+            });
+          }
+        });
+      });
       
       await client.post(`/production-orders/${selectedOrderId}/granulation`, {
-        records: granulationRecords.map(r => ({
-          finished_good_id: r.finished_good_id,
-          granulation_values: r.values
-        }))
+        records: recordsToSave
       });
       showToast("Success", "Granulation records saved");
       setOrder(null);
@@ -231,11 +239,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     );
   }
 
-  const fgGroups = granulationRecords.reduce((acc, r) => {
-    if (!acc[r.finished_good_id]) acc[r.finished_good_id] = { name: r.finished_good_name, records: [] };
-    acc[r.finished_good_id].records.push(r);
-    return acc;
-  }, {});
+  const activeTemplates = Object.values(templates).filter(t => t.is_active);
 
   const renderExcelHeader = () => {
     return (
@@ -243,17 +247,12 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
         <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#e8f0fe' }]}>
           <Text style={styles.excelHeaderText}>Granulation</Text>
         </View>
-        {Object.keys(fgGroups).map(fgId => {
-          const group = fgGroups[fgId];
-          const template = templates[fgId];
-          const cols = template?.columns_definition?.columns || [];
+        {activeTemplates.map(t => {
+          const cols = t.columns_definition?.columns || [];
           return (
-            <View key={fgId} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
+            <View key={t.id} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
               <View style={styles.excelProductHeader}>
-                <Text style={styles.excelProductText}>{group.name}</Text>
-                <TouchableOpacity onPress={() => addRow(fgId, group.name)}>
-                  <Text style={styles.addText}>+</Text>
-                </TouchableOpacity>
+                <Text style={styles.excelProductText}>{t.finished_good?.product_name || "Product"}</Text>
               </View>
               <View style={styles.excelSubHeaderRow}>
                 {cols.map(c => (
@@ -270,32 +269,24 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   };
 
   const renderExcelRows = () => {
-    const maxRows = 10;
-    const rows = Array.from({ length: maxRows });
-
-    return rows.map((_, rowIndex) => (
-      <View key={rowIndex} style={styles.excelDataRow}>
+    return globalRows.map((row, rowIndex) => (
+      <View key={row.id} style={styles.excelDataRow}>
         <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff' }]}>
           <Text style={styles.excelRowIndexText}>{rowIndex + 1}</Text>
         </View>
-        {Object.keys(fgGroups).map(fgId => {
-          const group = fgGroups[fgId];
-          const template = templates[fgId];
-          const cols = template?.columns_definition?.columns || [];
-          const record = group.records[rowIndex];
+        {activeTemplates.map(t => {
+          const cols = t.columns_definition?.columns || [];
+          const fgId = t.finished_good_id;
+          const rowData = row.data[fgId] || {};
           
           return (
-            <View key={fgId} style={[styles.excelProductDataGroup, { width: Math.max(cols.length * 80, 100) }]}>
+            <View key={t.id} style={[styles.excelProductDataGroup, { width: Math.max(cols.length * 80, 100) }]}>
               {cols.map(c => (
                 <View key={c} style={[styles.excelDataCell, { width: 80 }]}>
                   <TextInput
                     style={styles.excelInput}
-                    value={record ? String(record.values[c] || "") : ""}
-                    onChangeText={(v) => {
-                      if (record) {
-                        updateValue(record.id, c, v);
-                      }
-                    }}
+                    value={String(rowData[c] || "")}
+                    onChangeText={(v) => updateGlobalValue(row.id, fgId, c, v)}
                     keyboardType="numeric"
                     placeholder="-"
                   />
@@ -318,9 +309,9 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           </TouchableOpacity>
         </View>
         
-        {Object.keys(fgGroups).length === 0 ? (
+        {activeTemplates.length === 0 ? (
           <View style={styles.centered}>
-            <Text style={styles.emptyText}>No finished goods found for this order.</Text>
+            <Text style={styles.emptyText}>No granulation templates found.</Text>
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -329,6 +320,9 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
                 {renderExcelHeader()}
                 <ScrollView showsVerticalScrollIndicator={true}>
                   {renderExcelRows()}
+                  <TouchableOpacity style={styles.addNewRowBtn} onPress={addGlobalRow}>
+                    <Text style={styles.addNewRowText}>+ Add New Entry Row</Text>
+                  </TouchableOpacity>
                 </ScrollView>
               </View>
             </ScrollView>
@@ -363,7 +357,6 @@ const styles = StyleSheet.create({
   excelProductGroup: { borderRightWidth: 1, borderRightColor: '#000' },
   excelProductHeader: { height: 30, backgroundColor: '#d9e2f3', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', paddingHorizontal: 5 },
   excelProductText: { fontWeight: 'bold', fontSize: 12, textAlign: 'center', flex: 1 },
-  addText: { color: colors.primary, fontWeight: 'bold', fontSize: 18, marginLeft: 5 },
   
   excelSubHeaderRow: { flexDirection: 'row' },
   excelSubHeaderCell: { height: 30, backgroundColor: '#f2f2f2', borderRightWidth: 1, borderRightColor: '#000', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center', alignItems: 'center' },
@@ -375,7 +368,24 @@ const styles = StyleSheet.create({
   excelRowIndexText: { textAlign: 'center', fontSize: 12, color: '#666' },
   excelInput: { height: '100%', paddingHorizontal: 4, fontSize: 12, textAlign: 'center' },
   
+  addNewRowBtn: { padding: 15, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc', borderStyle: 'dashed' },
+  addNewRowText: { color: colors.primary, fontWeight: 'bold', fontSize: 15 },
+  
   footerButtons: { flexDirection: 'row', marginTop: 15, paddingBottom: 10 },
+  orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
+  orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
+  orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
+  productNameText: { fontSize: 15, color: colors.textSecondary, marginTop: 4 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  orderCardDetails: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 15, marginBottom: 15 },
+  detailItem: { flex: 1 },
+  detailLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 5 },
+  detailValue: { fontSize: 15, fontWeight: '700', color: colors.text },
+  recordButton: { backgroundColor: colors.success, padding: 14, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 80, fontSize: 17 }
+});
   orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
   orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
