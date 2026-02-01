@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import DataTable from "../components/DataTable";
 import colors from "../theme/colors";
 import { getApiClient, productionOrderApi } from "../api/client";
 import { showToast, showAlert, showError } from "../utils/customAlerts";
@@ -34,7 +33,6 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     try {
       setLoading(true);
       const res = await productionOrderApi.getAll();
-      // Only show orders that are PLANNED or IN_PROGRESS or COMPLETED
       const filtered = res.data.filter(o => o.status !== 'CREATED');
       setOrders(filtered);
     } catch (error) {
@@ -49,7 +47,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     try {
       setLoadingDetails(true);
       const client = getApiClient();
-      const orderRes = await client.get(`/api/production-orders/${orderId}`);
+      const orderRes = await client.get(`/production-orders/${orderId}`);
       if (!orderRes.data) {
         throw new Error("Order not found");
       }
@@ -61,7 +59,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       const templatesMap = {};
       for (const fgId of fgIds) {
         try {
-          const tRes = await client.get(`/api/granulation-templates/finished-good/${fgId}`);
+          const tRes = await client.get(`/granulation-templates/finished-good/${fgId}`);
           if (tRes.data) {
             templatesMap[fgId] = tRes.data;
           }
@@ -73,7 +71,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
       let recordsRes = { data: [] };
       try {
-        recordsRes = await client.get(`/api/production-orders/${orderId}/granulation`);
+        recordsRes = await client.get(`/production-orders/${orderId}/granulation`);
       } catch (e) {
         console.log("No existing granulation records");
       }
@@ -124,7 +122,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     setSaving(true);
     try {
       const client = getApiClient();
-      await client.post(`/api/production-orders/${selectedOrderId}/granulation`, {
+      await client.post(`/production-orders/${selectedOrderId}/granulation`, {
         records: granulationRecords.map(r => ({
           finished_good_id: r.finished_good_id,
           granulation_values: r.values
@@ -244,30 +242,41 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
               <View style={styles.fgHeader}>
                 <Text style={styles.fgName}>{group.name}</Text>
                 <TouchableOpacity onPress={() => addRow(fgId, group.name)}>
-                  <Text style={styles.addText}>+ Add Entry</Text>
+                  <Text style={styles.addText}>+ Add Row</Text>
                 </TouchableOpacity>
               </View>
               
-              <ScrollView horizontal>
-                <View>
-                  <View style={styles.tableHeader}>
-                    {cols.map(c => <Text key={c} style={styles.headerCol}>{c}</Text>)}
-                    <Text style={styles.headerAction}>Action</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={styles.excelContainer}>
+                  <View style={styles.excelHeaderRow}>
+                    {cols.map(c => (
+                      <View key={c} style={[styles.excelHeaderCell, { width: 100 }]}>
+                        <Text style={styles.excelHeaderText}>{c}</Text>
+                      </View>
+                    ))}
+                    <View style={[styles.excelHeaderCell, { width: 60 }]}>
+                      <Text style={styles.excelHeaderText}>Action</Text>
+                    </View>
                   </View>
-                  {group.records.map(r => (
-                    <View key={r.id} style={styles.tableRow}>
+                  
+                  {group.records.map((r, index) => (
+                    <View key={r.id} style={[styles.excelDataRow, index % 2 === 1 && { backgroundColor: '#f9f9f9' }]}>
                       {cols.map(c => (
-                        <TextInput
-                          key={c}
-                          style={styles.input}
-                          value={String(r.values[c] || "")}
-                          onChangeText={(v) => updateValue(r.id, c, v)}
-                          keyboardType="numeric"
-                        />
+                        <View key={c} style={[styles.excelDataCell, { width: 100 }]}>
+                          <TextInput
+                            style={styles.excelInput}
+                            value={String(r.values[c] || "")}
+                            onChangeText={(v) => updateValue(r.id, c, v)}
+                            keyboardType="numeric"
+                            placeholder="-"
+                          />
+                        </View>
                       ))}
-                      <TouchableOpacity onPress={() => removeRow(r.id)} style={styles.removeBtn}>
-                        <Text style={{color: colors.danger}}>✕</Text>
-                      </TouchableOpacity>
+                      <View style={[styles.excelDataCell, { width: 60, alignItems: 'center' }]}>
+                        <TouchableOpacity onPress={() => removeRow(r.id)}>
+                          <Text style={{color: colors.danger, fontWeight: 'bold'}}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -276,10 +285,10 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           );
         })}
 
-        <View style={{marginVertical: 20}}>
-          <Button title="Save Records" onPress={handleSave} loading={saving} />
-          <View style={{height: 10}} />
-          <Button title="Cancel" variant="outline" onPress={() => { setSelectedOrderId(null); setOrder(null); }} />
+        <View style={styles.footerButtons}>
+          <Button title="Save Records" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
+          <View style={{ width: 10 }} />
+          <Button title="Cancel" variant="outline" onPress={() => { setSelectedOrderId(null); setOrder(null); }} style={{ flex: 1 }} />
         </View>
       </ScrollView>
     </Layout>
@@ -288,32 +297,36 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 200 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 300 },
   loadingText: { marginTop: 10, color: colors.textSecondary },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, color: colors.text },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  orderInfo: { fontSize: 18, fontWeight: 'bold' },
-  fgCard: { marginBottom: 20, padding: 10 },
-  fgHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  fgName: { fontSize: 16, fontWeight: 'bold' },
-  addText: { color: colors.primary, fontWeight: 'bold' },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#eee', paddingBottom: 5 },
-  headerCol: { width: 80, textAlign: 'center', fontWeight: 'bold', fontSize: 12 },
-  headerAction: { width: 50, textAlign: 'center', fontWeight: 'bold', fontSize: 12 },
-  tableRow: { flexDirection: 'row', paddingVertical: 5, alignItems: 'center' },
-  input: { width: 80, height: 35, borderWidth: 1, borderColor: '#ddd', textAlign: 'center', marginHorizontal: 2, borderRadius: 4, backgroundColor: '#fff' },
-  removeBtn: { width: 50, alignItems: 'center' },
-  orderSelectionCard: { marginBottom: 15, padding: 15 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: colors.text },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8 },
+  orderInfo: { fontSize: 18, fontWeight: 'bold', color: colors.text },
+  fgCard: { marginBottom: 25, padding: 0, overflow: 'hidden', borderLeftWidth: 4, borderLeftColor: colors.primary },
+  fgHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#f0f4f8', borderBottomWidth: 1, borderBottomColor: '#e1e8ed' },
+  fgName: { fontSize: 17, fontWeight: 'bold', color: colors.text },
+  addText: { color: colors.primary, fontWeight: 'bold', fontSize: 14 },
+  
+  excelContainer: { backgroundColor: '#fff' },
+  excelHeaderRow: { flexDirection: 'row', backgroundColor: '#f1f3f4', borderBottomWidth: 1, borderBottomColor: '#ccc' },
+  excelHeaderCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#ccc', justifyContent: 'center', alignItems: 'center' },
+  excelHeaderText: { fontWeight: 'bold', fontSize: 13, color: '#333' },
+  excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  excelDataCell: { borderRightWidth: 1, borderRightColor: '#eee', justifyContent: 'center' },
+  excelInput: { height: 40, paddingHorizontal: 8, fontSize: 14, textAlign: 'center', backgroundColor: '#fff' },
+  
+  footerButtons: { flexDirection: 'row', marginVertical: 30, paddingBottom: 40 },
+  orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
-  orderNumberText: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
-  productNameText: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  orderCardDetails: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 12, marginBottom: 15 },
+  orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
+  productNameText: { fontSize: 15, color: colors.textSecondary, marginTop: 4 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  orderCardDetails: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 15, marginBottom: 15 },
   detailItem: { flex: 1 },
-  detailLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
-  detailValue: { fontSize: 14, fontWeight: '600', color: colors.text },
-  recordButton: { backgroundColor: colors.success, padding: 12, borderRadius: 8, alignItems: 'center' },
-  recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 50, fontSize: 16 }
+  detailLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 5 },
+  detailValue: { fontSize: 15, fontWeight: '700', color: colors.text },
+  recordButton: { backgroundColor: colors.success, padding: 14, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 80, fontSize: 17 }
 });
