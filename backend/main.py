@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Hea
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 import base64
 from datetime import datetime
@@ -1269,7 +1269,7 @@ def create_granulation_template(template: schemas.GranulationTemplateCreate, db:
 
 @app.get("/api/granulation-templates", response_model=List[schemas.GranulationTemplate])
 def get_granulation_templates(fg_id: Optional[int] = None, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
-    query = db.query(models.FinishedGoodGranulationTemplate)
+    query = db.query(models.FinishedGoodGranulationTemplate).options(joinedload(models.FinishedGoodGranulationTemplate.finished_good))
     if branch_id:
         query = query.filter(models.FinishedGoodGranulationTemplate.branch_id == branch_id)
     if fg_id:

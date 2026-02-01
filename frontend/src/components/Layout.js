@@ -232,6 +232,12 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
+      name: "Granulation Template",
+      route: "AdminDashboard",
+      icon: SvgClipboardIcon,
+      section: "Operations",
+    },
+    {
       name: "Unloading Entry",
       route: "UnloadingEntry",
       icon: SvgPackageIcon,
