@@ -55,10 +55,13 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
       // Fetch ALL templates instead of just those in the order
       const templatesRes = await client.get(`/granulation-templates`);
+      console.log("Templates API Response:", templatesRes.data);
       const allTemplates = templatesRes.data || [];
       
       const templatesMap = {};
       allTemplates.forEach(t => {
+        // Log individual template to see structure
+        console.log(`Processing template for FG ${t.finished_good_id}:`, t);
         if (t.is_active) {
           templatesMap[t.finished_good_id] = t;
         }
@@ -72,7 +75,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
         console.log("No existing granulation records");
       }
 
-      console.log("Templates Map:", templatesMap);
+      console.log("Final Templates Map:", templatesMap);
       console.log("Existing Records:", recordsRes.data);
 
       if (recordsRes.data && recordsRes.data.length > 0) {
@@ -85,7 +88,6 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       } else {
         // Create initial records for ALL finished goods that have a template
         const initialRecords = allTemplates
-          .filter(t => t.is_active && t.finished_good)
           .map(t => {
             const defaultValues = {};
             if (t.columns_definition?.columns) {
@@ -96,7 +98,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
             return {
               id: Date.now() + Math.random(),
               finished_good_id: t.finished_good_id,
-              finished_good_name: t.finished_good.product_name || "Product",
+              finished_good_name: t.finished_good?.product_name || "Product",
               values: defaultValues
             };
           });
