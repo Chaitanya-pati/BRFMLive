@@ -36,6 +36,7 @@ import Transfer12HourScreen from './src/screens/Transfer12HourScreen';
 import DispatchManagementScreen from './src/screens/DispatchManagementScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
+import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -149,6 +150,7 @@ export default function App() {
           <Stack.Screen name="DispatchManagement" component={DispatchManagementScreen} />
           <Stack.Screen name="Grinding" component={GrindingScreen} />
           <Stack.Screen name="GrindingExcelView" component={GrindingExcelViewScreen} />
+          <Stack.Screen name="GranulationTemplate" component={GranulationTemplateScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}
