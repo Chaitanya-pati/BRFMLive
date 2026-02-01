@@ -1254,6 +1254,61 @@ def get_godowns(skip: int = 0,
     godowns = query.offset(skip).limit(limit).all()
     return godowns
 
+# Granulation & Quality Endpoints
+
+@app.post("/api/granulation-templates", response_model=schemas.GranulationTemplate)
+def create_granulation_template(template: schemas.GranulationTemplateCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = template.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    db_template = models.FinishedGoodGranulationTemplate(**data)
+    db.add(db_template)
+    db.commit()
+    db.refresh(db_template)
+    return db_template
+
+@app.get("/api/granulation-templates", response_model=List[schemas.GranulationTemplate])
+def get_granulation_templates(fg_id: Optional[int] = None, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.FinishedGoodGranulationTemplate)
+    if branch_id:
+        query = query.filter(models.FinishedGoodGranulationTemplate.branch_id == branch_id)
+    if fg_id:
+        query = query.filter(models.FinishedGoodGranulationTemplate.finished_good_id == fg_id)
+    return query.all()
+
+@app.post("/api/production-granulation", response_model=schemas.GranulationResult)
+def create_production_granulation(result: schemas.GranulationResultCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = result.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    db_result = models.ProductionOrderGranulation(**data)
+    db.add(db_result)
+    db.commit()
+    db.refresh(db_result)
+    return db_result
+
+@app.post("/api/maida-results", response_model=schemas.MaidaResult)
+def create_maida_result(result: schemas.MaidaResultCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = result.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    db_result = models.ProductionOrderMaidaResult(**data)
+    db.add(db_result)
+    db.commit()
+    db.refresh(db_result)
+    return db_result
+
+@app.post("/api/extractions", response_model=schemas.Extraction)
+def create_extraction(extraction: schemas.ExtractionCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = extraction.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    db_extraction = models.ProductionOrderExtraction(**data)
+    db.add(db_extraction)
+    db.commit()
+    db.refresh(db_extraction)
+    return db_extraction
+
 
 @app.get("/api/godowns/{godown_id}", response_model=schemas.GodownMaster)
 def get_godown(godown_id: int, db: Session = Depends(get_db)):
