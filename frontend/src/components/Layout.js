@@ -269,7 +269,7 @@ export default function Layout({ children, title, currentRoute }) {
     },
     {
       name: "Granulation Recording",
-      route: "ProductionOrder", // Still navigates to order list where you can click Granulation
+      route: "ProductionOrderGranulation",
       icon: SvgClipboardIcon,
       section: "Operations",
     },
