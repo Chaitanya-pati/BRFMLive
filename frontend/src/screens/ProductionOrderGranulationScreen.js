@@ -76,6 +76,9 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
         console.log("No existing granulation records");
       }
 
+      console.log("Templates Map:", templatesMap);
+      console.log("Existing Records:", recordsRes.data);
+
       if (recordsRes.data && recordsRes.data.length > 0) {
         setGranulationRecords(recordsRes.data.map(r => ({
           ...r,
@@ -84,12 +87,23 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           values: r.granulation_values || {}
         })));
       } else {
-        const initialRecords = destBins.map(db => ({
-          id: Date.now() + Math.random(),
-          finished_good_id: db.finished_good_id,
-          finished_good_name: db.bin?.material_type || "Product",
-          values: {}
-        }));
+        const initialRecords = destBins.map(db => {
+          const fgId = db.finished_good_id;
+          const template = templatesMap[fgId];
+          const defaultValues = {};
+          if (template?.columns_definition?.columns) {
+            template.columns_definition.columns.forEach(col => {
+              defaultValues[col] = "";
+            });
+          }
+          return {
+            id: Date.now() + Math.random(),
+            finished_good_id: fgId,
+            finished_good_name: db.bin?.material_type || db.bin?.bin_number || "Product",
+            values: defaultValues
+          };
+        });
+        console.log("Initial Records Created:", initialRecords);
         setGranulationRecords(initialRecords);
       }
     } catch (error) {
@@ -240,10 +254,16 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           </TouchableOpacity>
         </View>
         
-        {Object.keys(fgGroups).map(fgId => {
+        {Object.keys(fgGroups).length === 0 ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No finished goods found for this order.</Text>
+          </View>
+        ) : Object.keys(fgGroups).map(fgId => {
           const group = fgGroups[fgId];
           const template = templates[fgId];
           const cols = template?.columns_definition?.columns || [];
+
+          console.log(`Rendering group for FG ${fgId}:`, { group, template, cols });
 
           return (
             <Card key={fgId} style={styles.fgCard}>
@@ -254,41 +274,47 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
                 </TouchableOpacity>
               </View>
               
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                <View style={styles.excelContainer}>
-                  <View style={styles.excelHeaderRow}>
-                    {cols.map(c => (
-                      <View key={c} style={[styles.excelHeaderCell, { width: 100 }]}>
-                        <Text style={styles.excelHeaderText}>{c}</Text>
-                      </View>
-                    ))}
-                    <View style={[styles.excelHeaderCell, { width: 60 }]}>
-                      <Text style={styles.excelHeaderText}>Action</Text>
-                    </View>
-                  </View>
-                  
-                  {group.records.map((r, index) => (
-                    <View key={r.id} style={[styles.excelDataRow, index % 2 === 1 && { backgroundColor: '#f9f9f9' }]}>
+              {cols.length === 0 ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: colors.danger }}>No granulation template found for this product.</Text>
+                </View>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                  <View style={styles.excelContainer}>
+                    <View style={styles.excelHeaderRow}>
                       {cols.map(c => (
-                        <View key={c} style={[styles.excelDataCell, { width: 100 }]}>
-                          <TextInput
-                            style={styles.excelInput}
-                            value={String(r.values[c] || "")}
-                            onChangeText={(v) => updateValue(r.id, c, v)}
-                            keyboardType="numeric"
-                            placeholder="-"
-                          />
+                        <View key={c} style={[styles.excelHeaderCell, { width: 100 }]}>
+                          <Text style={styles.excelHeaderText}>{c}</Text>
                         </View>
                       ))}
-                      <View style={[styles.excelDataCell, { width: 60, alignItems: 'center' }]}>
-                        <TouchableOpacity onPress={() => removeRow(r.id)}>
-                          <Text style={{color: colors.danger, fontWeight: 'bold'}}>✕</Text>
-                        </TouchableOpacity>
+                      <View style={[styles.excelHeaderCell, { width: 60 }]}>
+                        <Text style={styles.excelHeaderText}>Action</Text>
                       </View>
                     </View>
-                  ))}
-                </View>
-              </ScrollView>
+                    
+                    {group.records.map((r, index) => (
+                      <View key={r.id} style={[styles.excelDataRow, index % 2 === 1 && { backgroundColor: '#f9f9f9' }]}>
+                        {cols.map(c => (
+                          <View key={c} style={[styles.excelDataCell, { width: 100 }]}>
+                            <TextInput
+                              style={styles.excelInput}
+                              value={String(r.values[c] || "")}
+                              onChangeText={(v) => updateValue(r.id, c, v)}
+                              keyboardType="numeric"
+                              placeholder="-"
+                            />
+                          </View>
+                        ))}
+                        <View style={[styles.excelDataCell, { width: 60, alignItems: 'center' }]}>
+                          <TouchableOpacity onPress={() => removeRow(r.id)}>
+                            <Text style={{color: colors.danger, fontWeight: 'bold'}}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
             </Card>
           );
         })}
