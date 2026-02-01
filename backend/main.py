@@ -145,6 +145,14 @@ app.include_router(drivers.router)
 
 # --- Granulation Endpoints ---
 
+@app.get("/api/granulation-templates", response_model=List[schemas.GranulationTemplate])
+def get_granulation_templates(db: Session = Depends(get_db)):
+    return db.query(models.FinishedGoodGranulationTemplate).options(
+        joinedload(models.FinishedGoodGranulationTemplate.finished_good)
+    ).filter(
+        models.FinishedGoodGranulationTemplate.is_active == True
+    ).all()
+
 @app.get("/api/granulation-templates/finished-good/{fg_id}", response_model=Optional[schemas.GranulationTemplate])
 def get_template_by_fg(fg_id: int, db: Session = Depends(get_db)):
     return db.query(models.FinishedGoodGranulationTemplate).filter(
