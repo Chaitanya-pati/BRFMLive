@@ -141,21 +141,47 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     }
   };
 
-  const columns = [
-    { key: 'order_number', title: 'Order #', width: 150 },
-    { key: 'raw_product', title: 'Product', width: 150, render: (item) => item.raw_product?.product_name || 'N/A' },
-    { key: 'quantity', title: 'Qty', width: 100, render: (item) => `${item.quantity} kg` },
-    { key: 'order_date', title: 'Date', width: 120, render: (item) => formatISTDate(item.order_date) },
-    { key: 'status', title: 'Status', width: 120 },
-  ];
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'CREATED': return colors.info;
+      case 'PLANNED': return colors.primary;
+      case 'IN_PROGRESS': return colors.warning;
+      case 'COMPLETED': return colors.success;
+      case 'CANCELLED': return colors.danger;
+      default: return colors.textLight;
+    }
+  };
 
-  const renderActions = (item) => (
-    <TouchableOpacity 
-      style={styles.selectButton} 
-      onPress={() => setSelectedOrderId(item.id)}
-    >
-      <Text style={styles.buttonText}>Record Granulation</Text>
-    </TouchableOpacity>
+  const renderOrderCard = ({ item }) => (
+    <Card style={styles.orderSelectionCard}>
+      <View style={styles.orderCardHeader}>
+        <View>
+          <Text style={styles.orderNumberText}>{item.order_number}</Text>
+          <Text style={styles.productNameText}>{item.raw_product?.product_name || 'N/A'}</Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <Text style={styles.statusText}>{item.status}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.orderCardDetails}>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Quantity</Text>
+          <Text style={styles.detailValue}>{item.quantity} kg</Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Date</Text>
+          <Text style={styles.detailValue}>{formatISTDate(item.order_date)}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.recordButton} 
+        onPress={() => setSelectedOrderId(item.id)}
+      >
+        <Text style={styles.recordButtonText}>Record Granulation Data</Text>
+      </TouchableOpacity>
+    </Card>
   );
 
   if (!selectedOrderId) {
@@ -166,10 +192,14 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           {loading ? (
             <ActivityIndicator size="large" color={colors.primary} />
           ) : (
-            <DataTable
-              columns={columns}
+            <FlatList
               data={orders}
-              renderActions={renderActions}
+              renderItem={renderOrderCard}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No production orders available for granulation.</Text>
+              }
             />
           )}
         </View>
@@ -273,6 +303,17 @@ const styles = StyleSheet.create({
   tableRow: { flexDirection: 'row', paddingVertical: 5, alignItems: 'center' },
   input: { width: 80, height: 35, borderWidth: 1, borderColor: '#ddd', textAlign: 'center', marginHorizontal: 2, borderRadius: 4, backgroundColor: '#fff' },
   removeBtn: { width: 50, alignItems: 'center' },
-  selectButton: { backgroundColor: colors.success, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4 },
-  buttonText: { color: '#fff', fontSize: 12 },
+  orderSelectionCard: { marginBottom: 15, padding: 15 },
+  orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
+  orderNumberText: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
+  productNameText: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  orderCardDetails: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 12, marginBottom: 15 },
+  detailItem: { flex: 1 },
+  detailLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+  detailValue: { fontSize: 14, fontWeight: '600', color: colors.text },
+  recordButton: { backgroundColor: colors.success, padding: 12, borderRadius: 8, alignItems: 'center' },
+  recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 50, fontSize: 16 }
 });
