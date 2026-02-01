@@ -62,7 +62,7 @@ export default function GranulationTemplateScreen({ navigation }) {
       const client = getApiClient();
       await client.post("/granulation-templates", {
         finished_good_id: selectedFg,
-        columns_definition: { columns: validColumns.map(({ label, sieveSize, unit }) => ({ label, sieveSize, unit })) },
+        columns_definition: { columns: validColumns.map(({ label }) => label.trim()) },
         is_active: true
       });
       showToast("Success", "Granulation template saved successfully");
@@ -90,20 +90,12 @@ export default function GranulationTemplateScreen({ navigation }) {
           <Text style={styles.subtitle}>Sieve Columns Definition</Text>
           {columns.map((col, index) => (
             <View key={col.id} style={styles.columnRow}>
-              <View style={{ flex: 2, marginRight: 10 }}>
-                <InputField
-                  label={index === 0 ? "Label (e.g. Over 40 mesh)" : ""}
-                  value={col.label}
-                  onChangeText={(v) => updateColumn(col.id, 'label', v)}
-                  placeholder="Label"
-                />
-              </View>
               <View style={{ flex: 1, marginRight: 10 }}>
                 <InputField
-                  label={index === 0 ? "Sieve Size" : ""}
-                  value={col.sieveSize}
-                  onChangeText={(v) => updateColumn(col.id, 'sieveSize', v)}
-                  placeholder="Size"
+                  label={index === 0 ? "Column Label (e.g. 1000 \u03bc)" : ""}
+                  value={col.label}
+                  onChangeText={(v) => updateColumn(col.id, 'label', v)}
+                  placeholder="e.g. 1000 \u03bc or Throughs"
                 />
               </View>
               <TouchableOpacity 
