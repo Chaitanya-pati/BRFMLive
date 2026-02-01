@@ -262,6 +262,12 @@ export default function Layout({ children, title, currentRoute }) {
       section: "Operations",
     },
     {
+      name: "Production Orders",
+      route: "ProductionOrder",
+      icon: SvgCogIcon,
+      section: "Operations",
+    },
+    {
       name: "Reports",
       route: "Reports",
       icon: SvgFileTextIcon,
