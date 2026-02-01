@@ -14,7 +14,7 @@ export default function GranulationTemplateScreen({ navigation }) {
   const [finishedGoods, setFinishedGoods] = useState([]);
   const [selectedFg, setSelectedFg] = useState(null);
   const [columns, setColumns] = useState([
-    { id: Date.now(), label: "", sieveSize: "", unit: "%" }
+    { id: Date.now(), label: "" }
   ]);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function GranulationTemplateScreen({ navigation }) {
   };
 
   const handleAddColumn = () => {
-    setColumns([...columns, { id: Date.now(), label: "", sieveSize: "", unit: "%" }]);
+    setColumns([...columns, { id: Date.now(), label: "" }]);
   };
 
   const handleRemoveColumn = (id) => {
