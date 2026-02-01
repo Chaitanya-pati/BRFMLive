@@ -47,3 +47,10 @@ websockets==15.0.1
 # - expo-camera ^17.0.8
 # - expo-image-picker ^17.0.8
 # - react-hook-form ^7.63.0
+datasetrising
+fastapi
+pydantic
+python-multipart
+pytz
+sqlalchemy
+uvicorn

@@ -124,6 +124,11 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     setSaving(true);
     try {
       const client = getApiClient();
+      
+      // Separate records by finished good to ensure clean structure if needed, 
+      // but the backend currently expects a flat list of records.
+      // However, we should only save the actual data.
+      
       await client.post(`/production-orders/${selectedOrderId}/granulation`, {
         records: granulationRecords.map(r => ({
           finished_good_id: r.finished_good_id,
@@ -135,7 +140,8 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       setSelectedOrderId(null);
       loadOrders();
     } catch (error) {
-      showAlert("Error", "Failed to save records");
+      console.error("Save error:", error);
+      showAlert("Error", "Failed to save records. " + (error.response?.data?.detail || ""));
     } finally {
       setSaving(false);
     }
