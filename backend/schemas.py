@@ -779,6 +779,7 @@ class GranulationTemplate(GranulationTemplateBase):
     id: int
     branch_id: int
     created_at: datetime
+    finished_good: Optional[FinishedGood] = None
 
 class GranulationResultBase(ISTModel):
     production_order_id: int

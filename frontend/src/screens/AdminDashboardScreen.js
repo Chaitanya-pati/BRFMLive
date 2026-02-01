@@ -31,7 +31,7 @@ export default function AdminDashboardScreen({ navigation }) {
   const renderTemplateItem = ({ item }) => (
     <Card style={styles.templateCard}>
       <View style={styles.templateHeader}>
-        <Text style={styles.fgName}>{item.finished_good?.product_name || `FG ID: ${item.finished_good_id}`}</Text>
+        <Text style={styles.fgName}>{item.finished_good?.product_name || item.finished_good_name || `FG ID: ${item.finished_good_id}`}</Text>
         <Text style={[styles.status, { color: item.is_active ? "#10b981" : "#ef4444" }]}>
           {item.is_active ? "Active" : "Inactive"}
         </Text>
