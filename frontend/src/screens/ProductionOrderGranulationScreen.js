@@ -43,7 +43,14 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
       setTemplates(templatesMap);
 
-      const recordsRes = await client.get(`/api/production-orders/${orderId}/granulation`);
+      let recordsRes;
+      try {
+        recordsRes = await client.get(`/api/production-orders/${orderId}/granulation`);
+      } catch (e) {
+        console.log("No existing granulation records");
+        recordsRes = { data: [] };
+      }
+
       if (recordsRes.data && recordsRes.data.length > 0) {
         setGranulationRecords(recordsRes.data.map(r => ({
           ...r,
@@ -104,7 +111,22 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     }
   };
 
-  if (loading) return <ActivityIndicator style={{marginTop: 50}} />;
+  if (loading) return (
+    <Layout title="Production Granulation" navigation={navigation}>
+      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
+    </Layout>
+  );
+
+  if (!orderId) {
+    return (
+      <Layout title="Production Granulation" navigation={navigation}>
+        <View style={styles.container}>
+          <Text style={styles.errorText}>Please select a production order from the Planning screen first.</Text>
+          <Button title="Go to Production Planning" onPress={() => navigation.navigate('ProductionOrder')} />
+        </View>
+      </Layout>
+    );
+  }
 
   const fgGroups = granulationRecords.reduce((acc, r) => {
     if (!acc[r.finished_good_id]) acc[r.finished_good_id] = { name: r.finished_good_name, records: [] };
@@ -178,6 +200,7 @@ const styles = StyleSheet.create({
   headerCol: { width: 80, textAlign: 'center', fontWeight: 'bold', fontSize: 12 },
   headerAction: { width: 50, textAlign: 'center', fontWeight: 'bold', fontSize: 12 },
   tableRow: { flexDirection: 'row', paddingVertical: 5, alignItems: 'center' },
-  input: { width: 80, height: 35, borderWidth: 1, borderColor: '#ddd', textAlign: 'center', marginHorizontal: 2, borderRadius: 4 },
-  removeBtn: { width: 50, alignItems: 'center' }
+  input: { width: 80, height: 35, borderWidth: 1, borderColor: '#ddd', textAlign: 'center', marginHorizontal: 2, borderRadius: 4, backgroundColor: '#fff' },
+  removeBtn: { width: 50, alignItems: 'center' },
+  errorText: { fontSize: 16, color: colors.danger, textAlign: 'center', marginVertical: 20 }
 });
