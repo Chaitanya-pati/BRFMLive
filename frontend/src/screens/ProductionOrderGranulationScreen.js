@@ -23,8 +23,12 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
   const fetchOrderAndTemplates = async () => {
     try {
+      setLoading(true);
       const client = getApiClient();
       const orderRes = await client.get(`/api/production-orders/${orderId}`);
+      if (!orderRes.data) {
+        throw new Error("Order not found");
+      }
       setOrder(orderRes.data);
 
       const destBins = orderRes.data.destination_bins || [];
@@ -43,12 +47,11 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
       setTemplates(templatesMap);
 
-      let recordsRes;
+      let recordsRes = { data: [] };
       try {
         recordsRes = await client.get(`/api/production-orders/${orderId}/granulation`);
       } catch (e) {
         console.log("No existing granulation records");
-        recordsRes = { data: [] };
       }
 
       if (recordsRes.data && recordsRes.data.length > 0) {
@@ -67,7 +70,8 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
     } catch (error) {
       console.error("Failed to fetch data", error);
-      showAlert("Error", "Failed to load order data");
+      showAlert("Error", error.message || "Failed to load order data");
+      setOrder(null);
     } finally {
       setLoading(false);
     }
@@ -113,15 +117,20 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
   if (loading) return (
     <Layout title="Production Granulation" navigation={navigation}>
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading order details...</Text>
+      </View>
     </Layout>
   );
 
-  if (!orderId) {
+  if (!orderId || !order) {
     return (
       <Layout title="Production Granulation" navigation={navigation}>
         <View style={styles.container}>
-          <Text style={styles.errorText}>Please select a production order from the Planning screen first.</Text>
+          <Text style={styles.errorText}>
+            {!orderId ? "Please select a production order from the Planning screen first." : "Production order details could not be loaded."}
+          </Text>
           <Button title="Go to Production Planning" onPress={() => navigation.navigate('ProductionOrder')} />
         </View>
       </Layout>
