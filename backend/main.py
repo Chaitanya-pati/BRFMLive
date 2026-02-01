@@ -131,7 +131,40 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(customer_orders.router)
 app.include_router(drivers.router)
 
-# --- Silo Master Endpoints ---
+# --- Granulation Endpoints ---
+
+@app.get("/api/granulation-templates/finished-good/{fg_id}", response_model=Optional[schemas.GranulationTemplate])
+def get_template_by_fg(fg_id: int, db: Session = Depends(get_db)):
+    return db.query(models.FinishedGoodGranulationTemplate).filter(
+        models.FinishedGoodGranulationTemplate.finished_good_id == fg_id,
+        models.FinishedGoodGranulationTemplate.is_active == True
+    ).first()
+
+@app.get("/api/production-orders/{order_id}/granulation", response_model=List[schemas.ProductionOrderGranulation])
+def get_order_granulation(order_id: int, db: Session = Depends(get_db)):
+    return db.query(models.ProductionOrderGranulation).filter(
+        models.ProductionOrderGranulation.production_order_id == order_id
+    ).all()
+
+@app.post("/api/production-orders/{order_id}/granulation")
+def save_order_granulation(order_id: int, data: dict, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
+    records = data.get("records", [])
+    # Delete existing for this order
+    db.query(models.ProductionOrderGranulation).filter(
+        models.ProductionOrderGranulation.production_order_id == order_id
+    ).delete()
+    
+    for r in records:
+        db_rec = models.ProductionOrderGranulation(
+            production_order_id=order_id,
+            branch_id=branch_id or 1,
+            finished_good_id=r["finished_good_id"],
+            granulation_values=r["granulation_values"]
+        )
+        db.add(db_rec)
+    
+    db.commit()
+    return {"message": "Success"}
 
 @app.post("/api/silos", response_model=schemas.SiloMaster)
 def create_silo(silo: schemas.SiloMasterCreate,

@@ -37,6 +37,7 @@ import DispatchManagementScreen from './src/screens/DispatchManagementScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
+import ProductionOrderGranulationScreen from './src/screens/ProductionOrderGranulationScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import colors from './src/theme/colors';
 
@@ -145,6 +146,7 @@ export default function App() {
           <Stack.Screen name="FinishedGoodsMaster" component={FinishedGoodsMasterScreen} />
           <Stack.Screen name="ProductionOrder" component={ProductionOrderScreen} />
           <Stack.Screen name="ProductionOrderPlanning" component={ProductionOrderPlanningScreen} />
+          <Stack.Screen name="ProductionOrderGranulation" component={ProductionOrderGranulationScreen} />
           <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
           <Stack.Screen name="TransferRecording" component={TransferRecordingScreen} />
           <Stack.Screen name="Transfer12Hour" component={Transfer12HourScreen} />

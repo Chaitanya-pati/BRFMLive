@@ -775,7 +775,27 @@ class GranulationTemplateBase(ISTModel):
 class GranulationTemplateCreate(GranulationTemplateBase):
     branch_id: Optional[int] = None
 
+class ProductionOrderGranulationBase(BaseModel):
+    finished_good_id: int
+    granulation_values: dict
+
+class ProductionOrderGranulationCreate(ProductionOrderGranulationBase):
+    production_order_id: int
+    branch_id: Optional[int] = None
+
+class ProductionOrderGranulation(ProductionOrderGranulationBase):
+    id: int
+    production_order_id: int
+    branch_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class GranulationTemplate(GranulationTemplateBase):
+    id: int
+    branch_id: int
+    created_at: datetime
     id: int
     branch_id: int
     created_at: datetime
