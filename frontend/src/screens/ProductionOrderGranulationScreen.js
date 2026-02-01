@@ -237,9 +237,80 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
     return acc;
   }, {});
 
+  const renderExcelHeader = () => {
+    return (
+      <View style={styles.excelHeaderRow}>
+        <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#e8f0fe' }]}>
+          <Text style={styles.excelHeaderText}>Granulation</Text>
+        </View>
+        {Object.keys(fgGroups).map(fgId => {
+          const group = fgGroups[fgId];
+          const template = templates[fgId];
+          const cols = template?.columns_definition?.columns || [];
+          return (
+            <View key={fgId} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
+              <View style={styles.excelProductHeader}>
+                <Text style={styles.excelProductText}>{group.name}</Text>
+                <TouchableOpacity onPress={() => addRow(fgId, group.name)}>
+                  <Text style={styles.addText}>+</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.excelSubHeaderRow}>
+                {cols.map(c => (
+                  <View key={c} style={[styles.excelSubHeaderCell, { width: 80 }]}>
+                    <Text style={styles.excelSubHeaderText}>{c}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderExcelRows = () => {
+    const maxRows = 10;
+    const rows = Array.from({ length: maxRows });
+
+    return rows.map((_, rowIndex) => (
+      <View key={rowIndex} style={styles.excelDataRow}>
+        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff' }]}>
+          <Text style={styles.excelRowIndexText}>{rowIndex + 1}</Text>
+        </View>
+        {Object.keys(fgGroups).map(fgId => {
+          const group = fgGroups[fgId];
+          const template = templates[fgId];
+          const cols = template?.columns_definition?.columns || [];
+          const record = group.records[rowIndex];
+          
+          return (
+            <View key={fgId} style={[styles.excelProductDataGroup, { width: Math.max(cols.length * 80, 100) }]}>
+              {cols.map(c => (
+                <View key={c} style={[styles.excelDataCell, { width: 80 }]}>
+                  <TextInput
+                    style={styles.excelInput}
+                    value={record ? String(record.values[c] || "") : ""}
+                    onChangeText={(v) => {
+                      if (record) {
+                        updateValue(record.id, c, v);
+                      }
+                    }}
+                    keyboardType="numeric"
+                    placeholder="-"
+                  />
+                </View>
+              ))}
+            </View>
+          );
+        })}
+      </View>
+    ));
+  };
+
   return (
     <Layout title="Production Granulation" navigation={navigation}>
-      <ScrollView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.orderInfo}>Order: {order?.order_number}</Text>
           <TouchableOpacity onPress={() => { setSelectedOrderId(null); setOrder(null); }}>
@@ -251,73 +322,25 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           <View style={styles.centered}>
             <Text style={styles.emptyText}>No finished goods found for this order.</Text>
           </View>
-        ) : Object.keys(fgGroups).map(fgId => {
-          const group = fgGroups[fgId];
-          const template = templates[fgId];
-          const cols = template?.columns_definition?.columns || [];
-
-          console.log(`Rendering group for FG ${fgId}:`, { group, template, cols });
-
-          return (
-            <Card key={fgId} style={styles.fgCard}>
-              <View style={styles.fgHeader}>
-                <Text style={styles.fgName}>{group.name}</Text>
-                <TouchableOpacity onPress={() => addRow(fgId, group.name)}>
-                  <Text style={styles.addText}>+ Add Row</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {cols.length === 0 ? (
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <Text style={{ color: colors.danger }}>No granulation template found for this product.</Text>
-                </View>
-              ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                  <View style={styles.excelContainer}>
-                    <View style={styles.excelHeaderRow}>
-                      {cols.map(c => (
-                        <View key={c} style={[styles.excelHeaderCell, { width: 100 }]}>
-                          <Text style={styles.excelHeaderText}>{c}</Text>
-                        </View>
-                      ))}
-                      <View style={[styles.excelHeaderCell, { width: 60 }]}>
-                        <Text style={styles.excelHeaderText}>Action</Text>
-                      </View>
-                    </View>
-                    
-                    {group.records.map((r, index) => (
-                      <View key={r.id} style={[styles.excelDataRow, index % 2 === 1 && { backgroundColor: '#f9f9f9' }]}>
-                        {cols.map(c => (
-                          <View key={c} style={[styles.excelDataCell, { width: 100 }]}>
-                            <TextInput
-                              style={styles.excelInput}
-                              value={String(r.values[c] || "")}
-                              onChangeText={(v) => updateValue(r.id, c, v)}
-                              keyboardType="numeric"
-                              placeholder="-"
-                            />
-                          </View>
-                        ))}
-                        <View style={[styles.excelDataCell, { width: 60, alignItems: 'center' }]}>
-                          <TouchableOpacity onPress={() => removeRow(r.id)}>
-                            <Text style={{color: colors.danger, fontWeight: 'bold'}}>✕</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.excelScrollView}>
+              <View style={styles.excelMainContainer}>
+                {renderExcelHeader()}
+                <ScrollView showsVerticalScrollIndicator={true}>
+                  {renderExcelRows()}
                 </ScrollView>
-              )}
-            </Card>
-          );
-        })}
+              </View>
+            </ScrollView>
+          </View>
+        )}
 
         <View style={styles.footerButtons}>
           <Button title="Save Records" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           <View style={{ width: 10 }} />
           <Button title="Cancel" variant="outline" onPress={() => { setSelectedOrderId(null); setOrder(null); }} style={{ flex: 1 }} />
         </View>
-      </ScrollView>
+      </View>
     </Layout>
   );
 }
@@ -327,22 +350,32 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 300 },
   loadingText: { marginTop: 10, color: colors.textSecondary },
   title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: colors.text },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8 },
   orderInfo: { fontSize: 18, fontWeight: 'bold', color: colors.text },
-  fgCard: { marginBottom: 25, padding: 0, overflow: 'hidden', borderLeftWidth: 4, borderLeftColor: colors.primary },
-  fgHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#f0f4f8', borderBottomWidth: 1, borderBottomColor: '#e1e8ed' },
-  fgName: { fontSize: 17, fontWeight: 'bold', color: colors.text },
-  addText: { color: colors.primary, fontWeight: 'bold', fontSize: 14 },
   
-  excelContainer: { backgroundColor: '#fff' },
-  excelHeaderRow: { flexDirection: 'row', backgroundColor: '#f1f3f4', borderBottomWidth: 1, borderBottomColor: '#ccc' },
-  excelHeaderCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#ccc', justifyContent: 'center', alignItems: 'center' },
-  excelHeaderText: { fontWeight: 'bold', fontSize: 13, color: '#333' },
-  excelDataRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  excelDataCell: { borderRightWidth: 1, borderRightColor: '#eee', justifyContent: 'center' },
-  excelInput: { height: 40, paddingHorizontal: 8, fontSize: 14, textAlign: 'center', backgroundColor: '#fff' },
+  excelScrollView: { flex: 1, borderTopWidth: 1, borderTopColor: '#000', borderLeftWidth: 1, borderLeftColor: '#000' },
+  excelMainContainer: { backgroundColor: '#fff' },
+  excelHeaderRow: { flexDirection: 'row' },
+  excelHeaderCell: { height: 60, borderRightWidth: 1, borderRightColor: '#000', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  excelFixedCol: { width: 60, zIndex: 1 },
+  excelHeaderText: { fontWeight: 'bold', fontSize: 14, color: '#333' },
   
-  footerButtons: { flexDirection: 'row', marginVertical: 30, paddingBottom: 40 },
+  excelProductGroup: { borderRightWidth: 1, borderRightColor: '#000' },
+  excelProductHeader: { height: 30, backgroundColor: '#d9e2f3', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', paddingHorizontal: 5 },
+  excelProductText: { fontWeight: 'bold', fontSize: 12, textAlign: 'center', flex: 1 },
+  addText: { color: colors.primary, fontWeight: 'bold', fontSize: 18, marginLeft: 5 },
+  
+  excelSubHeaderRow: { flexDirection: 'row' },
+  excelSubHeaderCell: { height: 30, backgroundColor: '#f2f2f2', borderRightWidth: 1, borderRightColor: '#000', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  excelSubHeaderText: { fontSize: 11, fontWeight: '600' },
+  
+  excelDataRow: { flexDirection: 'row' },
+  excelProductDataGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#000' },
+  excelDataCell: { height: 35, borderRightWidth: 1, borderRightColor: '#000', borderBottomWidth: 1, borderBottomColor: '#000', justifyContent: 'center' },
+  excelRowIndexText: { textAlign: 'center', fontSize: 12, color: '#666' },
+  excelInput: { height: '100%', paddingHorizontal: 4, fontSize: 12, textAlign: 'center' },
+  
+  footerButtons: { flexDirection: 'row', marginTop: 15, paddingBottom: 10 },
   orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
   orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
