@@ -316,7 +316,7 @@ export default function HomeScreen({ navigation }) {
     },
     {
       title: "Granulation Template",
-      route: "GranulationTemplate",
+      route: "AdminDashboard",
       icon: "tasks",
       color: "#4CAF50",
       adminOnly: true,
