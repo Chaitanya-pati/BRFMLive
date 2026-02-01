@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator } from "react-native";
 import Layout from "../components/Layout";
 import colors from "../theme/colors";
 import GranulationTemplateView from "../components/admin/GranulationTemplateView";
