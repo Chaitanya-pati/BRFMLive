@@ -12,10 +12,8 @@ export default function AdminDashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "data") {
-      fetchTemplates();
-    }
-  }, [activeTab]);
+    fetchTemplates();
+  }, []);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -34,7 +32,7 @@ export default function AdminDashboardScreen({ navigation }) {
     <Card style={styles.templateCard}>
       <View style={styles.templateHeader}>
         <Text style={styles.fgName}>{item.finished_good?.product_name || `FG ID: ${item.finished_good_id}`}</Text>
-        <Text style={[styles.status, { color: item.is_active ? colors.success : colors.danger }]}>
+        <Text style={[styles.status, { color: item.is_active ? "#10b981" : "#ef4444" }]}>
           {item.is_active ? "Active" : "Inactive"}
         </Text>
       </View>
@@ -48,6 +46,29 @@ export default function AdminDashboardScreen({ navigation }) {
     </Card>
   );
 
+  const GranulationModule = () => (
+    <ScrollView style={{ flex: 1 }}>
+      <View style={{ padding: 16 }}>
+        <Text style={styles.sectionHeader}>Define New Template</Text>
+        <GranulationTemplateView onSuccess={fetchTemplates} />
+        
+        <Text style={[styles.sectionHeader, { marginTop: 30 }]}>Saved Templates</Text>
+        {loading && !templates.length ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+        ) : (
+          templates.map(item => (
+            <View key={item.id}>
+              {renderTemplateItem({ item })}
+            </View>
+          ))
+        )}
+        {!loading && templates.length === 0 && (
+          <Text style={styles.emptyText}>No templates found</Text>
+        )}
+      </View>
+    </ScrollView>
+  );
+
   return (
     <Layout navigation={navigation} title="Administrator Settings">
       <View style={styles.container}>
@@ -56,30 +77,12 @@ export default function AdminDashboardScreen({ navigation }) {
             style={[styles.tab, activeTab === "templates" && styles.activeTab]} 
             onPress={() => setActiveTab("templates")}
           >
-            <Text style={[styles.tabText, activeTab === "templates" && styles.activeTabText]}>Define Template</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === "data" && styles.activeTab]} 
-            onPress={() => setActiveTab("data")}
-          >
-            <Text style={[styles.tabText, activeTab === "data" && styles.activeTabText]}>Saved Templates</Text>
+            <Text style={[styles.tabText, activeTab === "templates" && styles.activeTabText]}>Granulation Setup</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
-          {activeTab === "templates" ? (
-            <GranulationTemplateView onSuccess={() => setActiveTab("data")} />
-          ) : (
-            <FlatList
-              data={templates}
-              renderItem={renderTemplateItem}
-              keyExtractor={item => item.id.toString()}
-              contentContainerStyle={{ padding: 16 }}
-              ListEmptyComponent={<Text style={styles.emptyText}>No templates found</Text>}
-              onRefresh={fetchTemplates}
-              refreshing={loading}
-            />
-          )}
+          {activeTab === "templates" && <GranulationModule />}
         </View>
       </View>
     </Layout>
@@ -94,6 +97,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 16, color: '#666', fontWeight: '600' },
   activeTabText: { color: colors.primary },
   content: { flex: 1 },
+  sectionHeader: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 15, paddingHorizontal: 4 },
   templateCard: { marginBottom: 12, padding: 16 },
   templateHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   fgName: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
@@ -101,5 +105,5 @@ const styles = StyleSheet.create({
   columnsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   columnBadge: { backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 15 },
   columnText: { color: '#1976D2', fontSize: 12, fontWeight: '600' },
-  emptyText: { textAlign: 'center', marginTop: 50, color: '#999', fontSize: 16 }
+  emptyText: { textAlign: 'center', marginTop: 20, color: '#999', fontSize: 16 }
 });
