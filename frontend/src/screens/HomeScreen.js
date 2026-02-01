@@ -314,6 +314,13 @@ export default function HomeScreen({ navigation }) {
       color: "#795548",
       adminOnly: false,
     },
+    {
+      title: "Granulation Template",
+      route: "GranulationTemplate",
+      icon: "tasks",
+      color: "#4CAF50",
+      adminOnly: true,
+    },
   ];
 
   const quickActions = allQuickActions.filter(
