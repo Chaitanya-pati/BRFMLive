@@ -97,6 +97,7 @@ export default function GrindingScreen({ navigation }) {
           b1Reading: row.b1_scale_reading?.toString(),
           loadPerHour: row.load_per_hour_tons?.toString(),
           productionDetails: row.details || [],
+          siloDetails: row.silo_details || [],
           isSubmitted: true
         }));
         
