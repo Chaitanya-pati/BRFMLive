@@ -74,17 +74,14 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       }
 
       if (recordsRes.data && recordsRes.data.length > 0) {
-        // Group existing records by a unique identifier (like created_at or a batch id if available)
-        // Since we don't have a batch ID, we'll group by index if they were saved together, 
-        // but it's safer to reconstruct them. 
-        // For simplicity, let's assume records are saved in groups.
+        // Group existing records by a unique identifier
         const groupedByFg = {};
         recordsRes.data.forEach(r => {
           if (!groupedByFg[r.finished_good_id]) groupedByFg[r.finished_good_id] = [];
           groupedByFg[r.finished_good_id].push(r);
         });
 
-        const maxRows = Math.max(...Object.values(groupedByFg).map(arr => arr.length), 5);
+        const maxRows = Math.max(...Object.values(groupedByFg).map(arr => arr.length), 1);
         const initialGlobalRows = Array.from({ length: maxRows }).map((_, rowIndex) => {
           const rowData = {};
           Object.keys(groupedByFg).forEach(fgId => {
@@ -94,10 +91,10 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
         });
         setGlobalRows(initialGlobalRows);
       } else {
-        const initialGlobalRows = Array.from({ length: 5 }).map((_, i) => ({
-          id: Date.now() + Math.random() + i,
+        const initialGlobalRows = [{
+          id: Date.now() + Math.random(),
           data: {}
-        }));
+        }];
         setGlobalRows(initialGlobalRows);
       }
     } catch (error) {
@@ -114,6 +111,14 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
       id: Date.now() + Math.random(),
       data: {}
     }]);
+  };
+
+  const removeGlobalRow = (rowId) => {
+    if (globalRows.length > 1) {
+      setGlobalRows(globalRows.filter(r => r.id !== rowId));
+    } else {
+      showToast("Info", "At least one row is required");
+    }
   };
 
   const updateGlobalValue = (rowId, fgId, col, val) => {
@@ -271,8 +276,16 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   const renderExcelRows = () => {
     return globalRows.map((row, rowIndex) => (
       <View key={row.id} style={styles.excelDataRow}>
-        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff' }]}>
+        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff', position: 'relative' }]}>
           <Text style={styles.excelRowIndexText}>{rowIndex + 1}</Text>
+          {globalRows.length > 1 && (
+            <TouchableOpacity 
+              style={styles.removeRowBtn} 
+              onPress={() => removeGlobalRow(row.id)}
+            >
+              <Text style={styles.removeRowText}>×</Text>
+            </TouchableOpacity>
+          )}
         </View>
         {activeTemplates.map(t => {
           const cols = t.columns_definition?.columns || [];
@@ -368,23 +381,29 @@ const styles = StyleSheet.create({
   excelRowIndexText: { textAlign: 'center', fontSize: 12, color: '#666' },
   excelInput: { height: '100%', paddingHorizontal: 4, fontSize: 12, textAlign: 'center' },
   
+  removeRowBtn: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.danger,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  removeRowText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    lineHeight: 14,
+  },
+  
   addNewRowBtn: { padding: 15, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc', borderStyle: 'dashed' },
   addNewRowText: { color: colors.primary, fontWeight: 'bold', fontSize: 15 },
   
   footerButtons: { flexDirection: 'row', marginTop: 15, paddingBottom: 10 },
-  orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
-  orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
-  orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
-  productNameText: { fontSize: 15, color: colors.textSecondary, marginTop: 4 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  orderCardDetails: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 15, marginBottom: 15 },
-  detailItem: { flex: 1 },
-  detailLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 5 },
-  detailValue: { fontSize: 15, fontWeight: '700', color: colors.text },
-  recordButton: { backgroundColor: colors.success, padding: 14, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  recordButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 80, fontSize: 17 },
   orderSelectionCard: { marginBottom: 15, padding: 18, borderRadius: 12 },
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
   orderNumberText: { fontSize: 19, fontWeight: 'bold', color: colors.primary },
