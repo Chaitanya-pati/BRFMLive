@@ -54,3 +54,4 @@ python-multipart
 pytz
 sqlalchemy
 uvicorn
+pytz

@@ -11,15 +11,6 @@ packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "l
 runButton = "Project"
 
 [[workflows.workflow]]
-name = "Backend API Server"
-author = 48243134
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-
-[[workflows.workflow]]
 name = "Start Application"
 author = 49361797
 mode = "parallel"
@@ -76,10 +67,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
 
 [deployment]
 deploymentTarget = "autoscale"

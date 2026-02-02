@@ -2442,6 +2442,14 @@ def start_transfer_session(session_data: schemas.TransferSessionCreate,
     if not source_godown:
         raise HTTPException(status_code=404, detail="Source godown not found")
 
+    # Validate moisture parameters if source godown is 12HR or 24HR
+    if source_godown.type in ["12HR", "24HR"]:
+        if session_data.water_added is None or session_data.moisture_level is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"water_added and moisture_level are required for {source_godown.type} source godown"
+            )
+
     # Validate destination bin exists
     destination_bin = db.query(models.Bin).filter(
         models.Bin.id == session_data.destination_bin_id).first()
@@ -2517,7 +2525,9 @@ def start_transfer_session(session_data: schemas.TransferSessionCreate,
         current_bin_start_timestamp=utc_now,
         status="active",
         cleaning_interval_hours=cleaning_interval,
-        notes=session_data.notes)
+        notes=session_data.notes,
+        water_added=session_data.water_added,
+        moisture_level=session_data.moisture_level)
 
     db.add(db_session)
     db.flush()
@@ -2676,7 +2686,7 @@ def divert_transfer_session(session_id: int,
 @app.post("/api/transfer-sessions/{session_id}/stop",
           response_model=schemas.TransferSessionWithDetails)
 def stop_transfer_session(session_id: int,
-                          transferred_quantity: float,
+                          stop_data: schemas.TransferSessionComplete,
                           db: Session = Depends(get_db)):
     # Get the transfer session
     db_session = db.query(models.TransferSession).filter(
@@ -2690,9 +2700,9 @@ def stop_transfer_session(session_id: int,
                             detail="Transfer session is not active")
 
     utc_now = get_utc_now()
+    transferred_quantity = stop_data.quantity_transferred
 
     print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
-    print(f"   Transferred Quantity: {transferred_quantity} tons")
 
     # Close current bin transfer record
     current_bin_transfer = db.query(models.BinTransfer).filter(
