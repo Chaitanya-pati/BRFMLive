@@ -557,12 +557,16 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
     if transfers_24h:
         details = []
         for t in transfers_24h:
-            details.append(f"Qty: {t.quantity_kg}kg | To: {t.destination_bin.bin_number if t.destination_bin else 'N/A'} | Water: {t.water_added_liters}L | Moist: {t.moisture_percent}%")
+            qty = t.quantity_transferred if hasattr(t, 'quantity_transferred') else 0.0
+            dest_bin = t.destination_bin.bin_number if t.destination_bin else 'N/A'
+            water = t.water_added if hasattr(t, 'water_added') else 0.0
+            moist = t.moisture_level if hasattr(t, 'moisture_level') else 0.0
+            details.append(f"Qty: {qty}kg | To: {dest_bin} | Water: {water}L | Moist: {moist}%")
         
         traceability["stages"].append({
             "name": "Raw Wheat Transfer (24h)",
             "status": "Completed",
-            "date": transfers_24h[0].transfer_date,
+            "date": transfers_24h[0].transfer_start_time,
             "details": "\n".join(details)
         })
     else:
@@ -580,12 +584,17 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
     if transfers_12h:
         details = []
         for t in transfers_12h:
-            details.append(f"Qty: {t.quantity_kg}kg | From: {t.source_bin.bin_number if t.source_bin else 'N/A'} | To: {t.destination_bin.bin_number if t.destination_bin else 'N/A'} | Water: {t.water_added_liters}L | Moist: {t.moisture_percent}%")
+            qty = t.quantity_transferred if hasattr(t, 'quantity_transferred') else 0.0
+            src_bin = t.source_bin.bin_number if t.source_bin else 'N/A'
+            dest_bin = t.destination_bin.bin_number if t.destination_bin else 'N/A'
+            water = t.water_added if hasattr(t, 'water_added') else 0.0
+            moist = t.moisture_level if hasattr(t, 'moisture_level') else 0.0
+            details.append(f"Qty: {qty}kg | From: {src_bin} | To: {dest_bin} | Water: {water}L | Moist: {moist}%")
         
         traceability["stages"].append({
             "name": "12 Hours Bin Transfer",
             "status": "Completed",
-            "date": transfers_12h[0].transfer_date,
+            "date": transfers_12h[0].transfer_start_time,
             "details": "\n".join(details)
         })
     else:
