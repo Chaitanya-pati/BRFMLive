@@ -273,6 +273,13 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
+      title: "Order Traceability",
+      route: "ProductionOrderTraceability",
+      icon: "route",
+      color: "#e91e63",
+      adminOnly: false,
+    },
+    {
       title: "Production Orders",
       route: "ProductionOrder",
       icon: "cogs",

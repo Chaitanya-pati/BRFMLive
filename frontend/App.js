@@ -38,6 +38,7 @@ import GrindingScreen from './src/screens/GrindingScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
 import ProductionOrderGranulationScreen from './src/screens/ProductionOrderGranulationScreen';
+import ProductionOrderTraceabilityScreen from './src/screens/ProductionOrderTraceabilityScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import colors from './src/theme/colors';
 
@@ -154,6 +155,7 @@ export default function App() {
           <Stack.Screen name="Grinding" component={GrindingScreen} />
           <Stack.Screen name="GrindingExcelView" component={GrindingExcelViewScreen} />
           <Stack.Screen name="GranulationTemplate" component={GranulationTemplateScreen} />
+          <Stack.Screen name="ProductionOrderTraceability" component={ProductionOrderTraceabilityScreen} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         </Stack.Navigator>
           </BranchProvider>
