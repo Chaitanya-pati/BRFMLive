@@ -576,8 +576,6 @@ class TransferSession(Base):
     status = Column(String(20), default="active", nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     notes = Column(Text)
-    water_added = Column(Float, nullable=True)
-    moisture_level = Column(Float, nullable=True)
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 

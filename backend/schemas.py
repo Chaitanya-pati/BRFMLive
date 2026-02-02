@@ -571,14 +571,14 @@ class TransferSessionCreate(BaseModel):
     magnet_id: Optional[int] = None
     cleaning_interval_hours: Optional[int] = None
     notes: Optional[str] = None
-    water_added: Optional[float] = None
-    moisture_level: Optional[float] = None
 
 class TransferSessionDivert(ISTModel):
     new_bin_id: int
     quantity_transferred: float
 
 class TransferSessionComplete(ISTModel):
+    water_added: float
+    moisture_level: float
     quantity_transferred: float
 
 class TransferSessionUpdate(ISTModel):
@@ -1177,10 +1177,10 @@ class ProductionOrderPlanningCreate(BaseModel):
 class TransferRecordingStartTransfer(BaseModel):
     production_order_id: int
     destination_bin_id: int
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
 
 class TransferRecordingCompleteTransfer(BaseModel):
-    water_added: float
-    moisture_level: float
     quantity_transferred: float
 
 class TransferRecordingBase(ISTModel):
