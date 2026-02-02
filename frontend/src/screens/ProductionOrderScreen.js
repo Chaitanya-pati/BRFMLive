@@ -241,14 +241,6 @@ export default function ProductionOrderScreen({ navigation }) {
 
   const renderActions = (item) => (
     <View style={styles.actionButtons}>
-      {item.status !== 'CREATED' && (
-        <TouchableOpacity 
-          style={[styles.planButton, {backgroundColor: colors.success}]} 
-          onPress={() => navigation.navigate('ProductionOrderGranulation', { orderId: item.id })}
-        >
-          <Text style={styles.buttonText}>Granulation</Text>
-        </TouchableOpacity>
-      )}
       <TouchableOpacity style={styles.planButton} onPress={() => handlePlan(item)}>
         <Text style={styles.buttonText}>Plan</Text>
       </TouchableOpacity>

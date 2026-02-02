@@ -3176,22 +3176,13 @@ def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Opt
 
 @app.get("/api/production-orders", response_model=List[schemas.ProductionOrderWithProduct])
 def get_production_orders(branch_id: Optional[int] = Header(None, alias="X-Branch-Id"), db: Session = Depends(get_db)):
-    # Filter: Not completed and must be IN_PROGRESS or COMPLETED in 24-hour transfers
-    query = db.query(models.ProductionOrder).filter(
-        models.ProductionOrder.status != models.ProductionOrderStatus.COMPLETED
-    ).join(
-        models.TransferRecording,
-        models.TransferRecording.production_order_id == models.ProductionOrder.id
-    ).filter(
-        models.TransferRecording.status.in_([
-            models.TransferRecordingStatus.IN_PROGRESS,
-            models.TransferRecordingStatus.COMPLETED
-        ])
-    ).distinct()
+    query = db.query(models.ProductionOrder).options(
+        joinedload(models.ProductionOrder.raw_product)
+    )
 
     if branch_id:
         query = query.filter(models.ProductionOrder.branch_id == branch_id)
-    return query.all()
+    return query.order_by(models.ProductionOrder.created_at.desc()).all()
 
 @app.get("/api/production-orders/{order_id}", response_model=schemas.ProductionOrderWithProduct)
 def get_production_order(order_id: int, db: Session = Depends(get_db)):
