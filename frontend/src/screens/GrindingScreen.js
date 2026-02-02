@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, ActivityIndicator } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
@@ -127,13 +128,28 @@ export default function GrindingScreen({ navigation }) {
     }
   };
 
-  const handleBinSelect = (bin) => {
+  const handleBinSelect = async (bin) => {
     if (!bin.production_order_id) {
       showAlert("Error", "No Production Order found for this bin in transfer records");
       return;
     }
     setSelectedBin(bin);
     setIsGrindingStarted(true);
+    
+    // Try to load template from local storage
+    try {
+      const templateKey = `grinding_template_${bin.production_order_id}`;
+      const savedTemplate = await AsyncStorage.getItem(templateKey);
+      if (savedTemplate) {
+        const { productIds, bagSizeMap, siloIds } = JSON.parse(savedTemplate);
+        setSelectedProductIds(productIds || []);
+        setProductBagSizeMap(bagSizeMap || {});
+        setSelectedSiloIds(siloIds || []);
+      }
+    } catch (e) {
+      console.error("Failed to load template", e);
+    }
+
     fetchExistingProductionData(bin.production_order_id);
     showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
@@ -409,6 +425,15 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       
+      // Save template to local storage on first submission
+      const templateKey = `grinding_template_${selectedBin.production_order_id}`;
+      const templateData = {
+        productIds: selectedProductIds,
+        bagSizeMap: productBagSizeMap,
+        siloIds: selectedSiloIds
+      };
+      await AsyncStorage.setItem(templateKey, JSON.stringify(templateData));
+
       for (const row of newRows) {
         if (!row.productionTime || !row.b1Reading) continue;
 
