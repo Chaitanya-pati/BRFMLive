@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -3608,7 +3608,12 @@ def get_24hour_transfer_records(
         db: Session = Depends(get_db)):
     query = db.query(models.TransferRecording)
     if branch_id:
-        query = query.filter(models.TransferRecording.branch_id == branch_id)
+        query = query.filter(
+            or_(
+                models.TransferRecording.branch_id == branch_id,
+                models.TransferRecording.branch_id == None
+            )
+        )
     records = query.order_by(models.TransferRecording.created_at.desc()).offset(skip).limit(limit).all()
     return records
 
