@@ -87,12 +87,12 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           Object.keys(groupedByFg).forEach(fgId => {
             rowData[fgId] = groupedByFg[fgId][rowIndex]?.granulation_values || {};
           });
-          return { id: Date.now() + Math.random() + rowIndex, data: rowData };
+          return { id: rowIndex + 1, data: rowData };
         });
         setGlobalRows(initialGlobalRows);
       } else {
         const initialGlobalRows = [{
-          id: Date.now() + Math.random(),
+          id: 1,
           data: {}
         }];
         setGlobalRows(initialGlobalRows);
@@ -107,8 +107,9 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   };
 
   const addGlobalRow = () => {
+    const nextId = globalRows.length > 0 ? Math.max(...globalRows.map(r => r.id)) + 1 : 1;
     setGlobalRows([...globalRows, {
-      id: Date.now() + Math.random(),
+      id: nextId,
       data: {}
     }]);
   };
@@ -247,28 +248,39 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   const activeTemplates = Object.values(templates).filter(t => t.is_active);
 
   const renderExcelHeader = () => {
+    const totalCols = activeTemplates.reduce((sum, t) => sum + (t.columns_definition?.columns || []).length, 0);
     return (
-      <View style={styles.excelHeaderRow}>
-        <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#e8f0fe' }]}>
-          <Text style={styles.excelHeaderText}>Granulation</Text>
+      <View>
+        <View style={styles.excelHeaderRow}>
+          <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#4a90e2', borderBottomWidth: 0 }]}>
+            <Text style={[styles.excelHeaderText, { color: '#fff' }]}>Main</Text>
+          </View>
+          <View style={[styles.excelHeaderCell, { flex: 1, backgroundColor: '#4a90e2', width: totalCols * 80, borderBottomWidth: 0 }]}>
+            <Text style={[styles.excelHeaderText, { color: '#fff', fontSize: 16 }]}>Granulation</Text>
+          </View>
         </View>
-        {activeTemplates.map(t => {
-          const cols = t.columns_definition?.columns || [];
-          return (
-            <View key={t.id} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
-              <View style={styles.excelProductHeader}>
-                <Text style={styles.excelProductText}>{t.finished_good?.product_name || "Product"}</Text>
+        <View style={styles.excelHeaderRow}>
+          <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#e8f0fe' }]}>
+            <Text style={styles.excelHeaderText}>Row #</Text>
+          </View>
+          {activeTemplates.map(t => {
+            const cols = t.columns_definition?.columns || [];
+            return (
+              <View key={t.id} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
+                <View style={styles.excelProductHeader}>
+                  <Text style={styles.excelProductText}>{t.finished_good?.product_name || "Product"}</Text>
+                </View>
+                <View style={styles.excelSubHeaderRow}>
+                  {cols.map(c => (
+                    <View key={c} style={[styles.excelSubHeaderCell, { width: 80 }]}>
+                      <Text style={styles.excelSubHeaderText}>{c}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-              <View style={styles.excelSubHeaderRow}>
-                {cols.map(c => (
-                  <View key={c} style={[styles.excelSubHeaderCell, { width: 80 }]}>
-                    <Text style={styles.excelSubHeaderText}>{c}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
     );
   };
@@ -276,16 +288,14 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
   const renderExcelRows = () => {
     return globalRows.map((row, rowIndex) => (
       <View key={row.id} style={styles.excelDataRow}>
-        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff', position: 'relative' }]}>
+        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff', position: 'relative', overflow: 'visible' }]}>
           <Text style={styles.excelRowIndexText}>{rowIndex + 1}</Text>
-          {globalRows.length > 1 && (
-            <TouchableOpacity 
-              style={styles.removeRowBtn} 
-              onPress={() => removeGlobalRow(row.id)}
-            >
-              <Text style={styles.removeRowText}>×</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={styles.removeRowBtn} 
+            onPress={() => removeGlobalRow(row.id)}
+          >
+            <Text style={styles.removeRowText}>×</Text>
+          </TouchableOpacity>
         </View>
         {activeTemplates.map(t => {
           const cols = t.columns_definition?.columns || [];
@@ -383,21 +393,23 @@ const styles = StyleSheet.create({
   
   removeRowBtn: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -5,
+    left: -5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 100,
+    elevation: 5,
   },
   removeRowText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    lineHeight: 14,
+    lineHeight: 16,
+    textAlign: 'center',
   },
   
   addNewRowBtn: { padding: 15, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc', borderStyle: 'dashed' },
