@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, useWin
 import colors from '../theme/colors';
 import { formatISTDateTime, formatISTDate } from '../utils/dateUtils';
 
-export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onView, viewLabel, onCustomAction, customActionLabel, showCustomAction, searchable = true }) {
+export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onView, viewLabel, onCustomAction, customActionLabel, showCustomAction, searchable = true, renderActions }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -93,48 +93,52 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
         })}
       </View>
 
-      {(onView || onEdit || onCustomAction || onDelete) && (
+      {(renderActions || onView || onEdit || onCustomAction || onDelete) && (
         <View style={styles.mobileCardFooter}>
-          {onView && (!viewLabel || viewLabel(row)) && (
-            <TouchableOpacity
-              style={[styles.mobileActionButton, styles.mobileViewButton]}
-              onPress={() => onView(row)}
-            >
-              <View style={styles.actionButtonContent}>
-                <EyeIcon />
-                <Text style={styles.mobileActionButtonText}>{viewLabel ? viewLabel(row) : 'View'}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          {onEdit && (
-            <TouchableOpacity
-              style={[styles.mobileActionButton, styles.mobileEditButton]}
-              onPress={() => onEdit(row)}
-            >
-              <View style={styles.actionButtonContent}>
-                <EditIcon />
-                <Text style={styles.mobileActionButtonText}>Edit</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
-            <TouchableOpacity
-              style={[styles.mobileActionButton, styles.mobileCustomButton]}
-              onPress={() => onCustomAction(row)}
-            >
-              <Text style={styles.mobileActionButtonText}>{customActionLabel || 'Action'}</Text>
-            </TouchableOpacity>
-          )}
-          {onDelete && (
-            <TouchableOpacity
-              style={[styles.mobileActionButton, styles.mobileDeleteButton]}
-              onPress={() => onDelete(row)}
-            >
-              <View style={styles.actionButtonContent}>
-                <DeleteIcon />
-                <Text style={styles.mobileActionButtonText}>Delete</Text>
-              </View>
-            </TouchableOpacity>
+          {renderActions ? renderActions(row) : (
+            <>
+              {onView && (!viewLabel || viewLabel(row)) && (
+                <TouchableOpacity
+                  style={[styles.mobileActionButton, styles.mobileViewButton]}
+                  onPress={() => onView(row)}
+                >
+                  <View style={styles.actionButtonContent}>
+                    <EyeIcon />
+                    <Text style={styles.mobileActionButtonText}>{viewLabel ? viewLabel(row) : 'View'}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              {onEdit && (
+                <TouchableOpacity
+                  style={[styles.mobileActionButton, styles.mobileEditButton]}
+                  onPress={() => onEdit(row)}
+                >
+                  <View style={styles.actionButtonContent}>
+                    <EditIcon />
+                    <Text style={styles.mobileActionButtonText}>Edit</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
+                <TouchableOpacity
+                  style={[styles.mobileActionButton, styles.mobileCustomButton]}
+                  onPress={() => onCustomAction(row)}
+                >
+                  <Text style={styles.mobileActionButtonText}>{customActionLabel || 'Action'}</Text>
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  style={[styles.mobileActionButton, styles.mobileDeleteButton]}
+                  onPress={() => onDelete(row)}
+                >
+                  <View style={styles.actionButtonContent}>
+                    <DeleteIcon />
+                    <Text style={styles.mobileActionButtonText}>Delete</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       )}
@@ -187,41 +191,43 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
                   </View>
                 );
               })}
-              <View style={[styles.cell, { flex: onCustomAction ? 1.5 : 1 }]}>
-                <View style={styles.actionButtons}>
-                  {onView && (!viewLabel || viewLabel(row)) && (
-                    <TouchableOpacity
-                      style={styles.viewButton}
-                      onPress={() => onView(row)}
-                    >
-                      <EyeIcon />
-                    </TouchableOpacity>
-                  )}
-                  {onEdit && (
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => onEdit(row)}
-                    >
-                      <EditIcon />
-                    </TouchableOpacity>
-                  )}
-                  {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
-                    <TouchableOpacity
-                      style={styles.customActionButton}
-                      onPress={() => onCustomAction(row)}
-                    >
-                      <Text style={styles.customActionButtonText}>{customActionLabel || 'Action'}</Text>
-                    </TouchableOpacity>
-                  )}
-                  {onDelete && (
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => onDelete(row)}
-                    >
-                      <DeleteIcon />
-                    </TouchableOpacity>
-                  )}
-                </View>
+              <View style={[styles.cell, { flex: renderActions || onCustomAction ? 1.5 : 1 }]}>
+                {renderActions ? renderActions(row) : (
+                  <View style={styles.actionButtons}>
+                    {onView && (!viewLabel || viewLabel(row)) && (
+                      <TouchableOpacity
+                        style={styles.viewButton}
+                        onPress={() => onView(row)}
+                      >
+                        <EyeIcon />
+                      </TouchableOpacity>
+                    )}
+                    {onEdit && (
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => onEdit(row)}
+                      >
+                        <EditIcon />
+                      </TouchableOpacity>
+                    )}
+                    {onCustomAction && (!showCustomAction || showCustomAction(row)) && (
+                      <TouchableOpacity
+                        style={styles.customActionButton}
+                        onPress={() => onCustomAction(row)}
+                      >
+                        <Text style={styles.customActionButtonText}>{customActionLabel || 'Action'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onDelete && (
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => onDelete(row)}
+                      >
+                        <DeleteIcon />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
             </View>
           ))

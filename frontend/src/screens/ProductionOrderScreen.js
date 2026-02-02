@@ -203,20 +203,20 @@ export default function ProductionOrderScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'order_number', title: 'Order #', width: 150 },
+    { key: 'order_number', label: 'Order #', flex: 1.5 },
     { 
       key: 'raw_product', 
-      title: 'Product', 
-      width: 150,
+      label: 'Product', 
+      flex: 1,
       render: (item) => item.raw_product?.product_name || 'N/A'
     },
-    { key: 'quantity', title: 'Quantity (kg)', width: 120, render: (item) => `${item.quantity} kg` },
-    { key: 'order_date', title: 'Order Date', width: 120, render: (item) => formatISTDate(item.order_date) },
-    { key: 'target_finish_date', title: 'Target Date', width: 120, render: (item) => formatISTDate(item.target_finish_date) },
+    { key: 'quantity', label: 'Quantity (kg)', flex: 1, render: (item) => `${item.quantity} kg` },
+    { key: 'order_date', label: 'Order Date', flex: 1, type: 'date' },
+    { key: 'target_finish_date', label: 'Target Date', flex: 1, type: 'date' },
     { 
       key: 'status', 
-      title: 'Status', 
-      width: 120,
+      label: 'Status', 
+      flex: 1,
       render: (item) => (
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusText}>{item.status}</Text>
