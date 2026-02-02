@@ -22,8 +22,9 @@ import { formatISTDateTime } from "../utils/dateUtils";
 const STAGES = {
   SELECT_ORDER: "SELECT_ORDER",
   SELECT_BIN: "SELECT_BIN",
+  START_PARAMETERS_INPUT: "START_PARAMETERS_INPUT",
   TRANSFER_IN_PROGRESS: "TRANSFER_IN_PROGRESS",
-  PARAMETERS_INPUT: "PARAMETERS_INPUT",
+  STOP_PARAMETERS_INPUT: "STOP_PARAMETERS_INPUT",
   DIVERT_OR_STOP: "DIVERT_OR_STOP",
   HISTORY: "HISTORY",
 };
@@ -102,24 +103,48 @@ export default function TransferRecordingScreen({ navigation }) {
     }
   };
 
-  const handleStartTransfer = async (destBin) => {
+  const getSourceBinType = () => {
+    if (!selectedOrder || !selectedOrder.source_bins || selectedOrder.source_bins.length === 0) return null;
+    // Assuming type is consistent for the order's sources or taking the first one
+    const type = selectedOrder.source_bins[0]?.bin?.bin_type;
+    if (type === "24HOUR" || type === "24 hours bin") return "24HR";
+    if (type === "12HOUR" || type === "12 hours bin") return "12HR";
+    return "RAW";
+  };
+
+  const handleInitiateTransfer = (destBin) => {
     setSelectedBin(destBin);
+    const sourceType = getSourceBinType();
+    
+    if (sourceType === "24HR" || sourceType === "12HR") {
+      setWaterAdded("");
+      setMoistureLevel("");
+      setErrors({});
+      setStage(STAGES.START_PARAMETERS_INPUT);
+    } else {
+      handleStartTransfer(destBin);
+    }
+  };
+
+  const handleStartTransfer = async (destBin, startParams = {}) => {
     setLoading(true);
     try {
       const client = getApiClient();
       const response = await client.post("/transfer/start", {
         production_order_id: selectedOrder.id,
         destination_bin_id: destBin.bin_id,
+        // We might need to store these start params in the session if the backend supports it,
+        // or just keep them in local state to send at completion as per current backend.
       });
-      // Store the planned quantity from the selection
+      
       const transferData = {
         ...response.data,
-        quantity_planned: destBin.quantity
+        quantity_planned: destBin.quantity,
+        start_parameters: startParams // Store locally to send later
       };
+      
       setCurrentTransfer(transferData);
       setTimer(0);
-      setWaterAdded("");
-      setMoistureLevel("");
       setErrors({});
       setStage(STAGES.TRANSFER_IN_PROGRESS);
     } catch (error) {
@@ -131,27 +156,41 @@ export default function TransferRecordingScreen({ navigation }) {
   };
 
   const handleCompleteTransfer = () => {
-    setStage(STAGES.PARAMETERS_INPUT);
+    setQuantityTransferred("");
+    setErrors({});
+    setStage(STAGES.STOP_PARAMETERS_INPUT);
   };
 
-  const validateParameters = () => {
+  const validateStartParameters = () => {
     const newErrors = {};
+    const sourceType = getSourceBinType();
 
-    if (!waterAdded || waterAdded.trim() === "") {
-      newErrors.waterAdded = "Water added is required";
-    } else if (isNaN(parseFloat(waterAdded))) {
-      newErrors.waterAdded = "Must be a number";
-    } else if (parseFloat(waterAdded) < 0) {
-      newErrors.waterAdded = "Cannot be negative";
+    if (sourceType === "24HR") {
+      if (!waterAdded || waterAdded.trim() === "") {
+        newErrors.waterAdded = "Water added is required";
+      } else if (isNaN(parseFloat(waterAdded))) {
+        newErrors.waterAdded = "Must be a number";
+      }
+
+      if (!moistureLevel || moistureLevel.trim() === "") {
+        newErrors.moistureLevel = "Moisture level is required";
+      } else if (isNaN(parseFloat(moistureLevel))) {
+        newErrors.moistureLevel = "Must be a number";
+      }
+    } else if (sourceType === "12HR") {
+      if (!moistureLevel || moistureLevel.trim() === "") {
+        newErrors.moistureLevel = "Moisture level is required";
+      } else if (isNaN(parseFloat(moistureLevel))) {
+        newErrors.moistureLevel = "Must be a number";
+      }
     }
 
-    if (!moistureLevel || moistureLevel.trim() === "") {
-      newErrors.moistureLevel = "Moisture level is required";
-    } else if (isNaN(parseFloat(moistureLevel))) {
-      newErrors.moistureLevel = "Must be a number";
-    } else if (parseFloat(moistureLevel) < 0 || parseFloat(moistureLevel) > 100) {
-      newErrors.moistureLevel = "Must be 0-100";
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStopParameters = () => {
+    const newErrors = {};
 
     if (!quantityTransferred || quantityTransferred.trim() === "") {
       newErrors.quantityTransferred = "Quantity transferred is required";
@@ -166,28 +205,30 @@ export default function TransferRecordingScreen({ navigation }) {
   };
 
   const handleStopTransfer = async () => {
-    if (!validateParameters()) return;
+    if (!validateStopParameters()) return;
 
     setLoading(true);
     try {
       const client = getApiClient();
-      await client.post(`/transfer/${currentTransfer.id}/complete`, {
-        water_added: parseFloat(waterAdded),
-        moisture_level: parseFloat(moistureLevel),
+      const params = {
         quantity_transferred: parseFloat(quantityTransferred),
-      });
+        // Send the parameters captured at the start
+        water_added: parseFloat(currentTransfer.start_parameters?.water_added || 0),
+        moisture_level: parseFloat(currentTransfer.start_parameters?.moisture_level || 0),
+      };
+
+      await client.post(`/transfer/${currentTransfer.id}/complete`, params);
       showToast("Transfer completed successfully");
       
       // Refresh history
       const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
       setTransferHistory(historyResponse.data || []);
       
-      // Reset to select bin stage
+      // Reset
       setCurrentTransfer(null);
+      setQuantityTransferred("");
       setWaterAdded("");
       setMoistureLevel("");
-      setQuantityTransferred("");
-      setErrors({});
       setStage(STAGES.SELECT_BIN);
     } catch (error) {
       showAlert("Error", "Failed to complete transfer");
@@ -198,40 +239,54 @@ export default function TransferRecordingScreen({ navigation }) {
   };
 
   const handleDivertBin = async (nextBin) => {
-    if (!validateParameters()) return;
+    if (!validateStopParameters()) return;
 
     setLoading(true);
     try {
       const client = getApiClient();
+      // Parameters for completion of current bin
+      const params = {
+        quantity_transferred: parseFloat(quantityTransferred),
+        water_added: parseFloat(currentTransfer.start_parameters?.water_added || 0),
+        moisture_level: parseFloat(currentTransfer.start_parameters?.moisture_level || 0),
+      };
+
       const response = await client.post(
         `/transfer/${currentTransfer.id}/divert/${nextBin.bin_id}`,
-        {
-          water_added: parseFloat(waterAdded),
-          moisture_level: parseFloat(moistureLevel),
-          quantity_transferred: parseFloat(quantityTransferred),
-        }
+        params
       );
       
       showToast("Transfer diverted successfully");
       
-      // Start new transfer
+      // Since it's a divert within the same session, we need to decide 
+      // if the NEXT bin also needs new parameters. 
+      // The prompt says "capture timing... from STOP... to START".
+      // Divert effectively stops current and starts next.
+      // For now, we'll reset and go to START_PARAMETERS_INPUT if needed.
+      
       const nextBinTransferData = {
         ...response.data,
         quantity_planned: nextBin.quantity
       };
+      
+      setSelectedBin(nextBin);
       setCurrentTransfer(nextBinTransferData);
       setTimer(0);
-      setWaterAdded("");
-      setMoistureLevel("");
       setQuantityTransferred("");
-      setErrors({});
-      setSelectedBin(nextBin);
       
       // Refresh history
       const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
       setTransferHistory(historyResponse.data || []);
-      
-      setStage(STAGES.TRANSFER_IN_PROGRESS);
+
+      const sourceType = getSourceBinType();
+      if (sourceType === "24HR" || sourceType === "12HR") {
+        setWaterAdded("");
+        setMoistureLevel("");
+        setErrors({});
+        setStage(STAGES.START_PARAMETERS_INPUT);
+      } else {
+        setStage(STAGES.TRANSFER_IN_PROGRESS);
+      }
     } catch (error) {
       showAlert("Error", "Failed to divert transfer");
       console.error(error);
@@ -372,7 +427,7 @@ export default function TransferRecordingScreen({ navigation }) {
                     ) : (
                       <Button
                         title="START"
-                        onPress={() => handleStartTransfer(item)}
+                        onPress={() => handleInitiateTransfer(item)}
                         style={styles.startBtn}
                       />
                     )}
@@ -450,7 +505,7 @@ export default function TransferRecordingScreen({ navigation }) {
             {availableBinsForDivert.length > 0 && (
               <Button
                 title="Divert Transfer"
-                onPress={handleCompleteTransfer}
+                onPress={() => setStage(STAGES.DIVERT_OR_STOP)}
                 variant="secondary"
                 style={styles.actionBtn}
               />
@@ -461,20 +516,119 @@ export default function TransferRecordingScreen({ navigation }) {
     );
   }
 
-  // STAGE: PARAMETERS_INPUT
-  if (stage === STAGES.PARAMETERS_INPUT) {
+  // STAGE: DIVERT_OR_STOP
+  if (stage === STAGES.DIVERT_OR_STOP) {
+    return (
+      <Layout>
+        <ScrollView style={styles.container}>
+          <Text style={styles.title}>Divert or Stop</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoText}>Select next destination or stop transfer</Text>
+          </View>
+
+          <View style={styles.divertSection}>
+            <Text style={styles.divertLabel}>Divert to:</Text>
+            {availableBinsForDivert.map((item) => (
+              <Button
+                key={item.id.toString()}
+                title={`Divert to ${item.bin.bin_number}`}
+                onPress={() => {
+                  setSelectedBin(item);
+                  setStage(STAGES.STOP_PARAMETERS_INPUT);
+                }}
+                style={styles.divertBtn}
+              />
+            ))}
+          </View>
+
+          <Button
+            title="Stop Transfer"
+            onPress={handleCompleteTransfer}
+            style={[styles.stopBtn, { backgroundColor: colors.danger }]}
+          />
+          
+          <Button
+            title="Cancel"
+            onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
+            variant="secondary"
+            style={styles.backBtn}
+          />
+        </ScrollView>
+      </Layout>
+    );
+  }
+
+  // STAGE: START_PARAMETERS_INPUT
+  if (stage === STAGES.START_PARAMETERS_INPUT) {
+    const sourceType = getSourceBinType();
     return (
       <Layout>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
           <ScrollView style={styles.container}>
-            <Text style={styles.title}>Record Parameters</Text>
-
+            <Text style={styles.title}>Source Bin Conditioning Parameters</Text>
             <View style={styles.infoCard}>
-              <Text style={styles.infoText}>Capture data before stopping or diverting</Text>
+              <Text style={styles.infoText}>Record parameters for source bin outflow</Text>
             </View>
 
+            {sourceType === "24HR" && (
+              <InputField
+                label="Water Added (Litres)"
+                placeholder="Enter amount"
+                value={waterAdded}
+                onChangeText={setWaterAdded}
+                keyboardType="decimal-pad"
+                error={errors.waterAdded}
+              />
+            )}
+
+            {(sourceType === "24HR" || sourceType === "12HR") && (
+              <InputField
+                label="Moisture Level (%)"
+                placeholder="0-100"
+                value={moistureLevel}
+                onChangeText={setMoistureLevel}
+                keyboardType="decimal-pad"
+                error={errors.moistureLevel}
+              />
+            )}
+
+            <View style={styles.actionButtons}>
+              <Button
+                title="Confirm & Start"
+                onPress={() => {
+                  if (validateStartParameters()) {
+                    handleStartTransfer(selectedBin, {
+                      water_added: waterAdded,
+                      moisture_level: moistureLevel
+                    });
+                  }
+                }}
+                loading={loading}
+                style={styles.stopBtn}
+              />
+              <Button
+                title="Cancel"
+                onPress={() => setStage(STAGES.SELECT_BIN)}
+                variant="secondary"
+                style={styles.backBtn}
+              />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Layout>
+    );
+  }
+
+  // STAGE: STOP_PARAMETERS_INPUT
+  if (stage === STAGES.STOP_PARAMETERS_INPUT) {
+    return (
+      <Layout>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
+          <ScrollView style={styles.container}>
+            <Text style={styles.title}>Complete Transfer</Text>
+
             <View style={styles.binContext}>
-              <Text style={styles.binContextLabel}>Current Bin: {currentTransfer?.destination_bin?.bin_number}</Text>
+              <Text style={styles.binContextLabel}>Destination Bin: {currentTransfer?.destination_bin?.bin_number}</Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>Duration: {formatTime(timer)}</Text>
             </View>
 
@@ -487,47 +641,13 @@ export default function TransferRecordingScreen({ navigation }) {
               error={errors.quantityTransferred}
             />
 
-            <InputField
-              label="Water Added (Litres)"
-              placeholder="Enter amount"
-              value={waterAdded}
-              onChangeText={setWaterAdded}
-              keyboardType="decimal-pad"
-              error={errors.waterAdded}
-            />
-
-            <InputField
-              label="Moisture Level (%)"
-              placeholder="0-100"
-              value={moistureLevel}
-              onChangeText={setMoistureLevel}
-              keyboardType="decimal-pad"
-              error={errors.moistureLevel}
-            />
-
             <View style={styles.actionButtons}>
               <Button
-                title="Save & Stop Transfer"
+                title="Save & Stop"
                 onPress={handleStopTransfer}
                 loading={loading}
                 style={styles.stopBtn}
               />
-
-              {availableBinsForDivert.length > 0 && (
-                <View style={styles.divertSection}>
-                  <Text style={styles.divertLabel}>Or Divert to:</Text>
-                  {availableBinsForDivert.map((item) => (
-                    <Button
-                      key={item.id.toString()}
-                      title={`Save & Divert to ${item.bin.bin_number}`}
-                      onPress={() => handleDivertBin(item)}
-                      loading={loading}
-                      style={styles.divertBtn}
-                    />
-                  ))}
-                </View>
-              )}
-
               <Button
                 title="Cancel"
                 onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
