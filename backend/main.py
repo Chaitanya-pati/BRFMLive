@@ -1353,12 +1353,21 @@ def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session =
     db.flush()
     
     for detail in details_data:
+        # Check if finished_good_id is "REPROCESS" (from frontend) and handle it
+        if detail.get("finished_good_id") == "REPROCESS":
+            # Map "REPROCESS" to a specific field or skip if it shouldn't go to details
+            # Based on the model, it seems reprocess is a field in HourlyProduction
+            db_prod.reprocess = float(detail.get("quantity_bags", 0))
+            continue
+            
         db_detail = models.HourlyProductionDetail(**detail, hourly_production_id=db_prod.id)
         db.add(db_detail)
 
     for silo_detail in silo_details_data:
-        db_silo_detail = models.HourlyProductionSilo(**silo_detail, hourly_production_id=db_prod.id)
-        db.add(db_silo_detail)
+        # Ensure silo_id is valid integer
+        if silo_detail.get("silo_id"):
+            db_silo_detail = models.HourlyProductionSilo(**silo_detail, hourly_production_id=db_prod.id)
+            db.add(db_silo_detail)
     
     db.commit()
     db.refresh(db_prod)

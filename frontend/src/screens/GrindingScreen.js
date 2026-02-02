@@ -413,11 +413,13 @@ export default function GrindingScreen({ navigation }) {
         if (!row.productionTime || !row.b1Reading) continue;
 
         const validDetails = row.productionDetails
-          .filter(d => d.finished_good_id)
+          .filter(d => d.finished_good_id && d.finished_good_id !== 'REPROCESS')
           .map(d => ({
             ...d,
             quantity_bags: parseInt(d.quantity_bags) || 0
           }));
+        
+        const reprocessQty = parseInt(row.productionDetails.find(d => d.finished_good_id === 'REPROCESS')?.quantity_bags) || 0;
 
         const validSiloDetails = (row.siloDetails || [])
           .filter(d => d.finished_good_id && d.silo_id)
@@ -427,7 +429,7 @@ export default function GrindingScreen({ navigation }) {
             moisture_percent: parseFloat(d.moisture_percent) || null
           }));
 
-        if (validDetails.length === 0 && validSiloDetails.length === 0) continue;
+        if (validDetails.length === 0 && validSiloDetails.length === 0 && reprocessQty === 0) continue;
 
         await client.post("/grinding/hourly-production", {
           production_order_id: selectedBin.production_order_id,
@@ -435,6 +437,7 @@ export default function GrindingScreen({ navigation }) {
           production_time: row.productionTime,
           b1_scale_reading: parseFloat(row.b1Reading),
           load_per_hour_tons: parseFloat(row.loadPerHour) || 0,
+          reprocess: reprocessQty,
           details: validDetails,
           silo_details: validSiloDetails
         });
