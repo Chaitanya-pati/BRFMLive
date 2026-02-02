@@ -150,7 +150,7 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
 
         {lifecycleData && (
           <ScrollView style={styles.resultsContainer}>
-            <Text style={styles.resultsTitle}>Lifecycle: {lifecycleData.order.order_number}</Text>
+            <Text style={styles.resultsTitle}>Lifecycle: {lifecycleData.order_number}</Text>
             {lifecycleData.stages.map((stage, index) => (
               <View key={index} style={styles.stageItem}>
                 <View style={styles.stageLineContainer}>
