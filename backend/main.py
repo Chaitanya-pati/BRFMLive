@@ -524,6 +524,126 @@ def get_bag_sizes(db: Session = Depends(get_db),
         query = query.filter(models.BagSize.branch_id == branch_id)
     return query.all()
 
+@app.get("/api/production-orders/{order_id}/traceability")
+def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # 1. Date Created & Planning
+    traceability = {
+        "order_number": order.order_number,
+        "raw_product": order.raw_product.product_name if order.raw_product else "N/A",
+        "stages": [
+            {
+                "name": "Date Created",
+                "status": "Completed",
+                "date": order.order_date,
+                "details": f"Order #{order.order_number} created for {order.quantity}kg"
+            },
+            {
+                "name": "Planning",
+                "status": "Completed" if order.status != "CREATED" else "Pending",
+                "details": "Production planning and scheduling"
+            }
+        ]
+    }
+
+    # 2. Raw Wheat Transfer (24h)
+    transfers_24h = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == order_id
+    ).all()
+    
+    if transfers_24h:
+        details = []
+        for t in transfers_24h:
+            details.append(f"Qty: {t.quantity_kg}kg | To: {t.destination_bin.bin_number if t.destination_bin else 'N/A'} | Water: {t.water_added_liters}L | Moist: {t.moisture_percent}%")
+        
+        traceability["stages"].append({
+            "name": "Raw Wheat Transfer (24h)",
+            "status": "Completed",
+            "date": transfers_24h[0].transfer_date,
+            "details": "\n".join(details)
+        })
+    else:
+        traceability["stages"].append({
+            "name": "Raw Wheat Transfer (24h)",
+            "status": "Pending",
+            "details": "Transfer to 24-hour tempering bins"
+        })
+
+    # 3. 12 Hours Bin Transfer
+    transfers_12h = db.query(models.Transfer12HourRecord).filter(
+        models.Transfer12HourRecord.production_order_id == order_id
+    ).all()
+    
+    if transfers_12h:
+        details = []
+        for t in transfers_12h:
+            details.append(f"Qty: {t.quantity_kg}kg | From: {t.source_bin.bin_number if t.source_bin else 'N/A'} | To: {t.destination_bin.bin_number if t.destination_bin else 'N/A'} | Water: {t.water_added_liters}L | Moist: {t.moisture_percent}%")
+        
+        traceability["stages"].append({
+            "name": "12 Hours Bin Transfer",
+            "status": "Completed",
+            "date": transfers_12h[0].transfer_date,
+            "details": "\n".join(details)
+        })
+    else:
+        traceability["stages"].append({
+            "name": "12 Hours Bin Transfer",
+            "status": "Pending",
+            "details": "Transfer to 12-hour conditioning bins"
+        })
+
+    # 4. Hourly Grinding Results
+    hourly_prods = db.query(models.HourlyProduction).filter(
+        models.HourlyProduction.production_order_id == order_id
+    ).all()
+    
+    if hourly_prods:
+        details = []
+        for p in hourly_prods:
+            details.append(f"Time: {p.production_time} | Load: {p.load_per_hour_tons}T/h | Scale: {p.b1_scale_reading}")
+        
+        traceability["stages"].append({
+            "name": "Hourly Grinding Results",
+            "status": "Completed",
+            "date": hourly_prods[0].production_date,
+            "details": "\n".join(details)
+        })
+    else:
+        traceability["stages"].append({
+            "name": "Hourly Grinding Results",
+            "status": "Pending",
+            "details": "Quality checks during grinding"
+        })
+
+    # 5. Granulation Results
+    granulations = db.query(models.ProductionOrderGranulation).filter(
+        models.ProductionOrderGranulation.production_order_id == order_id
+    ).all()
+    
+    if granulations:
+        details = []
+        for g in granulations:
+            vals = ", ".join([f"{k}:{v}" for k, v in g.granulation_values.items()])
+            details.append(f"{g.finished_good.product_name}: {vals}")
+        
+        traceability["stages"].append({
+            "name": "Granulation Results",
+            "status": "Completed",
+            "date": granulations[0].created_at,
+            "details": "\n".join(details)
+        })
+    else:
+        traceability["stages"].append({
+            "name": "Granulation Results",
+            "status": "Pending",
+            "details": "Final product granulation analysis"
+        })
+
+    return traceability
+
 @app.get("/")
 @app.head("/")
 def read_root():

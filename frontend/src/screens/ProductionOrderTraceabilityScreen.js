@@ -83,22 +83,8 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
       setLifecycleData(null);
       const client = getApiClient();
       
-      // In a real scenario, we'd have a single endpoint for this.
-      // For now, we'll fetch what we can or simulate the structure.
-      const res = await client.get(`/production-orders/${selectedOrderId}`);
-      
-      // Placeholder for future multi-stage data integration
-      setLifecycleData({
-        order: res.data,
-        stages: [
-          { name: "Date Created", status: "Completed", date: res.data.order_date, details: `Order #${res.data.order_number} created` },
-          { name: "Planning", status: res.data.status !== "CREATED" ? "Completed" : "Pending", details: "Production planning and scheduling" },
-          { name: "Raw Wheat Transfer (24h)", status: "Pending", details: "Transfer to 24-hour tempering bins" },
-          { name: "12 Hours Bin Transfer", status: "Pending", details: "Transfer to 12-hour conditioning bins" },
-          { name: "Hourly Grinding Results", status: "Pending", details: "Quality checks during grinding" },
-          { name: "Granulation Results", status: "Pending", details: "Final product granulation analysis" }
-        ]
-      });
+      const res = await client.get(`/production-orders/${selectedOrderId}/traceability`);
+      setLifecycleData(res.data);
 
       showToast("Success", "Traceability data loaded");
     } catch (error) {
@@ -213,7 +199,7 @@ const styles = StyleSheet.create({
   stageContent: { flex: 1, paddingBottom: 20, paddingLeft: 8 },
   stageName: { fontSize: 16, fontWeight: 'bold', color: colors.text },
   stageStatus: { fontSize: 12, fontWeight: 'bold', color: colors.textSecondary, marginTop: 2 },
-  stageDetails: { fontSize: 14, color: '#666', marginTop: 4 },
+  stageDetails: { fontSize: 14, color: '#666', marginTop: 4, lineHeight: 20 },
   stageDate: { fontSize: 12, color: colors.primary, marginTop: 4 },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' }
 });
