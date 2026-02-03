@@ -491,6 +491,16 @@ export const dispatchApi = {
   delete: (id) => api.delete(`/dispatches/${id}`),
 };
 
+export const finishedGoodsGodownApi = {
+  getAll: () => api.get("/finished-goods-godown"),
+  getById: (id) => api.get(`/finished-goods-godown/${id}`),
+  create: (data) => api.post("/finished-goods-godown", data),
+  update: (id, data) => api.put(`/finished-goods-godown/${id}`, data),
+  delete: (id) => api.delete(`/finished-goods-godown/${id}`),
+  getStock: (godownId) => api.get(`/finished-goods-godown-stock${godownId ? `?godown_id=${godownId}` : ""}`),
+  recordMovement: (data) => api.post("/finished-goods-godown-movement", data),
+};
+
 export const stateCityApi = {
   getStates: async () => {
     try {
