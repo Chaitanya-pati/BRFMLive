@@ -487,6 +487,55 @@ class Bin(Base):
     transfer_12h_record_dest = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.destination_bin_id]", back_populates="destination_bin", cascade="all, delete-orphan")
     transfer_12h_record_source = relationship("Transfer12HourRecord", foreign_keys="[Transfer12HourRecord.source_bin_id]", back_populates="source_bin", cascade="all, delete-orphan")
 
+class FinishedGoodsGodownMaster(Base):
+    __tablename__ = "finished_goods_godown_master"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    godown_code = Column(String(50), nullable=False)
+    godown_name = Column(String(120), nullable=False)
+    capacity_bags = Column(Integer)
+    location = Column(String(200))
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    stock = relationship("FinishedGoodsGodownStock", back_populates="godown", cascade="all, delete-orphan")
+
+class FinishedGoodsGodownStock(Base):
+    __tablename__ = "finished_goods_godown_stock"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    godown_id = Column(Integer, ForeignKey("finished_goods_godown_master.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
+    quantity_bags = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    godown = relationship("FinishedGoodsGodownMaster", back_populates="stock")
+    finished_good = relationship("FinishedGood")
+    bag_size = relationship("BagSize")
+
+class FinishedGoodsGodownMovement(Base):
+    __tablename__ = "finished_goods_godown_movement"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    movement_type = Column(String(20), nullable=False) # IN / OUT / TRANSFER
+    from_godown_id = Column(Integer, ForeignKey("finished_goods_godown_master.id"))
+    to_godown_id = Column(Integer, ForeignKey("finished_goods_godown_master.id"))
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
+    quantity_bags = Column(Integer, nullable=False)
+    reference_id = Column(Integer)
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+
+    branch = relationship("Branch")
+    from_godown = relationship("FinishedGoodsGodownMaster", foreign_keys=[from_godown_id])
+    to_godown = relationship("FinishedGoodsGodownMaster", foreign_keys=[to_godown_id])
+    finished_good = relationship("FinishedGood")
+    bag_size = relationship("BagSize")
+
 class Magnet(Base):
     __tablename__ = "magnets"
 

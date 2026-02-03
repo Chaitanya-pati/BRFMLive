@@ -774,6 +774,51 @@ class FinishedGood(FinishedGoodBase):
     created_at: datetime
     updated_at: datetime
 
+# Finished Goods Godown Schemas
+class FinishedGoodsGodownMasterBase(ISTModel):
+    branch_id: int
+    godown_code: str
+    godown_name: str
+    capacity_bags: Optional[int] = None
+    location: Optional[str] = None
+    is_active: bool = True
+
+class FinishedGoodsGodownMasterCreate(FinishedGoodsGodownMasterBase):
+    pass
+
+class FinishedGoodsGodownMaster(FinishedGoodsGodownMasterBase):
+    id: int
+    created_at: datetime
+
+class FinishedGoodsGodownStockBase(ISTModel):
+    branch_id: int
+    godown_id: int
+    finished_good_id: int
+    bag_size_id: int
+    quantity_bags: int = 0
+
+class FinishedGoodsGodownStock(FinishedGoodsGodownStockBase):
+    id: int
+    updated_at: datetime
+
+class FinishedGoodsGodownMovementBase(ISTModel):
+    branch_id: int
+    movement_type: str
+    from_godown_id: Optional[int] = None
+    to_godown_id: Optional[int] = None
+    finished_good_id: int
+    bag_size_id: int
+    quantity_bags: int
+    reference_id: Optional[int] = None
+    remarks: Optional[str] = None
+
+class FinishedGoodsGodownMovementCreate(FinishedGoodsGodownMovementBase):
+    pass
+
+class FinishedGoodsGodownMovement(FinishedGoodsGodownMovementBase):
+    id: int
+    created_at: datetime
+
 class ExtractionBase(ISTModel):
     production_order_id: int
     finished_good_id: int
