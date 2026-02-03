@@ -1425,7 +1425,74 @@ def delete_finished_goods_godown(godown_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Godown deleted successfully"}
 
-@app.delete("/api/lab-tests/{lab_test_id}")
+@app.get("/api/finished-goods-godown-stock", response_model=List[schemas.FinishedGoodsGodownStock])
+def get_finished_goods_godown_stock(godown_id: Optional[int] = None, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
+    query = db.query(models.FinishedGoodsGodownStock)
+    if branch_id:
+        query = query.filter(models.FinishedGoodsGodownStock.branch_id == branch_id)
+    if godown_id:
+        query = query.filter(models.FinishedGoodsGodownStock.godown_id == godown_id)
+    return query.all()
+
+@app.get("/api/finished-goods-godown-movement", response_model=List[schemas.FinishedGoodsGodownMovement])
+def get_finished_goods_godown_movements(godown_id: Optional[int] = None, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
+    query = db.query(models.FinishedGoodsGodownMovement)
+    if branch_id:
+        query = query.filter(models.FinishedGoodsGodownMovement.branch_id == branch_id)
+    if godown_id:
+        query = query.filter((models.FinishedGoodsGodownMovement.from_godown_id == godown_id) | (models.FinishedGoodsGodownMovement.to_godown_id == godown_id))
+    return query.order_by(models.FinishedGoodsGodownMovement.created_at.desc()).all()
+
+@app.post("/api/finished-goods-godown-movement", response_model=schemas.FinishedGoodsGodownMovement)
+def create_finished_goods_godown_movement(movement: schemas.FinishedGoodsGodownMovementCreate, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
+    data = movement.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    
+    # Update Stock logic
+    qty = data['quantity_bags']
+    fg_id = data['finished_good_id']
+    bs_id = data['bag_size_id']
+    m_type = data['movement_type'].upper()
+    
+    # 1. Handle Deduction (OUT or TRANSFER from source)
+    if m_type in ['OUT', 'TRANSFER'] and data.get('from_godown_id'):
+        source_stock = db.query(models.FinishedGoodsGodownStock).filter(
+            models.FinishedGoodsGodownStock.godown_id == data['from_godown_id'],
+            models.FinishedGoodsGodownStock.finished_good_id == fg_id,
+            models.FinishedGoodsGodownStock.bag_size_id == bs_id
+        ).first()
+        if not source_stock or source_stock.quantity_bags < qty:
+            raise HTTPException(status_code=400, detail="Insufficient stock in source godown")
+        source_stock.quantity_bags -= qty
+
+    # 2. Handle Addition (IN or TRANSFER to destination)
+    if m_type in ['IN', 'TRANSFER'] and data.get('to_godown_id'):
+        dest_stock = db.query(models.FinishedGoodsGodownStock).filter(
+            models.FinishedGoodsGodownStock.godown_id == data['to_godown_id'],
+            models.FinishedGoodsGodownStock.finished_good_id == fg_id,
+            models.FinishedGoodsGodownStock.bag_size_id == bs_id
+        ).first()
+        if dest_stock:
+            dest_stock.quantity_bags += qty
+        else:
+            dest_stock = models.FinishedGoodsGodownStock(
+                branch_id=data['branch_id'],
+                godown_id=data['to_godown_id'],
+                finished_good_id=fg_id,
+                bag_size_id=bs_id,
+                quantity_bags=qty
+            )
+            db.add(dest_stock)
+
+    db_movement = models.FinishedGoodsGodownMovement(**data)
+    db.add(db_movement)
+    db.commit()
+    db.refresh(db_movement)
+    return db_movement
+
+
+@app.get("/api/users", response_model=List[schemas.User])
 def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
     db_lab_test = db.query(
         models.LabTest).filter(models.LabTest.id == lab_test_id).first()

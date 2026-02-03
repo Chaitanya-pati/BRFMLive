@@ -273,6 +273,13 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
+      title: "FG Inventory",
+      route: "FinishedGoodsManagement",
+      icon: "warehouse",
+      color: "#4CAF50",
+      adminOnly: false,
+    },
+    {
       title: "Order Traceability",
       route: "ProductionOrderTraceability",
       icon: "route",
