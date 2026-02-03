@@ -1383,6 +1383,48 @@ def get_hourly_productions(production_order_id: Optional[int] = None, db: Sessio
     return query.order_by(models.HourlyProduction.production_date.desc(), models.HourlyProduction.production_time.desc()).all()
 
 
+@app.get("/api/finished-goods-godown", response_model=List[schemas.FinishedGoodsGodownMaster])
+def get_finished_goods_godowns(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    query = db.query(models.FinishedGoodsGodownMaster)
+    if branch_id:
+        query = query.filter(models.FinishedGoodsGodownMaster.branch_id == branch_id)
+    return query.all()
+
+@app.post("/api/finished-goods-godown", response_model=schemas.FinishedGoodsGodownMaster)
+def create_finished_goods_godown(godown: schemas.FinishedGoodsGodownMasterCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
+    data = godown.dict()
+    if branch_id and not data.get('branch_id'):
+        data['branch_id'] = branch_id
+    
+    db_godown = models.FinishedGoodsGodownMaster(**data)
+    db.add(db_godown)
+    db.commit()
+    db.refresh(db_godown)
+    return db_godown
+
+@app.put("/api/finished-goods-godown/{godown_id}", response_model=schemas.FinishedGoodsGodownMaster)
+def update_finished_goods_godown(godown_id: int, godown: schemas.FinishedGoodsGodownMasterCreate, db: Session = Depends(get_db)):
+    db_godown = db.query(models.FinishedGoodsGodownMaster).filter(models.FinishedGoodsGodownMaster.id == godown_id).first()
+    if not db_godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+    
+    for key, value in godown.dict().items():
+        setattr(db_godown, key, value)
+    
+    db.commit()
+    db.refresh(db_godown)
+    return db_godown
+
+@app.delete("/api/finished-goods-godown/{godown_id}")
+def delete_finished_goods_godown(godown_id: int, db: Session = Depends(get_db)):
+    db_godown = db.query(models.FinishedGoodsGodownMaster).filter(models.FinishedGoodsGodownMaster.id == godown_id).first()
+    if not db_godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+    
+    db.delete(db_godown)
+    db.commit()
+    return {"message": "Godown deleted successfully"}
+
 @app.delete("/api/lab-tests/{lab_test_id}")
 def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
     db_lab_test = db.query(
