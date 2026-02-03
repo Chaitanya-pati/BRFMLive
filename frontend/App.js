@@ -38,6 +38,7 @@ import GrindingScreen from './src/screens/GrindingScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
 import FinishedGoodsManagementScreen from './src/screens/FinishedGoodsManagementScreen';
+import GodownStockViewScreen from './src/screens/GodownStockViewScreen';
 import ProductionOrderGranulationScreen from './src/screens/ProductionOrderGranulationScreen';
 import ProductionOrderTraceabilityScreen from './src/screens/ProductionOrderTraceabilityScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
@@ -147,6 +148,7 @@ export default function App() {
           <Stack.Screen name="RawProductMaster" component={RawProductMasterScreen} />
           <Stack.Screen name="FinishedGoodsMaster" component={FinishedGoodsMasterScreen} />
           <Stack.Screen name="FinishedGoodsManagement" component={FinishedGoodsManagementScreen} />
+          <Stack.Screen name="GodownStockView" component={GodownStockViewScreen} />
           <Stack.Screen name="ProductionOrder" component={ProductionOrderScreen} />
           <Stack.Screen name="ProductionOrderPlanning" component={ProductionOrderPlanningScreen} />
           <Stack.Screen name="ProductionOrderGranulation" component={ProductionOrderGranulationScreen} />

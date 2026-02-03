@@ -280,6 +280,13 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
+      title: "FG Stock View",
+      route: "GodownStockView",
+      icon: "warehouse",
+      color: "#673AB7",
+      adminOnly: false,
+    },
+    {
       title: "Order Traceability",
       route: "ProductionOrderTraceability",
       icon: "route",
