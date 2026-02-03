@@ -87,8 +87,11 @@ export default function FinishedGoodsManagementScreen({ navigation }) {
       }
     }
 
-    if (movementForm.movement_type === 'TRANSFER' && movementForm.from_godown_id === movementForm.to_godown_id) {
-      return showAlert("Error", "Source and destination godowns cannot be the same");
+    if (movementForm.movement_type === 'TRANSFER') {
+      if (!movementForm.to_godown_id) return showAlert("Error", "Select destination godown");
+      if (selectedGodown.id === movementForm.to_godown_id) {
+        return showAlert("Error", "Source and destination godowns cannot be the same");
+      }
     }
 
     setLoading(true);
