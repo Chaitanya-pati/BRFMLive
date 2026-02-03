@@ -76,6 +76,21 @@ export default function FinishedGoodsManagementScreen({ navigation }) {
 
   const handleMovement = async () => {
     if (!movementForm.finished_good_id || !movementForm.bag_size_id || !movementForm.quantity_bags) return showAlert("Error", "Fill required fields");
+    
+    const qty = parseInt(movementForm.quantity_bags);
+    if (isNaN(qty) || qty <= 0) return showAlert("Error", "Enter a valid quantity greater than zero");
+
+    if (movementForm.movement_type === 'OUT' || movementForm.movement_type === 'TRANSFER') {
+      const currentStock = stocks.find(s => s.finished_good_id === movementForm.finished_good_id && s.bag_size_id === movementForm.bag_size_id);
+      if (!currentStock || currentStock.quantity_bags < qty) {
+        return showAlert("Error", `Insufficient stock. Available: ${currentStock ? currentStock.quantity_bags : 0} bags`);
+      }
+    }
+
+    if (movementForm.movement_type === 'TRANSFER' && movementForm.from_godown_id === movementForm.to_godown_id) {
+      return showAlert("Error", "Source and destination godowns cannot be the same");
+    }
+
     setLoading(true);
     try {
       const client = getApiClient();
