@@ -1498,7 +1498,7 @@ def get_users(db: Session = Depends(get_db)):
 
 @app.delete("/api/lab-tests/{lab_test_id}")
 def delete_lab_test(lab_test_id: int, db: Session = Depends(get_db)):
-
+    db_lab_test = db.query(
         models.LabTest).filter(models.LabTest.id == lab_test_id).first()
     if not db_lab_test:
         raise HTTPException(status_code=404, detail="Lab test not found")
