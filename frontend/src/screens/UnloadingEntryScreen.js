@@ -135,7 +135,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       setCameraPermission(true);
       return;
     }
-    const { status } = await Camera.requestCameraPermissionsAsync();
+    const { status } = await CameraView.requestCameraPermissionsAsync();
     setCameraPermission(status === 'granted');
     if (status !== 'granted') {
       showNotification('Camera permission is required to take photos', 'warning');

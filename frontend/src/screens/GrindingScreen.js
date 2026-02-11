@@ -690,7 +690,7 @@ export default function GrindingScreen({ navigation }) {
               </View>
             </Card>
           </View>
-        )}
+        </Modal>
       </ScrollView>
     </Layout>
   );
