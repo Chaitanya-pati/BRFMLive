@@ -10,7 +10,11 @@ const getCurrentAPIUrl = () => {
       return `http://${hostname}:8000/api`;
     }
 
-    return `${protocol}//${hostname}/api`;
+    // Fixed for Replit: In a production-like environment (proxy), 
+    // the backend is served under the same host but the frontend's webpack proxy 
+    // routes /api calls to the backend. We must NOT include the port 5000 in the base URL
+    // when making relative calls.
+    return "/api";
   }
 
   return "http://localhost:8000/api";
