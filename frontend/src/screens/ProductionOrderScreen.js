@@ -325,36 +325,31 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             <Text style={styles.label}>Target Finish Date *</Text>
-            {Platform.OS === 'web' ? (
-              <TextInput
-                style={styles.input}
-                value={formData.target_finish_date}
-                onChangeText={(text) => setFormData({ ...formData, target_finish_date: text })}
-                placeholder="YYYY-MM-DD"
+            <TouchableOpacity 
+              style={styles.input} 
+              onPress={() => {
+                setDatePickerMode('date');
+                setShowDatePicker(true);
+              }}
+            >
+              <Text style={{ color: formData.target_finish_date ? colors.textPrimary : colors.textSecondary }}>
+                {formData.target_finish_date ? formData.target_finish_date : 'Select target date'}
+              </Text>
+            </TouchableOpacity>
+            
+            {showDatePicker && (
+              <DateTimePicker
+                value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
+                mode={datePickerMode}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    const dateString = selectedDate.toISOString().split('T')[0];
+                    setFormData({ ...formData, target_finish_date: dateString });
+                  }
+                }}
               />
-            ) : (
-              <>
-                <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-                  <Text style={{ color: formData.target_finish_date ? colors.textDark : colors.textLight }}>
-                    {formData.target_finish_date ? formData.target_finish_date : 'Select date'}
-                  </Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleDateChange}
-                  />
-                )}
-                {Platform.OS === 'ios' && showDatePicker && (
-                  <View style={styles.datePickerFooter}>
-                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                      <Text style={styles.datePickerButton}>Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
             )}
 
             {editMode && (
@@ -423,28 +418,43 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   planButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#eff6ff',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editButton: {
-    backgroundColor: colors.info,
+    backgroundColor: '#f0fdf4',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButton: {
-    backgroundColor: colors.danger,
+    backgroundColor: '#fef2f2',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 12,
+    fontWeight: '600',
   },
   statusBadge: {
     paddingHorizontal: 8,

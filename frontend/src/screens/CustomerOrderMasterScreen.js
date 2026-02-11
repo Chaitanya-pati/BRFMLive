@@ -10,7 +10,8 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import SelectDropdown from '../components/SelectDropdown';
+import InputField from '../components/InputField';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';

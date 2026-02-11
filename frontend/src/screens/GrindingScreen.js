@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, ActivityIndicator } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Layout from "../components/Layout";
@@ -14,7 +14,21 @@ export default function GrindingScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  const [loading, setLoading] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [activeRowId, setActiveRowId] = useState(null);
+
+  const handleTimePicker = (rowId) => {
+    setActiveRowId(rowId);
+    setShowTimePicker(true);
+  };
+
+  const onTimeChange = (event, selectedTime) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime && activeRowId) {
+      const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      handleRowUpdate(activeRowId, 'productionTime', timeStr);
+    }
+  };
   const [availableBins, setAvailableBins] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
