@@ -244,26 +244,21 @@ export default function CustomerOrderMasterScreen({ navigation }) {
           <View style={isMobile ? styles.mobileGrid : styles.grid}>
             <View style={styles.gridItem}>
               <Text style={styles.label}>Order Code *</Text>
-              <TextInput
-                style={styles.input}
+              <InputField
                 value={formData.order_code}
                 onChangeText={(text) => setFormData({ ...formData, order_code: text })}
+                placeholder="e.g. ORD-001"
               />
             </View>
 
             <View style={styles.gridItem}>
               <Text style={styles.label}>Customer *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={formData.customer_id}
-                  onValueChange={(val) => setFormData({ ...formData, customer_id: val })}
-                >
-                  <Picker.Item label="Select Customer" value="" />
-                  {customers.map(c => (
-                    <Picker.Item key={c.customer_id} label={c.customer_name} value={c.customer_id} />
-                  ))}
-                </Picker>
-              </View>
+              <SelectDropdown
+                placeholder="Select Customer"
+                value={formData.customer_id}
+                onValueChange={(val) => setFormData({ ...formData, customer_id: val })}
+                options={customers.map(c => ({ label: c.customer_name, value: c.customer_id }))}
+              />
             </View>
           </View>
 
@@ -286,30 +281,25 @@ export default function CustomerOrderMasterScreen({ navigation }) {
               <View style={isMobile ? styles.mobileGrid : styles.grid}>
                 <View style={[styles.gridItem, { flex: 2 }]}>
                   <Text style={styles.subLabel}>Product</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={item.finished_good_id}
-                      onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
-                    >
-                      <Picker.Item label="Select Product" value="" />
-                      {finishedGoods.map(fg => (
-                        <Picker.Item key={fg.id} label={fg.product_name} value={fg.id} />
-                      ))}
-                    </Picker>
-                  </View>
+                  <SelectDropdown
+                    placeholder="Select Product"
+                    value={item.finished_good_id}
+                    onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
+                    options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
+                  />
                 </View>
 
                 <View style={[styles.gridItem, { flex: 1 }]}>
                   <Text style={styles.subLabel}>Unit Type</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={item.quantity_type}
-                      onValueChange={(val) => updateItem(index, 'quantity_type', val)}
-                    >
-                      <Picker.Item label="Bag" value="bag" />
-                      <Picker.Item label="Ton" value="ton" />
-                    </Picker>
-                  </View>
+                  <SelectDropdown
+                    placeholder="Select Unit"
+                    value={item.quantity_type}
+                    onValueChange={(val) => updateItem(index, 'quantity_type', val)}
+                    options={[
+                      { label: 'Bag', value: 'bag' },
+                      { label: 'Ton', value: 'ton' },
+                    ]}
+                  />
                 </View>
               </View>
 
@@ -340,17 +330,12 @@ export default function CustomerOrderMasterScreen({ navigation }) {
                 <View style={isMobile ? styles.mobileGrid : styles.grid}>
                   <View style={styles.gridItem}>
                     <Text style={styles.subLabel}>Bag Size</Text>
-                    <View style={styles.pickerContainer}>
-                      <Picker
-                        selectedValue={item.bag_size_kg}
-                        onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
-                      >
-                        <Picker.Item label="Select Size" value="" />
-                        {bagSizes.map(bs => (
-                          <Picker.Item key={bs.id} label={`${bs.weight_kg} kg`} value={bs.weight_kg.toString()} />
-                        ))}
-                      </Picker>
-                    </View>
+                    <SelectDropdown
+                      placeholder="Select Size"
+                      value={item.bag_size_kg}
+                      onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
+                      options={bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: bs.weight_kg.toString() }))}
+                    />
                   </View>
                   <View style={styles.gridItem}>
                     <Text style={styles.subLabel}>Number of Bags</Text>
@@ -390,8 +375,16 @@ export default function CustomerOrderMasterScreen({ navigation }) {
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} disabled={isSubmitting}>
-              <Text style={styles.saveBtnText}>{isSubmitting ? 'Saving...' : (editMode ? 'Update Order' : 'Create Order')}</Text>
+            <TouchableOpacity 
+              style={[styles.saveBtn, isSubmitting && styles.disabledButton]} 
+              onPress={handleSubmit} 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveBtnText}>{editMode ? 'Update Order' : 'Create Order'}</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -532,6 +525,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     minWidth: 120,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   saveBtnText: { 
     color: '#fff', 

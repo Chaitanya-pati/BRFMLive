@@ -339,7 +339,16 @@ export default function GrindingScreen({ navigation }) {
               <Text style={{ fontSize: 10 }}>{rowIdx + 1}</Text>
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
-            <View style={{ width: 80, padding: 2 }}><InputField value={row.productionTime} onChangeText={(v) => handleRowUpdate(row.id, 'productionTime', v)} placeholder="8am" disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 80, padding: 2 }}>
+              <TouchableOpacity 
+                style={[styles.inputField, row.isSubmitted && { backgroundColor: '#F0F0F0' }]} 
+                onPress={() => !row.isSubmitted && handleTimePicker(row.id)}
+              >
+                <Text style={{ fontSize: 12, color: row.productionTime ? colors.textPrimary : colors.textSecondary }}>
+                  {row.productionTime || "Select"}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             
@@ -584,6 +593,15 @@ export default function GrindingScreen({ navigation }) {
             </Card>
           </View>
         )}
+        {showTimePicker && (
+          <DateTimePicker
+            value={new Date()}
+            mode="time"
+            is24Hour={false}
+            display="default"
+            onChange={onTimeChange}
+          />
+        )}
       </ScrollView>
     </Layout>
   );
@@ -595,6 +613,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: colors.primary },
   excelButton: { backgroundColor: colors.secondary, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
   excelButtonText: { color: '#fff', fontWeight: 'bold' },
+  inputField: {
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderRadius: 4,
+    padding: 8,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    height: 34,
+  },
   card: { padding: 16, marginBottom: 16, borderRadius: 12 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.text.primary },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 15, color: colors.text.primary, textAlign: 'center' },
