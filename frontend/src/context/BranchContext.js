@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import * as React from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import { storage } from '../utils/storage';
 
 const BranchContext = createContext();
