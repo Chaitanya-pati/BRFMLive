@@ -19,7 +19,7 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     // Use truly relative path for Replit proxy to handle routing correctly
-    const loginUrl = "/api/login";
+    const loginUrl = `${API_BASE_URL}/api/auth/login`;
     console.log('🔐 Attempting login with:', {
       username,
       apiUrl: API_BASE_URL,
@@ -30,12 +30,14 @@ export default function LoginScreen({ navigation }) {
     });
 
     try {
+      // Use FormData for OAuth2 password grant as expected by FastAPI
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('password', password);
+
       const response = await fetch(loginUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+        body: formData,
       });
 
       console.log('📡 Login response status:', response.status);

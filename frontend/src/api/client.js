@@ -14,6 +14,10 @@ const getCurrentAPIUrl = () => {
     // but the user only has port 5000 exposed via the webview.
     // However, Replit's proxy handles multiple ports if they are defined in workflows.
     // Let's try calling the backend on its own port via the same domain.
+    const replitDomain = process.env.REPLIT_DEV_DOMAIN || hostname;
+    if (replitDomain.includes('replit.dev')) {
+        return `${protocol}//${replitDomain}/api`;
+    }
     return `${protocol}//${hostname}:8000/api`;
   }
 
