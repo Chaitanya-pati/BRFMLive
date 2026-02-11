@@ -15,7 +15,7 @@ import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
 import Card from "../components/Card";
 import colors from "../theme/colors";
-import { getApiClient } from "../api/client";
+import { transfer12HourApi, productionOrderApi, binApi } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
 
@@ -79,8 +79,7 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const fetchAllBins = async () => {
     try {
-      const client = getApiClient();
-      const response = await client.get("/bins");
+      const response = await binApi.getAll();
       const allBins = response.data || [];
       // We need these for display names regardless of current stage filters
       setSourceBins(prev => prev.length > 0 ? prev : allBins);
@@ -100,8 +99,7 @@ export default function Transfer12HourScreen({ navigation }) {
   const fetchProductionOrders = async () => {
     setLoading(true);
     try {
-      const client = getApiClient();
-      const response = await client.get("/production-orders");
+      const response = await productionOrderApi.getAll();
       setProductionOrders(response.data || []);
     } catch (error) {
       showAlert("Error", "Failed to fetch production orders");
@@ -112,8 +110,7 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const fetchSessions = async () => {
     try {
-      const client = getApiClient();
-      const response = await client.get("/12hour-transfer/records");
+      const response = await transfer12HourApi.getSessions();
       setSessions(response.data || []);
     } catch (error) {
       console.error("Failed to fetch records:", error);
@@ -125,27 +122,16 @@ export default function Transfer12HourScreen({ navigation }) {
     setSelectedOrder(order);
     setLoading(true);
     try {
-      const client = getApiClient();
-      const [binsResponse, transferRecordsResponse] = await Promise.all([
-        client.get("/bins"),
-        client.get("/24hour-transfer/records")
+      const [sourceBinsRes, destBinsRes] = await Promise.all([
+        transfer12HourApi.getAvailableSourceBins(order.id),
+        transfer12HourApi.getAvailableDestinationBins(order.id)
       ]);
       
-      const allBins = binsResponse.data || [];
-      const transferRecords = transferRecordsResponse.data || [];
-      
-      const validSourceBinIds = transferRecords
-        .filter(record => Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED")
-        .map(record => Number(record.destination_bin_id));
-
-      const filteredSource = allBins.filter(bin => bin.bin_type === "24 hours bin" && bin.status === "Active" && validSourceBinIds.includes(Number(bin.id)));
-      const filteredDest = allBins.filter(bin => bin.bin_type === "12 hours bin" && bin.status === "Active");
-
-      setSourceBins(filteredSource);
-      setDestinationBins(filteredDest);
+      setSourceBins(sourceBinsRes.data || []);
+      setDestinationBins(destBinsRes.data || []);
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
-      showAlert("Error", "Failed to fetch bins or transfer records");
+      showAlert("Error", "Failed to fetch available bins for this order");
     } finally {
       setLoading(false);
     }
@@ -163,17 +149,23 @@ export default function Transfer12HourScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const client = getApiClient();
-      const response = await client.post("/12hour-transfer/records", {
+      let response;
+      const payload = {
         production_order_id: selectedOrder.id,
         source_bin_id: source,
         destination_bin_id: dest,
-        transfer_type: transferType,
-        status: "IN_PROGRESS",
-        transfer_start_time: new Date().toISOString()
-      });
+      };
 
-      setCurrentRecordId(response.data.id);
+      if (isManualSpecial) {
+        response = await transfer12HourApi.createSessionSpecial(payload);
+      } else {
+        response = await transfer12HourApi.createSessionNormal(payload);
+      }
+
+      const sessionId = response.data.id;
+      await transfer12HourApi.startSession(sessionId);
+
+      setCurrentRecordId(sessionId);
       setStage(STAGES.TRANSFER_ACTIVE);
       showToast("Success", "Transfer started");
     } catch (error) {
@@ -196,14 +188,18 @@ export default function Transfer12HourScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const client = getApiClient();
-      await client.patch(`/12hour-transfer/records/${currentRecordId}`, {
+      const payload = {
         quantity_transferred: parseFloat(transferQuantity),
         water_added: waterAdded ? parseFloat(waterAdded) : 0,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
-        status: pendingStatus,
-        transfer_end_time: new Date().toISOString()
-      });
+      };
+
+      if (pendingStatus === "DIVERTED") {
+        await transfer12HourApi.divertTransfer(currentRecordId, payload);
+      } else {
+        await transfer12HourApi.recordTransfer(currentRecordId, payload);
+        await transfer12HourApi.stopTransfer(currentRecordId);
+      }
 
       showToast("Success", `Transfer ${pendingStatus.toLowerCase()}`);
       
