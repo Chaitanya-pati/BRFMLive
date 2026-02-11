@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = 'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-summer-brook-af6opqny-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
 
 if not DATABASE_URL:
     raise ValueError(
