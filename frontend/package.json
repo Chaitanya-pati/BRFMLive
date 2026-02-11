@@ -3,29 +3,41 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 expo start --web --port 5000"
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
+    "build": "npx expo export --platform web",
+    "serve": "npx serve dist"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/datetimepicker": "^8.4.5",
-    "@react-native-picker/picker": "^2.11.2",
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-picker/picker": "2.11.1",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/native-stack": "^7.3.26",
     "axios": "^1.12.2",
-    "expo": "~54.0.10",
-    "expo-camera": "^17.0.8",
-    "expo-image-picker": "^17.0.8",
-    "expo-status-bar": "~3.0.8",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "expo": "~54.0.0",
+    "expo-camera": "^17.0.10",
+    "expo-image-picker": "^17.0.10",
+    "expo-status-bar": "^3.0.9",
+    "intro.js": "^8.3.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-hook-form": "^7.63.0",
-    "react-native": "0.81.4",
+    "react-icons": "^5.5.0",
+    "react-native": "^0.81.5",
     "react-native-safe-area-context": "^5.6.1",
-    "react-native-screens": "^4.16.0",
+    "react-native-screens": "~4.16.0",
     "react-native-web": "^0.21.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/preset-flow": "^7.27.1",
+    "@babel/preset-react": "^7.28.5",
+    "@expo/cli": "^0.24.22",
+    "babel-preset-expo": "^54.0.10",
+    "react-refresh": "^0.18.0"
+  }
 }

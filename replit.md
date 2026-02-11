@@ -1,231 +1,114 @@
 # Gate Entry & Lab Testing Application
 
 ## Overview
-
-This is a full-stack, cross-platform Gate Entry and Lab Testing application designed for managing supplier information, vehicle entries, and laboratory quality testing for raw wheat. The application provides a unified codebase that runs on Android, iOS, and Web platforms, with a REST API backend for data management.
-
-The system handles:
-- Supplier master data management
-- Vehicle entry registration with photo capture
-- Lab test recording for wheat quality parameters
-- Image storage directly in PostgreSQL database
+This full-stack, cross-platform application manages supplier information, vehicle entries, and laboratory quality testing for raw wheat. It provides a unified codebase for Android, iOS, and Web platforms, backed by a REST API. The system focuses on managing supplier master data, vehicle entry registration with photo capture, and comprehensive lab test recording for wheat quality, including an integrated system for Godown (warehouse) management, unloading entries, and quality claim tracking. The project aims to streamline operations, enhance data accuracy, and provide robust reporting for agricultural supply chain management.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### Frontend Architecture
-
-**Technology Stack:**
-- React Native with Expo framework for cross-platform development
-- react-native-web enables web deployment from the same codebase
-- React Navigation for screen routing and navigation
-- React Hook Form for form state management
-- Functional components with React Hooks pattern
-
-**Key Design Decisions:**
-- **Cross-Platform Strategy**: Single codebase targets Android, iOS, and Web using Expo and react-native-web. This reduces maintenance overhead and ensures feature parity across platforms.
-- **Mobile-First Design**: UI components are designed primarily for mobile screens with responsive layouts that adapt to web viewports.
-- **Image Handling**: Uses Expo ImagePicker and Camera APIs for capturing or selecting photos. Images are converted to base64 or multipart form data for upload to backend.
-- **Navigation Pattern**: Native stack navigation provides platform-appropriate transitions and navigation behavior.
-
-**Screen Structure:**
-- LoginScreen: Professional login form with username/password authentication
-- HomeScreen: Professional dashboard with stats cards, quick actions, and recent activity
-- SupplierMasterScreen: Data table view with Add/Edit modal forms for supplier records
-- VehicleEntryScreen: Data table view with modal form for vehicle entries and photo capture
-- LabTestScreen: Data table view with comprehensive modal form for lab test data entry
-- UserManagementScreen: Admin-only screen for managing users (add, edit, delete users)
-
-**UI/UX Design:**
-- **Professional ERP Layout**: Collapsible sidebar navigation with menu items and icons
-- **Top Bar**: Blue header with system title and "ERP Management" subtitle
-- **Data Tables**: Professional grid views with search functionality and action buttons (Edit/Delete)
-- **Modal Forms**: Add/Edit operations displayed in overlay modal dialogs instead of full-screen forms
-- **Responsive Design**: Clean, modern styling with proper spacing, shadows, and color scheme
-- **Color Palette**: Blue primary (#3b82f6), dark sidebar (#1e293b), green success (#10b981), red delete (#ef4444)
+The frontend is built with React Native (Expo framework) for cross-platform compatibility (Android, iOS, Web via `react-native-web`). It follows a mobile-first design philosophy with responsive layouts. Key features include React Navigation for routing, React Hook Form for state management, and functional components with React Hooks. UI/UX emphasizes a professional ERP layout with a collapsible sidebar, a blue-themed top bar, data tables with search and action buttons, and modal forms for Add/Edit operations. The application is fully responsive with mobile breakpoint at width < 768px. Image handling uses Expo APIs for capturing/selecting photos, uploaded as base64 or multipart data. A cross-platform branch selection system is implemented, allowing users to select an active branch after login, with session persistence.
 
 ### Backend Architecture
-
-**Technology Stack:**
-- FastAPI framework for REST API
-- SQLAlchemy ORM for database abstraction
-- Alembic for database migrations
-- PostgreSQL as the relational database
-
-**Key Design Decisions:**
-- **No File Storage**: Images are stored directly in PostgreSQL as BYTEA (binary) columns instead of file system storage. This simplifies deployment, eliminates file path management issues, and ensures data integrity through database transactions.
-- **RESTful API Design**: Standard REST endpoints following resource-oriented patterns (GET, POST, PUT, DELETE operations on resources).
-- **Database-First Migrations**: Alembic manages schema versioning, allowing controlled database evolution and rollback capability.
-- **CORS Enabled**: Wildcard CORS policy allows frontend to call API from any origin (suitable for development; should be restricted in production).
-
-**Data Models:**
-- **User**: User accounts with authentication (username, email, hashed password, role)
-- **Supplier**: Master data for suppliers with location information (state/city)
-- **VehicleEntry**: Records vehicle arrivals with foreign key to Supplier, includes binary fields for photos
-- **LabTest**: Quality test results linked to VehicleEntry, stores multiple wheat quality parameters (moisture, protein, gluten, impurities, etc.)
-
-**Architectural Patterns:**
-- Dependency Injection: FastAPI's Depends() for database session management
-- Repository Pattern: Database access through SQLAlchemy ORM sessions
-- Schema Validation: Pydantic models for request/response validation
+The backend is a REST API developed with FastAPI, using SQLAlchemy ORM for database abstraction and Alembic for migrations. PostgreSQL is the primary database. Architectural decisions include RESTful API design, database-first migrations, and a hybrid image storage approach (some images as BYTEA in DB, newer features like Unloading Entry images as files in a `/uploads` directory with paths stored in the DB). FastAPI serves static files for uploaded images. Data models include Supplier, VehicleEntry, LabTest, Claim, GodownMaster, UnloadingEntry, Machine, RouteConfiguration, and RouteStage, all with proper relationships and audit trails. A dynamic workflow system is implemented for managing machines and flexible route configurations with multiple stages.
 
 ### Data Storage
+PostgreSQL serves as the primary data store, utilizing relational structures with foreign key constraints. It supports binary image storage for older features and file path storage for newer image-heavy features. Tables include `suppliers`, `vehicle_entries`, `lab_tests`, `claims`, `godown_master`, `unloading_entries`, `machines`, `route_configurations`, `route_stages`, `bins`, `magnets`, `transfer_sessions`, `magnet_cleaning_records`, `route_magnet_mappings`, `branches`, `users`, and `user_branches`, all featuring `created_at` and `updated_at` timestamps.
 
-**PostgreSQL Database:**
-- Primary data store for all application data
-- Binary image storage using LargeBinary (BYTEA) column type
-- Relational structure with foreign key constraints maintaining referential integrity
+### System Design Choices
+- **Cross-Platform**: Single codebase for Android, iOS, and Web using Expo.
+- **Image Storage**: Hybrid approach; older image features store images as BYTEA in PostgreSQL, newer features store them as files in `backend/uploads`.
+- **Warehouse Management**: Comprehensive `GodownMaster` and `UnloadingEntry` system, including real-time capacity tracking and automated net weight calculation.
+- **Quality Claims**: Integrated `Claim` model linked to `LabTest` results, with status tracking.
+- **Dynamic Workflow System**: Flexible machine management and configurable routes with multiple stages (Godown, Magnet, Machine, Bin).
+- **Multi-Branch Support**: Users can be associated with multiple branches, with a dedicated branch selection mechanism.
+- **UI/UX**: Professional ERP-style interface with a collapsible sidebar, data tables, and modal forms, adapting to mobile and desktop views.
+- **Reliability**: Implemented static fallback data for external API dependencies (e.g., CoWIN API) to ensure continuous operation.
 
-**Schema Design:**
-- users table: user accounts with authentication credentials and role-based access
-- suppliers table: supplier master data
-- vehicle_entries table: vehicle entry records with supplier foreign key
-- lab_tests table: test results with vehicle_entry foreign key
-- Timestamps (created_at, updated_at) on all tables for audit trail
+## External Dependencies
 
-### External Dependencies
+### Third-Party APIs
+- **CoWIN API** (https://cdn-api.co-vin.in): Used for fetching Indian states and cities, with static data fallback for resilience.
 
-**Third-Party APIs:**
-- **CoWIN API** (https://cdn-api.co-vin.in): Free public API for fetching Indian states and cities (districts). Used for dependent dropdown functionality where city selection depends on state selection.
-  - **Fallback Strategy**: Static data provided for 33 Indian states and districts for UP, Maharashtra, and Delhi when API is unavailable
-  - **Flexible City Input**: Form automatically switches to text input when no city dropdown data is available, allowing manual entry
+### Frontend Libraries
+- `@react-navigation/native`, `@react-navigation/native-stack`: Navigation.
+- `@react-native-picker/picker`: Dropdown selection.
+- `@react-native-community/datetimepicker`: Date/time selection.
+- `expo-camera`, `expo-image-picker`: Camera and photo library access.
+- `axios`: HTTP client.
+- `react-hook-form`: Form state and validation.
+- `@react-native-async-storage/async-storage`: Cross-platform session storage.
 
-**Frontend Libraries:**
-- @react-navigation/native & native-stack: Navigation framework
-- @react-native-picker/picker: Dropdown selection component
-- @react-native-community/datetimepicker: Date/time selection
-- expo-camera & expo-image-picker: Camera and photo library access
-- axios: HTTP client for API communication
-- react-hook-form: Form state and validation management
+### Backend Libraries
+- `FastAPI`: Web framework.
+- `SQLAlchemy`: ORM and database toolkit.
+- `Alembic`: Database migration tool.
+- `Pydantic`: Data validation.
+- `psycopg2-binary`: PostgreSQL adapter.
 
-**Backend Libraries:**
-- FastAPI: Web framework with automatic OpenAPI documentation
-- SQLAlchemy: ORM and database toolkit
-- Alembic: Database migration tool
-- Pydantic: Data validation using Python type annotations
+### Environment Configuration
+- `DATABASE_URL`: PostgreSQL connection string.
+- `EXPO_PUBLIC_API_URL`: Frontend API endpoint (configured in `frontend/.env`).
 
-**Environment Configuration:**
-- DATABASE_URL environment variable for PostgreSQL connection string
-- Default connection: postgresql://localhost/gateentry
-- Connection pooling configured with pre-ping and recycle for reliability
+## Test Users & Login Credentials
+
+The application is seeded with the following test users for different roles:
+
+### Admin User
+- **Username**: `admin`
+- **Password**: `admin123`
+- **Role**: Admin
+- **Branches**: All branches (Main, North, South, East, West)
+
+### Manager User
+- **Username**: `manager`
+- **Password**: `manager123`
+- **Role**: Manager
+- **Branches**: Main Branch, North Branch
+
+### Operator User
+- **Username**: `operator`
+- **Password**: `operator123`
+- **Role**: Operator
+- **Branches**: Main Branch
+
+### Supervisor User
+- **Username**: `supervisor`
+- **Password**: `super123`
+- **Role**: Supervisor
+- **Branches**: South Branch, East Branch
+
+### Test Users
+- **Username**: `user1` / Password: `password123` (Main Branch)
+- **Username**: `user2` / Password: `password123` (North Branch)
 
 ## Recent Changes
 
-**October 2, 2025 - Complete Authentication & User Management System**
-- **Full JWT-Based Authentication**:
-  - Implemented secure JWT token-based authentication with access tokens
-  - Password hashing using bcrypt for secure credential storage
-  - Secure SECRET_KEY generation using Python's secrets module (secrets.token_urlsafe)
-  - Token-based session management with 24-hour token expiration
-- **User Management System**:
-  - Created User model with role-based access control (admin/user roles)
-  - Admin-only user management screen with full CRUD operations
-  - Pre-configured admin account (username: admin, password: admin123)
-  - User registration restricted to "user" role to prevent privilege escalation
-- **Security Hardening**:
-  - Protected all business endpoints (suppliers, vehicles, lab tests) with authentication
-  - Only authenticated users can access API endpoints
-  - Admin-only endpoints for user management operations
-  - Secure registration flow that prevents role-based privilege escalation
-- **Frontend Authentication**:
-  - Professional login screen with username/password form
-  - Token storage in AsyncStorage for persistent sessions
-  - Automatic token refresh and logout functionality
-  - User info display in Layout header with logout button
-  - Navigation updated with Users menu item (admin-only)
+### January 28, 2026
+- Implemented Dispatch Management system.
+- Added backend CRUD endpoints for `Dispatch` in `main.py`.
+- Created `DispatchManagementScreen.js` in the frontend with data table and modal forms.
+- Integrated dispatch management with customer orders and driver data.
+- Added dispatch management to the dashboard navigation.
 
-**October 2, 2025 - Professional ERP UI Transformation**
-- **Complete UI/UX Overhaul**: Transformed application into professional ERP-style interface
-  - Implemented sidebar navigation with collapsible menu and icons
-  - Added professional top bar with system branding
-  - Created reusable Layout, DataTable, and Modal components
-  - Replaced card-based screens with professional data table views
-  - Converted forms to modal-based Add/Edit dialogs
-- **Enhanced User Experience**:
-  - Added search functionality to all data tables
-  - Implemented Edit and Delete actions with confirmation dialogs
-  - Created professional dashboard with stats cards and quick actions
-  - Applied consistent color scheme and modern styling throughout
-- **Reliability Improvements**:
-  - Added static fallback data for Indian states and cities
-  - Implemented flexible city input (dropdown or text) for resilient data entry
-  - Ensured all CRUD operations work regardless of external API availability
+### November 19, 2025
+- Successfully imported and set up the project in Replit environment
+- Installed all frontend dependencies (750 npm packages)
+- Configured PostgreSQL database connection via DATABASE_URL environment variable
+- Ran all Alembic migrations to head (4c3fda579a0a) - created 20 database tables
+- Created default admin user for testing (username: admin, password: admin123)
+- Created 5 default branches (Main, North, South, East, West) and associated all with admin user
+- Fixed login redirection issue by ensuring users have branch associations
+- Fixed Pre-Cleaning view blank screen error by adding default props and proper prop spreading in CleaningReminder component
+- Configured frontend environment with proper API URL for Replit deployment
+- Verified both Backend API (port 8000) and Frontend (Expo on port 5000) workflows are running
+- Tested and confirmed login functionality is working end-to-end with proper branch selection
 
-**September 30, 2025**
-- Initial implementation completed with all three core modules:
-  - Supplier Master with dependent State/City dropdowns using CoWIN API
-  - Vehicle Entry with camera/image picker integration for bill and vehicle photos
-  - Lab Test form with auto-calculation of total impurities and dockage
-- Backend API running on port 8000 with all CRUD endpoints functional
-- Frontend web app running on port 5000 with React Native + Expo + react-native-web
-- Database migrations applied successfully
-- Image storage implemented directly in PostgreSQL as BYTEA columns
-- Auto-fetch of bill number when vehicle is selected in lab test form
-
-## Current Status
-
-The application is fully functional with professional ERP-style interface and complete authentication:
-- **Backend API**: FastAPI server on port 8000 with JWT-authenticated endpoints
-- **Frontend Web**: Professional Expo web app on port 5000 with ERP layout
-- **Database**: PostgreSQL with all tables and relationships configured
-- **Authentication**: Complete JWT-based authentication system with login and user management
-  - Default admin credentials: username "admin", password "admin123"
-  - Role-based access control (admin/user roles)
-  - All business endpoints protected with authentication
-  - Admin-only user management functionality
-- **UI/UX**: Complete professional transformation with sidebar navigation, data tables, and modal forms
-- **Features**: All CRUD operations (Create, Read, Update, Delete) working across all modules:
-  - User Management: Add/Edit/Delete users (admin-only) ✅
-  - Supplier Master: Add/Edit/Delete with flexible state/city input ✅
-  - Vehicle Entry: Add entries with photo capture (bill and vehicle photos) ✅
-  - Lab Test: Add comprehensive test data with auto-calculations ✅
-- **Security**: All endpoints require authentication, secure password hashing, JWT token management
-- **Reliability**: Static fallback data ensures functionality even when external APIs are unavailable
-
-## Replit Environment Configuration
-
-**October 2, 2025 - Fresh GitHub Import Successfully Configured**
-
-The application has been successfully imported from GitHub and configured to run in the Replit environment:
-
-### Backend Configuration
-- Python dependencies managed with `uv` (pyproject.toml)
-- FastAPI backend running on `0.0.0.0:8000`
-- PostgreSQL database provisioned using Replit's managed database service
-- Database connected via DATABASE_URL environment variable
-- Alembic migrations applied successfully on first run
-- All REST API endpoints tested and operational
-
-### Frontend Configuration
-- React Native web dependencies installed via npm
-- Expo web server configured to listen on all interfaces (0.0.0.0)
-- Running on port 5000 for Replit webview compatibility
-- Environment variable `EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0` set for proper proxy handling
-- Custom `webpack.config.js` with `allowedHosts: 'all'` for Replit iframe support
-- API client configured to use Replit domain with port 8000 for backend communication
-- Package.json updated with web script: `EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 expo start --web --port 5000`
-
-### Workflows
-- **Backend API**: `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000`
-  - Listens on port 8000
-  - Console output type (API server)
-- **Frontend**: `cd frontend && npm run web`
-  - Listens on port 5000
-  - Webview output type (main user interface)
-
-### Deployment Configuration
-- Deployment target: VM (stateful full-stack application with database)
-- Build command: `bash -c "cd frontend && npm install && cd ../backend && uv sync"`
-- Run command: `bash -c "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npm run web"`
-- Both backend and frontend services run concurrently in production
-
-### Import Verification
-Application successfully tested and verified:
-- ✅ **Backend API**: Health check endpoint responding correctly
-- ✅ **Database**: PostgreSQL provisioned, migrations applied, tables created
-- ✅ **Frontend**: Professional ERP dashboard rendering correctly
-- ✅ **Integration**: Frontend-backend communication working
-- ✅ **Deployment**: Production configuration complete
+### November 18, 2025
+- Set up PostgreSQL database with all required tables
+- Created test users and branches for login functionality
+- Configured Backend workflow (FastAPI on port 8000)
+- Configured Frontend workflow (Expo on port 5000)
+- Verified login system is working properly with backend connectivity

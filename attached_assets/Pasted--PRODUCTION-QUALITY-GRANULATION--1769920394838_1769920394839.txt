@@ -1,0 +1,146 @@
+/* ============================================================
+   PRODUCTION QUALITY & GRANULATION SCHEMA (CORRECTED)
+   ============================================================ */
+
+
+/* ============================================================
+   1. GRANULATION TEMPLATE (PER FINISHED GOOD)
+   ============================================================ */
+
+CREATE TABLE finished_good_granulation_template (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+    finished_good_id INTEGER NOT NULL,
+
+    columns_definition JSONB NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_fg_granulation_template_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_fg_granulation_template_fg
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id)
+
+);
+
+
+
+/* ============================================================
+   2. PRODUCTION ORDER – GRANULATION RESULT
+   ============================================================ */
+
+CREATE TABLE production_order_granulation (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+    production_order_id INTEGER NOT NULL,
+    finished_good_id INTEGER NOT NULL,
+
+    granulation_values JSONB NOT NULL,
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_po_granulation_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_po_granulation_po
+        FOREIGN KEY (production_order_id)
+        REFERENCES production_orders(id),
+
+    CONSTRAINT fk_po_granulation_fg
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id)
+
+);
+
+
+
+/* ============================================================
+   3. PRODUCTION ORDER – MAIDA RESULT (QUALITY DATA)
+   ============================================================ */
+
+CREATE TABLE production_order_maida_result (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+    production_order_id INTEGER NOT NULL,
+    finished_good_id INTEGER NOT NULL,
+
+    moisture_percent NUMERIC(5,2),
+    ash_percent NUMERIC(6,3),
+    dry_gluten_percent NUMERIC(6,2),
+    wet_gluten_percent NUMERIC(6,2),
+    sv_value NUMERIC(6,2),
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_maida_result_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_maida_result_po
+        FOREIGN KEY (production_order_id)
+        REFERENCES production_orders(id),
+
+    CONSTRAINT fk_maida_result_fg
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id)
+
+);
+
+
+
+/* ============================================================
+   4. PRODUCTION ORDER – EXTRACTION RESULT
+   ============================================================ */
+
+CREATE TABLE production_order_extraction (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+    production_order_id INTEGER NOT NULL,
+    finished_good_id INTEGER NOT NULL,
+
+    extraction_percent NUMERIC(6,2) NOT NULL,
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_extraction_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_extraction_po
+        FOREIGN KEY (production_order_id)
+        REFERENCES production_orders(id),
+
+    CONSTRAINT fk_extraction_fg
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id)
+
+);
+
+
+
+/* ============================================================
+   5. INDEXES (PERFORMANCE / REPORTING)
+   ============================================================ */
+
+CREATE INDEX idx_po_granulation_branch
+ON production_order_granulation(branch_id, production_order_id);
+
+CREATE INDEX idx_po_maida_branch
+ON production_order_maida_result(branch_id, production_order_id);
+
+CREATE INDEX idx_po_extraction_branch
+ON production_order_extraction(branch_id, production_order_id);

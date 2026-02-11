@@ -1,0 +1,34 @@
+2026-01-28 10:57:04.83
+{message: "Network Error", stack: "AxiosError: Network Error at XMLHttpRequest.handleError (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:82790:21) at Axios.request (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:80820:43)"}
+message: "Network Error"
+stack: "AxiosError: Network Error at XMLHttpRequest.handleError (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:82790:21) at Axios.request (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:80820:43)"
+2026-01-28 10:57:05.18
+✅ API Response:
+200
+/drivers
+2026-01-28 10:57:05.18
+✅ API Response:
+200
+/customer-orders
+2026-01-28 10:57:05.39
+❌ API Error:
+{message: "Network Error", url: "/dispatches"}
+2026-01-28 10:57:05.39
+{message: "Network Error", stack: "AxiosError: Network Error at XMLHttpRequest.handleError (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:82790:21) at Axios.request (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:80820:43)"}
+2026-01-28 10:57:05.58
+✅ API Response:
+200
+/drivers
+2026-01-28 10:57:05.95
+✅ API Response:
+200
+/customer-orders
+2026-01-28 10:57:05.95
+❌ API Error:
+{message: "Network Error", url: "/dispatches"}
+2026-01-28 10:57:05.95
+{message: "Network Error", stack: "AxiosError: Network Error at XMLHttpRequest.handleError (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:82790:21) at Axios.request (https://6f00dd36-f89e-4c49-98cd-451b0a4d4e84-00-37jdfsvvw0djn.janeway.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:80820:43)"}
+2026-01-28 10:57:06.71
+✅ API Response:
+200
+/customer-orders

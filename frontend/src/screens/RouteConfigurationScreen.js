@@ -1,0 +1,623 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import Layout from '../components/Layout';
+import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
+import { routeConfigurationApi, magnetApi, machineApi, godownApi, binApi } from '../api/client';
+import { showToast, showAlert, showConfirm } from '../utils/customAlerts';
+import colors from '../theme/colors';
+
+export default function RouteConfigurationScreen({ navigation }) {
+  const [routes, setRoutes] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [currentRoute, setCurrentRoute] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const [magnets, setMagnets] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [godowns, setGodowns] = useState([]);
+  const [bins, setBins] = useState([]);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    sourceType: 'godown', // New field to track source type selection
+    stages: [
+      { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
+      { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
+    ],
+  });
+
+  const componentTypes = ['godown', 'magnet', 'machine', 'bin'];
+  const firstStageTypes = ['godown', 'bin'];
+
+
+
+  useEffect(() => {
+    loadRoutes();
+    loadComponents();
+  }, []);
+
+  const loadComponents = async () => {
+    try {
+      const [magnetsRes, machinesRes, godownsRes, binsRes] = await Promise.all([
+        magnetApi.getAll(),
+        machineApi.getAll(),
+        godownApi.getAll(),
+        binApi.getAll(),
+      ]);
+      setMagnets(magnetsRes.data);
+      setMachines(machinesRes.data);
+      setGodowns(godownsRes.data);
+      setBins(binsRes.data);
+    } catch (error) {
+      console.error('Error loading components:', error);
+      showToast('Failed to load components', 'error');
+    }
+  };
+
+  const loadRoutes = async () => {
+    try {
+      const response = await routeConfigurationApi.getAll();
+      setRoutes(response.data);
+    } catch (error) {
+      console.error('Error loading routes:', error);
+      showToast('Failed to load routes', 'error');
+    }
+  };
+
+  const getComponentsForType = (type) => {
+    switch (type) {
+      case 'godown':
+        return godowns;
+      case 'magnet':
+        return magnets;
+      case 'machine':
+        return machines;
+      case 'bin':
+        return bins;
+      default:
+        return [];
+    }
+  };
+
+  const getComponentLabel = (type, componentId) => {
+    const components = getComponentsForType(type);
+    const component = components.find((c) => c.id === componentId);
+    if (!component) return 'Not selected';
+
+    switch (type) {
+      case 'godown':
+        return component.name;
+      case 'magnet':
+        return component.name;
+      case 'machine':
+        return component.name;
+      case 'bin':
+        return component.bin_number;
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const openAddModal = () => {
+    setEditMode(false);
+    setCurrentRoute(null);
+    setFormData({
+      name: '',
+      description: '',
+      sourceType: 'godown',
+      stages: [
+        { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
+        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
+      ],
+    });
+    setModalVisible(true);
+  };
+
+  const openEditModal = (route) => {
+    setEditMode(true);
+    setCurrentRoute(route);
+    const sourceType = route.stages?.[0]?.component_type || 'godown';
+    setFormData({
+      name: route.name,
+      description: route.description || '',
+      sourceType: sourceType,
+      stages: route.stages || [
+        { sequence_no: 1, component_type: sourceType, component_id: null, interval_hours: null },
+        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
+      ],
+    });
+    setModalVisible(true);
+  };
+
+  const handleAddStage = () => {
+    const stages = [...formData.stages];
+    const lastStage = stages[stages.length - 1];
+
+    const newStage = {
+      sequence_no: stages.length,
+      component_type: 'magnet',
+      component_id: null,
+      interval_hours: null,
+    };
+
+    stages[stages.length - 1] = newStage;
+
+    stages.push({
+      sequence_no: stages.length + 1,
+      component_type: 'bin',
+      component_id: lastStage.component_id,
+      interval_hours: null,
+    });
+
+    setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
+  };
+
+  const handleRemoveStage = (index) => {
+    if (index === 0 || index === formData.stages.length - 1) {
+      showAlert('Error', 'Cannot remove first or last stage', 'error');
+      return;
+    }
+
+    const stages = formData.stages.filter((_, idx) => idx !== index);
+    setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
+  };
+
+  const handleSourceTypeChange = (value) => {
+    const stages = [...formData.stages];
+    stages[0] = { ...stages[0], component_type: value, component_id: null, interval_hours: null };
+    setFormData({ ...formData, sourceType: value, stages });
+  };
+
+  const handleStageChange = (index, field, value) => {
+    const stages = [...formData.stages];
+    stages[index] = { ...stages[index], [field]: value };
+
+    if (field === 'component_type') {
+      stages[index].component_id = null;
+    }
+
+    setFormData({ ...formData, stages });
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      showAlert('Validation Error', 'Route name is required', 'error');
+      return;
+    }
+
+    for (let i = 0; i < formData.stages.length; i++) {
+      const stage = formData.stages[i];
+      // Convert component_id to integer if it's a string
+      const componentId = stage.component_id ? parseInt(stage.component_id) : null;
+
+      if (!componentId) {
+        showAlert('Validation Error', `Please select a component for stage ${i + 1}`, 'error');
+        return;
+      }
+
+      // Update the component_id to be an integer
+      formData.stages[i].component_id = componentId;
+
+      if (stage.component_type === 'magnet') {
+        const intervalValue = parseFloat(stage.interval_hours);
+        if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
+          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`, 'error');
+          return;
+        }
+        // Convert string to float for submission
+        formData.stages[i].interval_hours = intervalValue;
+      }
+    }
+
+    if (formData.stages.length < 2) {
+      showAlert('Validation Error', 'At least 2 stages (godown and bin) are required', 'error');
+      return;
+    }
+
+    if (formData.sourceType !== 'godown' && formData.sourceType !== 'bin') {
+      showAlert('Validation Error', 'Source type must be a godown or bin', 'error');
+      return;
+    }
+
+    if (formData.stages[formData.stages.length - 1].component_type !== 'bin') {
+      showAlert('Validation Error', 'Last stage must be a bin', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (editMode) {
+        await routeConfigurationApi.update(currentRoute.id, formData);
+        showToast('Route Configuration updated successfully!', 'success');
+      } else {
+        await routeConfigurationApi.create(formData);
+        showToast('Route Configuration created successfully!', 'success');
+      }
+      setModalVisible(false);
+      loadRoutes();
+    } catch (error) {
+      console.error('Error saving route:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to save route';
+      showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (route) => {
+    showConfirm(
+      'Delete Route',
+      `Are you sure you want to delete route "${route.name}"?`,
+      async () => {
+        try {
+          await routeConfigurationApi.delete(route.id);
+          showToast('Route Configuration deleted successfully!', 'success');
+          loadRoutes();
+        } catch (error) {
+          console.error('Error deleting route:', error);
+          const errorMessage = error.response?.data?.detail || 'Failed to delete route';
+          showToast(errorMessage, 'error');
+        }
+      }
+    );
+  };
+
+  const columns = [
+    { label: 'ID', field: 'id', flex: 0.5, key: 'id' },
+    { label: 'Name', field: 'name', flex: 1.5, key: 'name' },
+    { label: 'Description', field: 'description', flex: 2, key: 'description' },
+    { label: 'Stages', field: 'stages', flex: 0.8, key: 'stages_count', render: (value, row) => row.stages?.length || 0 },
+  ];
+
+  const renderStage = (stage, index) => {
+    const isFirst = index === 0;
+    const isLast = index === formData.stages.length - 1;
+    const components = getComponentsForType(stage.component_type);
+
+    return (
+      <View key={index} style={styles.stageContainer}>
+        <View style={styles.stageHeader}>
+          <Text style={styles.stageTitle}>Stage {stage.sequence_no}</Text>
+          {!isFirst && !isLast && (
+            <TouchableOpacity
+              style={styles.removeStageButton}
+              onPress={() => handleRemoveStage(index)}
+            >
+              <Text style={styles.removeStageText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            Component Type {isFirst ? '(Locked - Set by Source Type)' : isLast ? '(Last = Bin)' : ''}
+          </Text>
+          <View style={[styles.pickerContainer, (isFirst || isLast) && styles.disabledPicker]}>
+            <Picker
+              selectedValue={stage.component_type}
+              onValueChange={(value) => handleStageChange(index, 'component_type', value)}
+              style={styles.picker}
+              enabled={!isFirst && !isLast}
+            >
+              {(isFirst ? [formData.sourceType] : isLast ? ['bin'] : componentTypes).map((type) => (
+                <Picker.Item key={type} label={type.charAt(0).toUpperCase() + type.slice(1)} value={type} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Select Component *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={stage.component_id}
+              onValueChange={(value) => handleStageChange(index, 'component_id', parseInt(value))}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select..." value={null} />
+              {components.map((component) => {
+                const label = component.name || component.bin_number || `ID: ${component.id}`;
+                return <Picker.Item key={component.id} label={label} value={component.id} />;
+              })}
+            </Picker>
+          </View>
+        </View>
+
+        {stage.component_type === 'magnet' && (
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Cleaning Interval (Hours) *</Text>
+            <TextInput
+              style={styles.input}
+              value={stage.interval_hours?.toString() || ''}
+              onChangeText={(text) => {
+                // Allow empty string, digits, and decimal point
+                if (text === '' || /^\d*\.?\d*$/.test(text)) {
+                  const value = text === '' ? null : text;
+                  handleStageChange(index, 'interval_hours', value);
+                }
+              }}
+              placeholder="Enter cleaning interval in hours (e.g., 0.001 for testing)"
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.helperText}>
+              Magnet cleaning interval in decimal hours (e.g., 0.001 for testing, 3 for 3 hours)
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderModalContent = () => (
+    <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Route Name *</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.name}
+          onChangeText={(text) => setFormData({ ...formData, name: text })}
+          placeholder="Enter route name"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={formData.description}
+          onChangeText={(text) => setFormData({ ...formData, description: text })}
+          placeholder="Enter description"
+          multiline
+          numberOfLines={3}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Source Type (First Stage) *</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={formData.sourceType}
+            onValueChange={handleSourceTypeChange}
+            style={styles.picker}
+          >
+            <Picker.Item label="Godown" value="godown" />
+            <Picker.Item label="Bin" value="bin" />
+          </Picker>
+        </View>
+        <Text style={styles.helperText}>
+          This will set the component type for Stage 1 and cannot be changed after selection
+        </Text>
+      </View>
+
+      <View style={styles.stagesSection}>
+        <View style={styles.stagesSectionHeader}>
+          <Text style={styles.sectionTitle}>Workflow Stages</Text>
+          <TouchableOpacity
+            style={styles.addStageButton}
+            onPress={handleAddStage}
+          >
+            <Text style={styles.addStageText}>+ Add Stage</Text>
+          </TouchableOpacity>
+        </View>
+
+        {formData.stages.map((stage, index) => renderStage(stage, index))}
+      </View>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, styles.cancelButton]}
+          onPress={() => setModalVisible(false)}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Saving...' : editMode ? 'Update' : 'Create'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
+  return (
+    <Layout navigation={navigation} title="Route Configuration">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Dynamic Route Configuration</Text>
+          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+            <Text style={styles.addButtonText}>+ Add Route</Text>
+          </TouchableOpacity>
+        </View>
+
+        <DataTable
+          columns={columns}
+          data={routes}
+          onEdit={openEditModal}
+          onDelete={handleDelete}
+        />
+
+        <Modal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          title={editMode ? 'Edit Route' : 'Add New Route'}
+        >
+          {renderModalContent()}
+        </Modal>
+      </View>
+    </Layout>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalScrollContent: {
+    flex: 1,
+  },
+  formGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    marginBottom: 5,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  textArea: {
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  disabledPicker: {
+    backgroundColor: '#f0f0f0',
+  },
+  picker: {
+    height: 40,
+  },
+  stagesSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  stagesSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  addStageButton: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 5,
+  },
+  addStageText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  stageContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  stageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  stageTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  removeStageButton: {
+    backgroundColor: '#dc3545',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeStageText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    gap: 10,
+  },
+  button: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#6c757d',
+  },
+  submitButton: {
+    backgroundColor: colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+});

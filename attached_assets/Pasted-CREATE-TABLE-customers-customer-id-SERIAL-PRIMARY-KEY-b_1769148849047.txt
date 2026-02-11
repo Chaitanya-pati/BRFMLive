@@ -1,0 +1,153 @@
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL,
+ 
+    customer_name VARCHAR(150) NOT NULL,
+    contact_person VARCHAR(150),
+    contact_person_mobile VARCHAR(15),
+ 
+    phone VARCHAR(20),
+    email VARCHAR(150),
+ 
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    pin_code VARCHAR(10),
+ 
+    gst_number VARCHAR(20),
+ 
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ 
+    CONSTRAINT customers_branch_id_fkey
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches (id)
+);
+ 
+CREATE TABLE customer_orders (
+    order_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL,
+ 
+    order_code VARCHAR(50) UNIQUE NOT NULL,
+    customer_id INT NOT NULL,
+ 
+    order_status VARCHAR(30) DEFAULT 'PENDING',
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_time TIMESTAMP,
+    remarks TEXT,
+ 
+    CONSTRAINT fk_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES customers (customer_id),
+ 
+    CONSTRAINT customer_orders_branch_id_fkey
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches (id)
+);
+ 
+CREATE TABLE order_items (
+    order_item_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL,
+ 
+    order_id INT NOT NULL,
+    finished_good_id INT NOT NULL,
+ 
+    -- Loose orders (tons)
+    quantity_ton NUMERIC(10,2),
+    price_per_ton NUMERIC(10,2),
+ 
+    -- Bag-based orders
+    bag_size_id INT,
+    number_of_bags INT,
+    price_per_bag NUMERIC(10,2),
+ 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ 
+    CONSTRAINT fk_order
+        FOREIGN KEY (order_id)
+        REFERENCES customer_orders (order_id)
+        ON DELETE CASCADE,
+ 
+    CONSTRAINT fk_finished_goods
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods (id),
+ 
+    CONSTRAINT fk_bag_size
+        FOREIGN KEY (bag_size_id)
+        REFERENCES bag_sizes (id),
+ 
+    CONSTRAINT order_items_branch_id_fkey
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches (id),
+ 
+    CONSTRAINT chk_order_item_type CHECK (
+        (
+            bag_size_id IS NULL
+            AND quantity_ton IS NOT NULL
+            AND price_per_ton IS NOT NULL
+        )
+        OR
+        (
+            bag_size_id IS NOT NULL
+            AND number_of_bags IS NOT NULL
+            AND price_per_bag IS NOT NULL
+        )
+    )
+);
+ 
+CREATE TABLE drivers (
+    driver_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL,
+ 
+    driver_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20),
+    license_number VARCHAR(50) UNIQUE,
+ 
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+ 
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ 
+    CONSTRAINT drivers_branch_id_fkey
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches (id)
+);
+ 
+CREATE TABLE dispatch (
+    dispatch_id SERIAL PRIMARY KEY,
+    branch_id INT NOT NULL,
+ 
+    order_id INT NOT NULL,
+    driver_id INT NOT NULL,
+ 
+    dispatched_quantity_ton NUMERIC(10,2) NOT NULL,
+ 
+    state VARCHAR(100),
+    city VARCHAR(100),
+    warehouse_loader VARCHAR(150),
+ 
+    actual_dispatch_date TIMESTAMP NOT NULL,
+    delivery_date TIMESTAMP,
+ 
+    status VARCHAR(30) DEFAULT 'DISPATCHED',
+    -- DISPATCHED | IN_TRANSIT | DELIVERED | CANCELLED
+ 
+    driver_photo TEXT,
+    remarks TEXT,
+ 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ 
+    CONSTRAINT fk_dispatch_order
+        FOREIGN KEY (order_id)
+        REFERENCES customer_orders (order_id),
+ 
+    CONSTRAINT fk_dispatch_driver
+        FOREIGN KEY (driver_id)
+        REFERENCES drivers (driver_id),
+ 
+    CONSTRAINT dispatch_branch_id_fkey
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches (id)
+); i had created tavbles for this in database so now u just need to update the modals give corrected sentenece so i wiull give to replit agent and done work

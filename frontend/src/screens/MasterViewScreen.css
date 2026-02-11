@@ -1,0 +1,61 @@
+
+/* Custom Intro.js theme for Master View */
+.introjs-tooltip {
+  max-width: 500px !important;
+  min-width: 350px !important;
+}
+
+.introjs-tooltiptext {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  padding: 15px !important;
+}
+
+.introjs-tooltip-title {
+  color: #2c3e50 !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin-bottom: 10px !important;
+}
+
+.introjs-button {
+  text-shadow: none !important;
+  font-weight: 600 !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+}
+
+.introjs-nextbutton {
+  background: #2c3e50 !important;
+  color: white !important;
+}
+
+.introjs-prevbutton {
+  background: #6b7280 !important;
+  color: white !important;
+}
+
+.introjs-skipbutton {
+  color: #6b7280 !important;
+}
+
+.introjs-donebutton {
+  background: #10b981 !important;
+  color: white !important;
+}
+
+.introjs-progressbar {
+  background-color: #2c3e50 !important;
+}
+
+.introjs-bullets ul li a.active {
+  background: #2c3e50 !important;
+}
+
+/* Highlight overlay */
+.introjs-helperLayer {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 2px solid #2c3e50 !important;
+  box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.5) !important;
+}

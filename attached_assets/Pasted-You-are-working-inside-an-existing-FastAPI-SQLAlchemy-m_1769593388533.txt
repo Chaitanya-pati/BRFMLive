@@ -1,0 +1,119 @@
+You are working inside an existing FastAPI + SQLAlchemy monolithic app.
+
+Context (VERY IMPORTANT):
+- I already have a working Dispatch module.
+- Existing endpoint: POST /api/dispatches
+- Existing model: Dispatch (order-level dispatch)
+- Existing tables: customer_orders, order_items, dispatch
+- I have ALREADY CREATED a new DB table called `dispatch_items`.
+
+GOAL:
+Extend dispatch functionality to support ITEM-WISE DISPATCH TRACKING
+WITHOUT breaking any existing APIs or behavior.
+
+-----------------------------------
+WHAT YOU MUST DO
+-----------------------------------
+
+1️⃣ ADD SQLALCHEMY MODEL
+Create a new SQLAlchemy model `DispatchItem` mapped to `dispatch_items` table:
+Fields:
+- id (PK)
+- dispatch_id (FK → dispatch.dispatch_id)
+- order_item_id (FK → order_items.order_item_id)
+- finished_good_id (FK → finished_goods.id)
+- dispatched_qty_ton
+- bag_size_id
+- dispatched_bags
+- item_status
+- created_at
+
+Add relationships:
+- Dispatch.items → relationship("DispatchItem")
+- OrderItem.dispatch_items → relationship("DispatchItem") (optional)
+
+DO NOT change existing Dispatch fields.
+
+-----------------------------------
+
+2️⃣ EXTEND DISPATCH CREATE API (CRITICAL)
+Endpoint:
+POST /api/dispatches
+
+Enhance it to ALSO accept item-wise dispatch data like:
+
+dispatch_items: [
+  {
+    order_item_id,
+    finished_good_id,
+    dispatched_qty_ton,
+    bag_size_id,
+    dispatched_bags
+  }
+]
+
+Flow:
+- Create Dispatch record FIRST (existing logic stays)
+- Then insert multiple DispatchItem records
+- Auto-calculate:
+  Dispatch.dispatched_quantity_ton = SUM(dispatch_items.dispatched_qty_ton)
+  Dispatch.dispatched_bags = SUM(dispatch_items.dispatched_bags)
+
+-----------------------------------
+
+3️⃣ VALIDATION RULES (MANDATORY)
+Before inserting DispatchItem:
+
+- Remaining qty per order item =
+  order_items.quantity_ton
+  - SUM(dispatch_items.dispatched_qty_ton)
+
+- dispatched_qty_ton MUST NOT exceed remaining qty
+
+- Bag validation:
+  (bag_size.weight_kg × dispatched_bags) / 1000 ≈ dispatched_qty_ton
+
+If validation fails → raise HTTP 400.
+
+-----------------------------------
+
+4️⃣ STATUS AUTO-UPDATE (NO MANUAL STATUS)
+OrderItem status:
+- PENDING → no dispatch
+- PARTIAL → partially dispatched
+- DELIVERED → fully dispatched
+
+CustomerOrder status:
+- CONFIRMED → no dispatch
+- PARTIAL → some items delivered
+- DELIVERED → all items delivered
+
+Statuses must be DERIVED from dispatch_items data.
+
+-----------------------------------
+
+5️⃣ READ APIs UPDATE
+- GET /api/dispatches/{id}
+  → return dispatch with item-wise details
+
+- Order details API
+  → return for each order item:
+    ordered_qty,
+    dispatched_qty,
+    remaining_qty
+
+-----------------------------------
+
+6️⃣ CONSTRAINTS (VERY IMPORTANT)
+❌ DO NOT remove or rename any existing fields  
+❌ DO NOT change existing response models unless extending  
+❌ DO NOT break backward compatibility  
+✅ Existing dispatch without items must still work  
+
+-----------------------------------
+
+DELIVERABLES:
+- SQLAlchemy model
+- Updated create-dispatch API
+- Validation logic
+- Status update logic

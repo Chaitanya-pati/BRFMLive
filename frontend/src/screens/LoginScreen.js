@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { authApi } from '../api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { API_BASE_URL } from '../api/client';
+import { storage } from '../utils/storage';
+import { useBranch } from '../context/BranchContext';
+import colors from '../theme/colors';
 
-export default function LoginScreen({ onLoginSuccess }) {
+export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { setActiveBranch, setUserBranches } = useBranch();
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -15,18 +18,68 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
 
     setLoading(true);
+    const loginUrl = `${API_BASE_URL}/api/login`;
+    console.log('🔐 Attempting login with:', {
+      username,
+      apiUrl: API_BASE_URL,
+      fullUrl: loginUrl,
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A',
+      port: typeof window !== 'undefined' ? window.location.port : 'N/A'
+    });
+
     try {
-      const response = await authApi.login({ username, password });
-      const { access_token } = response.data;
-      
-      await AsyncStorage.setItem('auth_token', access_token);
-      const userResponse = await authApi.getCurrentUser();
-      await AsyncStorage.setItem('user_data', JSON.stringify(userResponse.data));
-      
-      onLoginSuccess(userResponse.data, access_token);
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log('📡 Login response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response received:', text.substring(0, 200));
+        throw new Error('Server returned invalid response. Please check if backend is running on port 8000.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Login failed:', errorData);
+        throw new Error(errorData.detail || 'Invalid username or password');
+      }
+
+      const data = await response.json();
+      console.log('✅ Login successful:', data);
+
+      await storage.setUserData(data);
+      await storage.setItem('userId', String(data.user_id));
+      await storage.setItem('username', data.username);
+      await storage.setItem('userRole', data.role || 'user');
+      await storage.setItem('userName', data.full_name || data.username);
+
+      // Store branches
+      if (data.branches && data.branches.length > 0) {
+        await storage.setItem('userBranches', JSON.stringify(data.branches));
+      }
+
+      navigation.replace('BranchSelection');
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Login Failed', error.response?.data?.detail || 'Invalid username or password');
+      console.error('❌ Login error:', error);
+
+      let errorMessage = error.message || 'Invalid username or password';
+
+      // Check if it's a network/connection error
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        errorMessage = `Cannot connect to backend server.\n\nBackend URL: ${API_BASE_URL}\n\nPlease ensure:\n1. Backend server is running (port 8000)\n2. Click the Run button to start both servers\n3. Wait for "Uvicorn running on http://0.0.0.0:8000" message\n\nIf issue persists, check the console logs for API URL details.`;
+      }
+
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -35,44 +88,39 @@ export default function LoginScreen({ onLoginSuccess }) {
   return (
     <View style={styles.container}>
       <View style={styles.loginBox}>
-        <Text style={styles.title}>Gate Entry & Lab Testing System</Text>
-        <Text style={styles.subtitle}>Login to Continue</Text>
-        
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-          />
-        </View>
+        <Text style={styles.title}>Login</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
+        <Text style={styles.label}>Username</Text>
+        <TextInput
+          style={styles.input}
+          value={username}
+          onChangeText={setUsername}
+          placeholder="Enter username"
+          autoCapitalize="none"
+          editable={!loading}
+        />
 
-        <TouchableOpacity 
-          style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter password"
+          secureTextEntry
+          editable={!loading}
+        />
+
+        <TouchableOpacity
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={styles.loginButtonText}>
-            {loading ? 'Logging in...' : 'Login'}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.loginButtonText}>Login</Text>
+          )}
         </TouchableOpacity>
-
-        <Text style={styles.defaultCredentials}>
-          Default credentials: admin / admin123
-        </Text>
       </View>
     </View>
   );
@@ -81,71 +129,58 @@ export default function LoginScreen({ onLoginSuccess }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   loginBox: {
-    backgroundColor: 'white',
-    padding: 40,
-    borderRadius: 8,
-    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 30,
+    width: '100%',
     maxWidth: 400,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: colors.primary,
+    marginBottom: 30,
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  inputContainer: {
-    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#334155',
+    color: '#333',
     marginBottom: 8,
+    marginTop: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 6,
+    borderColor: '#ddd',
+    borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f9f9f9',
   },
   loginButton: {
-    backgroundColor: '#3b82f6',
-    padding: 14,
-    borderRadius: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    padding: 15,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 25,
   },
   loginButtonDisabled: {
-    backgroundColor: '#93c5fd',
+    backgroundColor: '#ccc',
   },
   loginButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  defaultCredentials: {
-    marginTop: 20,
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#64748b',
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

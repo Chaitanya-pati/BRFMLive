@@ -1,7 +1,25 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal as RNModal, ScrollView } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal as RNModal, ScrollView, useWindowDimensions, Platform } from 'react-native';
+import colors from '../theme/colors';
 
 export default function Modal({ visible, onClose, title, children, width = '80%' }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    if (visible && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
+  }, [visible]);
+
+  const getModalWidth = () => {
+    if (isMobile) return '95%';
+    if (isTablet) return '85%';
+    return width;
+  };
+
   return (
     <RNModal
       visible={visible}
@@ -10,14 +28,21 @@ export default function Modal({ visible, onClose, title, children, width = '80%'
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modal, { width }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+        <View style={[
+          styles.modalContainer,
+          { width: getModalWidth() },
+          isMobile && styles.modalContainerMobile,
+        ]}>
+          <View style={[styles.header, isMobile && styles.headerMobile]}>
+            <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.content}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={[styles.content, isMobile && styles.contentMobile]}
+          >
             {children}
           </ScrollView>
         </View>
@@ -29,19 +54,21 @@ export default function Modal({ visible, onClose, title, children, width = '80%'
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: Platform.select({ web: 20, default: 0 }),
   },
-  modal: {
-    backgroundColor: 'white',
+  modalContainer: {
+    backgroundColor: colors.surface,
     borderRadius: 12,
     maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  },
+  modalContainerMobile: {
+    borderRadius: 0,
+    maxHeight: '100%',
+    height: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -49,21 +76,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.outlineVariant,
+  },
+  headerMobile: {
+    padding: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontWeight: '700',
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  titleMobile: {
+    fontSize: 18,
   },
   closeButton: {
     padding: 4,
+    marginLeft: 12,
   },
-  closeText: {
+  closeButtonText: {
     fontSize: 24,
-    color: '#6b7280',
+    color: colors.textSecondary,
+    fontWeight: '300',
   },
   content: {
-    padding: 20,
+    flex: 1,
+    padding: 16,
+  },
+  contentMobile: {
+    padding: 10,
   },
 });

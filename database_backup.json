@@ -1,0 +1,20 @@
+{
+  "backup_date": "2025-10-03T05:51:53.704568",
+  "tables": {
+    "suppliers": [
+      {
+        "id": 1,
+        "supplier_name": "sdaf",
+        "contact_person": "fsagas",
+        "phone": "32535",
+        "address": "ewr",
+        "state": "Karnataka",
+        "city": "Belgaum",
+        "created_at": "2025-10-03 05:36:32.868437",
+        "updated_at": "2025-10-03 05:36:32.868441"
+      }
+    ],
+    "vehicle_entries": [],
+    "lab_tests": []
+  }
+}

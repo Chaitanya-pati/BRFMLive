@@ -1,0 +1,124 @@
+
+
+CREATE TABLE finished_goods_godown_master (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+
+    godown_code VARCHAR(50) NOT NULL,
+    godown_name VARCHAR(120) NOT NULL,
+
+    capacity_bags INTEGER,
+    location VARCHAR(200),
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_fg_godown_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id)
+
+);
+
+CREATE TABLE finished_goods_godown_stock (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+    godown_id INTEGER NOT NULL,
+
+    finished_good_id INTEGER NOT NULL,
+    bag_size_id INTEGER NOT NULL,
+
+    quantity_bags INTEGER NOT NULL DEFAULT 0,
+
+    updated_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_fg_stock_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_fg_stock_godown
+        FOREIGN KEY (godown_id)
+        REFERENCES finished_goods_godown_master(id),
+
+    CONSTRAINT fk_fg_stock_finished_good
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id),
+
+    CONSTRAINT fk_fg_stock_bag_size
+        FOREIGN KEY (bag_size_id)
+        REFERENCES bag_sizes(id)
+
+);
+
+
+
+
+CREATE TABLE finished_goods_godown_movement (
+    id SERIAL PRIMARY KEY,
+
+    branch_id INTEGER NOT NULL,
+
+    movement_type VARCHAR(20) NOT NULL,
+    -- IN / OUT / TRANSFER
+
+    from_godown_id INTEGER,
+    to_godown_id INTEGER,
+
+    finished_good_id INTEGER NOT NULL,
+    bag_size_id INTEGER NOT NULL,
+
+    quantity_bags INTEGER NOT NULL,
+
+    reference_id INTEGER,
+
+
+    remarks TEXT,
+
+    created_at TIMESTAMP WITHOUT TIME ZONE
+        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_fg_move_branch
+        FOREIGN KEY (branch_id)
+        REFERENCES public.branches(id),
+
+    CONSTRAINT fk_fg_move_from_godown
+        FOREIGN KEY (from_godown_id)
+        REFERENCES finished_goods_godown_master(id),
+
+    CONSTRAINT fk_fg_move_to_godown
+        FOREIGN KEY (to_godown_id)
+        REFERENCES finished_goods_godown_master(id),
+
+    CONSTRAINT fk_fg_move_finished_good
+        FOREIGN KEY (finished_good_id)
+        REFERENCES finished_goods(id),
+
+    CONSTRAINT fk_fg_move_bag_size
+        FOREIGN KEY (bag_size_id)
+        REFERENCES bag_sizes(id)
+);
+
+
+
+/* ============================================================
+   4. INDEXES FOR PERFORMANCE
+   ============================================================ */
+
+CREATE INDEX idx_fg_stock_branch
+ON finished_goods_godown_stock(branch_id);
+
+CREATE INDEX idx_fg_stock_godown
+ON finished_goods_godown_stock(godown_id);
+
+CREATE INDEX idx_fg_move_branch
+ON finished_goods_godown_movement(branch_id);
+
+CREATE INDEX idx_fg_move_created_at
+ON finished_goods_godown_movement(created_at);
+
+CREATE INDEX idx_fg_move_fg
+ON finished_goods_godown_movement(finished_good_id);

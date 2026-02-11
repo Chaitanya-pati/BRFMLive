@@ -1,0 +1,187 @@
+🔴 CORE BACKEND PROBLEMS (Dispatch Module)
+❌ Problem 1: quantity_ton logic breaks BAG-based items
+Where it fails
+
+In create_dispatch:
+
+remaining_qty = order_item.quantity_ton - dispatched_so_far
+
+Why this is WRONG
+
+For bag-based items:
+
+order_item.quantity_ton is 0 or NULL
+
+Actual quantity is:
+
+number_of_bags × bag_size.weight_kg / 1000
+
+
+So:
+
+Remaining becomes 0 - dispatched = 0
+
+Frontend shows Ordered 0.00t | Remaining 0.00t
+
+✅ FIX (MANDATORY)
+
+Replace remaining calculation with:
+
+# Calculate ordered quantity in tons
+if order_item.quantity_ton and order_item.quantity_ton > 0:
+    ordered_qty_ton = order_item.quantity_ton
+elif order_item.number_of_bags and order_item.bag_size:
+    ordered_qty_ton = (order_item.number_of_bags * order_item.bag_size.weight_kg) / 1000
+else:
+    ordered_qty_ton = 0.0
+
+remaining_qty = ordered_qty_ton - dispatched_so_far
+
+
+⚠️ This SAME logic must be reused everywhere.
+
+❌ Problem 2: OrderItem status logic also broken
+Where
+
+update_order_statuses()
+
+if dispatched_total >= item.quantity_ton:
+
+
+Again ❌ for bag items.
+
+✅ FIX
+
+Replace with:
+
+if item.quantity_ton and item.quantity_ton > 0:
+    ordered_qty = item.quantity_ton
+elif item.number_of_bags and item.bag_size:
+    ordered_qty = (item.number_of_bags * item.bag_size.weight_kg) / 1000
+else:
+    ordered_qty = 0.0
+
+if dispatched_total >= ordered_qty - 0.0001:
+    pass  # fully delivered
+elif dispatched_total > 0:
+    all_items_delivered = False
+    any_item_partial = True
+else:
+    all_items_delivered = False
+
+❌ Problem 3: Product name shows as Unknown Product
+Why
+
+Your API response for order items does not expose a consistent product field.
+
+OrderItem may have:
+
+finished_good
+
+OR product
+
+OR only finished_good_id
+
+✅ FIX (BEST PRACTICE)
+
+In schemas.OrderItemResponse (or equivalent), explicitly include:
+
+class OrderItemResponse(BaseModel):
+    order_item_id: int
+    finished_good_id: int
+    product_name: Optional[str]
+
+
+Then in serializer:
+
+product_name = (
+    item.finished_good.product_name
+    if item.finished_good
+    else None
+)
+
+
+This avoids frontend guessing.
+
+❌ Problem 4: Dispatched bags not tracked for remaining
+
+You validate bags:
+
+expected_weight_ton = ...
+
+
+But you NEVER compute:
+
+dispatched bags so far
+
+remaining bags
+
+✅ FIX (optional but recommended)
+
+Add:
+
+dispatched_bags_so_far = db.query(
+    func.sum(models.DispatchItem.dispatched_bags)
+).filter(
+    models.DispatchItem.order_item_id == item_data['order_item_id']
+).scalar() or 0
+
+
+Use this for UI read APIs.
+
+❌ Problem 5: /api/dispatches GET does NOT expose remaining qty
+
+Frontend needs:
+
+ordered_qty
+
+dispatched_qty
+
+remaining_qty
+
+But backend returns raw models only.
+
+✅ FIX (IMPORTANT)
+
+In schemas.DispatchWithDetails, add computed fields:
+
+class DispatchItemWithComputed(BaseModel):
+    order_item_id: int
+    ordered_qty_ton: float
+    dispatched_qty_ton: float
+    remaining_qty_ton: float
+
+
+Compute them in response (property or ORM hybrid).
+
+✅ WHAT IS ALREADY GOOD (Don’t Touch)
+
+✔ DispatchItem table design
+✔ Bag weight validation
+✔ Status auto-update design
+✔ Branch handling
+✔ Transaction safety
+
+You’re architecturally correct — just missing bag-aware math.
+
+🧠 GOLDEN RULE (VERY IMPORTANT)
+
+Never use quantity_ton directly unless unit_type = TON
+
+Create ONE helper and reuse everywhere:
+
+def get_order_item_qty_ton(item):
+    if item.quantity_ton and item.quantity_ton > 0:
+        return item.quantity_ton
+    if item.number_of_bags and item.bag_size:
+        return (item.number_of_bags * item.bag_size.weight_kg) / 1000
+    return 0.0
+
+
+Use it in:
+
+create_dispatch
+
+update_order_statuses
+
+reporting APIs
