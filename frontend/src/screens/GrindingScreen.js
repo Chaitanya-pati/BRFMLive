@@ -14,25 +14,70 @@ export default function GrindingScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [activeRowId, setActiveRowId] = useState(null);
+  const [completeModalVisible, setCompleteModalVisible] = useState(false);
+  const [selectedFGGodownId, setSelectedFGGodownId] = useState(null);
+  const [packedSummary, setPackedSummary] = useState([]);
 
-  const handleTimePicker = (rowId) => {
-    setActiveRowId(rowId);
-    setShowTimePicker(true);
+  const handleCompleteProcess = () => {
+    // Group productionRows by finished_good and bag_size
+    const summaryMap = {};
+    productionRows.forEach(row => {
+      row.productionDetails?.forEach(detail => {
+        const fg = finishedGoods.find(f => f.id === detail.finished_good_id);
+        const bs = bagSizes.find(b => b.id === detail.bag_size_id);
+        if (!fg || !bs) return;
+
+        const key = `${detail.finished_good_id}_${detail.bag_size_id}`;
+        if (!summaryMap[key]) {
+          summaryMap[key] = {
+            fgName: fg.product_name,
+            fgId: fg.id,
+            bsWeight: bs.weight_kg,
+            bsId: bs.id,
+            totalBags: 0
+          };
+        }
+        summaryMap[key].totalBags += parseInt(detail.quantity_bags) || 0;
+      });
+    });
+
+    setPackedSummary(Object.values(summaryMap).filter(s => s.totalBags > 0));
+    setCompleteModalVisible(true);
   };
 
-  const onTimeChange = (event, selectedTime) => {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (selectedTime && activeRowId) {
-      const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      handleRowUpdate(activeRowId, 'productionTime', timeStr);
+  const handleSaveToGodown = async () => {
+    if (!selectedFGGodownId) {
+      showAlert("Error", "Please select a destination godown");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      for (const item of packedSummary) {
+        await client.post("/finished-goods-godown-movement", {
+          movement_type: "IN",
+          to_godown_id: selectedFGGodownId,
+          finished_good_id: item.fgId,
+          bag_size_id: item.bsId,
+          quantity_bags: item.totalBags,
+          remarks: `Production Order: ${selectedBin?.order_number}`
+        });
+      }
+      showToast("Success", "Stock updated in Godown");
+      setCompleteModalVisible(false);
+      setIsGrindingStarted(false);
+    } catch (error) {
+      showAlert("Error", "Failed to update godown stock");
+    } finally {
+      setLoading(false);
     }
   };
   const [availableBins, setAvailableBins] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
   const [silos, setSilos] = useState([]);
+  const [godowns, setGodowns] = useState([]);
 
   const [selectedBin, setSelectedBin] = useState(null);
   const [isGrindingStarted, setIsGrindingStarted] = useState(false);
@@ -60,22 +105,25 @@ export default function GrindingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [binsRes, bagsRes, fgRes, silosRes] = await Promise.all([
+      const [binsRes, bagsRes, fgRes, silosRes, gdRes] = await Promise.all([
         client.get("/grinding/available-bins"),
         client.get("/bag-sizes"),
         client.get("/finished-goods"),
-        client.get("/silos")
+        client.get("/silos"),
+        client.get("/finished-goods-godown")
       ]);
       
       const bins = binsRes.data || [];
       const bags = bagsRes.data || [];
       const fgs = fgRes.data || [];
       const sls = silosRes.data || [];
+      const gds = gdRes.data || [];
       
       setAvailableBins(bins);
       setBagSizes(bags);
       setFinishedGoods(fgs);
       setSilos(sls);
+      setGodowns(gds);
       
       // Default: select all products and all bag sizes for each
       setSelectedProductIds(fgs.map(f => f.id));
@@ -587,8 +635,9 @@ export default function GrindingScreen({ navigation }) {
                 {renderDynamicGrid()}
               </ScrollView>
 
-              <View style={{ marginTop: 20 }}>
-                <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
+              <View style={{ marginTop: 20, flexDirection: 'row', gap: 10 }}>
+                <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} style={{ flex: 1 }} />
+                <Button title="Complete Process" onPress={handleCompleteProcess} variant="success" style={{ flex: 1 }} />
               </View>
             </Card>
           </View>
@@ -601,6 +650,46 @@ export default function GrindingScreen({ navigation }) {
             display="default"
             onChange={onTimeChange}
           />
+        )}
+        
+        {/* Completion Modal */}
+        <Modal visible={completeModalVisible} animationType="fade" transparent>
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Complete Production</Text>
+              <Text style={styles.modalSubtitle}>Summary of packed bags:</Text>
+              
+              <View style={styles.summaryTable}>
+                <View style={styles.summaryHeader}>
+                  <Text style={[styles.summaryHeaderCell, { flex: 2 }]}>Product</Text>
+                  <Text style={styles.summaryHeaderCell}>Size</Text>
+                  <Text style={[styles.summaryHeaderCell, { textAlign: 'right' }]}>Bags</Text>
+                </View>
+                {packedSummary.map((item, idx) => (
+                  <View key={idx} style={styles.summaryRow}>
+                    <Text style={[styles.summaryCell, { flex: 2 }]}>{item.fgName}</Text>
+                    <Text style={styles.summaryCell}>{item.bsWeight}kg</Text>
+                    <Text style={[styles.summaryCell, { textAlign: 'right', fontWeight: 'bold' }]}>{item.totalBags}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={{ marginTop: 20 }}>
+                <SelectDropdown 
+                  label="Select Destination Godown"
+                  placeholder="Choose godown..."
+                  options={godowns.map(g => ({ label: g.godown_name, value: g.id }))}
+                  selectedValue={selectedFGGodownId}
+                  onValueChange={v => setSelectedFGGodownId(v)}
+                />
+              </View>
+
+              <View style={styles.modalButtons}>
+                <Button title="Cancel" onPress={() => setCompleteModalVisible(false)} variant="secondary" style={{ flex: 1, marginRight: 10 }} />
+                <Button title="Save & Close Order" onPress={handleSaveToGodown} loading={loading} style={{ flex: 1 }} />
+              </View>
+            </Card>
+          </View>
         )}
       </ScrollView>
     </Layout>
@@ -715,5 +804,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff'
   },
-  addRowBtnText: { color: colors.primary, fontWeight: 'bold' }
+  addRowBtnText: { color: colors.primary, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
+  modalCard: { padding: 24, borderRadius: 20, backgroundColor: '#FFF' },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', color: colors.primary, marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, color: '#666', marginBottom: 15 },
+  modalButtons: { flexDirection: 'row', marginTop: 24 },
+  summaryTable: { borderTopWidth: 1, borderTopColor: '#EEE' },
+  summaryHeader: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderColor: '#EEE' },
+  summaryHeaderCell: { fontSize: 12, fontWeight: 'bold', color: '#666' },
+  summaryRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderColor: '#F5F5F5' },
+  summaryCell: { fontSize: 14, color: '#333' },
 });

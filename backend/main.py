@@ -1396,11 +1396,18 @@ def create_finished_goods_godown(godown: schemas.FinishedGoodsGodownMasterCreate
     if branch_id and not data.get('branch_id'):
         data['branch_id'] = branch_id
     
+    if not data.get('branch_id'):
+        data['branch_id'] = 1 # Fallback to default branch if none provided to avoid validation error
+        
     db_godown = models.FinishedGoodsGodownMaster(**data)
     db.add(db_godown)
-    db.commit()
-    db.refresh(db_godown)
-    return db_godown
+    try:
+        db.commit()
+        db.refresh(db_godown)
+        return db_godown
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.put("/api/finished-goods-godown/{godown_id}", response_model=schemas.FinishedGoodsGodownMaster)
 def update_finished_goods_godown(godown_id: int, godown: schemas.FinishedGoodsGodownMasterCreate, db: Session = Depends(get_db)):
