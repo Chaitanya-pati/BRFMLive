@@ -14,13 +14,12 @@ from pathlib import Path
 import math
 import pytz
 
+import auth
 from database import engine, get_db, Base
 import models
 import schemas
 import drivers
 import customer_orders
-# from utils.image_utils import get_image_url, save_image_path
-# from utils.datetime_utils import format_ist_iso, parse_datetime
 
 def get_image_url(path):
     if not path:
@@ -140,6 +139,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(customer_orders.router)
 app.include_router(drivers.router)
 

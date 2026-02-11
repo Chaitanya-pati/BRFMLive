@@ -1,16 +1,17 @@
-
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import os
 import secrets
 import models
 import schemas
 from database import get_db
+
+router = APIRouter()
 
 # Use a fixed secret key for development. In production, set JWT_SECRET_KEY environment variable
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
@@ -46,6 +47,32 @@ def authenticate_user(db: Session, username: str, password: str):
     if not verify_password(password, user.hashed_password):
         return False
     return user
+
+@router.post("/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    # Get user branches for the response
+    branches = user.branches if hasattr(user, 'branches') else []
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "email": user.email,
+        "role": user.role,
+        "branches": branches
+    }
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
