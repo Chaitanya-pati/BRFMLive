@@ -208,7 +208,10 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       field: 'customer_id', 
       width: isMobile ? 150 : 200,
       key: 'customer_id',
-      render: (id) => customers.find(c => c.customer_id === id)?.customer_name || `ID: ${id}`
+      render: (id, row) => {
+        const customer = customers.find(c => c.customer_id === id);
+        return customer ? customer.customer_name : (row.customer?.customer_name || `ID: ${id}`);
+      }
     },
     { label: 'Status', field: 'order_status', width: 100, key: 'order_status' },
     { 
@@ -216,7 +219,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       field: 'order_date', 
       width: 120,
       key: 'order_date',
-      render: (v) => formatISTDate(v)
+      render: (v, row) => formatISTDate(v || row.created_at)
     },
   ];
 

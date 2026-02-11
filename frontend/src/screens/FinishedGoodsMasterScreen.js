@@ -120,8 +120,8 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
   const columns = [
     { label: 'Product Name', field: 'product_name', flex: 1.5 },
     { label: 'Short Code', field: 'product_initial', flex: 1 },
-    { label: 'Branch ID', field: 'branch_id', flex: 0.8 },
-    { label: 'Date Created', field: 'created_at', type: 'datetime', flex: 1.2 },
+    { label: 'Branch ID', field: 'branch_id', flex: 0.8, render: (v) => v || 'N/A' },
+    { label: 'Date Created', field: 'created_at', type: 'datetime', flex: 1.2, render: (v) => formatISTDate(v) },
   ];
 
   const renderActions = (item) => {

@@ -153,10 +153,11 @@ export default function LabTestScreen({ navigation }) {
   const loadLabTests = async () => {
     try {
       const response = await labTestApi.getAll();
-      setLabTests(response.data);
+      setLabTests(response.data || []);
     } catch (error) {
       console.error("Error loading lab tests:", error);
       notify.showError("Failed to load Lab Tests");
+      setLabTests([]);
     }
   };
 

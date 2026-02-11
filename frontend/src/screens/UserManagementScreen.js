@@ -59,10 +59,10 @@ export default function UserManagementScreen({ navigation }) {
   const handleEdit = (user) => {
     setCurrentUser({
       ...user,
-      branch_ids: user.branches.map(b => b.id),
+      branch_ids: user.branches ? user.branches.map(b => b.id) : [],
       password: ''
     });
-    setSelectedBranches(user.branches.map(b => b.id));
+    setSelectedBranches(user.branches ? user.branches.map(b => b.id) : []);
     setEditMode(true);
     setModalVisible(true);
   };

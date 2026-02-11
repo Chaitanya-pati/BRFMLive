@@ -371,8 +371,15 @@ export default function UnloadingEntryScreen({ navigation }) {
       flex: 1.5,
       render: (value, row) => {
         const godown = row.godown;
-        return godown ? `${godown.name} (${godown.type || 'N/A'})` : 'N/A';
+        return godown ? `${godown.godown_name || godown.name || 'N/A'} (${godown.type || 'N/A'})` : 'N/A';
       }
+    },
+    { 
+      key: 'net_weight', 
+      label: 'Net Weight', 
+      field: 'net_weight',
+      flex: 1,
+      render: (value) => value ? `${value} tons` : '0 tons'
     },
     { 
       key: 'images', 
