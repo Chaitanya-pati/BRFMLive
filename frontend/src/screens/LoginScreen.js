@@ -18,7 +18,8 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
-    const loginUrl = `${API_BASE_URL}/api/login`;
+    // Use truly relative path for Replit proxy to handle routing correctly
+    const loginUrl = "/api/login";
     console.log('🔐 Attempting login with:', {
       username,
       apiUrl: API_BASE_URL,

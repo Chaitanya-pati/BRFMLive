@@ -10,11 +10,11 @@ const getCurrentAPIUrl = () => {
       return `http://${hostname}:8000/api`;
     }
 
-    // Fixed for Replit: In a production-like environment (proxy), 
-    // the backend is served under the same host but the frontend's webpack proxy 
-    // routes /api calls to the backend. We must NOT include the port 5000 in the base URL
-    // when making relative calls.
-    return "/api";
+    // In Replit environment, we should call the backend directly on port 8000
+    // but the user only has port 5000 exposed via the webview.
+    // However, Replit's proxy handles multiple ports if they are defined in workflows.
+    // Let's try calling the backend on its own port via the same domain.
+    return `${protocol}//${hostname}:8000/api`;
   }
 
   return "http://localhost:8000/api";

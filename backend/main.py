@@ -3689,7 +3689,7 @@ def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
         return []
 
 
-@app.post("/api/login", response_model=schemas.LoginResponse)
+@app.post("/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")
 
