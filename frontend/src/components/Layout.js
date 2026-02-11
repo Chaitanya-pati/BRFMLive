@@ -810,6 +810,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
   },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  userInfo: {
+    alignItems: 'flex-end',
+  },
+  userName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userRole: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   mainContainer: {
     flex: 1,
     flexDirection: "row",

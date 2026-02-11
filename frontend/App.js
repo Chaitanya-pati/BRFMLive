@@ -45,6 +45,7 @@ import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
+export const AuthContext = createContext();
 
 export default function App() {
   const toastRef = useRef(null);
