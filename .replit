@@ -1,4 +1,4 @@
-modules = ["python-3.11", "nodejs-22", "postgresql-16"]
+modules = ["nodejs-20", "python-3.11", "bash", "web", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = ["python_database:1.0.0"]
@@ -9,19 +9,6 @@ packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "l
 
 [workflows]
 runButton = "Project"
-
-[[workflows.workflow]]
-name = "Start Application"
-author = 49361797
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm run web"
 
 [[workflows.workflow]]
 name = "Project"
@@ -57,16 +44,12 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && CI=1 npx expo start --web --port 5000"
+args = "cd frontend && EXPO_NO_LAZY=1 npx expo start --web --port 5000 --no-dev"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [[ports]]
 localPort = 8081

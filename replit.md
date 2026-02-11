@@ -86,6 +86,19 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### February 11, 2026
+- Re-imported project to new Replit environment
+- Installed all Python backend dependencies (uvicorn, fastapi, sqlalchemy, etc.)
+- Installed all frontend npm dependencies including intro.js
+- Created PostgreSQL database and all 45 tables
+- Fixed duplicate User model class in backend/models.py (removed first definition, kept second with extend_existing)
+- Fixed missing createContext import in frontend/App.js
+- Fixed API URL configuration in frontend/src/api/client.js to work with Replit proxy
+- Updated backend/database.py to use DATABASE_URL environment variable instead of hardcoded external URL
+- Updated backend/alembic/env.py to use DATABASE_URL environment variable
+- Removed hardcoded Neon database credentials from codebase
+- Both Backend API (port 8000) and Frontend (Expo on port 5000) workflows running successfully
+
 ### January 28, 2026
 - Implemented Dispatch Management system.
 - Added backend CRUD endpoints for `Dispatch` in `main.py`.

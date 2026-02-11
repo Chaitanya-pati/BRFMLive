@@ -19,11 +19,7 @@ config = context.config
 
 config.set_main_option(
     'sqlalchemy.url',
-    os.getenv(
-        #'DATABASE_URL', 'postgresql://replit:replit@localhost:5432/replit'
-        'DATABASE_URL',
-        'postgresql://neondb_owner:npg_Fj3BD2XscIqk@ep-still-math-afmw2sjv-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-    ))
+    os.getenv('DATABASE_URL', ''))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

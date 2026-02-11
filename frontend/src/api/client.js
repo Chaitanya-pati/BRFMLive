@@ -1,23 +1,18 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// API URL configuration for Replit environment
 const getCurrentAPIUrl = () => {
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
 
-    // For local development, use localhost with port 8000
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return `http://${hostname}:8000/api`;
     }
 
-    // For Replit deployment: backend runs on port 8000, which is externally accessible
-    // Must explicitly specify port 8000 to reach the FastAPI backend
-    return `${protocol}//${hostname}:8000/api`;
+    return `${protocol}//${hostname}/api`;
   }
 
-  // Final fallback
   return "http://localhost:8000/api";
 };
 
