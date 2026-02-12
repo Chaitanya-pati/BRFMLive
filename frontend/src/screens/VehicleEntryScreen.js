@@ -8,6 +8,7 @@ import Button from '../components/Button';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import DatePicker from '../components/DatePicker';
+import TimePicker from '../components/TimePicker';
 import ImagePreview from '../components/ImagePreview';
 import { vehicleApi, supplierApi } from '../api/client';
 import { showNotification } from '../utils/notifications';
@@ -59,10 +60,10 @@ export default function VehicleEntryScreen() {
       formDataToSend.append("bill_no", data.bill_no);
       formDataToSend.append("driver_name", data.driver_name || "");
       formDataToSend.append("driver_phone", data.driver_phone || "");
-      formDataToSend.append(
-        "arrival_time",
-        toISTISOString(data.arrival_time),
-      );
+      
+      // arrival_time is now stored as "HH-MM-PERIOD"
+      formDataToSend.append("arrival_time", data.arrival_time);
+
       formDataToSend.append(
         "empty_weight",
         data.empty_weight ? String(data.empty_weight) : "0",
@@ -192,6 +193,7 @@ export default function VehicleEntryScreen() {
       : null;
 
     setFormData({
+      ...formData,
       vehicle_state_code: stateCode,
       vehicle_second_part: secondPart,
       vehicle_third_part: thirdPart,
@@ -199,9 +201,7 @@ export default function VehicleEntryScreen() {
       bill_no: vehicle.bill_no,
       driver_name: vehicle.driver_name || "",
       driver_phone: vehicle.driver_phone || "",
-      arrival_time: vehicle.arrival_time
-        ? new Date(vehicle.arrival_time)
-        : new Date(),
+      arrival_time: vehicle.arrival_time || "12-00-AM",
       empty_weight: vehicle.empty_weight?.toString() || "",
       gross_weight: vehicle.gross_weight?.toString() || "",
       notes: vehicle.notes || "",
@@ -237,7 +237,7 @@ export default function VehicleEntryScreen() {
       bill_no: "",
       driver_name: "",
       driver_phone: "",
-      arrival_time: new Date(),
+      arrival_time: "12-00-AM",
       empty_weight: "",
       gross_weight: "",
       notes: "",
@@ -316,7 +316,14 @@ export default function VehicleEntryScreen() {
       field: "arrival_time",
       flex: 1.8,
       key: "arrival_time",
-      type: "datetime",
+      render: (value) => {
+        if (!value || typeof value !== 'string') return value || '-';
+        const parts = value.split('-');
+        if (parts.length === 3) {
+          return `${parts[0]}:${parts[1]} ${parts[2]}`;
+        }
+        return value;
+      }
     },
   ];
 
@@ -436,14 +443,12 @@ export default function VehicleEntryScreen() {
             </View>
           </View>
 
-          <DatePicker
+          <TimePicker
             label="Arrival Time *"
             value={formData.arrival_time}
-            onChange={(date) =>
-              setFormData({ ...formData, arrival_time: date })
+            onValueChange={(time) =>
+              setFormData({ ...formData, arrival_time: time })
             }
-            mode="datetime"
-            placeholder="Select arrival date and time"
           />
 
           <InputField

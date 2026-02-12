@@ -14,6 +14,7 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Camera from 'expo-camera';
 import Layout from '../components/Layout';
+import TimePicker from '../components/TimePicker';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { unloadingApi, godownApi } from '../api/client';
@@ -35,8 +36,8 @@ export default function UnloadingEntryScreen({ navigation }) {
   const [formData, setFormData] = useState({
     vehicle_entry_id: '',
     godown_id: '',
-    unloading_start_time: new Date().toISOString(),
-    unloading_end_time: new Date().toISOString(),
+    unloading_start_time: '12-00-AM',
+    unloading_end_time: '12-00-AM',
     notes: '',
   });
 
@@ -262,8 +263,8 @@ export default function UnloadingEntryScreen({ navigation }) {
     setFormData({
       vehicle_entry_id: '',
       godown_id: '',
-      unloading_start_time: new Date().toISOString(),
-      unloading_end_time: new Date().toISOString(),
+      unloading_start_time: '12-00-AM',
+      unloading_end_time: '12-00-AM',
       notes: '',
     });
     setBeforeImage(null);
@@ -278,8 +279,8 @@ export default function UnloadingEntryScreen({ navigation }) {
       id: entry.id,
       vehicle_entry_id: entry.vehicle_entry_id,
       godown_id: entry.godown_id,
-      unloading_start_time: new Date(entry.unloading_start_time),
-      unloading_end_time: new Date(entry.unloading_end_time),
+      unloading_start_time: entry.unloading_start_time || '12-00-AM',
+      unloading_end_time: entry.unloading_end_time || '12-00-AM',
       notes: entry.notes || '',
     });
 
@@ -454,6 +455,18 @@ export default function UnloadingEntryScreen({ navigation }) {
               ))}
             </Picker>
           </View>
+
+          <TimePicker
+            label="Unloading Start Time *"
+            value={formData.unloading_start_time}
+            onValueChange={(time) => setFormData({ ...formData, unloading_start_time: time })}
+          />
+
+          <TimePicker
+            label="Unloading End Time *"
+            value={formData.unloading_end_time}
+            onValueChange={(time) => setFormData({ ...formData, unloading_end_time: time })}
+          />
 
           <View style={styles.imageSection}>
             <Text style={styles.label}>Before Unloading Photo</Text>
