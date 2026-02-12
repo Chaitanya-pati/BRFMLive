@@ -1,5 +1,6 @@
+import React, { useState, useEffect } from "react";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Layout from "../components/Layout";
 import Button from "../components/Button";
@@ -11,6 +12,7 @@ import { getApiClient } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
 
 export default function GrindingScreen({ navigation }) {
+  const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 

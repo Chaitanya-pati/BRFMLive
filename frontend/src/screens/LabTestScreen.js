@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import notify from "../utils/notifications";
 import { Picker } from "@react-native-picker/picker";
@@ -320,12 +321,22 @@ export default function LabTestScreen({ navigation }) {
 
       // Show download/print options after modal closes
       setTimeout(() => {
-        const shouldPrint = window.confirm(
-          "Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.",
-        );
+        if (Platform.OS === 'web') {
+          const shouldPrint = window.confirm(
+            "Lab Test saved successfully!\n\nWould you like to print the PDF report now?\n\nClick OK to print, or Cancel to skip.",
+          );
 
-        if (shouldPrint) {
-          generatePDF();
+          if (shouldPrint) {
+            generatePDF();
+          }
+        } else {
+          Alert.alert(
+            "Success",
+            "Lab Test saved successfully!",
+            [
+              { text: "OK" }
+            ]
+          );
         }
       }, 100);
     } catch (error) {
@@ -393,12 +404,15 @@ export default function LabTestScreen({ navigation }) {
 
       // Ask if user wants to print before opening claim modal
       setTimeout(() => {
-        const shouldPrint = window.confirm(
-          "Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.",
-        );
+        let shouldPrint = false;
+        if (Platform.OS === 'web') {
+          shouldPrint = window.confirm(
+            "Lab Test saved successfully!\n\nWould you like to print the PDF report before raising the claim?\n\nClick OK to print, or Cancel to continue to claim form.",
+          );
 
-        if (shouldPrint) {
-          generatePDF();
+          if (shouldPrint) {
+            generatePDF();
+          }
         }
 
         // Open raise claim modal with the saved lab test after print dialog
