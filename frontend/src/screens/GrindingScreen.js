@@ -690,7 +690,7 @@ export default function GrindingScreen({ navigation }) {
                   <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Button title="Complete Grinding" onPress={handleCompleteProcess} variant="secondary" />
+                  <Button title="Complete Process" onPress={handleCompleteProcess} variant="secondary" />
                 </View>
               </View>
 
