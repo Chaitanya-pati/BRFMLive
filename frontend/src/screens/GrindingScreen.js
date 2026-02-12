@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
+import TimePicker from "../components/TimePicker";
 import SelectDropdown from "../components/SelectDropdown";
 import Card from "../components/Card";
 import colors from "../theme/colors";
@@ -342,48 +343,10 @@ export default function GrindingScreen({ navigation }) {
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 80, padding: 2 }}>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={row.productionTime ? (row.productionTime.includes('AM') || row.productionTime.includes('PM') ? 
-                    (() => {
-                      const [time, modifier] = row.productionTime.split(' ');
-                      let [hours, minutes] = time.split(':');
-                      if (hours === '12') hours = '00';
-                      if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-                      return `${String(hours).padStart(2, '0')}:${minutes}`;
-                    })() : row.productionTime) : ''}
-                  onChange={(e) => {
-                    const time = e.target.value;
-                    if (time) {
-                      const [hours, minutes] = time.split(':');
-                      const h = parseInt(hours, 10);
-                      const ampm = h >= 12 ? 'PM' : 'AM';
-                      const h12 = h % 12 || 12;
-                      const timeStr = `${h12}:${minutes} ${ampm}`;
-                      handleRowUpdate(row.id, 'productionTime', timeStr);
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: 4,
-                    fontSize: 12,
-                    border: '1px solid #ccc',
-                    borderRadius: 4,
-                    height: 30
-                  }}
-                  disabled={row.isSubmitted}
-                />
-              ) : (
-                <TouchableOpacity 
-                  style={[styles.inputField, row.isSubmitted && { backgroundColor: '#F0F0F0' }]} 
-                  onPress={() => !row.isSubmitted && handleTimePicker(row.id)}
-                >
-                  <Text style={{ fontSize: 12, color: row.productionTime ? colors.textPrimary : colors.textSecondary }}>
-                    {row.productionTime || "Select"}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <TimePicker
+                value={row.productionTime || "12-00-AM"}
+                onValueChange={(time) => handleRowUpdate(row.id, 'productionTime', time)}
+              />
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>

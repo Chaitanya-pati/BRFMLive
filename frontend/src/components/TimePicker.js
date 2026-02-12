@@ -6,11 +6,23 @@ const hours = Array.from({ length: 12 }, (_, i) => (i === 0 ? 12 : i).toString()
 const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 const periods = ['AM', 'PM'];
 
-export default function TimePicker({ label, value, onValueChange }) {
+export default function TimePicker({ label, value, onValueChange, style }) {
   const [showModal, setShowModal] = useState(false);
   
   // value format: "HH-MM-PERIOD"
-  const [selectedHour, selectedMinute, selectedPeriod] = (value || '12-00-AM').split('-');
+  const parts = (value || '12-00-AM').split('-');
+  let selectedHour = parts[0] || '12';
+  let selectedMinute = parts[1] || '00';
+  let selectedPeriod = parts[2] || 'AM';
+
+  // Handle case where value might be in "HH:MM AM/PM" format from old data
+  if (value && value.includes(':')) {
+    const [time, period] = value.split(' ');
+    const [h, m] = time.split(':');
+    selectedHour = h.padStart(2, '0');
+    selectedMinute = m.padStart(2, '0');
+    selectedPeriod = period || 'AM';
+  }
 
   const handleSelect = (h, m, p) => {
     onValueChange(`${h}-${m}-${p}`);
@@ -33,7 +45,7 @@ export default function TimePicker({ label, value, onValueChange }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TouchableOpacity style={styles.input} onPress={() => setShowModal(true)}>
         <Text style={styles.inputText}>{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</Text>
@@ -66,10 +78,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minHeight: 30,
+    justifyContent: 'center',
   },
-  inputText: { fontSize: 16, color: colors.onSurface },
+  inputText: { fontSize: 13, color: colors.onSurface, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '50%' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
