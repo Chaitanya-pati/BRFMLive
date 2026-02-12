@@ -11,12 +11,14 @@ const getCurrentAPIUrl = () => {
     }
 
     // In Replit environment, we should call the backend directly on port 8000
-    // but the user only has port 5000 exposed via the webview.
-    // However, Replit's proxy handles multiple ports if they are defined in workflows.
-    // Let's try calling the backend on its own port via the same domain.
+    // Replit's proxy handles multiple ports if they are defined in workflows.
+    // We use the current hostname but specifically target port 8000 for the backend.
     const replitDomain = process.env.REPLIT_DEV_DOMAIN || hostname;
     if (replitDomain.includes('replit.dev')) {
-        return `${protocol}//${replitDomain}/api`;
+        // If we are on a Replit dev domain, the backend is usually on the same domain but a different port
+        // However, Replit's public URLs for different ports usually follow a pattern or are mapped.
+        // For the agent environment, port 8000 is accessible if defined in workflows.
+        return `${protocol}//${replitDomain.replace(/-\d+-(.*).replit.dev/, "-8000-$1.replit.dev")}/api`;
     }
     return `${protocol}//${hostname}:8000/api`;
   }
@@ -315,7 +317,14 @@ export const transfer12HourApi = {
 };
 
 export const authApi = {
-  login: (credentials) => api.post('/auth/login', credentials),
+  login: (credentials) => {
+    const formData = new FormData();
+    formData.append('username', credentials.username);
+    formData.append('password', credentials.password);
+    return api.post('/auth/login', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
   register: (userData) => api.post('/auth/register', userData),
   getCurrentUser: () => api.get('/auth/me'),
 };

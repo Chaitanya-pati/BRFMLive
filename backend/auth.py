@@ -62,7 +62,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     # Get user branches for the response
-    branches = user.branches if hasattr(user, 'branches') else []
+    branches = []
+    if hasattr(user, 'branches') and user.branches:
+        branches = [{"id": b.id, "name": b.name} for b in user.branches]
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { API_BASE_URL } from '../api/client';
+import { API_BASE_URL, authApi } from '../api/client';
 import { storage } from '../utils/storage';
 import { useBranch } from '../context/BranchContext';
 import colors from '../theme/colors';
@@ -30,37 +30,16 @@ export default function LoginScreen({ navigation }) {
     });
 
     try {
-      // Use FormData for OAuth2 password grant as expected by FastAPI
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-
-      const response = await fetch(loginUrl, {
-        method: 'POST',
-        body: formData,
+      const response = await authApi.login({
+        username,
+        password
       });
 
-      console.log('📡 Login response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('❌ Non-JSON response received:', text.substring(0, 200));
-        throw new Error('Server returned invalid response. Please check if backend is running on port 8000.');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Login failed:', errorData);
-        throw new Error(errorData.detail || 'Invalid username or password');
-      }
-
-      const data = await response.json();
-      console.log('✅ Login successful:', data);
+      console.log('✅ Login successful:', response.data);
+      const data = response.data;
 
       await storage.setUserData(data);
+      await storage.setItem('auth_token', data.access_token);
       await storage.setItem('userId', String(data.user_id));
       await storage.setItem('username', data.username);
       await storage.setItem('userRole', data.role || 'user');
