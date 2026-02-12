@@ -154,7 +154,7 @@ export default function GrindingScreen({ navigation }) {
   const fetchExistingProductionData = async (orderId) => {
     try {
       const client = getApiClient();
-      const res = await client.get("/grinding/hourly-production");
+      const res = await client.get("/grinding/hourly-production").catch(() => ({ data: [] }));
       
       // Filter data for the current production order
       const existingData = (res.data || []).filter(row => row.production_order_id === orderId);
