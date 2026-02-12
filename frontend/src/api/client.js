@@ -15,10 +15,18 @@ const getCurrentAPIUrl = () => {
     // We use the current hostname but specifically target port 8000 for the backend.
     const replitDomain = process.env.REPLIT_DEV_DOMAIN || hostname;
     if (replitDomain.includes('replit.dev')) {
-        // If we are on a Replit dev domain, the backend is usually on the same domain but a different port
-        // However, Replit's public URLs for different ports usually follow a pattern or are mapped.
-        // For the agent environment, port 8000 is accessible if defined in workflows.
-        return `${protocol}//${replitDomain.replace(/-\d+-(.*).replit.dev/, "-8000-$1.replit.dev")}/api`;
+        // Replit port-based URL structure for separate ports
+        // Example: 6ab05c4d-73da-4777-a918-4ff1b9a88307-00-3jt7btmwmmiz5.picard.replit.dev (Port 5000/Webview)
+        // Backend: 6ab05c4d-73da-8000-a918-4ff1b9a88307-00-3jt7btmwmmiz5.picard.replit.dev (Port 8000)
+        
+        // Extract the prefix parts before the first hyphen
+        const parts = replitDomain.split('-');
+        if (parts.length > 2) {
+            // Replace the second part (usually 4-5 chars) with 8000
+            // Logic: {random}-{port}-{rest}.replit.dev
+            parts[2] = '8000';
+            return `${protocol}//${parts.join('-')}/api`;
+        }
     }
     return `${protocol}//${hostname}:8000/api`;
   }
