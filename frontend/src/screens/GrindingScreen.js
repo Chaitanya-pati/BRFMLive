@@ -30,6 +30,7 @@ export default function GrindingScreen({ navigation }) {
     if (selectedTime && activeRowId) {
       const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
       handleRowUpdate(activeRowId, 'productionTime', timeStr);
+      setActiveRowId(null);
     }
   };
   const [showSummary, setShowSummary] = useState(false);
@@ -441,10 +442,13 @@ export default function GrindingScreen({ navigation }) {
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 80, padding: 2 }}>
-              <TimePicker
-                value={row.productionTime || "12-00-AM"}
-                onValueChange={(time) => handleRowUpdate(row.id, 'productionTime', time)}
-                style={{ marginBottom: 0 }}
+              <InputField 
+                value={row.productionTime} 
+                onFocus={() => handleTimePicker(row.id)}
+                showSoftInputOnFocus={false}
+                placeholder="Time"
+                disabled={row.isSubmitted}
+                dense 
               />
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
@@ -696,25 +700,30 @@ export default function GrindingScreen({ navigation }) {
 
               <Modal visible={showSummary} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                  <Card style={styles.summaryModal}>
-                    <Text style={styles.cardTitle}>Process Summary & Allocation</Text>
-                    <ScrollView style={{ maxHeight: 400 }}>
+                  <Card style={[styles.summaryModal, { width: '95%', maxWidth: 600, maxHeight: '90%' }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                      <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Process Summary & Allocation</Text>
+                      <TouchableOpacity onPress={() => setShowSummary(false)}>
+                        <Text style={{ fontSize: 28, color: '#666' }}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
                       {summaryData.map((item, idx) => (
-                        <View key={idx} style={[styles.summaryRow, { flexDirection: 'column', alignItems: 'stretch' }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                            <Text style={[styles.summaryLabel, { fontWeight: '700', color: '#333' }]}>{item.label}</Text>
-                            <Text style={styles.summaryValue}>{item.value} Bags Produced</Text>
+                        <View key={idx} style={[styles.summaryRow, { flexDirection: 'column', alignItems: 'stretch', backgroundColor: '#F9F9F9', padding: 12, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' }]}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#EEE', paddingBottom: 8 }}>
+                            <Text style={[styles.summaryLabel, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>{item.label}</Text>
+                            <Text style={[styles.summaryValue, { fontWeight: '700', color: '#4CAF50' }]}>{item.value} Bags Produced</Text>
                           </View>
                           
                           {godownAllocation[item.label]?.map((alloc, aIdx) => (
-                            <View key={alloc.id} style={{ flexDirection: 'row', gap: 10, marginBottom: 8, alignItems: 'center' }}>
+                            <View key={alloc.id} style={{ flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'center' }}>
                               <View style={{ flex: 2 }}>
                                 <SelectDropdown
-                                  items={godowns.map(g => ({ label: g.name, value: g.id }))}
+                                  options={godowns.map(g => ({ label: g.godown_name, value: g.id }))}
                                   value={alloc.godownId}
                                   onValueChange={(val) => updateAllocation(item.label, alloc.id, 'godownId', val)}
                                   placeholder="Select Godown"
-                                  dense
                                 />
                               </View>
                               <View style={{ flex: 1 }}>
@@ -727,29 +736,38 @@ export default function GrindingScreen({ navigation }) {
                                 />
                               </View>
                               {godownAllocation[item.label].length > 1 && (
-                                <TouchableOpacity onPress={() => removeAllocationRow(item.label, alloc.id)}>
-                                  <Text style={{ color: '#F44336', fontSize: 20 }}>×</Text>
+                                <TouchableOpacity 
+                                  onPress={() => removeAllocationRow(item.label, alloc.id)}
+                                  style={{ padding: 5 }}
+                                >
+                                  <Text style={{ color: '#F44336', fontSize: 24, fontWeight: 'bold' }}>×</Text>
                                 </TouchableOpacity>
                               )}
                             </View>
                           ))}
                           
                           <TouchableOpacity 
-                            style={{ alignSelf: 'flex-start', padding: 5 }} 
+                            style={{ alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 2 }} 
                             onPress={() => addAllocationRow(item.label)}
                           >
-                            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>+ Split to another Godown</Text>
+                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: 'bold' }}>+ Split to another Godown</Text>
                           </TouchableOpacity>
                         </View>
                       ))}
                     </ScrollView>
 
-                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-                      <TouchableOpacity style={[styles.addRowBtn, { flex: 1, marginBottom: 0 }]} onPress={() => setShowSummary(false)}>
-                        <Text style={styles.addRowBtnText}>Cancel</Text>
+                    <View style={{ flexDirection: 'row', gap: 15, marginTop: 20, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#EEE' }}>
+                      <TouchableOpacity 
+                        style={[styles.modalBtn, { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#DDD', alignItems: 'center' }]} 
+                        onPress={() => setShowSummary(false)}
+                      >
+                        <Text style={{ fontWeight: 'bold', color: '#666' }}>Cancel</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.addRowBtn, { flex: 1, marginBottom: 0, backgroundColor: colors.primary }]} onPress={handleSaveToGodown}>
-                        <Text style={[styles.addRowBtnText, { color: '#fff' }]}>Save & Finish</Text>
+                      <TouchableOpacity 
+                        style={[styles.modalBtn, { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', elevation: 2 }]} 
+                        onPress={handleSaveToGodown}
+                      >
+                        <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Save & Finish</Text>
                       </TouchableOpacity>
                     </View>
                   </Card>
