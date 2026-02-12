@@ -685,7 +685,7 @@ export default function GrindingScreen({ navigation }) {
                 {renderDynamicGrid()}
               </ScrollView>
 
-              <View style={{ marginTop: 20, flexDirection: 'row', gap: 10 }}>
+              <View style={{ marginTop: 20, flexDirection: 'row', gap: 10, paddingBottom: 20 }}>
                 <View style={{ flex: 1 }}>
                   <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
                 </View>
