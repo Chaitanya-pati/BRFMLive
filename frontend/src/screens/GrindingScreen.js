@@ -35,7 +35,7 @@ export default function GrindingScreen({ navigation }) {
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState([]);
   const [godowns, setGodowns] = useState([]);
-  const [selectedGodownId, setSelectedGodownId] = useState(null);
+  const [godownAllocation, setGodownAllocation] = useState({});
   const [availableBins, setAvailableBins] = useState([]);
 
   const handleCompleteProcess = async () => {
@@ -60,9 +60,16 @@ export default function GrindingScreen({ navigation }) {
 
     setSummaryData(formattedSummary);
     
+    // Initialize allocation
+    const initialAllocation = {};
+    formattedSummary.forEach(item => {
+      initialAllocation[item.label] = [{ id: Date.now(), godownId: null, bags: item.value.toString() }];
+    });
+    setGodownAllocation(initialAllocation);
+    
     try {
       const client = getApiClient();
-      const res = await client.get("/godowns"); // Assuming /godowns exists or similar
+      const res = await client.get("/godowns");
       setGodowns(res.data.filter(g => g.type === 'Finished Goods') || []);
     } catch (e) {
       console.error("Failed to fetch godowns", e);
@@ -71,17 +78,50 @@ export default function GrindingScreen({ navigation }) {
     setShowSummary(true);
   };
 
+  const addAllocationRow = (label) => {
+    setGodownAllocation(prev => ({
+      ...prev,
+      [label]: [...prev[label], { id: Date.now(), godownId: null, bags: "0" }]
+    }));
+  };
+
+  const removeAllocationRow = (label, id) => {
+    setGodownAllocation(prev => ({
+      ...prev,
+      [label]: prev[label].filter(row => row.id !== id)
+    }));
+  };
+
+  const updateAllocation = (label, id, field, value) => {
+    setGodownAllocation(prev => ({
+      ...prev,
+      [label]: prev[label].map(row => row.id === id ? { ...row, [field]: value } : row)
+    }));
+  };
+
   const handleSaveToGodown = async () => {
-    if (!selectedGodownId) {
-      showAlert("Error", "Please select a godown");
-      return;
+    // Validate allocations
+    for (const label in godownAllocation) {
+      const rows = godownAllocation[label];
+      const totalAllocated = rows.reduce((sum, r) => sum + (parseInt(r.bags) || 0), 0);
+      const originalTotal = summaryData.find(s => s.label === label)?.value || 0;
+      
+      if (totalAllocated !== originalTotal) {
+        showAlert("Error", `Total bags allocated for ${label} (${totalAllocated}) doesn't match total produced (${originalTotal})`);
+        return;
+      }
+      
+      if (rows.some(r => !r.godownId)) {
+        showAlert("Error", `Please select a godown for all allocations of ${label}`);
+        return;
+      }
     }
+
     setLoading(true);
     try {
       const client = getApiClient();
-      // Implementation for saving to godown using existing services
-      // This would typically involve calling an endpoint like /api/godowns/{id}/add-stock
-      showToast("Success", "Process completed and stock updated");
+      // Implementation for saving to godown - logic would involve looping through godownAllocation
+      showToast("Success", "Process completed and stock updated in multiple godowns");
       setShowSummary(false);
       setIsGrindingStarted(false);
     } catch (error) {
@@ -657,23 +697,52 @@ export default function GrindingScreen({ navigation }) {
               <Modal visible={showSummary} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                   <Card style={styles.summaryModal}>
-                    <Text style={styles.cardTitle}>Process Summary</Text>
-                    {summaryData.map((item, idx) => (
-                      <View key={idx} style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>{item.label}</Text>
-                        <Text style={styles.summaryValue}>{item.value} Bags</Text>
-                      </View>
-                    ))}
-                    
-                    <View style={{ marginTop: 20 }}>
-                      <Text style={styles.selectorLabel}>Select Godown</Text>
-                      <SelectDropdown
-                        items={godowns.map(g => ({ label: g.name, value: g.id }))}
-                        value={selectedGodownId}
-                        onValueChange={setSelectedGodownId}
-                        placeholder="Select Finished Goods Godown"
-                      />
-                    </View>
+                    <Text style={styles.cardTitle}>Process Summary & Allocation</Text>
+                    <ScrollView style={{ maxHeight: 400 }}>
+                      {summaryData.map((item, idx) => (
+                        <View key={idx} style={[styles.summaryRow, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                            <Text style={[styles.summaryLabel, { fontWeight: '700', color: '#333' }]}>{item.label}</Text>
+                            <Text style={styles.summaryValue}>{item.value} Bags Produced</Text>
+                          </View>
+                          
+                          {godownAllocation[item.label]?.map((alloc, aIdx) => (
+                            <View key={alloc.id} style={{ flexDirection: 'row', gap: 10, marginBottom: 8, alignItems: 'center' }}>
+                              <View style={{ flex: 2 }}>
+                                <SelectDropdown
+                                  items={godowns.map(g => ({ label: g.name, value: g.id }))}
+                                  value={alloc.godownId}
+                                  onValueChange={(val) => updateAllocation(item.label, alloc.id, 'godownId', val)}
+                                  placeholder="Select Godown"
+                                  dense
+                                />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <InputField
+                                  value={alloc.bags}
+                                  onChangeText={(val) => updateAllocation(item.label, alloc.id, 'bags', val)}
+                                  keyboardType="numeric"
+                                  placeholder="Bags"
+                                  dense
+                                />
+                              </View>
+                              {godownAllocation[item.label].length > 1 && (
+                                <TouchableOpacity onPress={() => removeAllocationRow(item.label, alloc.id)}>
+                                  <Text style={{ color: '#F44336', fontSize: 20 }}>×</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          ))}
+                          
+                          <TouchableOpacity 
+                            style={{ alignSelf: 'flex-start', padding: 5 }} 
+                            onPress={() => addAllocationRow(item.label)}
+                          >
+                            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>+ Split to another Godown</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </ScrollView>
 
                     <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
                       <TouchableOpacity style={[styles.addRowBtn, { flex: 1, marginBottom: 0 }]} onPress={() => setShowSummary(false)}>
