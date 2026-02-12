@@ -1,14 +1,39 @@
-modules = ["nodejs-20", "python-3.11", "bash", "web", "postgresql-16"]
+modules = ["python-3.11", "nodejs-22", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = ["python_database:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cacert", "cargo", "glibcLocales", "libffi", "libiconv", "libuv", "libxcrypt", "libyaml", "openssl", "pkg-config", "rustc"]
+packages = [
+  "cacert",
+  "cargo",
+  "glibcLocales",
+  "libffi",
+  "libiconv",
+  "libuv",
+  "libxcrypt",
+  "libyaml",
+  "openssl",
+  "pkg-config",
+  "rustc",
+]
 
 [workflows]
 runButton = "Project"
+
+[[workflows.workflow]]
+name = "Start Application"
+author = "agent"
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -c \"cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && CI=1 npx expo start --web --port 5000\""
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[workflows.workflow]]
 name = "Project"
@@ -22,6 +47,10 @@ args = "Backend API"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Frontend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start Application"
 
 [[workflows.workflow]]
 name = "Backend API"
@@ -44,28 +73,12 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && EXPO_NO_LAZY=1 npx expo start --web --port 5000 --no-dev"
+args = "cd frontend && CI=1 npx expo start --web --port 5000"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3001
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 19006
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
