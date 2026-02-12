@@ -36,6 +36,7 @@ export default function GrindingScreen({ navigation }) {
   const [summaryData, setSummaryData] = useState([]);
   const [godowns, setGodowns] = useState([]);
   const [selectedGodownId, setSelectedGodownId] = useState(null);
+  const [availableBins, setAvailableBins] = useState([]);
 
   const handleCompleteProcess = async () => {
     // Group productionRows by product and bag size
