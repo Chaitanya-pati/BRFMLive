@@ -99,6 +99,7 @@ export default function GrindingScreen({ navigation }) {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [productBagSizeMap, setProductBagSizeMap] = useState({});
   const [selectedSiloIds, setSelectedSiloIds] = useState([]);
+  const [productionDate, setProductionDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Hourly Data Form - Multiple Rows
   const [productionRows, setProductionRows] = useState([
