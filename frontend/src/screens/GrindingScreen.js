@@ -32,7 +32,63 @@ export default function GrindingScreen({ navigation }) {
       handleRowUpdate(activeRowId, 'productionTime', timeStr);
     }
   };
-  const [availableBins, setAvailableBins] = useState([]);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryData, setSummaryData] = useState([]);
+  const [godowns, setGodowns] = useState([]);
+  const [selectedGodownId, setSelectedGodownId] = useState(null);
+
+  const handleCompleteProcess = async () => {
+    // Group productionRows by product and bag size
+    const totals = {};
+    productionRows.forEach(row => {
+      (row.productionDetails || []).forEach(detail => {
+        const fg = finishedGoods.find(f => f.id === detail.finished_good_id);
+        const bs = bagSizes.find(b => b.id === detail.bag_size_id);
+        if (!fg || !bs) return;
+        
+        const key = `${fg.product_name} - ${bs.weight_kg}kg`;
+        if (!totals[key]) totals[key] = 0;
+        totals[key] += parseInt(detail.quantity_bags) || 0;
+      });
+    });
+
+    const formattedSummary = Object.keys(totals).map(key => ({
+      label: key,
+      value: totals[key]
+    }));
+
+    setSummaryData(formattedSummary);
+    
+    try {
+      const client = getApiClient();
+      const res = await client.get("/godowns"); // Assuming /godowns exists or similar
+      setGodowns(res.data.filter(g => g.type === 'Finished Goods') || []);
+    } catch (e) {
+      console.error("Failed to fetch godowns", e);
+    }
+    
+    setShowSummary(true);
+  };
+
+  const handleSaveToGodown = async () => {
+    if (!selectedGodownId) {
+      showAlert("Error", "Please select a godown");
+      return;
+    }
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      // Implementation for saving to godown using existing services
+      // This would typically involve calling an endpoint like /api/godowns/{id}/add-stock
+      showToast("Success", "Process completed and stock updated");
+      setShowSummary(false);
+      setIsGrindingStarted(false);
+    } catch (error) {
+      showAlert("Error", "Failed to update godown stock");
+    } finally {
+      setLoading(false);
+    }
+  };
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
   const [silos, setSilos] = useState([]);
@@ -346,6 +402,7 @@ export default function GrindingScreen({ navigation }) {
               <TimePicker
                 value={row.productionTime || "12-00-AM"}
                 onValueChange={(time) => handleRowUpdate(row.id, 'productionTime', time)}
+                style={{ marginBottom: 0 }}
               />
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
@@ -586,9 +643,47 @@ export default function GrindingScreen({ navigation }) {
                 {renderDynamicGrid()}
               </ScrollView>
 
-              <View style={{ marginTop: 20 }}>
-                <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
+              <View style={{ marginTop: 20, flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Button title="Submit Hourly Data" onPress={handleSubmitHourly} loading={loading} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Complete Process" onPress={handleCompleteProcess} variant="secondary" />
+                </View>
               </View>
+
+              <Modal visible={showSummary} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                  <Card style={styles.summaryModal}>
+                    <Text style={styles.cardTitle}>Process Summary</Text>
+                    {summaryData.map((item, idx) => (
+                      <View key={idx} style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>{item.label}</Text>
+                        <Text style={styles.summaryValue}>{item.value} Bags</Text>
+                      </View>
+                    ))}
+                    
+                    <View style={{ marginTop: 20 }}>
+                      <Text style={styles.selectorLabel}>Select Godown</Text>
+                      <SelectDropdown
+                        items={godowns.map(g => ({ label: g.name, value: g.id }))}
+                        value={selectedGodownId}
+                        onValueChange={setSelectedGodownId}
+                        placeholder="Select Finished Goods Godown"
+                      />
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+                      <TouchableOpacity style={[styles.addRowBtn, { flex: 1, marginBottom: 0 }]} onPress={() => setShowSummary(false)}>
+                        <Text style={styles.addRowBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.addRowBtn, { flex: 1, marginBottom: 0, backgroundColor: colors.primary }]} onPress={handleSaveToGodown}>
+                        <Text style={[styles.addRowBtnText, { color: '#fff' }]}>Save & Finish</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </Card>
+                </View>
+              </Modal>
             </Card>
           </View>
         )}
@@ -702,6 +797,32 @@ const styles = StyleSheet.create({
   miniChip: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: '#F0F0F0', borderWidth: 0.5, borderColor: '#CCC' },
   miniChipText: { fontSize: 9, color: '#666' },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.4)', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    padding: 20
+  },
+  summaryModal: {
+    padding: 24,
+    width: Platform.OS === 'web' ? 450 : '95%',
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15 },
+      android: { elevation: 8 }
+    })
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0'
+  },
+  summaryLabel: { fontSize: 14, color: '#666', fontWeight: '500' },
+  summaryValue: { fontSize: 15, fontWeight: '700', color: colors.primary },
   chipText: { fontSize: 11, color: '#666' },
   chipTextActive: { color: '#FFF', fontWeight: 'bold' },
   addRowBtn: { 

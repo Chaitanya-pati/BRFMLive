@@ -3682,6 +3682,34 @@ def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
         return []
 
 
+@app.get("/api/godowns", response_model=List[schemas.GodownMaster])
+def get_godowns(skip: int = 0, limit: int = 100, branch_id: Optional[int] = Depends(get_branch_id), db: Session = Depends(get_db)):
+    query = db.query(models.GodownMaster)
+    if branch_id is not None:
+        query = query.filter(models.GodownMaster.branch_id == branch_id)
+    return query.offset(skip).limit(limit).all()
+
+@app.post("/api/godowns", response_model=schemas.GodownMaster)
+def create_godown(godown: schemas.GodownMasterCreate, 
+                  db: Session = Depends(get_db),
+                  branch_id: Optional[int] = Depends(get_branch_id)):
+    godown_data = godown.dict()
+    if branch_id and not godown_data.get('branch_id'):
+        godown_data['branch_id'] = branch_id
+    
+    if not godown_data.get('branch_id'):
+        godown_data['branch_id'] = 1
+        
+    db_godown = models.GodownMaster(**godown_data)
+    db.add(db_godown)
+    try:
+        db.commit()
+        db.refresh(db_godown)
+        return db_godown
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+
 @app.post("/api/login", response_model=schemas.LoginResponse)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     print(f"🔐 Login attempt for username: {credentials.username}")

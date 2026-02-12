@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    minWidth: 100,
+    width: 120,
     justifyContent: 'center',
     alignItems: 'center',
     ...Platform.select({
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
       android: { elevation: 2 }
     })
   },
-  inputText: { fontSize: 14, fontWeight: '700', color: colors.primary, letterSpacing: 0.5 },
+  inputText: { fontSize: 13, fontWeight: '500', color: '#333' },
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.4)', 
@@ -139,8 +139,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', 
     borderRadius: 24, 
     padding: 24, 
-    width: Platform.OS === 'web' ? 400 : Math.min(SCREEN_WIDTH - 40, 360),
+    width: Platform.OS === 'web' ? 360 : Math.min(SCREEN_WIDTH - 40, 320),
     maxHeight: 500,
+    zIndex: 9999,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20 },
       android: { elevation: 10 }
