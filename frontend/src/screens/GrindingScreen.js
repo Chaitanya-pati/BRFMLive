@@ -400,9 +400,9 @@ export default function GrindingScreen({ navigation }) {
         <View style={styles.excelMainHeaderRow}>
           <View style={[styles.mainHeaderCell, { width: 40 }]}><Text style={styles.mainHeaderText}>#</Text></View>
           <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Date</Text></View>
-          <View style={[styles.mainHeaderCell, { width: 80 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
-          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
-          <View style={[styles.mainHeaderCell, { width: 100 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 130 }]}><Text style={styles.mainHeaderText}>Time</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 120 }]}><Text style={styles.mainHeaderText}>B1 Scale Reading</Text></View>
+          <View style={[styles.mainHeaderCell, { width: 120 }]}><Text style={styles.mainHeaderText}>Load / Hr (In Tons)</Text></View>
           
           {activeFgs.map((fg, fgIdx) => {
             const activeBagIds = productBagSizeMap[fg.id] || [];
@@ -441,18 +441,19 @@ export default function GrindingScreen({ navigation }) {
               <Text style={{ fontSize: 10 }}>{rowIdx + 1}</Text>
             </View>
             <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
-            <View style={{ width: 80, padding: 2 }}>
-              <InputField 
+            <View style={{ width: 130, padding: 2 }}>
+              <TimePicker 
                 value={row.productionTime} 
-                onFocus={() => handleTimePicker(row.id)}
-                showSoftInputOnFocus={false}
-                placeholder="Time"
+                onValueChange={(v) => {
+                  const parts = v.split('-');
+                  const timeStr = `${parts[0]}:${parts[1]} ${parts[2]}`;
+                  handleRowUpdate(row.id, 'productionTime', timeStr);
+                }}
                 disabled={row.isSubmitted}
-                dense 
               />
             </View>
-            <View style={{ width: 100, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
-            <View style={{ width: 100, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 120, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
+            <View style={{ width: 120, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             
             {activeFgs.map((fg, fgIdx) => {
               const activeBagIds = productBagSizeMap[fg.id] || [];

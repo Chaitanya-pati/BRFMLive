@@ -8,7 +8,7 @@ const hours = Array.from({ length: 12 }, (_, i) => (i === 0 ? 12 : i).toString()
 const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 const periods = ['AM', 'PM'];
 
-export default function TimePicker({ label, value, onValueChange, style }) {
+export default function TimePicker({ label, value, onValueChange, style, disabled }) {
   const [showModal, setShowModal] = useState(false);
   
   // value format: "HH-MM-PERIOD"
@@ -45,6 +45,7 @@ export default function TimePicker({ label, value, onValueChange, style }) {
               activeOpacity={0.7}
               style={[styles.pickerItem, isSelected && styles.selectedItem]}
               onPress={() => onSelect(item)}
+              disabled={disabled}
             >
               <Text style={[styles.pickerItemText, isSelected && styles.selectedItemText]}>
                 {item}
@@ -60,11 +61,12 @@ export default function TimePicker({ label, value, onValueChange, style }) {
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TouchableOpacity 
-        style={styles.input} 
+        style={[styles.input, disabled && styles.disabledInput]} 
         activeOpacity={0.7}
-        onPress={() => setShowModal(true)}
+        onPress={() => !disabled && setShowModal(true)}
+        disabled={disabled}
       >
-        <Text style={styles.inputText}>{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</Text>
+        <Text style={[styles.inputText, disabled && styles.disabledInputText]}>{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</Text>
       </TouchableOpacity>
 
       <Modal 
@@ -128,6 +130,13 @@ const styles = StyleSheet.create({
     })
   },
   inputText: { fontSize: 13, fontWeight: '500', color: '#333' },
+  disabledInput: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+  },
+  disabledInputText: {
+    color: '#999',
+  },
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.4)', 
