@@ -120,10 +120,10 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       const [binsRes, bagsRes, fgRes, silosRes] = await Promise.all([
-        client.get("/grinding/available-bins"),
-        client.get("/bag-sizes"),
-        client.get("/finished-goods"),
-        client.get("/silos")
+        client.get("/grinding/available-bins").catch(() => ({ data: [] })),
+        client.get("/bag-sizes").catch(() => ({ data: [] })),
+        client.get("/finished-goods").catch(() => ({ data: [] })),
+        client.get("/silos").catch(() => ({ data: [] }))
       ]);
       
       const bins = binsRes.data || [];
