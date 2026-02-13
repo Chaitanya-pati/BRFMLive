@@ -18,7 +18,10 @@ import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
 
+import { useBranch } from "../context/BranchContext";
+
 export default function FinishedGoodsManagementScreen({ navigation }) {
+  const { activeBranch } = useBranch();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [loading, setLoading] = useState(false);
@@ -82,7 +85,12 @@ export default function FinishedGoodsManagementScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      await client.post("/finished-goods-godown", { ...godownForm, capacity_bags: parseInt(godownForm.capacity_bags) || 0 });
+      const payload = { 
+        ...godownForm, 
+        capacity_bags: parseInt(godownForm.capacity_bags) || 0,
+        branch_id: activeBranch?.id 
+      };
+      await client.post("/finished-goods-godown", payload);
       showToast("Success", "Godown created");
       setGodownModalVisible(false);
       setGodownForm({ godown_code: "", godown_name: "", capacity_bags: "", location: "" });

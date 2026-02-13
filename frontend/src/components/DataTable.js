@@ -10,9 +10,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
 
   const filteredData = searchable
     ? data.filter((row) =>
-        Object.values(row).some((val) =>
-          String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        Object.values(row).some((val) => {
+          if (val === null || val === undefined) return false;
+          if (typeof val === 'object') return false;
+          return String(val).toLowerCase().includes(searchTerm.toLowerCase());
+        })
       )
     : data;
 
