@@ -721,8 +721,8 @@ export default function GrindingScreen({ navigation }) {
                             <View key={alloc.id} style={{ flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'center' }}>
                               <View style={{ flex: 2 }}>
                                 <SelectDropdown
-                                  options={godowns.map(g => ({ label: g.godown_name, value: g.id }))}
-                                  value={alloc.godownId}
+                                  options={godowns.map(g => ({ label: g.godown_name, value: g.id.toString() }))}
+                                  value={alloc.godownId?.toString()}
                                   onValueChange={(val) => updateAllocation(item.label, alloc.id, 'godownId', val)}
                                   placeholder="Select Godown"
                                 />
