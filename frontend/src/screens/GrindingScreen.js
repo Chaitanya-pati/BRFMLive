@@ -49,14 +49,16 @@ export default function GrindingScreen({ navigation }) {
         if (!fg || !bs) return;
         
         const key = `${fg.product_name} - ${bs.weight_kg}kg`;
-        if (!totals[key]) totals[key] = 0;
-        totals[key] += parseInt(detail.quantity_bags) || 0;
+        if (!totals[key]) totals[key] = { bags: 0, fgId: detail.finished_good_id, bsId: detail.bag_size_id };
+        totals[key].bags += parseInt(detail.quantity_bags) || 0;
       });
     });
 
     const formattedSummary = Object.keys(totals).map(key => ({
       label: key,
-      value: totals[key]
+      value: totals[key].bags,
+      fgId: totals[key].fgId,
+      bsId: totals[key].bsId
     }));
 
     setSummaryData(formattedSummary);
@@ -64,7 +66,13 @@ export default function GrindingScreen({ navigation }) {
     // Initialize allocation
     const initialAllocation = {};
     formattedSummary.forEach(item => {
-      initialAllocation[item.label] = [{ id: Date.now(), godownId: null, bags: item.value.toString() }];
+      initialAllocation[item.label] = [{ 
+        id: Date.now(), 
+        godownId: null, 
+        bags: item.value.toString(),
+        fgId: item.fgId,
+        bsId: item.bsId
+      }];
     });
     setGodownAllocation(initialAllocation);
     
@@ -80,9 +88,16 @@ export default function GrindingScreen({ navigation }) {
   };
 
   const addAllocationRow = (label) => {
+    const original = summaryData.find(s => s.label === label);
     setGodownAllocation(prev => ({
       ...prev,
-      [label]: [...prev[label], { id: Date.now(), godownId: null, bags: "0" }]
+      [label]: [...prev[label], { 
+        id: Date.now(), 
+        godownId: null, 
+        bags: "0",
+        fgId: original?.fgId,
+        bsId: original?.bsId
+      }]
     }));
   };
 
@@ -121,12 +136,32 @@ export default function GrindingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      // Implementation for saving to godown - logic would involve looping through godownAllocation
-      showToast("Success", "Process completed and stock updated in multiple godowns");
+      
+      // Prepare all movements
+      const movements = [];
+      for (const label in godownAllocation) {
+        godownAllocation[label].forEach(row => {
+          movements.push({
+            movement_type: 'IN',
+            to_godown_id: parseInt(row.godownId),
+            finished_good_id: row.fgId,
+            bag_size_id: row.bsId,
+            quantity_bags: parseInt(row.bags),
+            notes: `Grinding completion: ${label}`
+          });
+        });
+      }
+
+      // Execute all movements
+      await Promise.all(movements.map(m => client.post("/finished-goods-godown-movement", m)));
+
+      showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
       setIsGrindingStarted(false);
+      fetchInitialData(); // Refresh everything
     } catch (error) {
-      showAlert("Error", "Failed to update godown stock");
+      console.error("Save to godown failed", error);
+      showAlert("Error", "Failed to update godown stock: " + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
