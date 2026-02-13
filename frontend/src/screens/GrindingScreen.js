@@ -70,8 +70,8 @@ export default function GrindingScreen({ navigation }) {
     
     try {
       const client = getApiClient();
-      const res = await client.get("/godowns");
-      setGodowns(res.data.filter(g => g.type === 'Finished Goods') || []);
+      const res = await client.get("/finished-goods-godown");
+      setGodowns(res.data || []);
     } catch (e) {
       console.error("Failed to fetch godowns", e);
     }
@@ -709,66 +709,75 @@ export default function GrindingScreen({ navigation }) {
                       </TouchableOpacity>
                     </View>
                     
-                    <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+                    <ScrollView style={{ flex: 1, paddingRight: 5 }} showsVerticalScrollIndicator={true}>
                       {summaryData.map((item, idx) => (
-                        <View key={idx} style={[styles.summaryRow, { flexDirection: 'column', alignItems: 'stretch', backgroundColor: '#F9F9F9', padding: 12, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' }]}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#EEE', paddingBottom: 8 }}>
-                            <Text style={[styles.summaryLabel, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>{item.label}</Text>
-                            <Text style={[styles.summaryValue, { fontWeight: '700', color: '#4CAF50' }]}>{item.value} Bags Produced</Text>
+                        <View key={idx} style={styles.summarySection}>
+                          <View style={styles.summaryHeader}>
+                            <View>
+                              <Text style={styles.summaryProductTitle}>{item.label}</Text>
+                              <Text style={styles.summaryBagsSub}>Production Summary</Text>
+                            </View>
+                            <View style={styles.summaryBadge}>
+                              <Text style={styles.summaryBadgeText}>{item.value} Bags Produced</Text>
+                            </View>
                           </View>
                           
-                          {godownAllocation[item.label]?.map((alloc, aIdx) => (
-                            <View key={alloc.id} style={{ flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-                              <View style={{ flex: 2 }}>
-                                <SelectDropdown
-                                  options={godowns.map(g => ({ label: g.godown_name, value: g.id.toString() }))}
-                                  value={alloc.godownId?.toString()}
-                                  onValueChange={(val) => updateAllocation(item.label, alloc.id, 'godownId', val)}
-                                  placeholder="Select Godown"
-                                />
+                          <View style={styles.allocationContainer}>
+                            {godownAllocation[item.label]?.map((alloc, aIdx) => (
+                              <View key={alloc.id} style={styles.allocationRow}>
+                                <View style={{ flex: 1.5 }}>
+                                  <Text style={styles.allocationLabel}>Target Godown</Text>
+                                  <SelectDropdown
+                                    options={godowns.map(g => ({ label: g.godown_name, value: g.id.toString() }))}
+                                    value={alloc.godownId?.toString()}
+                                    onValueChange={(val) => updateAllocation(item.label, alloc.id, 'godownId', val)}
+                                    placeholder="Select Godown"
+                                  />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.allocationLabel}>Allocated Bags</Text>
+                                  <InputField
+                                    value={alloc.bags}
+                                    onChangeText={(val) => updateAllocation(item.label, alloc.id, 'bags', val)}
+                                    keyboardType="numeric"
+                                    placeholder="Bags"
+                                    dense
+                                  />
+                                </View>
+                                {godownAllocation[item.label].length > 1 && (
+                                  <TouchableOpacity 
+                                    onPress={() => removeAllocationRow(item.label, alloc.id)}
+                                    style={styles.removeAllocationBtn}
+                                  >
+                                    <Text style={styles.removeAllocationText}>✕</Text>
+                                  </TouchableOpacity>
+                                )}
                               </View>
-                              <View style={{ flex: 1 }}>
-                                <InputField
-                                  value={alloc.bags}
-                                  onChangeText={(val) => updateAllocation(item.label, alloc.id, 'bags', val)}
-                                  keyboardType="numeric"
-                                  placeholder="Bags"
-                                  dense
-                                />
-                              </View>
-                              {godownAllocation[item.label].length > 1 && (
-                                <TouchableOpacity 
-                                  onPress={() => removeAllocationRow(item.label, alloc.id)}
-                                  style={{ padding: 5 }}
-                                >
-                                  <Text style={{ color: '#F44336', fontSize: 24, fontWeight: 'bold' }}>×</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          ))}
+                            ))}
+                          </View>
                           
                           <TouchableOpacity 
-                            style={{ alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 2 }} 
+                            style={styles.splitButton} 
                             onPress={() => addAllocationRow(item.label)}
                           >
-                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: 'bold' }}>+ Split to another Godown</Text>
+                            <Text style={styles.splitButtonText}>+ Split to another Godown</Text>
                           </TouchableOpacity>
                         </View>
                       ))}
                     </ScrollView>
 
-                    <View style={{ flexDirection: 'row', gap: 15, marginTop: 20, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#EEE' }}>
+                    <View style={styles.modalFooter}>
                       <TouchableOpacity 
-                        style={[styles.modalBtn, { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#DDD', alignItems: 'center' }]} 
+                        style={[styles.modalBtn, styles.cancelBtn]} 
                         onPress={() => setShowSummary(false)}
                       >
-                        <Text style={{ fontWeight: 'bold', color: '#666' }}>Cancel</Text>
+                        <Text style={styles.cancelBtnText}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.modalBtn, { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', elevation: 2 }]} 
+                        style={[styles.modalBtn, styles.saveBtn]} 
                         onPress={handleSaveToGodown}
                       >
-                        <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Save & Finish</Text>
+                        <Text style={styles.saveBtnText}>Confirm & Save Stock</Text>
                       </TouchableOpacity>
                     </View>
                   </Card>
@@ -904,6 +913,44 @@ const styles = StyleSheet.create({
       android: { elevation: 8 }
     })
   },
+  summarySection: { 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    marginBottom: 20, 
+    borderWidth: 1, 
+    borderColor: '#E0E7FF',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2
+  },
+  summaryHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 16, 
+    backgroundColor: '#F8FAFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF'
+  },
+  summaryProductTitle: { fontSize: 16, fontWeight: '800', color: colors.primary, letterSpacing: 0.3 },
+  summaryBagsSub: { fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: '600', marginTop: 2 },
+  summaryBadge: { backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' },
+  summaryBadgeText: { color: '#059669', fontSize: 12, fontWeight: '700' },
+  allocationContainer: { padding: 16 },
+  allocationRow: { flexDirection: 'row', gap: 12, marginBottom: 12, alignItems: 'flex-end', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+  allocationLabel: { fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 6, textTransform: 'uppercase' },
+  removeAllocationBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FEE2E2' },
+  removeAllocationText: { color: '#EF4444', fontSize: 14, fontWeight: 'bold' },
+  splitButton: { alignSelf: 'flex-start', marginLeft: 16, marginBottom: 16, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#EEF2FF' },
+  splitButtonText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  modalFooter: { flexDirection: 'row', gap: 12, marginTop: 12, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center', backgroundColor: '#fff' },
+  cancelBtnText: { fontWeight: '700', color: '#475569', fontSize: 15 },
+  saveBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  saveBtnText: { fontWeight: '700', color: '#FFF', fontSize: 15 },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
