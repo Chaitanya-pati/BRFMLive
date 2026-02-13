@@ -144,16 +144,18 @@ export default function GrindingScreen({ navigation }) {
           movements.push({
             movement_type: 'IN',
             to_godown_id: parseInt(row.godownId),
-            finished_good_id: row.fgId,
-            bag_size_id: row.bsId,
+            finished_good_id: parseInt(row.fgId),
+            bag_size_id: parseInt(row.bsId),
             quantity_bags: parseInt(row.bags),
-            notes: `Grinding completion: ${label}`
+            remarks: `Grinding completion: ${label}`
           });
         });
       }
 
       // Execute all movements
-      await Promise.all(movements.map(m => client.post("/finished-goods-godown-movement", m)));
+      for (const m of movements) {
+        await client.post("/finished-goods-godown-movement", m);
+      }
 
       showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
