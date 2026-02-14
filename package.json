@@ -9,6 +9,7 @@
     "babel-preset-expo": "^54.0.9",
     "expo": "~50.0.0",
     "expo-cli": "^6.3.12",
+    "expo-linear-gradient": "^15.0.8",
     "intro.js": "^8.3.2",
     "jest": "^30.2.0",
     "react-dom": "^19.2.4",

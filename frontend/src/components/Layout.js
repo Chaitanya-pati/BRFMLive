@@ -26,7 +26,9 @@ import {
   FaCog,
   FaRoute,
   FaUserShield, // For User Management Admin Icon
-  FaUserCog // For Branch Master Admin Icon
+  FaUserCog, // For Branch Master Admin Icon
+  FaTag,
+  FaChartBar,
 } from "react-icons/fa";
 import { Checkbox } from 'react-native-web'; // Assuming a checkbox component for web
 
@@ -144,6 +146,33 @@ const SvgUserCogIcon = ({ active }) => {
   );
 };
 
+
+const SvgTagIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaTag color={color} size={18} />
+    </View>
+  );
+};
+
+const SvgWarehouseIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaWarehouse color={color} size={18} />
+    </View>
+  );
+};
+
+const SvgChartIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#94a3b8";
+  return (
+    <View style={styles.iconContainer}>
+      <FaChartBar color={color} size={18} />
+    </View>
+  );
+};
 
 export default function Layout({ children, title, currentRoute }) {
   const navigation = useNavigation();
@@ -292,12 +321,30 @@ const menuItems = [
     }
   ];
 
-  const toggleMobileMenu = () => {
+  const [expandedSections, setExpandedSections] = useState({
+    Masters: true, // Default open
+    Production: false,
+    Inventory: false,
+    Dispatch: false,
+    GateEntry: false,
+    Admin: false,
+    Reports: false,
+  });
+
+  const toggleSection = (sectionName) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionName]: !prev[sectionName],
+    }));
+  };
+
+  const handleNavigate = (route) => {
     if (isMobile) {
-      setMobileMenuOpen(!mobileMenuOpen);
-    } else {
-      setSidebarCollapsed(!sidebarCollapsed);
+      setMobileMenuOpen(false);
     }
+    navigation.navigate(route);
+  };
+
   };
 
   const handleNavigate = (route) => {

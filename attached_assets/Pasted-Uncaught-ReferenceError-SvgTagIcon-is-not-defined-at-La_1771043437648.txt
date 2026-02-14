@@ -1,0 +1,64 @@
+Uncaught ReferenceError: SvgTagIcon is not defined
+    at Layout (Layout.js:203:13)
+    at renderWithHooks (react-dom.development.js:16305:18)
+    at mountIndeterminateComponent (react-dom.development.js:20074:13)
+    at beginWork (react-dom.development.js:21587:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:4164:14)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4213:16)
+    at invokeGuardedCallback (react-dom.development.js:4277:31)
+    at beginWork$1 (react-dom.development.js:27451:7)
+    at performUnitOfWork (react-dom.development.js:26557:12)
+    at workLoopSync (react-dom.development.js:26466:5)Understand this error
+react-dom.development.js:18687 The above error occurred in the <Layout> component:
+
+    at Layout (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:85818:5)
+    at HomeScreen (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:84982:5)
+    at StaticContainer (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:53474:18)
+    at EnsureSingleNavigator (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:47512:5)
+    at SceneView (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:53260:5)
+    at div
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:41146:27
+    at AnimatedHeaderHeightProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:57102:5)
+    at div
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:41146:27
+    at div
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:41146:27
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:62892:60
+    at Background (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:57393:5)
+    at Screen (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:76183:70)
+    at div
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:41146:27
+    at NativeSafeAreaProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:73940:5)
+    at SafeAreaProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:73773:5)
+    at FrameSizeProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:74248:5)
+    at SafeAreaProviderCompat (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:76101:5)
+    at NativeStackView (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:57001:5)
+    at PreventRemoveProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:51536:5)
+    at NavigationStateListenerProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:54001:5)
+    at NavigationContent (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:52947:5)
+    at https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:52963:7
+    at NativeStackNavigator (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:56890:5)
+    at BranchProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:76329:5)
+    at ThemeProvider (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:48864:5)
+    at EnsureSingleNavigator (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:47512:5)
+    at BaseNavigationContainer (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:45619:5)
+    at NavigationContainerInner (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:54817:5)
+    at App (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:40700:40)
+    at AppWithErrorBoundary
+    at withDevTools(AppWithErrorBoundary)
+    at AppContainer (https://c5e998ac-0222-4209-9406-4ee142426e63-00-2ksw0bm58qwf.pike.replit.dev/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:33371:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ react-dom.development.js:18687Understand this error
+react-dom.development.js:12056 Uncaught ReferenceError: SvgTagIcon is not defined
+    at Layout (Layout.js:203:13)
+    at renderWithHooks (react-dom.development.js:16305:18)
+    at mountIndeterminateComponent (react-dom.development.js:20074:13)
+    at beginWork (react-dom.development.js:21587:16)
+    at beginWork$1 (react-dom.development.js:27426:14)
+    at performUnitOfWork (react-dom.development.js:26557:12)
+    at workLoopSync (react-dom.development.js:26466:5)
+    at renderRootSync (react-dom.development.js:26434:7)
+    at recoverFromConcurrentError (react-dom.development.js:25850:20)
+    at performSyncWorkOnRoot (react-dom.development.js:26096:20)Understand this error

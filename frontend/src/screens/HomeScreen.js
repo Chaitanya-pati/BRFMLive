@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Layout from "../components/Layout";
 import colors from "../theme/colors";
+import { LinearGradient } from "expo-linear-gradient";
 import { supplierApi, vehicleApi, labTestApi } from "../api/client";
 import {
   FaBuilding,
@@ -357,19 +358,23 @@ export default function HomeScreen({ navigation }) {
           ]}
         >
           {stats.map((stat, index) => (
-            <View
+            <LinearGradient
               key={index}
+              colors={stat.gradient || ["#ffffff", "#f3f4f6"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={[
                 styles.statCard,
-                { borderLeftColor: stat.color },
                 isMobile && styles.statCardMobile,
               ]}
             >
-              <Icon
-                name={stat.icon}
-                size={isMobile ? 28 : 36}
-                color={stat.color}
-              />
+              <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <Icon
+                  name={stat.icon}
+                  size={isMobile ? 24 : 32}
+                  color="#ffffff"
+                />
+              </View>
               <View style={styles.statInfo}>
                 <Text
                   style={[styles.statTitle, isMobile && styles.statTitleMobile]}
@@ -377,12 +382,11 @@ export default function HomeScreen({ navigation }) {
                   {stat.title}
                 </Text>
                 {loading ? (
-                  <ActivityIndicator size="small" color={stat.color} />
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
                   <Text
                     style={[
                       styles.statValue,
-                      { color: stat.color },
                       isMobile && styles.statValueMobile,
                     ]}
                   >
@@ -390,7 +394,7 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 )}
               </View>
-            </View>
+            </LinearGradient>
           ))}
         </View>
 
@@ -429,118 +433,72 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 200,
-    backgroundColor: "#fff",
     padding: 24,
-    borderRadius: 16,
-    borderLeftWidth: 5,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.12)",
+    elevation: 8,
     overflow: "hidden",
-    transition: "all 0.3s ease",
   },
-  statCardMobile: {
-    minWidth: "100%",
-    padding: 16,
-  },
-  statIcon: {
-    fontSize: 36,
+  statIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
-    // Removed direct icon styling, will rely on SvgIcon or placeholder
-  },
-  statIconMobile: {
-    fontSize: 28,
-    marginRight: 12,
   },
   statInfo: {
     flex: 1,
   },
   statTitle: {
-    fontSize: 13,
-    color: "#6b7280",
-    marginBottom: 8,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 4,
     textTransform: "uppercase",
-    letterSpacing: 1,
-    fontWeight: "700",
-  },
-  statTitleMobile: {
-    fontSize: 11,
-    marginBottom: 6,
+    letterSpacing: 0.5,
+    fontWeight: "600",
   },
   statValue: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: "800",
-    color: "#1f2937",
+    color: "#ffffff",
   },
   statValueMobile: {
     fontSize: 26,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: 10,
-    marginTop: 6,
-  },
-  sectionTitleMobile: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  quickActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 24,
-  },
-  quickActionsMobile: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  actionCard: {
-    flex: 1,
-    padding: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    minWidth: 150,
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)", // Softer shadow
-    justifyContent: "center", // Center content vertically
-  },
-  actionCardMobile: {
-    minWidth: Platform.select({ web: "calc(50% - 6px)", default: "45%" }),
-    padding: 16,
-  },
-  actionIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-    // Removed direct icon styling, will rely on SvgIcon or placeholder
-  },
-  actionIconMobile: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  actionTitle: {
-    color: colors.onPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  actionTitleMobile: {
-    fontSize: 13,
-  },
   activityCard: {
-    backgroundColor: colors.surface,
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 0,
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)", // Softer shadow
-    minHeight: 100, // Give it some height
-    justifyContent: "center", // Center text
+    backgroundColor: "#ffffff",
+    padding: 30,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
+    minHeight: 180,
+    justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(226, 232, 240, 0.8)",
   },
   activityText: {
-    color: colors.textTertiary,
-    fontSize: 16,
+    color: "#94a3b8",
+    fontSize: 18,
+    fontWeight: "500",
+    fontStyle: "italic",
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: 24,
+    marginTop: 16,
+    letterSpacing: -0.75,
+  },
+  sectionTitleMobile: {
+    fontSize: 20,
+    marginBottom: 16,
   },
 });
