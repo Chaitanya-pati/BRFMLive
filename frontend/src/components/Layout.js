@@ -385,29 +385,25 @@ const menuItems = [
     const isActive = currentRoute === item.route;
     const isExpanded = expandedSections[item.name];
 
-    if (item.isHeader) {
-      return (
-        <View key={index}>
-          <TouchableOpacity
-            style={styles.menuHeader}
-            onPress={() => toggleSection(item.name)}
-          >
-            <View style={styles.menuIcon}>
-              <IconComponent active={false} />
+    {item.isHeader ? (
+      <View key={index}>
+        <TouchableOpacity
+          style={styles.menuHeader}
+          onPress={() => toggleSection(item.name)}
+        >
+          <View style={styles.menuIcon}>
+            <IconComponent active={false} />
+          </View>
+          {(!sidebarCollapsed || mobileMenuOpen) && (
+            <View style={styles.headerTextRow}>
+              <Text style={styles.headerText}>{item.name}</Text>
+              <Text style={styles.chevronIcon}>{isExpanded ? "▼" : "▶"}</Text>
             </View>
-            {!sidebarCollapsed && (
-              <View style={styles.headerTextRow}>
-                <Text style={styles.headerText}>{item.name}</Text>
-                <Text style={styles.chevronIcon}>{isExpanded ? "▼" : "▶"}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          {isExpanded && !sidebarCollapsed && item.subItems.map((sub, idx) => renderMenuItem(sub, `${index}-${idx}`, true))}
-        </View>
-      );
-    }
-
-    return (
+          )}
+        </TouchableOpacity>
+        {isExpanded && (!sidebarCollapsed || mobileMenuOpen) && item.subItems.map((sub, idx) => renderMenuItem(sub, `${index}-${idx}`, true))}
+      </View>
+    ) : (
       <TouchableOpacity
         key={index}
         style={[
@@ -430,7 +426,7 @@ const menuItems = [
           </Text>
         )}
       </TouchableOpacity>
-    );
+    )}
   };
 
   const handleBranchSelectionChange = (branchId, isSelected) => {
