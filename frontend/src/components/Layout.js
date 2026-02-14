@@ -237,7 +237,7 @@ const menuItems = [
     {
       name: "Production",
       icon: SvgCogIcon,
-      section: "Production",
+      section: "Operations",
       isHeader: true,
       subItems: [
         { name: "Production Orders", route: "ProductionOrder", icon: SvgCogIcon },
@@ -256,7 +256,7 @@ const menuItems = [
     {
       name: "Inventory & Warehouse",
       icon: SvgWarehouseIcon,
-      section: "Inventory",
+      section: "Operations",
       isHeader: true,
       subItems: [
         { name: "Godown Management", route: "FinishedGoodsManagement", icon: SvgWarehouseIcon },
@@ -268,7 +268,7 @@ const menuItems = [
     {
       name: "Dispatch & Orders",
       icon: SvgTruckIcon,
-      section: "Dispatch",
+      section: "Operations",
       isHeader: true,
       subItems: [
         { name: "Customer Orders", route: "CustomerOrderMaster", icon: SvgFileTextIcon },
@@ -280,7 +280,7 @@ const menuItems = [
     {
       name: "Gate Entry & Inward",
       icon: SvgTruckIcon,
-      section: "GateEntry",
+      section: "Operations",
       isHeader: true,
       subItems: [
         { name: "Vehicle Entry", route: "VehicleEntry", icon: SvgTruckIcon },
@@ -294,7 +294,7 @@ const menuItems = [
     {
       name: "Admin Panel",
       icon: SvgUserShieldIcon,
-      section: "Admin",
+      section: "Administration",
       isAdminOnly: true,
       isHeader: true,
       subItems: [
@@ -311,7 +311,7 @@ const menuItems = [
     {
       name: "Reports & Analytics",
       icon: SvgChartIcon,
-      section: "Reports",
+      section: "Administration",
       isHeader: true,
       subItems: [
         { name: "Daily Report", route: "DailyReport", icon: SvgFileTextIcon },
@@ -556,7 +556,7 @@ const menuItems = [
 
             {menuItems
               .slice(1)
-              .filter(item => item.section === "Masters" || item.section === "Production" || item.section === "Inventory" || item.section === "Dispatch" || item.section === "GateEntry")
+              .filter(item => item.section === "Operations")
               .filter(item => !item.isAdminOnly || userRole === 'admin')
               .map((item, index) => renderMenuItem(item, index + 1))}
 
@@ -571,7 +571,7 @@ const menuItems = [
 
             {/* Render Admin Menu Items if user is admin */}
             {userRole === 'admin' && menuItems
-              .filter(item => item.section === "Admin" || item.section === "Reports")
+              .filter(item => item.section === "Administration")
               .map((item, index) => renderMenuItem(item, index + menuItems.length))}
           </ScrollView>
         </View>

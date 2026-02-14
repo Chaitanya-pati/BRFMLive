@@ -70,25 +70,25 @@ export default function HomeScreen({ navigation }) {
     {
       title: "Total Suppliers",
       value: "-",
-      color: "#2c3e50",
+      color: "#3b82f6",
       icon: "building",
     },
     {
       title: "Vehicle Entries",
       value: "-",
-      color: "#2c3e50",
+      color: "#6366f1",
       icon: "truck",
     },
     {
       title: "Lab Tests",
       value: "-",
-      color: "#2c3e50",
+      color: "#10b981",
       icon: "flask",
     },
     {
       title: "Pending Tests",
       value: "-",
-      color: "#2c3e50",
+      color: "#f59e0b",
       icon: "clock",
     },
   ]);
@@ -143,25 +143,25 @@ export default function HomeScreen({ navigation }) {
         {
           title: "Total Suppliers",
           value: suppliersRes.data.length.toString(),
-          color: "#2c3e50",
+          color: "#3b82f6",
           icon: "building",
         },
         {
           title: "Vehicle Entries",
           value: vehiclesRes.data.length.toString(),
-          color: "#2c3e50",
+          color: "#6366f1",
           icon: "truck",
         },
         {
           title: "Lab Tests",
           value: labTestsRes.data.length.toString(),
-          color: "#2c3e50",
+          color: "#10b981",
           icon: "flask",
         },
         {
           title: "Pending Tests",
           value: availableVehiclesRes.data.length.toString(),
-          color: "#2c3e50",
+          color: "#f59e0b",
           icon: "clock",
         },
       ]);
@@ -356,11 +356,11 @@ export default function HomeScreen({ navigation }) {
                 isMobile && styles.statCardMobile,
               ]}
             >
-              <View style={styles.statIconWrapper}>
+              <View style={[styles.statIconWrapper, { backgroundColor: stat.color + '15' }]}>
                 <Icon
                   name={stat.icon}
-                  size={18}
-                  color="#94a3b8"
+                  size={20}
+                  color={stat.color}
                 />
               </View>
               <View style={styles.statInfo}>
@@ -370,12 +370,13 @@ export default function HomeScreen({ navigation }) {
                   {stat.title}
                 </Text>
                 {loading ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={stat.color} />
                 ) : (
                   <Text
                     style={[
                       styles.statValue,
                       isMobile && styles.statValueMobile,
+                      { color: stat.color }
                     ]}
                   >
                     {stat.value}
@@ -420,44 +421,42 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: 200,
-    padding: 20,
-    borderRadius: 12,
+    minWidth: 240,
+    padding: 24,
+    borderRadius: 16,
     backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f1f5f9",
   },
   statIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#f1f5f9",
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 20,
   },
   statInfo: {
     flex: 1,
   },
   statTitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748b",
-    marginBottom: 4,
+    marginBottom: 6,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     fontWeight: "700",
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "800",
-    color: "#1e293b",
   },
   iconContainer: {
     width: 32,
