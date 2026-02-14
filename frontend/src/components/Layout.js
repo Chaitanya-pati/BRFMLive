@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   sidebar: {
-    width: 260,
+    width: 280,
     backgroundColor: "#2d3e50",
     boxShadow: "2px 0 8px rgba(0, 0, 0, 0.1)",
     zIndex: 1000,
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 260,
+    width: 280,
     boxShadow: "2px 0 16px rgba(0, 0, 0, 0.3)",
   },
   sidebarMobileHidden: {
