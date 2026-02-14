@@ -329,14 +329,6 @@ const menuItems = [
     }
   };
 
-  const toggleMobileMenu = () => {
-    if (isMobile) {
-      setMobileMenuOpen(!mobileMenuOpen);
-    } else {
-      setSidebarCollapsed(!sidebarCollapsed);
-    }
-  };
-
   const [expandedSections, setExpandedSections] = useState({
     Masters: true, // Default open
     Production: false,
