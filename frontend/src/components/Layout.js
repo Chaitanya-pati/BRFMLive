@@ -385,27 +385,31 @@ const menuItems = [
     const isActive = currentRoute === item.route;
     const isExpanded = expandedSections[item.name];
 
-    {item.isHeader ? (
-      <View key={index}>
-        <TouchableOpacity
-          style={styles.menuHeader}
-          onPress={() => toggleSection(item.name)}
-        >
-          <View style={styles.menuIcon}>
-            <IconComponent active={false} />
-          </View>
-          {(!sidebarCollapsed || mobileMenuOpen) && (
-            <View style={styles.headerTextRow}>
-              <Text style={styles.headerText}>{item.name}</Text>
-              <Text style={styles.chevronIcon}>{isExpanded ? "▼" : "▶"}</Text>
+    if (item.isHeader) {
+      return (
+        <View key={`${item.name}-${index}`}>
+          <TouchableOpacity
+            style={styles.menuHeader}
+            onPress={() => toggleSection(item.name)}
+          >
+            <View style={styles.menuIcon}>
+              <IconComponent active={false} />
             </View>
-          )}
-        </TouchableOpacity>
-        {isExpanded && (!sidebarCollapsed || mobileMenuOpen) && item.subItems.map((sub, idx) => renderMenuItem(sub, `${index}-${idx}`, true))}
-      </View>
-    ) : (
+            {(!sidebarCollapsed || mobileMenuOpen) && (
+              <View style={styles.headerTextRow}>
+                <Text style={styles.headerText}>{item.name}</Text>
+                <Text style={styles.chevronIcon}>{isExpanded ? "▼" : "▶"}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {isExpanded && (!sidebarCollapsed || mobileMenuOpen) && item.subItems.map((sub, idx) => renderMenuItem(sub, `${index}-${idx}`, true))}
+        </View>
+      );
+    }
+
+    return (
       <TouchableOpacity
-        key={index}
+        key={`${item.route || item.name}-${index}`}
         style={[
           styles.menuItem,
           isActive && styles.menuItemActive,
@@ -426,7 +430,7 @@ const menuItems = [
           </Text>
         )}
       </TouchableOpacity>
-    )}
+    );
   };
 
   const handleBranchSelectionChange = (branchId, isSelected) => {
