@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import Layout from "../components/Layout";
 import colors from "../theme/colors";
-import { LinearGradient } from "expo-linear-gradient";
 import { supplierApi, vehicleApi, labTestApi } from "../api/client";
 import {
   FaBuilding,

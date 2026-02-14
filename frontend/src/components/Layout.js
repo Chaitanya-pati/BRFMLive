@@ -217,7 +217,7 @@ export default function Layout({ children, title, currentRoute }) {
   }, [isMobile]);
 
 const menuItems = [
-    { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: null },
+    { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: "Home" },
     
     // Masters Section
     {
