@@ -33,7 +33,7 @@ import { useBranch } from "../context/BranchContext";
 import { storage } from "../utils/storage";
 
 // Icon component using Font Awesome icons
-const Icon = ({ name, size = 36, color }) => {
+const Icon = ({ name, size = 20, color }) => {
   const iconMap = {
     building: FaBuilding,
     truck: FaTruck,
@@ -55,8 +55,8 @@ const Icon = ({ name, size = 36, color }) => {
   const IconComponent = iconMap[name] || FaBuilding;
 
   return (
-    <View style={{ marginRight: 16 }}>
-      <IconComponent color={color || colors.primary} size={size} />
+    <View style={styles.iconContainer}>
+      <IconComponent color={color || "#94a3b8"} size={size} />
     </View>
   );
 };
@@ -71,30 +71,26 @@ export default function HomeScreen({ navigation }) {
     {
       title: "Total Suppliers",
       value: "-",
-      color: "#3b82f6",
+      color: "#2c3e50",
       icon: "building",
-      gradient: ["#3b82f6", "#2563eb"],
     },
     {
       title: "Vehicle Entries",
       value: "-",
-      color: "#8b5cf6",
+      color: "#2c3e50",
       icon: "truck",
-      gradient: ["#8b5cf6", "#7c3aed"],
     },
     {
       title: "Lab Tests",
       value: "-",
-      color: "#10b981",
+      color: "#2c3e50",
       icon: "flask",
-      gradient: ["#10b981", "#059669"],
     },
     {
       title: "Pending Tests",
       value: "-",
-      color: "#f59e0b",
+      color: "#2c3e50",
       icon: "clock",
-      gradient: ["#f59e0b", "#d97706"],
     },
   ]);
   const [loading, setLoading] = useState(true);
@@ -148,30 +144,26 @@ export default function HomeScreen({ navigation }) {
         {
           title: "Total Suppliers",
           value: suppliersRes.data.length.toString(),
-          color: "#3b82f6",
+          color: "#2c3e50",
           icon: "building",
-          gradient: ["#3b82f6", "#2563eb"],
         },
         {
           title: "Vehicle Entries",
           value: vehiclesRes.data.length.toString(),
-          color: "#8b5cf6",
+          color: "#2c3e50",
           icon: "truck",
-          gradient: ["#8b5cf6", "#7c3aed"],
         },
         {
           title: "Lab Tests",
           value: labTestsRes.data.length.toString(),
-          color: "#10b981",
+          color: "#2c3e50",
           icon: "flask",
-          gradient: ["#10b981", "#059669"],
         },
         {
           title: "Pending Tests",
           value: availableVehiclesRes.data.length.toString(),
-          color: "#f59e0b",
+          color: "#2c3e50",
           icon: "clock",
-          gradient: ["#f59e0b", "#d97706"],
         },
       ]);
     } catch (error) {
@@ -358,21 +350,18 @@ export default function HomeScreen({ navigation }) {
           ]}
         >
           {stats.map((stat, index) => (
-            <LinearGradient
+            <View
               key={index}
-              colors={stat.gradient || ["#ffffff", "#f3f4f6"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
               style={[
                 styles.statCard,
                 isMobile && styles.statCardMobile,
               ]}
             >
-              <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <View style={styles.statIconWrapper}>
                 <Icon
                   name={stat.icon}
-                  size={isMobile ? 24 : 32}
-                  color="#ffffff"
+                  size={18}
+                  color="#94a3b8"
                 />
               </View>
               <View style={styles.statInfo}>
@@ -382,7 +371,7 @@ export default function HomeScreen({ navigation }) {
                   {stat.title}
                 </Text>
                 {loading ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Text
                     style={[
@@ -394,7 +383,7 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 )}
               </View>
-            </LinearGradient>
+            </View>
           ))}
         </View>
 
@@ -433,23 +422,24 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 200,
-    padding: 24,
-    borderRadius: 24,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
-    overflow: "hidden",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#e5e7eb",
   },
   statIconWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -458,17 +448,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statTitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    color: "#64748b",
     marginBottom: 4,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   statValue: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: "800",
-    color: "#ffffff",
+    color: "#1e293b",
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statValueMobile: {
     fontSize: 26,

@@ -556,7 +556,7 @@ const menuItems = [
 
             {menuItems
               .slice(1)
-              // Filter out admin-only items from the main loop if they are not intended for regular display
+              .filter(item => item.section === "Masters" || item.section === "Production" || item.section === "Inventory" || item.section === "Dispatch" || item.section === "GateEntry")
               .filter(item => !item.isAdminOnly || userRole === 'admin')
               .map((item, index) => renderMenuItem(item, index + 1))}
 
@@ -571,7 +571,7 @@ const menuItems = [
 
             {/* Render Admin Menu Items if user is admin */}
             {userRole === 'admin' && menuItems
-              .filter(item => item.isAdminOnly)
+              .filter(item => item.section === "Admin" || item.section === "Reports")
               .map((item, index) => renderMenuItem(item, index + menuItems.length))}
           </ScrollView>
         </View>
