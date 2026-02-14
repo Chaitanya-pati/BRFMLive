@@ -345,15 +345,6 @@ const menuItems = [
     navigation.navigate(route);
   };
 
-  };
-
-  const handleNavigate = (route) => {
-    navigation.navigate(route);
-    if (isMobile) {
-      setMobileMenuOpen(false);
-    }
-  };
-
   const handleBranchSwitch = async (branch) => {
     try {
       const success = await setActiveBranch(branch);
