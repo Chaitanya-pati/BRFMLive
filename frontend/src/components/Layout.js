@@ -187,119 +187,109 @@ export default function Layout({ children, title, currentRoute }) {
     }
   }, [isMobile]);
 
-  const menuItems = [
+const menuItems = [
     { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: null },
+    
+    // Masters Section
     {
-      name: "Master Data",
+      name: "Masters",
       route: "MasterView",
       icon: SvgDatabaseIcon,
-      section: "Operations",
+      section: "Masters",
     },
     {
-      name: "Customer Master",
-      route: "CustomerMaster",
-      icon: SvgUserShieldIcon,
-      section: "Operations",
+      name: "Product Master",
+      route: "ProductMaster",
+      icon: SvgTagIcon,
+      section: "Masters",
     },
+
+    // Production Section
     {
-      name: "Driver Management",
-      route: "DriverMaster",
-      icon: SvgTruckIcon,
-      section: "Operations",
-    },
-    {
-      name: "Customer Orders",
-      route: "CustomerOrderMaster",
-      icon: SvgFileTextIcon,
-      section: "Operations",
-    },
-    {
-      name: "Route Configuration",
-      route: "RouteConfiguration",
-      icon: SvgRouteIcon,
-      section: "Operations",
-    },
-    {
-      name: "Gate Entry",
-      route: "VehicleEntry",
-      icon: SvgTruckIcon,
-      section: "Operations",
-    },
-    {
-      name: "Quality Control",
-      route: "LabTest",
-      icon: SvgClipboardIcon,
-      section: "Operations",
-    },
-    {
-      name: "Administrator Settings",
-      route: "AdminDashboard",
+      name: "Production",
       icon: SvgCogIcon,
-      section: "Operations",
+      section: "Production",
+      isHeader: true,
+      subItems: [
+        { name: "Production Orders", route: "ProductionOrder", icon: SvgCogIcon },
+        { name: "Production Planning", route: "ProductionOrderPlanning", icon: SvgFileTextIcon },
+        { name: "Transfer Recording", route: "TransferRecording", icon: SvgPackageIcon },
+        { name: "12 Hour Transfer", route: "Transfer12Hour", icon: SvgBinIcon },
+        { name: "Grinding", route: "Grinding", icon: SvgCogIcon },
+        { name: "Cleaning Bin", route: "PrecleaningBin", icon: SvgBinIcon },
+        { name: "Cleaning Timeline", route: "PrecleaningTimeline", icon: SvgBinIcon },
+        { name: "Granulation", route: "ProductionOrderGranulation", icon: SvgClipboardIcon },
+        { name: "Traceability", route: "ProductionOrderTraceability", icon: SvgRouteIcon },
+      ]
     },
+
+    // Inventory Section
     {
-      name: "Unloading Entry",
-      route: "UnloadingEntry",
-      icon: SvgPackageIcon,
-      section: "Operations",
+      name: "Inventory & Warehouse",
+      icon: SvgWarehouseIcon,
+      section: "Inventory",
+      isHeader: true,
+      subItems: [
+        { name: "Godown Management", route: "FinishedGoodsManagement", icon: SvgWarehouseIcon },
+        { name: "Stock Tracking", route: "GodownStockView", icon: SvgDatabaseIcon },
+      ]
     },
+
+    // Dispatch Section
     {
-      name: "Raw Wheat Bin Process", // Renamed from Precleaning Process
-      route: "PrecleaningBin",
-      icon: SvgBinIcon,
-      section: "Operations",
+      name: "Dispatch & Orders",
+      icon: SvgTruckIcon,
+      section: "Dispatch",
+      isHeader: true,
+      subItems: [
+        { name: "Customer Orders", route: "CustomerOrderMaster", icon: SvgFileTextIcon },
+        { name: "Dispatch Management", route: "DispatchManagement", icon: SvgTruckIcon },
+      ]
     },
+
+    // Gate Entry Section
     {
-      name: "Raw Wheat Bin Timeline", // Renamed from Precleaning Timeline
-      route: "PrecleaningTimeline",
-      icon: SvgBinIcon, // Assuming same icon as PrecleaningProcess for now
-      section: "Operations",
+      name: "Gate Entry & Inward",
+      icon: SvgTruckIcon,
+      section: "GateEntry",
+      isHeader: true,
+      subItems: [
+        { name: "Vehicle Entry", route: "VehicleEntry", icon: SvgTruckIcon },
+        { name: "Unloading Entry", route: "UnloadingEntry", icon: SvgPackageIcon },
+        { name: "Lab Testing", route: "LabTest", icon: SvgClipboardIcon },
+        { name: "Claim Tracking", route: "ClaimTracking", icon: SvgFileTextIcon },
+      ]
     },
+
+    // Admin Section
     {
-      name: "Claim Tracking",
-      route: "ClaimTracking",
-      icon: SvgFileTextIcon,
-      section: "Operations",
-    },
-    {
-      name: "Production Planning",
-      route: "ProductionOrder",
-      icon: SvgCogIcon,
-      section: "Operations",
-    },
-    {
-      name: "Granulation Recording",
-      route: "ProductionOrderGranulation",
-      icon: SvgClipboardIcon,
-      section: "Operations",
-    },
-    {
-      name: "Order Traceability",
-      route: "ProductionOrderTraceability",
-      icon: SvgRouteIcon,
-      section: "Operations",
-    },
-    {
-      name: "Reports",
-      route: "Reports",
-      icon: SvgFileTextIcon,
-      section: "Operations",
-    },
-    // Admin only menu items
-    {
-      name: "User Management",
-      route: "UserManagement",
+      name: "Admin Panel",
       icon: SvgUserShieldIcon,
       section: "Admin",
       isAdminOnly: true,
+      isHeader: true,
+      subItems: [
+        { name: "User Management", route: "UserManagement", icon: SvgUserShieldIcon },
+        { name: "Branch Master", route: "BranchMaster", icon: SvgUserCogIcon },
+        { name: "Branch Selection", route: "BranchSelection", icon: SvgUserCogIcon },
+        { name: "Granulation Setup", route: "AdminDashboard", icon: SvgCogIcon },
+        { name: "Route Config", route: "RouteConfiguration", icon: SvgRouteIcon },
+        { name: "Machine Management", route: "MachineManagement", icon: SvgCogIcon },
+      ]
     },
+
+    // Reports Section
     {
-      name: "Branch Master",
-      route: "BranchMaster",
-      icon: SvgUserCogIcon,
-      section: "Admin",
-      isAdminOnly: true,
-    },
+      name: "Reports & Analytics",
+      icon: SvgChartIcon,
+      section: "Reports",
+      isHeader: true,
+      subItems: [
+        { name: "Daily Report", route: "DailyReport", icon: SvgFileTextIcon },
+        { name: "Main Reports", route: "Reports", icon: SvgFileTextIcon },
+        { name: "Grinding Excel", route: "GrindingExcelView", icon: SvgFileTextIcon },
+      ]
+    }
   ];
 
   const toggleMobileMenu = () => {
@@ -340,25 +330,56 @@ export default function Layout({ children, title, currentRoute }) {
     navigation.replace('Login');
   };
 
-  const renderMenuItem = (item, index) => {
+  const renderMenuItem = (item, index, isSubItem = false) => {
     if (item.isAdminOnly && userRole !== 'admin') {
-      return null; // Skip rendering if not admin and it's an admin-only item
+      return null;
     }
 
     const IconComponent = item.icon;
     const isActive = currentRoute === item.route;
+    const isExpanded = expandedSections[item.name];
+
+    if (item.isHeader) {
+      return (
+        <View key={index}>
+          <TouchableOpacity
+            style={styles.menuHeader}
+            onPress={() => toggleSection(item.name)}
+          >
+            <View style={styles.menuIcon}>
+              <IconComponent active={false} />
+            </View>
+            {!sidebarCollapsed && (
+              <View style={styles.headerTextRow}>
+                <Text style={styles.headerText}>{item.name}</Text>
+                <Text style={styles.chevronIcon}>{isExpanded ? "▼" : "▶"}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {isExpanded && !sidebarCollapsed && item.subItems.map((sub, idx) => renderMenuItem(sub, `${index}-${idx}`, true))}
+        </View>
+      );
+    }
 
     return (
       <TouchableOpacity
         key={index}
-        style={[styles.menuItem, isActive && styles.menuItemActive]}
+        style={[
+          styles.menuItem,
+          isActive && styles.menuItemActive,
+          isSubItem && styles.subMenuItem
+        ]}
         onPress={() => handleNavigate(item.route)}
       >
         <View style={styles.menuIcon}>
           <IconComponent active={isActive} />
         </View>
         {(!sidebarCollapsed || mobileMenuOpen) && (
-          <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
+          <Text style={[
+            styles.menuText,
+            isActive && styles.menuTextActive,
+            isSubItem && styles.subMenuText
+          ]}>
             {item.name}
           </Text>
         )}

@@ -344,9 +344,7 @@ export default function HomeScreen({ navigation }) {
     },
   ];
 
-  const quickActions = allQuickActions.filter(
-    (action) => !action.adminOnly || userRole === "admin",
-  );
+  const quickActions = [];
 
   return (
     <Layout title="Dashboard" navigation={navigation} currentRoute="Home">
@@ -399,37 +397,6 @@ export default function HomeScreen({ navigation }) {
         <Text
           style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}
         >
-          Quick Actions
-        </Text>
-        <View
-          style={[styles.quickActions, isMobile && styles.quickActionsMobile]}
-        >
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.actionCard,
-                { backgroundColor: action.color },
-                isMobile && styles.actionCardMobile,
-              ]}
-              onPress={() => navigation.navigate(action.route, action.params)}
-            >
-              <Icon name={action.icon} size={isMobile ? 28 : 32} color="#fff" />
-              <Text
-                style={[
-                  styles.actionTitle,
-                  isMobile && styles.actionTitleMobile,
-                ]}
-              >
-                {action.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text
-          style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}
-        >
           Recent Activity
         </Text>
         <View style={styles.activityCard}>
@@ -438,7 +405,7 @@ export default function HomeScreen({ navigation }) {
       </View>
     </Layout>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

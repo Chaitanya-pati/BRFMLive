@@ -72,17 +72,8 @@ export default function AdminDashboardScreen({ navigation }) {
   return (
     <Layout navigation={navigation} title="Administrator Settings">
       <View style={styles.container}>
-        <View style={styles.tabBar}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === "templates" && styles.activeTab]} 
-            onPress={() => setActiveTab("templates")}
-          >
-            <Text style={[styles.tabText, activeTab === "templates" && styles.activeTabText]}>Granulation Setup</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.content}>
-          {activeTab === "templates" && <GranulationModule />}
+          <GranulationModule />
         </View>
       </View>
     </Layout>

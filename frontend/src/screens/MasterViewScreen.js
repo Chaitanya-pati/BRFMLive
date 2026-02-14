@@ -42,7 +42,7 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
 }
 
 export default function MasterViewScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState("godown");
+  const [activeTab, setActiveTab] = useState("supplier");
   const [godowns, setGodowns] = useState([]);
   const [godownTypes, setGodownTypes] = useState([]); // State to store godown types
   const [suppliers, setSuppliers] = useState([]);
