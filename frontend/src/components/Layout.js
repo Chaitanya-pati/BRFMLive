@@ -290,6 +290,7 @@ const menuItems = [
         { name: "Unloading Entry", route: "UnloadingEntry", icon: SvgPackageIcon },
         { name: "Lab Testing", route: "LabTest", icon: SvgClipboardIcon },
         { name: "Claim Tracking", route: "ClaimTracking", icon: SvgFileTextIcon },
+        { name: "Master View", route: "MasterView", icon: SvgDatabaseIcon },
       ]
     },
 

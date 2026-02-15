@@ -1288,23 +1288,9 @@ export default function LabTestScreen({ navigation }) {
               <View style={styles.formRow}>
                 <Text style={styles.rowLabel}>Test Date *</Text>
                 <View style={styles.rowField}>
-                  <TouchableOpacity
-                    style={styles.input}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text>{formData.test_date.toLocaleDateString()}</Text>
-                  </TouchableOpacity>
+                  {renderDatePicker()}
                 </View>
               </View>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={formData.test_date}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                />
-              )}
 
               {/* Test Parameters Table */}
               <View style={styles.section}>
