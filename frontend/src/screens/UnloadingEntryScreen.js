@@ -353,7 +353,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'vehicle_number',
       flex: 1,
       render: (value, row) => {
-        return row.vehicle_entry?.vehicle_number || 'N/A';
+        return row?.vehicle_entry?.vehicle_number || 'N/A';
       }
     },
     { 
@@ -362,7 +362,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'supplier',
       flex: 1.5,
       render: (value, row) => {
-        return row.vehicle_entry?.supplier?.supplier_name || 'N/A';
+        return row?.vehicle_entry?.supplier?.supplier_name || 'N/A';
       }
     },
     { 
@@ -371,7 +371,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'godown',
       flex: 1.5,
       render: (value, row) => {
-        const godown = row.godown;
+        const godown = row?.godown;
         return godown ? `${godown.godown_name || godown.name || 'N/A'} (${godown.type || 'N/A'})` : 'N/A';
       }
     },
@@ -381,7 +381,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'net_weight',
       flex: 1,
       render: (value, row) => {
-        const weight = row.vehicle_entry?.net_weight || value;
+        const weight = row?.vehicle_entry?.net_weight || value;
         return weight ? `${weight} tons` : '0 tons';
       }
     },
@@ -391,8 +391,8 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'images',
       flex: 0.8,
       render: (value, row) => {
-        const hasBeforeImage = row.before_unloading_image;
-        const hasAfterImage = row.after_unloading_image;
+        const hasBeforeImage = row?.before_unloading_image;
+        const hasAfterImage = row?.after_unloading_image;
 
         if (hasBeforeImage && hasAfterImage) {
           return '✅ Complete';
