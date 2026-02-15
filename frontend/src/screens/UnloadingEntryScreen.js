@@ -353,7 +353,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'vehicle_number',
       flex: 1,
       render: (value, row) => {
-        return row?.vehicle_entry?.vehicle_number || 'N/A';
+        return row?.vehicle_entry?.vehicle_number || row?.vehicle_number || 'N/A';
       }
     },
     { 
@@ -362,7 +362,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'supplier',
       flex: 1.5,
       render: (value, row) => {
-        return row?.vehicle_entry?.supplier?.supplier_name || 'N/A';
+        return row?.vehicle_entry?.supplier?.supplier_name || row?.supplier_name || 'N/A';
       }
     },
     { 
@@ -372,7 +372,9 @@ export default function UnloadingEntryScreen({ navigation }) {
       flex: 1.5,
       render: (value, row) => {
         const godown = row?.godown;
-        return godown ? `${godown.godown_name || godown.name || 'N/A'} (${godown.type || 'N/A'})` : 'N/A';
+        const name = godown?.godown_name || godown?.name || row?.godown_name || 'N/A';
+        const type = godown?.type || row?.godown_type || '';
+        return type ? `${name} (${type})` : name;
       }
     },
     { 
