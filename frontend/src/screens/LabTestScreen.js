@@ -133,11 +133,11 @@ export default function LabTestScreen({ navigation }) {
 
     if (vehicleFilterType === "vehicle") {
       // Search by vehicle number
-      return vehicle.vehicle_number?.toLowerCase().includes(searchLower);
+      return (vehicle.vehicle_number || "").toLowerCase().includes(searchLower);
     } else {
       // Search by supplier name
-      return vehicle.supplier?.supplier_name
-        ?.toLowerCase()
+      return (vehicle.supplier?.supplier_name || "")
+        .toLowerCase()
         .includes(searchLower);
     }
   });
@@ -203,13 +203,17 @@ export default function LabTestScreen({ navigation }) {
 
   const handleVehicleChange = async (vehicleId) => {
     const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
+    if (!vehicle) {
+      console.warn("Vehicle not found for ID:", vehicleId);
+      return;
+    }
     setSelectedVehicle(vehicle);
 
     // Removed document number and issue number generation
     setFormData((prev) => ({
       ...prev,
       vehicle_entry_id: vehicleId,
-      bill_number: vehicle?.bill_no || "",
+      bill_number: vehicle.bill_no || "",
     }));
   };
 
@@ -744,7 +748,7 @@ export default function LabTestScreen({ navigation }) {
   </div>
 
   <div class="basic-info">
-    <div>WHEAT VARIETY: <strong>${formData.wheat_variety || "N/A"}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DATE: <strong>${formData.test_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</strong></div>
+    <div>WHEAT VARIETY: <strong>${formData.wheat_variety || "N/A"}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DATE: <strong>${formData.test_date instanceof Date ? formData.test_date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A"}</strong></div>
     <div>TRADER/SUPPLIER NAME: <strong>${selectedVehicle?.supplier?.supplier_name || "N/A"}</strong></div>
   </div>
 
