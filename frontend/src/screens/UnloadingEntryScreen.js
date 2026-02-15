@@ -383,8 +383,9 @@ export default function UnloadingEntryScreen({ navigation }) {
       field: 'net_weight',
       flex: 1,
       render: (value, row) => {
+        // Correctly handle the response data based on the provided sample
         const weight = row?.net_weight || row?.vehicle_entry?.net_weight || value;
-        return weight ? `${weight} tons` : '0 tons';
+        return typeof weight === 'number' || typeof weight === 'string' ? `${weight} tons` : '0 tons';
       }
     },
     { 

@@ -1140,7 +1140,7 @@ export default function LabTestScreen({ navigation }) {
       width: 150,
       key: "actions",
       render: (value, labTest) => {
-        const hasClaim = labTest.has_claim;
+        const hasClaim = labTest?.has_claim === 1 || labTest?.has_claim === true;
         return (
           <View style={{ flexDirection: "row", gap: 8 }}>
             {!hasClaim ? (
