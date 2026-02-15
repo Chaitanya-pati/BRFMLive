@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import notify from "../utils/notifications";
 import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
+// Remove or conditionally import DateTimePicker if it's causing issues on web
+// import DateTimePicker from "@react-native-community/datetimepicker"; 
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
@@ -262,10 +263,54 @@ export default function LabTestScreen({ navigation }) {
   };
 
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === "ios");
+    setShowDatePicker(false);
     if (selectedDate) {
       setFormData({ ...formData, test_date: selectedDate });
     }
+  };
+
+  const renderDatePicker = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Test Date *</Text>
+          <input
+            type="date"
+            value={formData.test_date.toISOString().split('T')[0]}
+            onChange={(e) => {
+              const date = new Date(e.target.value);
+              setFormData({ ...formData, test_date: date });
+            }}
+            style={{
+              padding: 12,
+              borderRadius: 6,
+              border: '1px solid #d1d5db',
+              fontSize: 16,
+              width: '100%',
+              marginBottom: 12
+            }}
+          />
+        </View>
+      );
+    }
+    return (
+      <View>
+        <TouchableOpacity 
+          style={styles.dateButton} 
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text style={styles.label}>Test Date: {formData.test_date.toLocaleDateString()}</Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={formData.test_date}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+          />
+        )}
+      </View>
+    );
   };
 
   const handleSubmit = async () => {

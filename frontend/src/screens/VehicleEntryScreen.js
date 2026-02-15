@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Layout from '../components/Layout';
 import InputField from '../components/InputField';
@@ -217,7 +217,7 @@ export default function VehicleEntryScreen() {
   };
 
   const handleDelete = async (vehicle) => {
-    if (confirm("Are you sure you want to delete this vehicle entry?")) {
+    const performDelete = async () => {
       try {
         await vehicleApi.delete(vehicle.id);
         showNotification("Gate Entry deleted successfully!", "success");
@@ -225,6 +225,21 @@ export default function VehicleEntryScreen() {
       } catch (error) {
         showNotification("Failed to delete Gate Entry", "error");
       }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("Are you sure you want to delete this vehicle entry?")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "Confirm Delete",
+        "Are you sure you want to delete this vehicle entry?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: performDelete }
+        ]
+      );
     }
   };
 
