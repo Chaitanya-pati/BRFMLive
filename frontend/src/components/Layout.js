@@ -471,9 +471,11 @@ const menuItems = [
             onPress={() => setUserMenuVisible(!userMenuVisible)}
           >
             <View style={styles.adminAvatar}>
-              <Text style={styles.adminAvatarText}>AD</Text>
+              <Text style={styles.adminAvatarText}>
+                {userName ? userName.substring(0, 2).toUpperCase() : 'AD'}
+              </Text>
             </View>
-            {!isMobile && <Text style={styles.userMenuText}>▼</Text>}
+            {!isMobile && <Text style={styles.userMenuText}>{userMenuVisible ? "▲" : "▼"}</Text>}
           </TouchableOpacity>
 
           {userMenuVisible && (
