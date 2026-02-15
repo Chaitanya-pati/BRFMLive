@@ -222,15 +222,18 @@ const menuItems = [
     // Masters Section
     {
       name: "Masters",
-      route: "MasterView",
       icon: SvgDatabaseIcon,
       section: "Masters",
-    },
-    {
-      name: "Product Master",
-      route: "ProductMaster",
-      icon: SvgTagIcon,
-      section: "Masters",
+      isHeader: true,
+      subItems: [
+        { name: "Master View", route: "MasterView", icon: SvgDatabaseIcon },
+        { name: "Product Master", route: "ProductMaster", icon: SvgTagIcon },
+        { name: "Supplier Master", route: "SupplierMaster", icon: SvgUserCogIcon },
+        { name: "Customer Master", route: "CustomerMaster", icon: SvgUserCogIcon },
+        { name: "Driver Master", route: "DriverMaster", icon: SvgUserCogIcon },
+        { name: "Raw Product Master", route: "RawProductMaster", icon: SvgTagIcon },
+        { name: "Finished Goods Master", route: "FinishedGoodsMaster", icon: SvgTagIcon },
+      ]
     },
 
     // Production Section
