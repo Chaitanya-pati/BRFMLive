@@ -352,7 +352,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       label: 'Vehicle Number', 
       field: 'vehicle_number',
       flex: 1,
-      render: (value, row) => {
+      render: (row) => {
         return row?.vehicle_entry?.vehicle_number || row?.vehicle_number || 'N/A';
       }
     },
@@ -361,7 +361,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       label: 'Supplier', 
       field: 'supplier',
       flex: 1.5,
-      render: (value, row) => {
+      render: (row) => {
         return row?.vehicle_entry?.supplier?.supplier_name || row?.supplier_name || 'N/A';
       }
     },
@@ -370,7 +370,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       label: 'Godown', 
       field: 'godown',
       flex: 1.5,
-      render: (value, row) => {
+      render: (row) => {
         const godown = row?.godown;
         const name = godown?.godown_name || godown?.name || row?.godown_name || 'N/A';
         const type = godown?.type || row?.godown_type || '';
@@ -382,9 +382,9 @@ export default function UnloadingEntryScreen({ navigation }) {
       label: 'Net Weight', 
       field: 'net_weight',
       flex: 1,
-      render: (value, row) => {
+      render: (row) => {
         // Correctly handle the response data based on the provided sample
-        const weight = row?.net_weight || row?.vehicle_entry?.net_weight || value;
+        const weight = row?.net_weight || row?.vehicle_entry?.net_weight;
         return typeof weight === 'number' || typeof weight === 'string' ? `${weight} tons` : '0 tons';
       }
     },
@@ -393,7 +393,7 @@ export default function UnloadingEntryScreen({ navigation }) {
       label: 'Images', 
       field: 'images',
       flex: 0.8,
-      render: (value, row) => {
+      render: (row) => {
         const hasBeforeImage = row?.before_unloading_image;
         const hasAfterImage = row?.after_unloading_image;
 

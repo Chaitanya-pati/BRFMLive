@@ -1,0 +1,201 @@
+
+Array(33)
+0
+: 
+after_unloading_image
+: 
+"/uploads//uploads/8fbe0060-065a-4230-9531-1a750bbe2a79.jpg"
+before_unloading_image
+: 
+"/uploads//uploads/382e6ac5-eb16-489d-9397-83dceff95723.jpg"
+branch_id
+: 
+1
+created_at
+: 
+"2025-12-18T11:37:12.348668+05:30"
+empty_vehicle_weight
+: 
+0
+godown
+: 
+{name: 'Mill quality 1', type: 'Mill', id: 1, branch_id: 1, current_storage: 1058.025, …}
+godown_id
+: 
+1
+gross_weight
+: 
+22260
+id
+: 
+37
+net_weight
+: 
+22260
+notes
+: 
+null
+unloading_end_time
+: 
+"2026-02-16T15:20:11.731985+05:30"
+unloading_start_time
+: 
+"2026-02-16T15:20:11.731974+05:30"
+updated_at
+: 
+"2025-12-18T11:37:12.348678+05:30"
+vehicle_entry
+: 
+{vehicle_number: 'KA-22-AA7885', supplier_id: 14, bill_no: 'B150', driver_name: 'Salim ', driver_phone: '9380003783', …}
+vehicle_entry_id
+: 
+59
+[[Prototype]]
+: 
+Object
+1
+: 
+after_unloading_image
+: 
+"/uploads//uploads/db4fb137-92d2-43df-8190-9b3cb01912f6.jpg"
+before_unloading_image
+: 
+"/uploads//uploads/3e54e6a9-0798-452e-9466-1fb5ddc41a6a.jpg"
+branch_id
+: 
+1
+created_at
+: 
+"2025-12-17T17:39:54.464153+05:30"
+empty_vehicle_weight
+: 
+0
+godown
+: 
+{name: 'Mill quality 1', type: 'Mill', id: 1, branch_id: 1, current_storage: 1058.025, …}
+godown_id
+: 
+1
+gross_weight
+: 
+45000
+id
+: 
+36
+net_weight
+: 
+45000
+notes
+: 
+null
+unloading_end_time
+: 
+"2026-02-16T15:20:12.440024+05:30"
+unloading_start_time
+: 
+"2026-02-16T15:20:12.440016+05:30"
+updated_at
+: 
+"2025-12-17T17:40:52.898352+05:30"
+vehicle_entry
+: 
+{vehicle_number: 'GA-06-T9097', supplier_id: 14, bill_no: 'B149', driver_name: 'Ramcharan ', driver_phone: '8303691480', …}
+vehicle_entry_id
+: 
+58
+[[Prototype]]
+: 
+Object
+2
+: 
+{vehicle_entry_id: 57, godown_id: 1, gross_weight: 0, empty_vehicle_weight: 0, net_weight: 0, …}
+3
+: 
+{vehicle_entry_id: 56, godown_id: 1, gross_weight: 49280, empty_vehicle_weight: 0, net_weight: 49280, …}
+4
+: 
+{vehicle_entry_id: 55, godown_id: 1, gross_weight: 36580, empty_vehicle_weight: 0, net_weight: 36580, …}
+5
+: 
+{vehicle_entry_id: 54, godown_id: 1, gross_weight: 15820, empty_vehicle_weight: 6160, net_weight: 9660, …}
+6
+: 
+{vehicle_entry_id: 53, godown_id: 1, gross_weight: 49230, empty_vehicle_weight: 14110, net_weight: 35120, …}
+7
+: 
+{vehicle_entry_id: 52, godown_id: 1, gross_weight: 43310, empty_vehicle_weight: 0, net_weight: 43310, …}
+8
+: 
+{vehicle_entry_id: 51, godown_id: 1, gross_weight: 21610, empty_vehicle_weight: 7580, net_weight: 14030, …}
+9
+: 
+{vehicle_entry_id: 50, godown_id: 1, gross_weight: 23110, empty_vehicle_weight: 7780, net_weight: 15330, …}
+10
+: 
+{vehicle_entry_id: 49, godown_id: 1, gross_weight: 43010, empty_vehicle_weight: 0, net_weight: 43010, …}
+11
+: 
+{vehicle_entry_id: 48, godown_id: 1, gross_weight: 50840, empty_vehicle_weight: 15100, net_weight: 35740, …}
+12
+: 
+{vehicle_entry_id: 47, godown_id: 1, gross_weight: 49480, empty_vehicle_weight: 0, net_weight: 49480, …}
+13
+: 
+{vehicle_entry_id: 46, godown_id: 1, gross_weight: 43330, empty_vehicle_weight: 13120, net_weight: 30210, …}
+14
+: 
+{vehicle_entry_id: 44, godown_id: 1, gross_weight: 48950, empty_vehicle_weight: 14160, net_weight: 34790, …}
+15
+: 
+{vehicle_entry_id: 44, godown_id: 1, gross_weight: 48950, empty_vehicle_weight: 14160, net_weight: 34790, …}
+16
+: 
+{vehicle_entry_id: 43, godown_id: 1, gross_weight: 49430, empty_vehicle_weight: 14110, net_weight: 35320, …}
+17
+: 
+{vehicle_entry_id: 42, godown_id: 1, gross_weight: 49400, empty_vehicle_weight: 13860, net_weight: 35540, …}
+18
+: 
+{vehicle_entry_id: 41, godown_id: 1, gross_weight: 43380, empty_vehicle_weight: 12910, net_weight: 30470, …}
+19
+: 
+{vehicle_entry_id: 40, godown_id: 1, gross_weight: 55830, empty_vehicle_weight: 13880, net_weight: 41950, …}
+20
+: 
+{vehicle_entry_id: 39, godown_id: 1, gross_weight: 43260, empty_vehicle_weight: 12190, net_weight: 31070, …}
+21
+: 
+{vehicle_entry_id: 38, godown_id: 1, gross_weight: 49630, empty_vehicle_weight: 14690, net_weight: 34940, …}
+22
+: 
+{vehicle_entry_id: 37, godown_id: 1, gross_weight: 16020, empty_vehicle_weight: 4840, net_weight: 11180, …}
+23
+: 
+{vehicle_entry_id: 35, godown_id: 1, gross_weight: 49280, empty_vehicle_weight: 0, net_weight: 49280, …}
+24
+: 
+{vehicle_entry_id: 34, godown_id: 1, gross_weight: 48720, empty_vehicle_weight: 0, net_weight: 48720, …}
+25
+: 
+{vehicle_entry_id: 33, godown_id: 1, gross_weight: 50870, empty_vehicle_weight: 0, net_weight: 50870, …}
+26
+: 
+{vehicle_entry_id: 32, godown_id: 1, gross_weight: 51890, empty_vehicle_weight: 0, net_weight: 51890, …}
+27
+: 
+{vehicle_entry_id: 31, godown_id: 1, gross_weight: 43290, empty_vehicle_weight: 0, net_weight: 43290, …}
+28
+: 
+{vehicle_entry_id: 30, godown_id: 1, gross_weight: 24490, empty_vehicle_weight: 0, net_weight: 24490, …}
+29
+: 
+{vehicle_entry_id: 29, godown_id: 1, gross_weight: 43505, empty_vehicle_weight: 0, net_weight: 43505, …}
+30
+: 
+{vehicle_entry_id: 28, godown_id: 1, gross_weight: 0, empty_vehicle_weight: 0, net_weight: 0, …}
+31
+: 
+{vehicle_entry_id: 25, godown_id: 1, gross_weight: 40410, empty_vehicle_weight: 11695, net_weight: 28715, …}
+32
+: 
+{vehicle_entry_id: 24, godown_id: 1, gross_weight: 43205, empty_vehicle_weight: 0, net_weight: 43205, …}
