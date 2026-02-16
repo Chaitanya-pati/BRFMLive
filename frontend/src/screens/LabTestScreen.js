@@ -1113,14 +1113,14 @@ export default function LabTestScreen({ navigation }) {
       field: "vehicle_entry",
       width: 150,
       key: "vehicle_number",
-      render: (labTest) => labTest.vehicle_entry?.vehicle_number || "-",
+      render: (row) => row.vehicle_entry?.vehicle_number || "-",
     },
     {
       label: "Supplier",
       field: "vehicle_entry",
       width: 180,
       key: "supplier_name",
-      render: (labTest) => labTest.vehicle_entry?.supplier?.supplier_name || "-",
+      render: (row) => row.vehicle_entry?.supplier?.supplier_name || "-",
     },
     {
       label: "Wheat Variety",
@@ -1143,14 +1143,14 @@ export default function LabTestScreen({ navigation }) {
       field: "id",
       width: 150,
       key: "actions",
-      render: (value, labTest) => {
-        const hasClaim = labTest?.has_claim === 1 || labTest?.has_claim === true;
+      render: (row) => {
+        const hasClaim = row?.has_claim === 1 || row?.has_claim === true;
         return (
           <View style={{ flexDirection: "row", gap: 8 }}>
             {!hasClaim ? (
               <TouchableOpacity
                 style={styles.raiseClaimButton}
-                onPress={() => openRaiseClaimModal(labTest)}
+                onPress={() => openRaiseClaimModal(row)}
               >
                 <Text style={styles.raiseClaimButtonText}>Raise Claim</Text>
               </TouchableOpacity>
