@@ -151,11 +151,11 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
     <View style={styles.tableWrapper}>
       <View style={styles.tableHeader}>
         {columns.map((col, index) => (
-          <View key={index} style={[styles.headerCell, { flex: col.flex || 1 }]}>
+          <View key={index} style={[styles.headerCell, { flex: col.flex || 1, alignItems: col.align || 'flex-start' }]}>
             <Text style={styles.headerText}>{col.label}</Text>
           </View>
         ))}
-        <View style={[styles.headerCell, { flex: onCustomAction ? 1.5 : 1 }]}>
+        <View style={[styles.headerCell, { flex: renderActions || onCustomAction ? 1.5 : 1, alignItems: 'center' }]}>
           <Text style={styles.headerText}>Actions</Text>
         </View>
       </View>
@@ -186,14 +186,14 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
                 }
 
                 return (
-                  <View key={colIndex} style={[styles.cell, { flex: col.flex || 1 }]}>
+                  <View key={colIndex} style={[styles.cell, { flex: col.flex || 1, alignItems: col.align || 'flex-start' }]}>
                     <Text style={styles.cellText} numberOfLines={2}>
                       {cellContent}
                     </Text>
                   </View>
                 );
               })}
-              <View style={[styles.cell, { flex: renderActions || onCustomAction ? 1.5 : 1 }]}>
+              <View style={[styles.cell, { flex: renderActions || onCustomAction ? 1.5 : 1, alignItems: 'center' }]}>
                 {renderActions ? renderActions(row) : (
                   <View style={styles.actionButtons}>
                     {onView && (!viewLabel || viewLabel(row)) && (
@@ -453,37 +453,37 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(45, 62, 80, 0.25)',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    backgroundColor: '#f1f5f9',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
   headerCell: {
-    padding: 14,
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(45, 62, 80, 0.1)',
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
   },
   headerText: {
     fontWeight: '700',
     fontSize: 12,
-    color: '#2d3e50',
+    color: '#475569',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   tableBody: {
-    maxHeight: 500,
+    maxHeight: 600,
     backgroundColor: colors.surface,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#f1f5f9',
     backgroundColor: colors.surface,
-    transition: 'background-color 0.2s ease',
   },
   cell: {
-    padding: 14,
-    borderRightWidth: 1,
-    borderRightColor: '#f3f4f6',
+    paddingVertical: 16,
+    paddingHorizontal: 14,
     justifyContent: 'center',
   },
   cellText: {

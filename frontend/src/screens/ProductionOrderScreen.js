@@ -210,13 +210,14 @@ export default function ProductionOrderScreen({ navigation }) {
       flex: 1,
       render: (item) => item.raw_product?.product_name || 'N/A'
     },
-    { key: 'quantity', label: 'Quantity (kg)', flex: 1, render: (item) => `${item.quantity} kg` },
-    { key: 'order_date', label: 'Order Date', flex: 1, type: 'date' },
-    { key: 'target_finish_date', label: 'Target Date', flex: 1, type: 'date' },
+    { key: 'quantity', label: 'Quantity (kg)', flex: 1, align: 'center', render: (item) => `${item.quantity} kg` },
+    { key: 'order_date', label: 'Order Date', flex: 1, align: 'center', type: 'date' },
+    { key: 'target_finish_date', label: 'Target Date', flex: 1, align: 'center', type: 'date' },
     { 
       key: 'status', 
       label: 'Status', 
       flex: 1,
+      align: 'center',
       render: (item) => (
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusText}>{item.status}</Text>

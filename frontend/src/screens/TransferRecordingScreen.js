@@ -319,9 +319,9 @@ export default function TransferRecordingScreen({ navigation }) {
   // STAGE: SELECT ORDER
   if (stage === STAGES.SELECT_ORDER) {
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <ScrollView style={styles.container}>
-          <Text style={styles.title}>Transfer Recording</Text>
+          <Text style={styles.title}>24 hour transfer</Text>
           <Text style={styles.subtitle}>Select Production Order</Text>
 
           {loading ? (
@@ -360,7 +360,7 @@ export default function TransferRecordingScreen({ navigation }) {
   // STAGE: SELECT BIN
   if (stage === STAGES.SELECT_BIN) {
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Select Destination Bin</Text>
@@ -458,7 +458,7 @@ export default function TransferRecordingScreen({ navigation }) {
   // STAGE: TRANSFER_IN_PROGRESS
   if (stage === STAGES.TRANSFER_IN_PROGRESS && currentTransfer) {
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <ScrollView style={styles.container}>
           <Text style={styles.title}>Transfer In Progress</Text>
 
@@ -519,7 +519,7 @@ export default function TransferRecordingScreen({ navigation }) {
   // STAGE: DIVERT_OR_STOP
   if (stage === STAGES.DIVERT_OR_STOP) {
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <ScrollView style={styles.container}>
           <Text style={styles.title}>Divert or Stop</Text>
           <View style={styles.infoCard}>
@@ -562,7 +562,7 @@ export default function TransferRecordingScreen({ navigation }) {
   if (stage === STAGES.START_PARAMETERS_INPUT) {
     const sourceType = getSourceBinType();
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
           <ScrollView style={styles.container}>
             <Text style={styles.title}>Source Bin Conditioning Parameters</Text>
@@ -622,7 +622,7 @@ export default function TransferRecordingScreen({ navigation }) {
   // STAGE: STOP_PARAMETERS_INPUT
   if (stage === STAGES.STOP_PARAMETERS_INPUT) {
     return (
-      <Layout>
+      <Layout title="24 hour transfer">
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
           <ScrollView style={styles.container}>
             <Text style={styles.title}>Complete Transfer</Text>

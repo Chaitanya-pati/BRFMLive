@@ -307,7 +307,7 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
-      title: "Transfer Recording",
+      title: "24 hour transfer",
       route: "TransferRecording",
       icon: "warehouse",
       color: "#d946ef",
