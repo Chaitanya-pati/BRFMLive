@@ -318,18 +318,23 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             <Text style={styles.label}>Order Date</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.order_date}
-              onChangeText={(text) => setFormData({ ...formData, order_date: text })}
-              placeholder="YYYY-MM-DD"
-            />
+            <TouchableOpacity 
+              style={styles.input} 
+              onPress={() => {
+                setDatePickerMode('order_date');
+                setShowDatePicker(true);
+              }}
+            >
+              <Text style={{ color: formData.order_date ? colors.textPrimary : colors.textSecondary }}>
+                {formData.order_date ? formData.order_date : 'Select order date'}
+              </Text>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Target Finish Date *</Text>
             <TouchableOpacity 
               style={styles.input} 
               onPress={() => {
-                setDatePickerMode('date');
+                setDatePickerMode('target_finish_date');
                 setShowDatePicker(true);
               }}
             >
@@ -340,14 +345,22 @@ export default function ProductionOrderScreen({ navigation }) {
             
             {showDatePicker && (
               <DateTimePicker
-                value={formData.target_finish_date ? new Date(formData.target_finish_date) : new Date()}
-                mode={datePickerMode}
+                value={
+                  datePickerMode === 'order_date' 
+                    ? (formData.order_date ? new Date(formData.order_date) : new Date())
+                    : (formData.target_finish_date ? new Date(formData.target_finish_date) : new Date())
+                }
+                mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={(event, selectedDate) => {
                   setShowDatePicker(Platform.OS === 'ios');
                   if (selectedDate) {
                     const dateString = selectedDate.toISOString().split('T')[0];
-                    setFormData({ ...formData, target_finish_date: dateString });
+                    if (datePickerMode === 'order_date') {
+                      setFormData({ ...formData, order_date: dateString });
+                    } else {
+                      setFormData({ ...formData, target_finish_date: dateString });
+                    }
                   }
                 }}
               />
