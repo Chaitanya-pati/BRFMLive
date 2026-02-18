@@ -318,32 +318,53 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             <Text style={styles.label}>Order Date</Text>
-            <TouchableOpacity 
-              style={styles.input} 
-              onPress={() => {
-                setDatePickerMode('order_date');
-                setShowDatePicker(true);
-              }}
-            >
-              <Text style={{ color: formData.order_date ? colors.textPrimary : colors.textSecondary }}>
-                {formData.order_date ? formData.order_date : 'Select order date'}
-              </Text>
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <TextInput
+                style={styles.input}
+                type="date"
+                value={formData.order_date}
+                onChangeText={(text) => setFormData({ ...formData, order_date: text })}
+                // For web standard HTML date input behavior
+                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+              />
+            ) : (
+              <TouchableOpacity 
+                style={styles.input} 
+                onPress={() => {
+                  setDatePickerMode('order_date');
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={{ color: formData.order_date ? colors.textPrimary : colors.textSecondary }}>
+                  {formData.order_date ? formData.order_date : 'Select order date'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <Text style={styles.label}>Target Finish Date *</Text>
-            <TouchableOpacity 
-              style={styles.input} 
-              onPress={() => {
-                setDatePickerMode('target_finish_date');
-                setShowDatePicker(true);
-              }}
-            >
-              <Text style={{ color: formData.target_finish_date ? colors.textPrimary : colors.textSecondary }}>
-                {formData.target_finish_date ? formData.target_finish_date : 'Select target date'}
-              </Text>
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <TextInput
+                style={styles.input}
+                type="date"
+                value={formData.target_finish_date}
+                onChangeText={(text) => setFormData({ ...formData, target_finish_date: text })}
+                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+              />
+            ) : (
+              <TouchableOpacity 
+                style={styles.input} 
+                onPress={() => {
+                  setDatePickerMode('target_finish_date');
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={{ color: formData.target_finish_date ? colors.textPrimary : colors.textSecondary }}>
+                  {formData.target_finish_date ? formData.target_finish_date : 'Select target date'}
+                </Text>
+              </TouchableOpacity>
+            )}
             
-            {showDatePicker && (
+            {Platform.OS !== 'web' && showDatePicker && (
               <DateTimePicker
                 value={
                   datePickerMode === 'order_date' 
