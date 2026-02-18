@@ -3584,6 +3584,12 @@ def complete_transfer(
     transfer.transfer_end_time = get_utc_now()
     transfer.quantity_transferred = data.quantity_transferred
     
+    # Update moisture/water if provided during completion (edit before fully transferred out)
+    if data.water_added is not None:
+        transfer.water_added = data.water_added
+    if data.moisture_level is not None:
+        transfer.moisture_level = data.moisture_level
+    
     # Calculate duration
     if transfer.transfer_start_time and transfer.transfer_end_time:
         duration = transfer.transfer_end_time - transfer.transfer_start_time

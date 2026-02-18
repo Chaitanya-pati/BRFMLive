@@ -114,16 +114,12 @@ export default function TransferRecordingScreen({ navigation }) {
 
   const handleInitiateTransfer = (destBin) => {
     setSelectedBin(destBin);
-    const sourceType = getSourceBinType();
-    
-    if (sourceType === "24HR" || sourceType === "12HR") {
-      setWaterAdded("");
-      setMoistureLevel("");
-      setErrors({});
-      setStage(STAGES.START_PARAMETERS_INPUT);
-    } else {
-      handleStartTransfer(destBin);
-    }
+    // Always show parameters input for 24HR/12HR or if we want to capture moisture/water
+    // The user specifically asked for 24h and 12h bins
+    setWaterAdded("");
+    setMoistureLevel("");
+    setErrors({});
+    setStage(STAGES.START_PARAMETERS_INPUT);
   };
 
   const handleStartTransfer = async (destBin, startParams = {}) => {
@@ -157,6 +153,9 @@ export default function TransferRecordingScreen({ navigation }) {
 
   const handleCompleteTransfer = () => {
     setQuantityTransferred("");
+    // Pre-fill existing parameters for editing
+    setWaterAdded(currentTransfer.water_added?.toString() || "");
+    setMoistureLevel(currentTransfer.moisture_level?.toString() || "");
     setErrors({});
     setStage(STAGES.STOP_PARAMETERS_INPUT);
   };
@@ -212,9 +211,9 @@ export default function TransferRecordingScreen({ navigation }) {
       const client = getApiClient();
       const params = {
         quantity_transferred: parseFloat(quantityTransferred),
-        // Send the parameters captured at the start
-        water_added: parseFloat(currentTransfer.start_parameters?.water_added || 0),
-        moisture_level: parseFloat(currentTransfer.start_parameters?.moisture_level || 0),
+        // Send the parameters captured at the start or updated during stop
+        water_added: waterAdded ? parseFloat(waterAdded) : 0,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
       };
 
       await client.post(`/transfer/${currentTransfer.id}/complete`, params);
@@ -639,6 +638,23 @@ export default function TransferRecordingScreen({ navigation }) {
               onChangeText={setQuantityTransferred}
               keyboardType="decimal-pad"
               error={errors.quantityTransferred}
+            />
+
+            <Text style={styles.subtitle}>Edit Conditioning Parameters (Optional)</Text>
+            <InputField
+              label="Water Added (Litres)"
+              placeholder="Update water added"
+              value={waterAdded}
+              onChangeText={setWaterAdded}
+              keyboardType="decimal-pad"
+            />
+
+            <InputField
+              label="Moisture Level (%)"
+              placeholder="Update moisture level"
+              value={moistureLevel}
+              onChangeText={setMoistureLevel}
+              keyboardType="decimal-pad"
             />
 
             <View style={styles.actionButtons}>
