@@ -420,14 +420,19 @@ export default function ProductionOrderScreen({ navigation }) {
             {/* FIXED: Order Date Field */}
             <Text style={styles.label}>Order Date</Text>
             {Platform.OS === "web" ? (
-              // Web: Use standard HTML date input via dangerouslySetInnerHTML or a web-specific component
-              // Since React Native Web doesn't support type="date" on TextInput, we use a simple text input
-              // or you can install @react-native-community/datetimepicker for web
-              <TextInput
-                style={styles.input}
+              <input
+                type="date"
                 value={formData.order_date}
-                onChangeText={(text) => handleWebDateChange("order_date", text)}
-                placeholder="YYYY-MM-DD"
+                onChange={(e) => handleWebDateChange("order_date", e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ced4da',
+                  fontSize: '14px',
+                  backgroundColor: '#fff',
+                  marginBottom: '16px',
+                }}
               />
             ) : (
               // Native: Use TouchableOpacity to open DateTimePicker
@@ -452,13 +457,21 @@ export default function ProductionOrderScreen({ navigation }) {
             {/* FIXED: Target Finish Date Field */}
             <Text style={styles.label}>Target Finish Date *</Text>
             {Platform.OS === "web" ? (
-              <TextInput
-                style={styles.input}
+              <input
+                type="date"
                 value={formData.target_finish_date}
-                onChangeText={(text) =>
-                  handleWebDateChange("target_finish_date", text)
+                onChange={(e) =>
+                  handleWebDateChange("target_finish_date", e.target.value)
                 }
-                placeholder="YYYY-MM-DD"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ced4da',
+                  fontSize: '14px',
+                  backgroundColor: '#fff',
+                  marginBottom: '16px',
+                }}
               />
             ) : (
               <TouchableOpacity
