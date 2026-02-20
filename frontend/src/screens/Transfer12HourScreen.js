@@ -58,6 +58,9 @@ export default function Transfer12HourScreen({ navigation }) {
   // Modal state
   const [showDataModal, setShowDataModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
+  
+  // To track if we need to show parameters modal at start
+  const [showStartParamsModal, setShowStartParamsModal] = useState(false);
 
   useEffect(() => {
     fetchProductionOrders();
@@ -161,6 +164,19 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
+    // Check if source is 24HR bin to capture parameters
+    const sourceBin = sourceBins.find(b => Number(b.id) === Number(source));
+    if (sourceBin && (sourceBin.bin_type === "24 hours bin" || sourceBin.bin_type === "24HOUR")) {
+      setWaterAdded("");
+      setMoistureLevel("");
+      setShowStartParamsModal(true);
+      return;
+    }
+
+    proceedWithStartTransfer(source, dest);
+  };
+
+  const proceedWithStartTransfer = async (source, dest) => {
     setLoading(true);
     try {
       const client = getApiClient();
@@ -170,11 +186,15 @@ export default function Transfer12HourScreen({ navigation }) {
         destination_bin_id: dest,
         transfer_type: transferType,
         status: "IN_PROGRESS",
-        transfer_start_time: new Date().toISOString()
+        transfer_start_time: new Date().toISOString(),
+        // Pass the parameters if captured
+        water_added: waterAdded ? parseFloat(waterAdded) : 0,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
       });
 
       setCurrentRecordId(response.data.id);
       setStage(STAGES.TRANSFER_ACTIVE);
+      setShowStartParamsModal(false);
       showToast("Success", "Transfer started");
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to start transfer");
@@ -354,6 +374,50 @@ export default function Transfer12HourScreen({ navigation }) {
             <Text style={styles.buttonText}>Stop Transfer</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal visible={showStartParamsModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Source Bin Parameters</Text>
+              <Text style={styles.modalSubtitle}>Please enter source bin moisture and water details.</Text>
+              
+              <InputField
+                label="Moisture Level (%)"
+                value={moistureLevel}
+                onChangeText={setMoistureLevel}
+                keyboardType="decimal-pad"
+                placeholder="Enter moisture level"
+              />
+              <InputField
+                label="Water Added (Litres)"
+                value={waterAdded}
+                onChangeText={setWaterAdded}
+                keyboardType="decimal-pad"
+                placeholder="Enter water added"
+              />
+
+              <View style={styles.modalActions}>
+                <Button 
+                  title="Cancel" 
+                  onPress={() => setShowStartParamsModal(false)} 
+                  variant="secondary" 
+                  style={{flex: 1, marginRight: 8}}
+                />
+                <Button 
+                  title="Confirm & Start" 
+                  onPress={() => {
+                    const isManualSpecial = transferType === "SPECIAL";
+                    const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
+                    const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+                    proceedWithStartTransfer(source, dest);
+                  }} 
+                  loading={loading}
+                  style={{flex: 1}}
+                />
+              </View>
+            </Card>
+          </View>
+        </Modal>
 
         <Modal visible={showDataModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>

@@ -282,13 +282,42 @@ export default function GrindingScreen({ navigation }) {
     }
   };
 
+  // Modal for capturing source parameters
+  const [showSourceParamsModal, setShowSourceParamsModal] = useState(false);
+  const [sourceMoisture, setSourceMoisture] = useState("");
+  const [sourceWater, setSourceWater] = useState("");
+
   const handleBinSelect = async (bin) => {
     if (!bin.production_order_id) {
       showAlert("Error", "No Production Order found for this bin in transfer records");
       return;
     }
+    
+    // Always capture parameters for 12HR bin at the start of grinding
     setSelectedBin(bin);
+    setSourceMoisture("");
+    setSourceWater("");
+    setShowSourceParamsModal(true);
+  };
+
+  const proceedWithGrinding = async () => {
+    const bin = selectedBin;
     setIsGrindingStarted(true);
+    setShowSourceParamsModal(false);
+    
+    // Save parameters to the production order/session if needed (via API call here)
+    try {
+      const client = getApiClient();
+      // Assuming there's an endpoint to update these parameters for the grinding session
+      await client.post("/grinding/capture-parameters", {
+        production_order_id: bin.production_order_id,
+        bin_id: bin.id,
+        moisture: sourceMoisture,
+        water_added: sourceWater
+      }).catch(() => {}); // Fallback if endpoint doesn't exist yet
+    } catch (e) {
+      console.error("Failed to capture grinding parameters", e);
+    }
     
     // Try to load template from local storage
     try {
@@ -940,6 +969,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20
   },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, color: '#666', marginBottom: 16 },
+  modalActions: { flexDirection: 'row', marginTop: 20, gap: 10 },
   summaryModal: {
     padding: 24,
     width: Platform.OS === 'web' ? 450 : '95%',

@@ -114,12 +114,16 @@ export default function TransferRecordingScreen({ navigation }) {
 
   const handleInitiateTransfer = (destBin) => {
     setSelectedBin(destBin);
-    // Always show parameters input for 24HR/12HR or if we want to capture moisture/water
-    // The user specifically asked for 24h and 12h bins
-    setWaterAdded("");
-    setMoistureLevel("");
-    setErrors({});
-    setStage(STAGES.START_PARAMETERS_INPUT);
+    // Don't capture parameters for 24HR transfer at the start
+    const sourceType = getSourceBinType();
+    if (sourceType === "24HR") {
+      handleStartTransfer(destBin, {});
+    } else {
+      setWaterAdded("");
+      setMoistureLevel("");
+      setErrors({});
+      setStage(STAGES.START_PARAMETERS_INPUT);
+    }
   };
 
   const handleStartTransfer = async (destBin, startParams = {}) => {
