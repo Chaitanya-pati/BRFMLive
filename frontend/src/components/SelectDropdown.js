@@ -25,8 +25,11 @@ export default function SelectDropdown({
         !enabled && styles.pickerDisabled
       ]}>
         <Picker
-          selectedValue={value}
-          onValueChange={onValueChange}
+          selectedValue={value || ""}
+          onValueChange={(val) => {
+            console.log(`SelectDropdown [${label}] changed to:`, val);
+            onValueChange(val);
+          }}
           enabled={enabled}
           style={[styles.picker, isMobile && styles.pickerMobile]}
           dropdownIconColor={enabled ? colors.textPrimary : colors.textSecondary}

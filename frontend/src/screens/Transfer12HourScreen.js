@@ -141,8 +141,15 @@ export default function Transfer12HourScreen({ navigation }) {
         .filter(record => Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED")
         .map(record => Number(record.destination_bin_id));
 
-      const filteredSource = allBins.filter(bin => bin.bin_type === "24 hours bin" && bin.status === "Active" && validSourceBinIds.includes(Number(bin.id)));
-      const filteredDest = allBins.filter(bin => bin.bin_type === "12 hours bin" && bin.status === "Active");
+    const filteredSource = allBins.filter(bin => 
+      (bin.bin_type === "24 hours bin" || bin.bin_type === "24HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("24"))) && 
+      bin.status === "Active" && 
+      validSourceBinIds.includes(Number(bin.id))
+    );
+    const filteredDest = allBins.filter(bin => 
+      (bin.bin_type === "12 hours bin" || bin.bin_type === "12HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("12"))) && 
+      bin.status === "Active"
+    );
 
       setSourceBins(filteredSource);
       setDestinationBins(filteredDest);
@@ -159,24 +166,37 @@ export default function Transfer12HourScreen({ navigation }) {
     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
     const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
 
-    if (!source || !dest) {
+    console.log("handleStartTransfer triggered - RAW VALUES:", { 
+      transferType, 
+      selectedSourceBin,
+      selectedDestinationBin,
+      specialSourceBin,
+      specialDestinationBin 
+    });
+    
+    console.log("handleStartTransfer RESOLVED:", { source, dest });
+
+    if (!source || source === "" || source === "null" || !dest || dest === "" || dest === "null") {
       showAlert("Validation Error", "Please select both source and destination bins");
       return;
     }
 
-    // Check if source is 24HR bin to capture parameters
-    const sourceBin = sourceBins.find(b => Number(b.id) === Number(source));
-    if (sourceBin && (sourceBin.bin_type === "24 hours bin" || sourceBin.bin_type === "24HOUR")) {
+    const sourceBin = sourceBins.find(b => b.id.toString() === source.toString());
+    console.log("Source Bin Found in lookup:", sourceBin, "from sourceBins:", sourceBins);
+    
+    if (sourceBin && (sourceBin.bin_type === "24 hours bin" || sourceBin.bin_type === "24HOUR" || (sourceBin.bin_type && sourceBin.bin_type.toLowerCase().includes("24")))) {
       setWaterAdded("");
       setMoistureLevel("");
       setShowStartParamsModal(true);
       return;
     }
 
+    console.log("Proceeding with transfer to:", dest);
     proceedWithStartTransfer(source, dest);
   };
 
   const proceedWithStartTransfer = async (source, dest) => {
+    console.log("API Call - Start Transfer:", { source, dest, type: transferType });
     setLoading(true);
     try {
       const client = getApiClient();
@@ -338,7 +358,14 @@ export default function Transfer12HourScreen({ navigation }) {
         />
       </Card>
 
-      <Button title="Start Transfer" onPress={handleStartTransfer} loading={loading} />
+          <Button 
+            title="Start Transfer" 
+            onPress={() => {
+              console.log("Button 'Start Transfer' clicked");
+              handleStartTransfer();
+            }} 
+            loading={loading} 
+          />
       <Button title="Back" onPress={handleGoBack} variant="secondary" />
     </ScrollView>
   );
@@ -417,6 +444,10 @@ export default function Transfer12HourScreen({ navigation }) {
                     const isManualSpecial = transferType === "SPECIAL";
                     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
                     const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+                    if (!source || !dest) {
+                      showAlert("Validation Error", "Please select both source and destination bins");
+                      return;
+                    }
                     proceedWithStartTransfer(source, dest);
                   }} 
                   loading={loading}
