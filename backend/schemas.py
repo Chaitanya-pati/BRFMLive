@@ -1227,6 +1227,8 @@ class TransferRecordingStartTransfer(BaseModel):
 
 class TransferRecordingCompleteTransfer(BaseModel):
     quantity_transferred: float
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
 
 class TransferRecordingBase(ISTModel):
     production_order_id: int
