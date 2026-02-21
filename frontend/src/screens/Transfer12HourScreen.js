@@ -39,11 +39,11 @@ export default function Transfer12HourScreen({ navigation }) {
   const [transferType, setTransferType] = useState("NORMAL");
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const [selectedSourceBin, setSelectedSourceBin] = useState(null);
-  const [selectedDestinationBin, setSelectedDestinationBin] = useState(null);
+  const [selectedSourceBin, setSelectedSourceBin] = useState("");
+  const [selectedDestinationBin, setSelectedDestinationBin] = useState("");
   
-  const [specialSourceBin, setSpecialSourceBin] = useState(null);
-  const [specialDestinationBin, setSpecialDestinationBin] = useState(null);
+  const [specialSourceBin, setSpecialSourceBin] = useState("");
+  const [specialDestinationBin, setSpecialDestinationBin] = useState("");
 
   const [transferQuantity, setTransferQuantity] = useState("");
   const [waterAdded, setWaterAdded] = useState("");
@@ -255,10 +255,10 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const handleGoBack = () => {
     setSelectedOrder(null);
-    setSelectedSourceBin(null);
-    setSelectedDestinationBin(null);
-    setSpecialSourceBin(null);
-    setSpecialDestinationBin(null);
+    setSelectedSourceBin("");
+    setSelectedDestinationBin("");
+    setSpecialSourceBin("");
+    setSpecialDestinationBin("");
     setTransferQuantity("");
     setWaterAdded("");
     setMoistureLevel("");
@@ -302,13 +302,21 @@ export default function Transfer12HourScreen({ navigation }) {
       <View style={styles.subTypeSelector}>
         <TouchableOpacity 
           style={[styles.subTypeTab, transferType === "NORMAL" && styles.activeSubTypeTab]} 
-          onPress={() => setTransferType("NORMAL")}
+          onPress={() => {
+            setTransferType("NORMAL");
+            setSelectedSourceBin("");
+            setSelectedDestinationBin("");
+          }}
         >
           <Text style={[styles.subTypeTabText, transferType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.subTypeTab, transferType === "SPECIAL" && styles.activeSubTypeTab]} 
-          onPress={() => setTransferType("SPECIAL")}
+          onPress={() => {
+            setTransferType("SPECIAL");
+            setSpecialSourceBin("");
+            setSpecialDestinationBin("");
+          }}
         >
           <Text style={[styles.subTypeTabText, transferType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
         </TouchableOpacity>
@@ -320,13 +328,13 @@ export default function Transfer12HourScreen({ navigation }) {
           label="Source Bin"
           value={transferType === "NORMAL" ? selectedSourceBin : specialSourceBin}
           onValueChange={transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin}
-          options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
         />
         <SelectDropdown
           label="Destination Bin"
           value={transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin}
           onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
-          options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id }))}
+          options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
         />
       </Card>
 
