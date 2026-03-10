@@ -308,16 +308,29 @@ export default function GrindingScreen({ navigation }) {
     // Save parameters to the 12-hour transfer record
     try {
       const client = getApiClient();
-      console.log("Capturing grinding parameters for bin:", { bin_id: bin.id, moisture: sourceMoisture, water_added: sourceWater, production_order_id: bin.production_order_id });
-      await client.post("/grinding/capture-parameters", {
-        bin_id: bin.id,
-        moisture: sourceMoisture ? parseFloat(sourceMoisture) : null,
-        water_added: sourceWater ? parseFloat(sourceWater) : null,
-        production_order_id: bin.production_order_id
-      });
-      console.log("✅ Grinding parameters saved successfully");
+      
+      // Fetch the 12-hour transfer record matching this bin and production order
+      const transferRecords = await client.get("/12hour-transfer/records");
+      const matchingRecord = (transferRecords.data || []).find(r => 
+        Number(r.destination_bin_id) === Number(bin.id) && 
+        Number(r.production_order_id) === Number(bin.production_order_id) &&
+        r.status === "IN_PROGRESS"
+      );
+      
+      if (matchingRecord) {
+        console.log("Found 12-hour transfer record:", matchingRecord.id);
+        // Update the matching 12-hour transfer record with the parameters
+        await client.patch(`/12hour-transfer/records/${matchingRecord.id}`, {
+          moisture_level: sourceMoisture ? parseFloat(sourceMoisture) : null,
+          water_added: sourceWater ? parseFloat(sourceWater) : null
+        });
+        console.log("✅ Parameters saved to 12-hour transfer record successfully");
+      } else {
+        console.warn("No matching 12-hour transfer record found for this bin");
+        showAlert("Warning", "Could not find transfer record for this bin");
+      }
     } catch (e) {
-      console.error("Failed to capture grinding parameters", e);
+      console.error("Failed to save grinding parameters", e);
       showAlert("Warning", "Parameters not saved, but grinding process started");
     }
     
