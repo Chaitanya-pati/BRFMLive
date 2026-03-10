@@ -224,7 +224,7 @@ export default function Transfer12HourScreen({ navigation }) {
       
       // Find the 24-hour transfer record for this source bin
       try {
-        const records24h = await client.get("/api/24hour-transfer/records");
+        const records24h = await client.get("/24hour-transfer/records");
         const matchingRecord = records24h.data.find(r => 
           r.destination_bin_id === parseInt(source) && 
           r.production_order_id === parseInt(selectedOrder.id) && 
@@ -235,7 +235,7 @@ export default function Transfer12HourScreen({ navigation }) {
           // Update 24-hour bin with captured parameters
           if (waterAdded || moistureLevel) {
             console.log("Saving parameters to 24-hour bin record:", sourceBinRecordId);
-            await client.patch(`/api/24hour-transfer/records/${sourceBinRecordId}`, {
+            await client.patch(`/24hour-transfer/records/${sourceBinRecordId}`, {
               water_added: waterAdded ? parseFloat(waterAdded) : null,
               moisture_level: moistureLevel ? parseFloat(moistureLevel) : null
             });
@@ -247,7 +247,7 @@ export default function Transfer12HourScreen({ navigation }) {
       }
       
       // Now create the 12-hour transfer record
-      const response = await client.post("/api/12hour-transfer/records", {
+      const response = await client.post("/12hour-transfer/records", {
         production_order_id: parseInt(selectedOrder.id),
         source_bin_id: parseInt(source),
         destination_bin_id: parseInt(dest),

@@ -309,7 +309,7 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       console.log("Capturing grinding parameters for bin:", { bin_id: bin.id, moisture: sourceMoisture, water_added: sourceWater, production_order_id: bin.production_order_id });
-      await client.post("/api/grinding/capture-parameters", {
+      await client.post("/grinding/capture-parameters", {
         bin_id: bin.id,
         moisture: sourceMoisture ? parseFloat(sourceMoisture) : null,
         water_added: sourceWater ? parseFloat(sourceWater) : null,
