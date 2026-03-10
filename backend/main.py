@@ -3889,6 +3889,47 @@ def complete_12hour_transfer(
     db.refresh(db_record)
     return db_record
 
+@app.post("/api/grinding/capture-parameters", response_model=schemas.Transfer12HourRecord)
+def capture_grinding_parameters(
+    data: schemas.CaptureParametersRequest,
+    db: Session = Depends(get_db)
+):
+    """Capture moisture and water parameters for 12-hour bin during grinding start"""
+    db_record = db.query(models.Transfer12HourRecord).filter(
+        models.Transfer12HourRecord.destination_bin_id == data.bin_id
+    ).order_by(models.Transfer12HourRecord.id.desc()).first()
+    
+    if not db_record:
+        raise HTTPException(status_code=404, detail="12-hour transfer record not found for this bin")
+    
+    if data.moisture is not None:
+        db_record.moisture_level = data.moisture
+    if data.water_added is not None:
+        db_record.water_added = data.water_added
+    
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+@app.patch("/api/24hour-transfer/records/{record_id}", response_model=schemas.TransferRecording)
+def update_24hour_transfer_record(
+    record_id: int,
+    record_update: schemas.TransferRecordingUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update 24-hour transfer record with captured parameters"""
+    db_record = db.query(models.TransferRecording).filter(models.TransferRecording.id == record_id).first()
+    if not db_record:
+        raise HTTPException(status_code=404, detail="24-hour transfer record not found")
+    
+    update_data = record_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_record, key, value)
+    
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
 @app.post("/api/12hour-transfer/records/{record_id}/divert/{next_bin_id}", response_model=schemas.Transfer12HourRecord)
 def divert_12hour_transfer(
     record_id: int,

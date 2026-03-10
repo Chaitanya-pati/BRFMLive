@@ -216,14 +216,44 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.post("/12hour-transfer/records", {
+      
+      // First, save the captured parameters to the 24-hour bin
+      const sourceBinFromDetails = sourceBins.find(b => b.id.toString() === source.toString());
+      const order24hRecords = binDetailsMap;
+      let sourceBinRecordId = null;
+      
+      // Find the 24-hour transfer record for this source bin
+      try {
+        const records24h = await client.get("/api/24hour-transfer/records");
+        const matchingRecord = records24h.data.find(r => 
+          r.destination_bin_id === parseInt(source) && 
+          r.production_order_id === parseInt(selectedOrder.id) && 
+          r.status === "COMPLETED"
+        );
+        if (matchingRecord) {
+          sourceBinRecordId = matchingRecord.id;
+          // Update 24-hour bin with captured parameters
+          if (waterAdded || moistureLevel) {
+            console.log("Saving parameters to 24-hour bin record:", sourceBinRecordId);
+            await client.patch(`/api/24hour-transfer/records/${sourceBinRecordId}`, {
+              water_added: waterAdded ? parseFloat(waterAdded) : null,
+              moisture_level: moistureLevel ? parseFloat(moistureLevel) : null
+            });
+            console.log("✅ Parameters saved to 24-hour bin");
+          }
+        }
+      } catch (e) {
+        console.log("Could not update 24-hour bin:", e.message);
+      }
+      
+      // Now create the 12-hour transfer record
+      const response = await client.post("/api/12hour-transfer/records", {
         production_order_id: parseInt(selectedOrder.id),
         source_bin_id: parseInt(source),
         destination_bin_id: parseInt(dest),
         transfer_type: transferType,
         status: "IN_PROGRESS",
         transfer_start_time: new Date().toISOString(),
-        // Pass the parameters if captured
         water_added: waterAdded ? parseFloat(waterAdded) : 0,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
       });

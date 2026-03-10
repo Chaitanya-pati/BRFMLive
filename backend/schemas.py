@@ -134,6 +134,15 @@ class Transfer12HourRecordUpdate(BaseModel):
     moisture_level: Optional[float] = None
     transfer_end_time: Optional[datetime] = None
 
+class CaptureParametersRequest(BaseModel):
+    bin_id: int
+    moisture: Optional[float] = None
+    water_added: Optional[float] = None
+
+class TransferRecordingUpdate(BaseModel):
+    water_added: Optional[float] = None
+    moisture_level: Optional[float] = None
+
 class Transfer12HourRecord(Transfer12HourRecordBase):
     id: int
     status: str

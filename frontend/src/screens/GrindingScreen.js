@@ -305,18 +305,19 @@ export default function GrindingScreen({ navigation }) {
     setIsGrindingStarted(true);
     setShowSourceParamsModal(false);
     
-    // Save parameters to the production order/session if needed (via API call here)
+    // Save parameters to the 12-hour transfer record
     try {
       const client = getApiClient();
-      // Assuming there's an endpoint to update these parameters for the grinding session
-      await client.post("/grinding/capture-parameters", {
-        production_order_id: bin.production_order_id,
+      console.log("Capturing grinding parameters for bin:", { bin_id: bin.id, moisture: sourceMoisture, water_added: sourceWater });
+      await client.post("/api/grinding/capture-parameters", {
         bin_id: bin.id,
-        moisture: sourceMoisture,
-        water_added: sourceWater
-      }).catch(() => {}); // Fallback if endpoint doesn't exist yet
+        moisture: sourceMoisture ? parseFloat(sourceMoisture) : null,
+        water_added: sourceWater ? parseFloat(sourceWater) : null
+      });
+      console.log("✅ Grinding parameters saved successfully");
     } catch (e) {
       console.error("Failed to capture grinding parameters", e);
+      showAlert("Warning", "Parameters not saved, but grinding process started");
     }
     
     // Try to load template from local storage
