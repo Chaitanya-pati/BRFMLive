@@ -7,6 +7,7 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
@@ -197,15 +198,18 @@ export default function Transfer12HourScreen({ navigation }) {
 
     // Auto-fetch moisture/water from 24h record if available
     const autoDetails = binDetailsMap[source];
-    if (autoDetails) {
+    if (autoDetails && (autoDetails.water_added !== null || autoDetails.moisture_level !== null)) {
+      // Parameters exist in source bin - auto-fill and proceed
       setWaterAdded(autoDetails.water_added?.toString() || "0");
       setMoistureLevel(autoDetails.moisture_level?.toString() || "0");
       console.log("Auto-filled details from 24h record:", autoDetails);
+      proceedWithStartTransfer(source, dest);
+    } else {
+      // No parameters captured yet - show modal for user to enter
+      setWaterAdded("");
+      setMoistureLevel("");
+      setShowStartParamsModal(true);
     }
-
-    // Proceed directly to start
-    console.log("Proceeding with transfer start");
-    proceedWithStartTransfer(source, dest);
   };
 
   const proceedWithStartTransfer = async (source, dest) => {
@@ -427,21 +431,21 @@ export default function Transfer12HourScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <Card style={styles.modalContent}>
               <Text style={styles.modalTitle}>Source Bin Parameters</Text>
-              <Text style={styles.modalSubtitle}>Please enter source bin moisture and water details.</Text>
+              <Text style={styles.modalSubtitle}>Please enter moisture and water details for the source bin (these values will be saved to this bin's record).</Text>
               
               <InputField
                 label="Moisture Level (%)"
                 value={moistureLevel}
                 onChangeText={setMoistureLevel}
                 keyboardType="decimal-pad"
-                placeholder="Enter moisture level"
+                placeholder="0"
               />
               <InputField
                 label="Water Added (Litres)"
                 value={waterAdded}
                 onChangeText={setWaterAdded}
                 keyboardType="decimal-pad"
-                placeholder="Enter water added"
+                placeholder="0"
               />
 
               <View style={styles.modalActions}>
