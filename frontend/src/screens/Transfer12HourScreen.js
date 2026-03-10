@@ -254,8 +254,8 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_type: transferType,
         status: "IN_PROGRESS",
         transfer_start_time: new Date().toISOString(),
-        water_added: waterAdded ? parseFloat(waterAdded) : 0,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
+        water_added: waterAdded ? parseFloat(waterAdded) : null,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
       });
 
       setCurrentRecordId(response.data.id);
@@ -285,8 +285,8 @@ export default function Transfer12HourScreen({ navigation }) {
       const client = getApiClient();
       await client.patch(`/12hour-transfer/records/${currentRecordId}`, {
         quantity_transferred: parseFloat(transferQuantity),
-        water_added: waterAdded ? parseFloat(waterAdded) : 0,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
+        water_added: waterAdded ? parseFloat(waterAdded) : null,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
         status: pendingStatus,
         transfer_end_time: new Date().toISOString()
       });
