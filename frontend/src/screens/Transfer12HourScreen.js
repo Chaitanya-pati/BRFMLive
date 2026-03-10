@@ -40,6 +40,7 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const [selectedSourceBin, setSelectedSourceBin] = useState("");
   const [selectedDestinationBin, setSelectedDestinationBin] = useState("");
+  const [binDetailsMap, setBinDetailsMap] = useState({});
   
   const [specialSourceBin, setSpecialSourceBin] = useState("");
   const [specialDestinationBin, setSpecialDestinationBin] = useState("");
@@ -136,22 +137,34 @@ export default function Transfer12HourScreen({ navigation }) {
       const allBins = binsResponse.data || [];
       const transferRecords = transferRecordsResponse.data || [];
       
-      const validSourceBinIds = transferRecords
-        .filter(record => Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED")
-        .map(record => Number(record.destination_bin_id));
+      // Store 24h records for moisture/water lookup
+      const order24hRecords = transferRecords.filter(record => 
+        Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED"
+      );
 
-    const filteredSource = allBins.filter(bin => 
-      (bin.bin_type === "24 hours bin" || bin.bin_type === "24HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("24"))) && 
-      bin.status === "Active" && 
-      validSourceBinIds.includes(Number(bin.id))
-    );
-    const filteredDest = allBins.filter(bin => 
-      (bin.bin_type === "12 hours bin" || bin.bin_type === "12HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("12"))) && 
-      bin.status === "Active"
-    );
+      const validSourceBinIds = order24hRecords.map(record => Number(record.destination_bin_id));
+
+      const filteredSource = allBins.filter(bin => 
+        (bin.bin_type === "24 hours bin" || bin.bin_type === "24HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("24"))) && 
+        bin.status === "Active" && 
+        validSourceBinIds.includes(Number(bin.id))
+      );
+      const filteredDest = allBins.filter(bin => 
+        (bin.bin_type === "12 hours bin" || bin.bin_type === "12HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("12"))) && 
+        bin.status === "Active"
+      );
 
       setSourceBins(filteredSource);
       setDestinationBins(filteredDest);
+      // Map bin ID to its 24h transfer details
+      const detailsMap = {};
+      order24hRecords.forEach(r => {
+        detailsMap[r.destination_bin_id] = {
+          water_added: r.water_added,
+          moisture_level: r.moisture_level
+        };
+      });
+      setBinDetailsMap(detailsMap);
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
       showAlert("Error", "Failed to fetch bins or transfer records");
@@ -182,30 +195,16 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
-    // Try to find the source bin in all possible lists to determine its type
-    // We use a broader search to ensure we find it even if filtered out of the active list
-    const sourceBin = sourceBins.find(b => b.id.toString() === source.toString()) || 
-                     destinationBins.find(b => b.id.toString() === source.toString());
-    
-    console.log("Source Bin Details:", sourceBin);
-    
-    // Check if it's a 24-hour bin to show parameters modal (moisture/water)
-    const is24HourBin = sourceBin && (
-        sourceBin.bin_type === "24 hours bin" || 
-        sourceBin.bin_type === "24HOUR" || 
-        (sourceBin.bin_type && sourceBin.bin_type.toLowerCase().includes("24"))
-    );
-
-    if (is24HourBin) {
-      console.log("Source is a 24-hour bin, showing parameters modal");
-      setWaterAdded("");
-      setMoistureLevel("");
-      setShowStartParamsModal(true);
-      return;
+    // Auto-fetch moisture/water from 24h record if available
+    const autoDetails = binDetailsMap[source];
+    if (autoDetails) {
+      setWaterAdded(autoDetails.water_added?.toString() || "0");
+      setMoistureLevel(autoDetails.moisture_level?.toString() || "0");
+      console.log("Auto-filled details from 24h record:", autoDetails);
     }
 
-    // Otherwise proceed directly
-    console.log("Proceeding with direct transfer start");
+    // Proceed directly to start
+    console.log("Proceeding with transfer start");
     proceedWithStartTransfer(source, dest);
   };
 
