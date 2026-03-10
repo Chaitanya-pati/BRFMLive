@@ -7,7 +7,6 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
@@ -166,32 +165,47 @@ export default function Transfer12HourScreen({ navigation }) {
     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
     const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
 
-    console.log("handleStartTransfer triggered - RAW VALUES:", { 
+    console.log("handleStartTransfer triggered:", { 
       transferType, 
-      selectedSourceBin,
-      selectedDestinationBin,
-      specialSourceBin,
-      specialDestinationBin 
+      source,
+      dest,
+      selectedOrderId: selectedOrder?.id
     });
-    
-    console.log("handleStartTransfer RESOLVED:", { source, dest });
+
+    if (!selectedOrder) {
+      showAlert("Validation Error", "Please select a production order first");
+      return;
+    }
 
     if (!source || source === "" || source === "null" || !dest || dest === "" || dest === "null") {
       showAlert("Validation Error", "Please select both source and destination bins");
       return;
     }
 
-    const sourceBin = sourceBins.find(b => b.id.toString() === source.toString());
-    console.log("Source Bin Found in lookup:", sourceBin, "from sourceBins:", sourceBins);
+    // Try to find the source bin in all possible lists to determine its type
+    // We use a broader search to ensure we find it even if filtered out of the active list
+    const sourceBin = sourceBins.find(b => b.id.toString() === source.toString()) || 
+                     destinationBins.find(b => b.id.toString() === source.toString());
     
-    if (sourceBin && (sourceBin.bin_type === "24 hours bin" || sourceBin.bin_type === "24HOUR" || (sourceBin.bin_type && sourceBin.bin_type.toLowerCase().includes("24")))) {
+    console.log("Source Bin Details:", sourceBin);
+    
+    // Check if it's a 24-hour bin to show parameters modal (moisture/water)
+    const is24HourBin = sourceBin && (
+        sourceBin.bin_type === "24 hours bin" || 
+        sourceBin.bin_type === "24HOUR" || 
+        (sourceBin.bin_type && sourceBin.bin_type.toLowerCase().includes("24"))
+    );
+
+    if (is24HourBin) {
+      console.log("Source is a 24-hour bin, showing parameters modal");
       setWaterAdded("");
       setMoistureLevel("");
       setShowStartParamsModal(true);
       return;
     }
 
-    console.log("Proceeding with transfer to:", dest);
+    // Otherwise proceed directly
+    console.log("Proceeding with direct transfer start");
     proceedWithStartTransfer(source, dest);
   };
 
@@ -201,9 +215,9 @@ export default function Transfer12HourScreen({ navigation }) {
     try {
       const client = getApiClient();
       const response = await client.post("/12hour-transfer/records", {
-        production_order_id: selectedOrder.id,
-        source_bin_id: source,
-        destination_bin_id: dest,
+        production_order_id: parseInt(selectedOrder.id),
+        source_bin_id: parseInt(source),
+        destination_bin_id: parseInt(dest),
         transfer_type: transferType,
         status: "IN_PROGRESS",
         transfer_start_time: new Date().toISOString(),
