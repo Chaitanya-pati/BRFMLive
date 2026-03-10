@@ -138,6 +138,7 @@ class CaptureParametersRequest(BaseModel):
     bin_id: int
     moisture: Optional[float] = None
     water_added: Optional[float] = None
+    production_order_id: Optional[int] = None
 
 class TransferRecordingUpdate(BaseModel):
     water_added: Optional[float] = None

@@ -308,11 +308,12 @@ export default function GrindingScreen({ navigation }) {
     // Save parameters to the 12-hour transfer record
     try {
       const client = getApiClient();
-      console.log("Capturing grinding parameters for bin:", { bin_id: bin.id, moisture: sourceMoisture, water_added: sourceWater });
+      console.log("Capturing grinding parameters for bin:", { bin_id: bin.id, moisture: sourceMoisture, water_added: sourceWater, production_order_id: bin.production_order_id });
       await client.post("/api/grinding/capture-parameters", {
         bin_id: bin.id,
         moisture: sourceMoisture ? parseFloat(sourceMoisture) : null,
-        water_added: sourceWater ? parseFloat(sourceWater) : null
+        water_added: sourceWater ? parseFloat(sourceWater) : null,
+        production_order_id: bin.production_order_id
       });
       console.log("✅ Grinding parameters saved successfully");
     } catch (e) {

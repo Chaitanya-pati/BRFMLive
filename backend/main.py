@@ -3892,12 +3892,21 @@ def complete_12hour_transfer(
 @app.post("/api/grinding/capture-parameters", response_model=schemas.Transfer12HourRecord)
 def capture_grinding_parameters(
     data: schemas.CaptureParametersRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    branch_id: Optional[int] = Depends(get_branch_id)
 ):
     """Capture moisture and water parameters for 12-hour bin during grinding start"""
-    db_record = db.query(models.Transfer12HourRecord).filter(
+    query = db.query(models.Transfer12HourRecord).filter(
         models.Transfer12HourRecord.destination_bin_id == data.bin_id
-    ).order_by(models.Transfer12HourRecord.id.desc()).first()
+    )
+    
+    if data.production_order_id:
+        query = query.filter(models.Transfer12HourRecord.production_order_id == data.production_order_id)
+    
+    if branch_id:
+        query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
+    
+    db_record = query.order_by(models.Transfer12HourRecord.id.desc()).first()
     
     if not db_record:
         raise HTTPException(status_code=404, detail="12-hour transfer record not found for this bin")
