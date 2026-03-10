@@ -196,20 +196,19 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
-    // Auto-fetch moisture/water from 24h record if available
+    // ALWAYS show parameter capture modal (mandatory)
+    // Pre-fill with values from 24h record if available
     const autoDetails = binDetailsMap[source];
     if (autoDetails && (autoDetails.water_added !== null || autoDetails.moisture_level !== null)) {
-      // Parameters exist in source bin - auto-fill and proceed
-      setWaterAdded(autoDetails.water_added?.toString() || "0");
-      setMoistureLevel(autoDetails.moisture_level?.toString() || "0");
-      console.log("Auto-filled details from 24h record:", autoDetails);
-      proceedWithStartTransfer(source, dest);
+      setWaterAdded(autoDetails.water_added?.toString() || "");
+      setMoistureLevel(autoDetails.moisture_level?.toString() || "");
+      console.log("Pre-filled details from 24h record:", autoDetails);
     } else {
-      // No parameters captured yet - show modal for user to enter
       setWaterAdded("");
       setMoistureLevel("");
-      setShowStartParamsModal(true);
     }
+    
+    setShowStartParamsModal(true);
   };
 
   const proceedWithStartTransfer = async (source, dest) => {

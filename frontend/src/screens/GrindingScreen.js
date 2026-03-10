@@ -852,6 +852,48 @@ export default function GrindingScreen({ navigation }) {
             </Card>
           </View>
         )}
+        <Modal visible={showSourceParamsModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Source Bin Parameters</Text>
+              <Text style={styles.modalSubtitle}>Please enter moisture and water details for the 12-hour bin (these values will be saved to this bin's record).</Text>
+              
+              <InputField
+                label="Moisture Level (%)"
+                value={sourceMoisture}
+                onChangeText={setSourceMoisture}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
+              <InputField
+                label="Water Added (Litres)"
+                value={sourceWater}
+                onChangeText={setSourceWater}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
+
+              <View style={styles.modalActions}>
+                <Button 
+                  title="Cancel" 
+                  onPress={() => {
+                    setShowSourceParamsModal(false);
+                    setSelectedBin(null);
+                  }} 
+                  variant="secondary" 
+                  style={{flex: 1, marginRight: 8}}
+                />
+                <Button 
+                  title="Confirm & Start" 
+                  onPress={proceedWithGrinding} 
+                  loading={loading}
+                  style={{flex: 1}}
+                />
+              </View>
+            </Card>
+          </View>
+        </Modal>
+
         {showTimePicker && Platform.OS !== 'web' && (
           <DateTimePicker
             value={new Date()}
