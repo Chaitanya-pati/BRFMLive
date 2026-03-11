@@ -812,7 +812,7 @@ class FinishedGoodsGodownStock(FinishedGoodsGodownStockBase):
     updated_at: datetime
 
 class FinishedGoodsGodownMovementBase(ISTModel):
-    branch_id: int
+    branch_id: Optional[int] = None
     movement_type: str
     from_godown_id: Optional[int] = None
     to_godown_id: Optional[int] = None

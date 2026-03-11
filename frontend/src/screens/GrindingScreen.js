@@ -470,18 +470,22 @@ export default function GrindingScreen({ navigation }) {
       const movements = [];
       for (const label in godownAllocation) {
         godownAllocation[label].forEach((row) => {
-          movements.push({
+          const movement = {
             movement_type: "IN",
             to_godown_id: parseInt(row.godownId),
             finished_good_id: parseInt(row.fgId),
             bag_size_id: parseInt(row.bsId),
             quantity_bags: parseInt(row.bags),
             remarks: `Grinding completion: ${label}`,
-          });
+          };
+          console.log("📦 Movement payload:", movement);
+          movements.push(movement);
         });
       }
+      console.log("📤 Saving movements to backend...", movements);
       for (const m of movements) {
-        await client.post("/finished-goods-godown-movement", m);
+        const response = await client.post("/finished-goods-godown-movement", m);
+        console.log("✅ Movement saved:", response.data);
       }
       showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
@@ -489,10 +493,10 @@ export default function GrindingScreen({ navigation }) {
       fetchInitialData();
     } catch (error) {
       console.error("Save to godown failed", error);
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || "Unknown error";
       showAlert(
         "Error",
-        "Failed to update godown stock: " +
-          (error.response?.data?.detail || error.message),
+        "Failed to update godown stock: " + errorMsg,
       );
     } finally {
       setLoading(false);
