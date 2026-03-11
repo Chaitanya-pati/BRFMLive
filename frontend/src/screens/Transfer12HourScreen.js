@@ -65,6 +65,18 @@ export default function Transfer12HourScreen({ navigation }) {
   
   // For transfer details display
   const [transfer12hRecords, setTransfer12hRecords] = useState([]);
+  
+  // Parameters modal state
+  const [showParametersModal, setShowParametersModal] = useState(false);
+  const [selectedTransfer12h, setSelectedTransfer12h] = useState(null);
+  const [paramsWaterAdded, setParamsWaterAdded] = useState("");
+  const [paramsMoistureLevel, setParamsMoistureLevel] = useState("");
+  const [savingParams, setSavingParams] = useState(false);
+  
+  // Stop transfer modal state
+  const [showStopModal, setShowStopModal] = useState(false);
+  const [selectedTransferToStop, setSelectedTransferToStop] = useState(null);
+  const [stoppingTransfer, setStoppingTransfer] = useState(false);
 
   useEffect(() => {
     fetchProductionOrders();
@@ -113,6 +125,60 @@ export default function Transfer12HourScreen({ navigation }) {
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleOpenParametersModal = (transfer) => {
+    setSelectedTransfer12h(transfer);
+    setParamsWaterAdded(transfer.water_added?.toString() || "");
+    setParamsMoistureLevel(transfer.moisture_level?.toString() || "");
+    setShowParametersModal(true);
+  };
+
+  const handleSaveParameters = async () => {
+    if (!selectedTransfer12h) return;
+    setSavingParams(true);
+    try {
+      const client = getApiClient();
+      await client.patch(`/12hour-transfer/records/${selectedTransfer12h.id}`, {
+        water_added: paramsWaterAdded ? parseFloat(paramsWaterAdded) : null,
+        moisture_level: paramsMoistureLevel ? parseFloat(paramsMoistureLevel) : null,
+      });
+      showToast("Success", "Parameters saved successfully");
+      setShowParametersModal(false);
+      fetch12HourRecords();
+      fetchSessions();
+    } catch (error) {
+      showAlert("Error", "Failed to save parameters");
+      console.error("Error saving parameters:", error);
+    } finally {
+      setSavingParams(false);
+    }
+  };
+
+  const handleOpenStopModal = (transfer) => {
+    setSelectedTransferToStop(transfer);
+    setShowStopModal(true);
+  };
+
+  const handleStopTransfer = async () => {
+    if (!selectedTransferToStop) return;
+    setStoppingTransfer(true);
+    try {
+      const client = getApiClient();
+      await client.patch(`/12hour-transfer/records/${selectedTransferToStop.id}`, {
+        status: "COMPLETED",
+        transfer_end_time: new Date().toISOString(),
+      });
+      showToast("Success", "Transfer stopped and marked as completed");
+      setShowStopModal(false);
+      fetch12HourRecords();
+      fetchSessions();
+    } catch (error) {
+      showAlert("Error", "Failed to stop transfer");
+      console.error("Error stopping transfer:", error);
+    } finally {
+      setStoppingTransfer(false);
+    }
   };
 
   const fetchProductionOrders = async () => {
@@ -507,6 +573,26 @@ export default function Transfer12HourScreen({ navigation }) {
                     </View>
                   </View>
                 )}
+                
+                {/* Action Buttons */}
+                <View style={styles.transferActionButtons}>
+                  {transfer.status === "COMPLETED" && (transfer.water_added === null || transfer.water_added === 0 || transfer.moisture_level === null || transfer.moisture_level === 0) && (
+                    <TouchableOpacity
+                      style={styles.transferActionButton}
+                      onPress={() => handleOpenParametersModal(transfer)}
+                    >
+                      <Text style={styles.transferActionButtonText}>➕ Add Water & Moisture</Text>
+                    </TouchableOpacity>
+                  )}
+                  {transfer.status === "IN_PROGRESS" && (
+                    <TouchableOpacity
+                      style={[styles.transferActionButton, { backgroundColor: '#ea4335' }]}
+                      onPress={() => handleOpenStopModal(transfer)}
+                    >
+                      <Text style={styles.transferActionButtonText}>⏹ Stop Transfer</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </Card>
             ))}
           </View>
@@ -697,11 +783,99 @@ export default function Transfer12HourScreen({ navigation }) {
             <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || item.source_bin_id}</Text>
             <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || item.destination_bin_id}</Text>
             <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} units</Text>
+            <Text style={styles.sessionDetail}>Water: {item.water_added !== null ? `${item.water_added}L` : "—"}</Text>
+            <Text style={styles.sessionDetail}>Moisture: {item.moisture_level !== null ? `${item.moisture_level}%` : "—"}</Text>
             <Text style={styles.sessionDetail}>Date: {formatISTDateTime(item.created_at)}</Text>
+            
+            {/* Action Buttons */}
+            <View style={styles.transferActionButtons}>
+              {item.status === "COMPLETED" && (item.water_added === null || item.water_added === 0 || item.moisture_level === null || item.moisture_level === 0) && (
+                <TouchableOpacity
+                  style={styles.transferActionButton}
+                  onPress={() => handleOpenParametersModal(item)}
+                >
+                  <Text style={styles.transferActionButtonText}>➕ Add Water & Moisture</Text>
+                </TouchableOpacity>
+              )}
+              {item.status === "IN_PROGRESS" && (
+                <TouchableOpacity
+                  style={[styles.transferActionButton, { backgroundColor: '#ea4335' }]}
+                  onPress={() => handleOpenStopModal(item)}
+                >
+                  <Text style={styles.transferActionButtonText}>⏹ Stop Transfer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </Card>
         ))}
         {sessions.length === 0 && <Text style={styles.emptyText}>No transfer records found</Text>}
       </View>
+      
+      {/* Parameters Modal */}
+      <Modal visible={showParametersModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Card style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter water and moisture details
+            </Text>
+            <InputField
+              label="Water Added (Litres)"
+              value={paramsWaterAdded}
+              onChangeText={setParamsWaterAdded}
+              keyboardType="decimal-pad"
+              placeholder="0"
+            />
+            <InputField
+              label="Moisture Level (%)"
+              value={paramsMoistureLevel}
+              onChangeText={setParamsMoistureLevel}
+              keyboardType="decimal-pad"
+              placeholder="0"
+            />
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowParametersModal(false)}
+                variant="secondary"
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="Save"
+                onPress={handleSaveParameters}
+                loading={savingParams}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
+
+      {/* Stop Transfer Modal */}
+      <Modal visible={showStopModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Card style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Stop Transfer?</Text>
+            <Text style={styles.modalSubtitle}>
+              This will mark the transfer as completed
+            </Text>
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowStopModal(false)}
+                variant="secondary"
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="Stop & Complete"
+                onPress={handleStopTransfer}
+                loading={stoppingTransfer}
+                style={{ flex: 1, backgroundColor: '#ea4335' }}
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </ScrollView>
   );
 
@@ -783,4 +957,7 @@ const styles = StyleSheet.create({
   transferDetailCol: { flex: 1, alignItems: 'center', paddingTop: 8 },
   transferDetailLabel: { fontSize: 10, color: colors.text.secondary, fontWeight: '600', marginBottom: 4 },
   transferDetailValue: { fontSize: 12, fontWeight: '700', color: colors.text.primary },
+  transferActionButtons: { marginTop: 12, flexDirection: 'column', gap: 8 },
+  transferActionButton: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 6, alignItems: 'center' },
+  transferActionButtonText: { color: '#fff', fontWeight: '600', fontSize: 12 },
 });
