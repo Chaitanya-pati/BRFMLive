@@ -106,7 +106,10 @@ export default function Transfer12HourScreen({ navigation }) {
       }, 1000);
     } else {
       clearInterval(timerRef.current);
-      setTimer(0);
+      // Don't reset timer to 0 - it might be set from calculateElapsedSeconds
+      if (stage !== STAGES.SELECT_ORDER && stage !== STAGES.CONFIGURE_BINS) {
+        // Only reset if we're not in a view mode
+      }
     }
   }, [stage]);
 
@@ -128,6 +131,19 @@ export default function Transfer12HourScreen({ navigation }) {
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const calculateElapsedSeconds = (startTimeISO) => {
+    if (!startTimeISO) return 0;
+    try {
+      const startTime = new Date(startTimeISO);
+      const now = new Date();
+      const elapsedMs = now.getTime() - startTime.getTime();
+      return Math.floor(elapsedMs / 1000);
+    } catch (error) {
+      console.error("Error calculating elapsed time:", error);
+      return 0;
+    }
   };
 
   const handleOpenParametersModal = (transfer) => {
@@ -162,7 +178,13 @@ export default function Transfer12HourScreen({ navigation }) {
     // Navigate to TRANSFER_ACTIVE stage to handle stop/divert
     setActiveTransferRecord(transfer);
     setCurrentRecordId(transfer.id);
-    // Start the timer by setting the stage
+    
+    // Calculate elapsed time from transfer start
+    const elapsedSeconds = calculateElapsedSeconds(transfer.transfer_start_time);
+    console.log("Redirecting to Transfer Active. Elapsed seconds:", elapsedSeconds, "Start time:", transfer.transfer_start_time);
+    setTimer(elapsedSeconds);
+    
+    // Set the stage to start the timer interval
     setStage(STAGES.TRANSFER_ACTIVE);
     setActiveTab("TRANSFER");
   };
@@ -181,6 +203,7 @@ export default function Transfer12HourScreen({ navigation }) {
       showToast("Success", "Transfer stopped and marked as completed");
       setShowStopModal(false);
       setActiveTransferRecord(null);
+      setTimer(0);
       setStage(STAGES.SELECT_ORDER);
       setActiveTab("HISTORY");
       fetch12HourRecords();
@@ -356,6 +379,8 @@ export default function Transfer12HourScreen({ navigation }) {
       });
 
       setCurrentRecordId(response.data.id);
+      // Start fresh transfer with timer at 0
+      setTimer(0);
       setStage(STAGES.TRANSFER_ACTIVE);
       setShowStartParamsModal(false);
       showToast("Success", "Transfer started");
