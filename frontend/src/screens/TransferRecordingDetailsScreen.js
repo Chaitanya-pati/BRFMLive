@@ -60,7 +60,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     }
   };
 
-  const renderTransferItem = (transfer, isFrom24h, label) => {
+  const renderTransferItem = (transfer, isFrom24h) => {
     // Show button if water_added OR moisture_level is missing or 0
     const needsParameters =
       transfer.status === "COMPLETED" &&
@@ -80,7 +80,6 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   ? `Bin ${transfer.source_bin_id} → Bin ${transfer.destination_bin_id}`
                   : `To Bin ${transfer.destination_bin_id}`}
               </Text>
-              <Text style={styles.typeLabel}>{label}</Text>
               <Text style={styles.transferTime}>
                 {transfer.transfer_start_time
                   ? formatISTDateTime(transfer.transfer_start_time)
@@ -221,21 +220,6 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* 12-Hour Transfer List - Only Active Ones */}
-        {active12hTransfers.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>12-HOUR TRANSFERS</Text>
-              <Text style={styles.sectionBadge}>
-                {active12hTransfers.filter((t) => t.status === "COMPLETED")
-                  .length}/{active12hTransfers.length}
-              </Text>
-            </View>
-            <View style={styles.transfersList}>
-              {active12hTransfers.map((t) => renderTransferItem(t, false, "12-Hour"))}
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {/* Parameters Modal */}
@@ -405,12 +389,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.text.primary,
     marginBottom: 3,
-  },
-  typeLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    color: colors.primary,
-    marginBottom: 2,
   },
   transferTime: {
     fontSize: 10,
