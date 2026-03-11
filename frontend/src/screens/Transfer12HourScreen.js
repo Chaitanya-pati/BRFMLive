@@ -475,7 +475,8 @@ export default function Transfer12HourScreen({ navigation }) {
     );
 
     return (
-      <ScrollView style={styles.container}>
+      <>
+        <ScrollView style={styles.container}>
         <View style={styles.headerSection}>
           <Text style={styles.mainHeading}>Configure Transfer</Text>
           <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
@@ -597,50 +598,9 @@ export default function Transfer12HourScreen({ navigation }) {
             ))}
           </View>
         )}
-      </ScrollView>
-    );
-  };
+        </ScrollView>
 
-  const renderTransferActive = () => {
-    const isManualSpecial = transferType === "SPECIAL";
-    const sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
-    const destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-    
-    // Improved lookup to avoid "Unknown"
-    const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
-    const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || "Bin #" + destBinId;
-
-    return (
-      <ScrollView style={styles.container}>
-        <View style={styles.headerSection}>
-          <Text style={styles.mainHeading}>Transfer In Progress</Text>
-          <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
-        </View>
-
-        <Card style={styles.timerCard}>
-          <Text style={styles.timerLabel}>Duration</Text>
-          <Text style={styles.timerText}>{formatTimer(timer)}</Text>
-          <View style={styles.detailsRow}>
-            <View style={styles.detailCol}>
-              <Text style={styles.detailLabel}>From</Text>
-              <Text style={styles.detailValue}>{sourceBinName}</Text>
-            </View>
-            <View style={styles.detailCol}>
-              <Text style={styles.detailLabel}>To</Text>
-              <Text style={styles.detailValue}>{destBinName}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#fbbc05'}]} onPress={() => initiateStopOrDivert("DIVERTED")}>
-            <Text style={styles.buttonText}>Divert Transfer</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ea4335'}]} onPress={() => initiateStopOrDivert("COMPLETED")}>
-            <Text style={styles.buttonText}>Stop Transfer</Text>
-          </TouchableOpacity>
-        </View>
-
+        {/* Start Transfer Modal - Outside ScrollView */}
         <Modal visible={showStartParamsModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <Card style={styles.modalContent}>
@@ -688,6 +648,49 @@ export default function Transfer12HourScreen({ navigation }) {
             </Card>
           </View>
         </Modal>
+      </>
+    );
+  };
+
+  const renderTransferActive = () => {
+    const isManualSpecial = transferType === "SPECIAL";
+    const sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
+    const destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+    
+    // Improved lookup to avoid "Unknown"
+    const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
+    const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || "Bin #" + destBinId;
+
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.mainHeading}>Transfer In Progress</Text>
+          <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
+        </View>
+
+        <Card style={styles.timerCard}>
+          <Text style={styles.timerLabel}>Duration</Text>
+          <Text style={styles.timerText}>{formatTimer(timer)}</Text>
+          <View style={styles.detailsRow}>
+            <View style={styles.detailCol}>
+              <Text style={styles.detailLabel}>From</Text>
+              <Text style={styles.detailValue}>{sourceBinName}</Text>
+            </View>
+            <View style={styles.detailCol}>
+              <Text style={styles.detailLabel}>To</Text>
+              <Text style={styles.detailValue}>{destBinName}</Text>
+            </View>
+          </View>
+        </Card>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#fbbc05'}]} onPress={() => initiateStopOrDivert("DIVERTED")}>
+            <Text style={styles.buttonText}>Divert Transfer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ea4335'}]} onPress={() => initiateStopOrDivert("COMPLETED")}>
+            <Text style={styles.buttonText}>Stop Transfer</Text>
+          </TouchableOpacity>
+        </View>
 
         <Modal visible={showDataModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
@@ -762,6 +765,7 @@ export default function Transfer12HourScreen({ navigation }) {
   );
 
   const renderHistory = () => (
+    <>
     <ScrollView style={styles.container}>
       <View style={styles.headerSection}>
         <Text style={styles.mainHeading}>Transfer History</Text>
@@ -810,74 +814,76 @@ export default function Transfer12HourScreen({ navigation }) {
         ))}
         {sessions.length === 0 && <Text style={styles.emptyText}>No transfer records found</Text>}
       </View>
-      
-      {/* Parameters Modal */}
-      <Modal visible={showParametersModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
-            <Text style={styles.modalSubtitle}>
-              Enter water and moisture details
-            </Text>
-            <InputField
-              label="Water Added (Litres)"
-              value={paramsWaterAdded}
-              onChangeText={setParamsWaterAdded}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-            <InputField
-              label="Moisture Level (%)"
-              value={paramsMoistureLevel}
-              onChangeText={setParamsMoistureLevel}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowParametersModal(false)}
-              >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={handleSaveParameters}
-                disabled={savingParams}
-              >
-                <Text style={styles.modalButtonSaveText}>{savingParams ? "Saving..." : "Save"}</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        </View>
-      </Modal>
-
-      {/* Stop Transfer Modal */}
-      <Modal visible={showStopModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Stop Transfer?</Text>
-            <Text style={styles.modalSubtitle}>
-              This will mark the transfer as completed
-            </Text>
-            <View style={styles.modalActions}>
-              <Button
-                title="Cancel"
-                onPress={() => setShowStopModal(false)}
-                variant="secondary"
-                style={{ flex: 1, marginRight: 8 }}
-              />
-              <Button
-                title="Stop & Complete"
-                onPress={handleStopTransfer}
-                loading={stoppingTransfer}
-                style={{ flex: 1, backgroundColor: '#ea4335' }}
-              />
-            </View>
-          </Card>
-        </View>
-      </Modal>
     </ScrollView>
+      
+    {/* Parameters Modal - Outside ScrollView */}
+    <Modal visible={showParametersModal} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <Card style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
+          <Text style={styles.modalSubtitle}>
+            Enter water and moisture details
+          </Text>
+          <InputField
+            label="Water Added (Litres)"
+            value={paramsWaterAdded}
+            onChangeText={setParamsWaterAdded}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+          <InputField
+            label="Moisture Level (%)"
+            value={paramsMoistureLevel}
+            onChangeText={setParamsMoistureLevel}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonCancel]}
+              onPress={() => setShowParametersModal(false)}
+            >
+              <Text style={styles.modalButtonCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonSave]}
+              onPress={handleSaveParameters}
+              disabled={savingParams}
+            >
+              <Text style={styles.modalButtonSaveText}>{savingParams ? "Saving..." : "Save"}</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </View>
+    </Modal>
+
+    {/* Stop Transfer Modal - Outside ScrollView */}
+    <Modal visible={showStopModal} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <Card style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Stop Transfer?</Text>
+          <Text style={styles.modalSubtitle}>
+            This will mark the transfer as completed
+          </Text>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonCancel]}
+              onPress={() => setShowStopModal(false)}
+            >
+              <Text style={styles.modalButtonCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonSave]}
+              onPress={handleStopTransfer}
+              disabled={stoppingTransfer}
+            >
+              <Text style={styles.modalButtonSaveText}>{stoppingTransfer ? "Stopping..." : "Stop & Complete"}</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </View>
+    </Modal>
+    </>
   );
 
   return (
