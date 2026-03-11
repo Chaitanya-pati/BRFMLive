@@ -8,14 +8,13 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Modal,
-  TextInput,
 } from "react-native";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import InputField from "../components/InputField";
 import colors from "../theme/colors";
-import { transfer12HourApi } from "../api/client";
+import { getApiClient } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
 
@@ -26,7 +25,6 @@ export default function TransferRecordingScreen({ navigation }) {
   const [productionOrders, setProductionOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [transfers, setTransfers] = useState([]);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [showParametersModal, setShowParametersModal] = useState(false);
   const [waterAdded, setWaterAdded] = useState("");
@@ -40,70 +38,85 @@ export default function TransferRecordingScreen({ navigation }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, transfersRes] = await Promise.all([
-        transfer12HourApi.getAvailableProductionOrders(),
-        transfer12HourApi.getSessions(),
+      const client = getApiClient();
+      
+      // Fetch all required data in parallel
+      const [ordersRes, records24hRes, records12hRes] = await Promise.all([
+        client.get("/production-orders"),
+        client.get("/24hour-transfer/records"),
+        client.get("/12hour-transfer/records"),
       ]);
 
       const orders = ordersRes.data || [];
-      const allTransfers = transfersRes.data || [];
+      const records24h = records24hRes.data || [];
+      const records12h = records12hRes.data || [];
 
-      // Get 24-hour transfer records
-      const transfer24hRes = await fetch("/api/24hour-transfer/records");
-      const transfer24h = await transfer24hRes.json();
-
-      // Combine and sort orders by created_at descending
-      const combinedOrders = orders.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB - dateA;
-      });
-
-      // Enrich orders with transfer status
-      const enrichedOrders = combinedOrders.map((order) => {
-        const orderTransfers = [
-          ...(allTransfers.filter((t) => t.production_order_id === order.id) || []),
-          ...(transfer24h.filter((t) => t.production_order_id === order.id) || []),
-        ];
-
-        // Determine combined status
-        const completedCount = orderTransfers.filter(
-          (t) => t.status === "COMPLETED"
-        ).length;
-        const totalCount = orderTransfers.length;
-
-        let status = "CREATED";
-        if (totalCount > 0) {
-          if (completedCount === totalCount) {
-            status = "COMPLETED";
-          } else if (completedCount > 0) {
-            status = "IN_PROGRESS";
-          } else {
-            status = "PLANNED";
+      // Combine and process orders
+      const enrichedOrders = orders
+        .map((order) => {
+          // Get all transfers for this order (both 24h and 12h)
+          const transfers24h = records24h.filter(
+            (t) => t.production_order_id === order.id
+          );
+          const transfers12h = records12h.filter(
+            (t) => t.production_order_id === order.id
+          );
+          
+          const allTransfers = [...transfers24h, ...transfers12h];
+          
+          if (allTransfers.length === 0) {
+            return null; // Skip orders with no transfers
           }
-        }
 
-        return {
-          ...order,
-          transfers: orderTransfers,
-          combinedStatus: status,
-          completedCount,
-          totalCount,
-        };
-      });
+          // Calculate combined status
+          const completedCount = allTransfers.filter(
+            (t) => t.status === "COMPLETED"
+          ).length;
+          const totalCount = allTransfers.length;
+
+          let combinedStatus = "CREATED";
+          if (totalCount > 0) {
+            if (completedCount === totalCount) {
+              combinedStatus = "COMPLETED";
+            } else if (completedCount > 0) {
+              combinedStatus = "IN_PROGRESS";
+            } else {
+              combinedStatus = "PLANNED";
+            }
+          }
+
+          return {
+            ...order,
+            allTransfers,
+            transfers24h,
+            transfers12h,
+            completedCount,
+            totalCount,
+            combinedStatus,
+          };
+        })
+        .filter((order) => order !== null)
+        // Sort by created_at descending
+        .sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateB - dateA;
+        });
 
       setProductionOrders(enrichedOrders);
-      setTransfers([...(allTransfers || []), ...(transfer24h || [])]);
     } catch (error) {
       showError("Error", "Failed to load data");
-      console.error(error);
+      console.error("Error loading transfer records:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCaptureParameters = (transfer) => {
-    setSelectedTransfer(transfer);
+  const handleCaptureParameters = (transfer, isFrom24h = false) => {
+    setSelectedTransfer({
+      ...transfer,
+      isFrom24h,
+    });
     setWaterAdded(transfer.water_added?.toString() || "");
     setMoistureLevel(transfer.moisture_level?.toString() || "");
     setShowParametersModal(true);
@@ -114,9 +127,14 @@ export default function TransferRecordingScreen({ navigation }) {
 
     setSavingParams(true);
     try {
-      await transfer12HourApi.updateTransfer(selectedTransfer.id, {
-        water_added: parseFloat(waterAdded) || null,
-        moisture_level: parseFloat(moistureLevel) || null,
+      const client = getApiClient();
+      const endpoint = selectedTransfer.isFrom24h
+        ? `/24hour-transfer/records/${selectedTransfer.id}`
+        : `/12hour-transfer/records/${selectedTransfer.id}`;
+
+      await client.patch(endpoint, {
+        water_added: waterAdded ? parseFloat(waterAdded) : null,
+        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
       });
 
       showSuccess("Success", "Parameters saved successfully");
@@ -124,7 +142,7 @@ export default function TransferRecordingScreen({ navigation }) {
       loadData();
     } catch (error) {
       showError("Error", "Failed to save parameters");
-      console.error(error);
+      console.error("Error saving parameters:", error);
     } finally {
       setSavingParams(false);
     }
@@ -141,6 +159,67 @@ export default function TransferRecordingScreen({ navigation }) {
       default:
         return "#6b7280";
     }
+  };
+
+  const getTransferType = (transfer) => {
+    return transfer.source_bin_id ? "12-Hour" : "24-Hour";
+  };
+
+  const renderTransferItem = (transfer, isFrom24h) => {
+    const hasParameters =
+      transfer.water_added !== null && transfer.moisture_level !== null;
+    const isCompleted = transfer.status === "COMPLETED";
+    const needsParameters = isCompleted && !hasParameters;
+
+    return (
+      <View key={transfer.id} style={styles.transferDetail}>
+        <View style={styles.transferHeader}>
+          <View style={styles.transferInfo}>
+            <Text style={styles.transferType}>{getTransferType(transfer)}</Text>
+            <Text style={styles.transferLabel}>
+              {transfer.source_bin_id
+                ? `${transfer.source_bin_id} → ${transfer.destination_bin_id}`
+                : `Bin ${transfer.destination_bin_id}`}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.transferStatus,
+              {
+                color:
+                  transfer.status === "COMPLETED" ? "#059669" : "#f59e0b",
+              },
+            ]}
+          >
+            {transfer.status}
+          </Text>
+        </View>
+
+        {transfer.quantity_transferred && (
+          <Text style={styles.paramValue}>
+            Qty: {transfer.quantity_transferred} kg
+          </Text>
+        )}
+
+        {transfer.water_added !== null && (
+          <Text style={styles.paramValue}>Water: {transfer.water_added}L</Text>
+        )}
+        {transfer.moisture_level !== null && (
+          <Text style={styles.paramValue}>
+            Moisture: {transfer.moisture_level}%
+          </Text>
+        )}
+
+        {needsParameters && (
+          <TouchableOpacity
+            style={styles.paramButton}
+            onPress={() => handleCaptureParameters(transfer, isFrom24h)}
+          >
+            <Text style={styles.paramButtonText}>+ Add Parameters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   const renderOrderCard = (order) => (
@@ -176,48 +255,19 @@ export default function TransferRecordingScreen({ navigation }) {
 
       {expandedOrderId === order.id && (
         <View style={styles.expandedContent}>
-          {order.transfers.map((transfer) => (
-            <View key={transfer.id} style={styles.transferDetail}>
-              <View style={styles.transferHeader}>
-                <Text style={styles.transferLabel}>
-                  {transfer.source_bin_number || transfer.source_bin_id} →{" "}
-                  {transfer.destination_bin_number || transfer.destination_bin_id}
-                </Text>
-                <Text
-                  style={[
-                    styles.transferStatus,
-                    {
-                      color:
-                        transfer.status === "COMPLETED" ? "#059669" : "#f59e0b",
-                    },
-                  ]}
-                >
-                  {transfer.status}
-                </Text>
-              </View>
-
-              {transfer.status === "COMPLETED" &&
-                (transfer.water_added === null ||
-                  transfer.moisture_level === null) && (
-                  <Button
-                    title="Add Parameters"
-                    onPress={() => handleCaptureParameters(transfer)}
-                    style={styles.paramButton}
-                  />
-                )}
-
-              {transfer.water_added !== null && (
-                <Text style={styles.paramValue}>
-                  Water: {transfer.water_added}L
-                </Text>
-              )}
-              {transfer.moisture_level !== null && (
-                <Text style={styles.paramValue}>
-                  Moisture: {transfer.moisture_level}%
-                </Text>
-              )}
+          {order.transfers24h.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>24-Hour Transfers</Text>
+              {order.transfers24h.map((t) => renderTransferItem(t, true))}
             </View>
-          ))}
+          )}
+
+          {order.transfers12h.length > 0 && (
+            <View style={{ marginTop: order.transfers24h.length > 0 ? 12 : 0 }}>
+              <Text style={styles.sectionTitle}>12-Hour Transfers</Text>
+              {order.transfers12h.map((t) => renderTransferItem(t, false))}
+            </View>
+          )}
         </View>
       )}
     </Card>
@@ -228,15 +278,11 @@ export default function TransferRecordingScreen({ navigation }) {
       <View style={styles.container}>
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} />
+        ) : productionOrders.length === 0 ? (
+          <Text style={styles.emptyText}>No production orders found</Text>
         ) : (
           <ScrollView>
-            {productionOrders.length === 0 ? (
-              <Text style={styles.emptyText}>
-                No production orders found
-              </Text>
-            ) : (
-              productionOrders.map(renderOrderCard)
-            )}
+            {productionOrders.map(renderOrderCard)}
           </ScrollView>
         )}
 
@@ -244,6 +290,9 @@ export default function TransferRecordingScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <Card style={styles.modalContent}>
               <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter water and moisture details for this transfer
+              </Text>
 
               <InputField
                 label="Water Added (Litres)"
@@ -335,17 +384,36 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary,
+    marginBottom: 8,
+    textTransform: "uppercase",
+  },
   transferDetail: {
     paddingVertical: 8,
     marginBottom: 8,
     backgroundColor: "#f9fafb",
     borderRadius: 8,
     padding: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   transferHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  transferInfo: {
+    flex: 1,
+  },
+  transferType: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.primary,
+    textTransform: "uppercase",
+    marginBottom: 2,
   },
   transferLabel: {
     fontSize: 13,
@@ -356,14 +424,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  paramButton: {
-    marginTop: 8,
-    paddingVertical: 6,
-  },
   paramValue: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 6,
+    marginTop: 4,
+  },
+  paramButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.info,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  paramButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
   emptyText: {
     textAlign: "center",
@@ -386,6 +463,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   modalActions: {
