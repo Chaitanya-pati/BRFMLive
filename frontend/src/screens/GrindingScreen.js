@@ -17,16 +17,34 @@ export default function GrindingScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [activeRowId, setActiveRowId] = useState(null);
+  const [pickerMode, setPickerMode] = useState('date');
+
+  const handleDatePicker = (rowId) => {
+    setActiveRowId(rowId);
+    setPickerMode('date');
+    setShowDatePicker(true);
+  };
 
   const handleTimePicker = (rowId) => {
     setActiveRowId(rowId);
+    setPickerMode('time');
     setShowTimePicker(true);
   };
 
+  const onDateChange = (event, selectedDate) => {
+    if (Platform.OS !== 'ios') setShowDatePicker(false);
+    if (selectedDate && activeRowId) {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      handleRowUpdate(activeRowId, 'productionDate', dateStr);
+      setActiveRowId(null);
+    }
+  };
+
   const onTimeChange = (event, selectedTime) => {
-    setShowTimePicker(Platform.OS === 'ios');
+    if (Platform.OS !== 'ios') setShowTimePicker(false);
     if (selectedTime && activeRowId) {
       const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
       handleRowUpdate(activeRowId, 'productionTime', timeStr);
@@ -293,11 +311,53 @@ export default function GrindingScreen({ navigation }) {
       return;
     }
     
-    // Always capture parameters for 12HR bin at the start of grinding
     setSelectedBin(bin);
-    setSourceMoisture("");
-    setSourceWater("");
-    setShowSourceParamsModal(true);
+    setLoading(true);
+    
+    try {
+      const client = getApiClient();
+      
+      // Fetch the 12-hour transfer record to check if it already has values
+      const transferRecords = await client.get("/12hour-transfer/records");
+      const matchingRecord = (transferRecords.data || []).find(r => 
+        Number(r.destination_bin_id) === Number(bin.id) && 
+        Number(r.production_order_id) === Number(bin.production_order_id) &&
+        r.status === "IN_PROGRESS"
+      );
+      
+      if (matchingRecord && matchingRecord.moisture_level !== null && matchingRecord.water_added !== null) {
+        // Values already exist, pre-fill and proceed without showing popup
+        setSourceMoisture(matchingRecord.moisture_level?.toString() || "");
+        setSourceWater(matchingRecord.water_added?.toString() || "");
+        setIsGrindingStarted(true);
+        // Directly load template and start grinding without modal
+        try {
+          const templateKey = `grinding_template_${bin.production_order_id}`;
+          const savedTemplate = await AsyncStorage.getItem(templateKey);
+          if (savedTemplate) {
+            const { productIds, bagSizeMap, siloIds } = JSON.parse(savedTemplate);
+            setSelectedProductIds(productIds || []);
+            setProductBagSizeMap(bagSizeMap || {});
+            setSelectedSiloIds(siloIds || []);
+          }
+        } catch (e) {
+          console.log("Template load skipped:", e.message);
+        }
+        showToast("Success", "Parameters already saved, starting grinding");
+      } else {
+        // Values missing or don't exist, show popup to capture them
+        setSourceMoisture(matchingRecord?.moisture_level?.toString() || "");
+        setSourceWater(matchingRecord?.water_added?.toString() || "");
+        setShowSourceParamsModal(true);
+      }
+    } catch (e) {
+      console.error("Error fetching record:", e);
+      setSourceMoisture("");
+      setSourceWater("");
+      setShowSourceParamsModal(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const proceedWithGrinding = async () => {
@@ -521,18 +581,12 @@ export default function GrindingScreen({ navigation }) {
             <View style={{ width: 40, justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderColor: '#CCC' }}>
               <Text style={{ fontSize: 10 }}>{rowIdx + 1}</Text>
             </View>
-            <View style={{ width: 100, padding: 2 }}><InputField value={row.productionDate} disabled={row.isSubmitted} dense /></View>
-            <View style={{ width: 130, padding: 2 }}>
-              <TimePicker 
-                value={row.productionTime} 
-                onValueChange={(v) => {
-                  const parts = v.split('-');
-                  const timeStr = `${parts[0]}:${parts[1]} ${parts[2]}`;
-                  handleRowUpdate(row.id, 'productionTime', timeStr);
-                }}
-                disabled={row.isSubmitted}
-              />
-            </View>
+            <TouchableOpacity style={{ width: 100, padding: 4, justifyContent: 'center', borderWidth: 1, borderColor: '#CCC', borderRadius: 4 }} onPress={() => !row.isSubmitted && handleDatePicker(row.id)} disabled={row.isSubmitted}>
+              <Text style={{ fontSize: 11, color: row.productionDate ? '#000' : '#999' }}>{row.productionDate || 'Select Date'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ width: 100, padding: 4, marginLeft: 4, justifyContent: 'center', borderWidth: 1, borderColor: '#CCC', borderRadius: 4 }} onPress={() => !row.isSubmitted && handleTimePicker(row.id)} disabled={row.isSubmitted}>
+              <Text style={{ fontSize: 11, color: row.productionTime ? '#000' : '#999' }}>{row.productionTime || 'Select Time'}</Text>
+            </TouchableOpacity>
             <View style={{ width: 120, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 120, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             
@@ -909,6 +963,14 @@ export default function GrindingScreen({ navigation }) {
           </View>
         </Modal>
 
+        {showDatePicker && Platform.OS !== 'web' && (
+          <DateTimePicker
+            value={new Date()}
+            mode="date"
+            display="default"
+            onChange={onDateChange}
+          />
+        )}
         {showTimePicker && Platform.OS !== 'web' && (
           <DateTimePicker
             value={new Date()}
