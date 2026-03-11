@@ -77,6 +77,9 @@ export default function Transfer12HourScreen({ navigation }) {
   const [showStopModal, setShowStopModal] = useState(false);
   const [selectedTransferToStop, setSelectedTransferToStop] = useState(null);
   const [stoppingTransfer, setStoppingTransfer] = useState(false);
+  
+  // Track active transfer being viewed in TRANSFER_ACTIVE stage
+  const [activeTransferRecord, setActiveTransferRecord] = useState(null);
 
   useEffect(() => {
     fetchProductionOrders();
@@ -156,21 +159,30 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const handleOpenStopModal = (transfer) => {
-    setSelectedTransferToStop(transfer);
-    setShowStopModal(true);
+    // Navigate to TRANSFER_ACTIVE stage to handle stop/divert
+    setActiveTransferRecord(transfer);
+    setCurrentRecordId(transfer.id);
+    // Start the timer by setting the stage
+    setStage(STAGES.TRANSFER_ACTIVE);
+    setActiveTab("TRANSFER");
   };
 
   const handleStopTransfer = async () => {
-    if (!selectedTransferToStop) return;
+    // Updated to work from TRANSFER_ACTIVE stage
+    const recordToStop = activeTransferRecord || selectedTransferToStop;
+    if (!recordToStop) return;
     setStoppingTransfer(true);
     try {
       const client = getApiClient();
-      await client.patch(`/12hour-transfer/records/${selectedTransferToStop.id}`, {
+      await client.patch(`/12hour-transfer/records/${recordToStop.id}`, {
         status: "COMPLETED",
         transfer_end_time: new Date().toISOString(),
       });
       showToast("Success", "Transfer stopped and marked as completed");
       setShowStopModal(false);
+      setActiveTransferRecord(null);
+      setStage(STAGES.SELECT_ORDER);
+      setActiveTab("HISTORY");
       fetch12HourRecords();
       fetchSessions();
     } catch (error) {
@@ -276,19 +288,24 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
-    // ALWAYS show parameter capture modal (mandatory)
-    // Pre-fill with values from 24h record if available
+    // Check if parameters are already captured in the 24h transfer record
     const autoDetails = binDetailsMap[source];
-    if (autoDetails && (autoDetails.water_added !== null || autoDetails.moisture_level !== null)) {
+    const hasWater = autoDetails?.water_added !== null && autoDetails?.water_added !== 0 && autoDetails?.water_added !== undefined;
+    const hasMoisture = autoDetails?.moisture_level !== null && autoDetails?.moisture_level !== 0 && autoDetails?.moisture_level !== undefined;
+
+    if (hasWater && hasMoisture) {
+      // Both parameters are already captured - directly start transfer
+      console.log("Parameters already captured, starting transfer directly:", autoDetails);
       setWaterAdded(autoDetails.water_added?.toString() || "");
       setMoistureLevel(autoDetails.moisture_level?.toString() || "");
-      console.log("Pre-filled details from 24h record:", autoDetails);
+      proceedWithStartTransfer(source, dest);
     } else {
-      setWaterAdded("");
-      setMoistureLevel("");
+      // Parameters missing - show modal to capture them
+      console.log("Parameters missing, showing capture modal. Has water:", hasWater, "Has moisture:", hasMoisture);
+      setWaterAdded(autoDetails?.water_added?.toString() || "");
+      setMoistureLevel(autoDetails?.moisture_level?.toString() || "");
+      setShowStartParamsModal(true);
     }
-    
-    setShowStartParamsModal(true);
   };
 
   const proceedWithStartTransfer = async (source, dest) => {
@@ -604,9 +621,21 @@ export default function Transfer12HourScreen({ navigation }) {
   };
 
   const renderTransferActive = () => {
-    const isManualSpecial = transferType === "SPECIAL";
-    const sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
-    const destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+    // If viewing an existing transfer from history, use that data
+    let isManualSpecial = false;
+    let sourceBinId, destBinId;
+    
+    if (activeTransferRecord) {
+      sourceBinId = activeTransferRecord.source_bin_id;
+      destBinId = activeTransferRecord.destination_bin_id;
+      // Determine type from the record
+      isManualSpecial = activeTransferRecord.transfer_type === "SPECIAL";
+    } else {
+      // New transfer being started
+      isManualSpecial = transferType === "SPECIAL";
+      sourceBinId = isManualSpecial ? specialSourceBin : selectedSourceBin;
+      destBinId = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
+    }
     
     // Improved lookup to avoid "Unknown"
     const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
@@ -616,7 +645,9 @@ export default function Transfer12HourScreen({ navigation }) {
       <ScrollView style={styles.container}>
         <View style={styles.headerSection}>
           <Text style={styles.mainHeading}>Transfer In Progress</Text>
-          <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
+          <Text style={styles.subHeading}>
+            Order: {activeTransferRecord?.production_order_number || selectedOrder?.order_number || 'N/A'}
+          </Text>
         </View>
 
         <Card style={styles.timerCard}>
