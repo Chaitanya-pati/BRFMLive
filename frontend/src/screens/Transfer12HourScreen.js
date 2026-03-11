@@ -462,47 +462,44 @@ export default function Transfer12HourScreen({ navigation }) {
           }} 
           loading={loading} 
         />
+        <Button title="Back" onPress={handleGoBack} variant="secondary" />
 
         {orderTransfers.length > 0 && (
-          <Card style={styles.transferDetailsCard}>
-            <Text style={styles.detailsCardTitle}>Transfer History</Text>
-            {orderTransfers.map((transfer, idx) => (
-              <View key={transfer.id} style={styles.transferHistoryItem}>
-                {idx > 0 && <View style={styles.divider} />}
-                <View style={styles.transferHistoryRow}>
-                  <View style={styles.transferHistoryLeft}>
-                    <Text style={styles.transferHistoryLabel}>
+          <View style={styles.transferHistorySection}>
+            <Text style={styles.transferHistorySectionTitle}>Transfer History</Text>
+            {orderTransfers.map((transfer) => (
+              <Card key={transfer.id} style={styles.transferHistoryCard}>
+                <View style={styles.transferHistoryCardHeader}>
+                  <View style={styles.transferHistoryCardLeft}>
+                    <Text style={styles.transferHistoryCardBin}>
                       Bin {transfer.source_bin_id} → Bin {transfer.destination_bin_id}
                     </Text>
-                    <Text style={styles.transferHistoryTime}>
+                    <Text style={styles.transferHistoryCardTime}>
                       {formatISTDateTime(transfer.transfer_start_time)}
                     </Text>
                   </View>
                   <View style={[
                     styles.transferStatusBadge,
-                    { backgroundColor: transfer.status === "COMPLETED" ? "#d1fae5" : "#fef3c7" }
+                    { backgroundColor: transfer.status === "COMPLETED" ? "#10b981" : transfer.status === "IN_PROGRESS" ? "#f59e0b" : "#6b7280" }
                   ]}>
-                    <Text style={[
-                      styles.transferStatusText,
-                      { color: transfer.status === "COMPLETED" ? "#059669" : "#b45309" }
-                    ]}>
+                    <Text style={styles.transferStatusText}>
                       {transfer.status}
                     </Text>
                   </View>
                 </View>
                 {transfer.quantity_transferred !== null && (
-                  <View style={styles.transferDetailsGrid}>
-                    <View style={styles.transferDetailItem}>
+                  <View style={styles.transferDetailsGridRow}>
+                    <View style={styles.transferDetailCol}>
                       <Text style={styles.transferDetailLabel}>Qty</Text>
                       <Text style={styles.transferDetailValue}>{transfer.quantity_transferred} kg</Text>
                     </View>
-                    <View style={styles.transferDetailItem}>
+                    <View style={styles.transferDetailCol}>
                       <Text style={styles.transferDetailLabel}>Water</Text>
                       <Text style={styles.transferDetailValue}>
                         {transfer.water_added !== null ? `${transfer.water_added}L` : "—"}
                       </Text>
                     </View>
-                    <View style={styles.transferDetailItem}>
+                    <View style={styles.transferDetailCol}>
                       <Text style={styles.transferDetailLabel}>Moisture</Text>
                       <Text style={styles.transferDetailValue}>
                         {transfer.moisture_level !== null ? `${transfer.moisture_level}%` : "—"}
@@ -510,12 +507,10 @@ export default function Transfer12HourScreen({ navigation }) {
                     </View>
                   </View>
                 )}
-              </View>
+              </Card>
             ))}
-          </Card>
+          </View>
         )}
-
-        <Button title="Back" onPress={handleGoBack} variant="secondary" />
       </ScrollView>
     );
   };
@@ -775,18 +770,17 @@ const styles = StyleSheet.create({
   statItemCompact: { flex: 1, alignItems: 'center', paddingTop: 8 },
   statLabelCompact: { fontSize: 10, color: colors.text.secondary, fontWeight: '600', marginBottom: 4 },
   statValueCompact: { fontSize: 14, fontWeight: '700', color: colors.primary },
-  transferDetailsCard: { padding: 12, marginBottom: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8 },
-  detailsCardTitle: { fontSize: 12, fontWeight: '700', color: colors.text.primary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 },
-  transferHistoryItem: { marginBottom: 8 },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 8 },
-  transferHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  transferHistoryLeft: { flex: 1, marginRight: 10 },
-  transferHistoryLabel: { fontSize: 12, fontWeight: '600', color: colors.text.primary, marginBottom: 2 },
-  transferHistoryTime: { fontSize: 10, color: colors.text.secondary },
-  transferStatusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, minWidth: 70, alignItems: 'center' },
-  transferStatusText: { fontSize: 10, fontWeight: '600' },
-  transferDetailsGrid: { flexDirection: 'row', gap: 6, marginTop: 8 },
-  transferDetailItem: { flex: 1, backgroundColor: colors.gray[50], borderRadius: 4, padding: 6, borderWidth: 1, borderColor: colors.border },
-  transferDetailLabel: { fontSize: 9, color: colors.text.secondary, fontWeight: '600', marginBottom: 2 },
-  transferDetailValue: { fontSize: 11, fontWeight: '600', color: colors.text.primary },
+  transferHistorySection: { marginTop: 20, marginBottom: 16 },
+  transferHistorySectionTitle: { fontSize: 13, fontWeight: '700', color: colors.text.primary, textTransform: 'uppercase', marginBottom: 12, letterSpacing: 0.5 },
+  transferHistoryCard: { padding: 14, marginBottom: 12, overflow: 'hidden' },
+  transferHistoryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  transferHistoryCardLeft: { flex: 1, marginRight: 10 },
+  transferHistoryCardBin: { fontSize: 13, fontWeight: '700', color: colors.text.primary, marginBottom: 3 },
+  transferHistoryCardTime: { fontSize: 11, color: colors.text.secondary },
+  transferStatusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 5, minWidth: 75, alignItems: 'center' },
+  transferStatusText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  transferDetailsGridRow: { flexDirection: 'row', gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  transferDetailCol: { flex: 1, alignItems: 'center', paddingTop: 8 },
+  transferDetailLabel: { fontSize: 10, color: colors.text.secondary, fontWeight: '600', marginBottom: 4 },
+  transferDetailValue: { fontSize: 12, fontWeight: '700', color: colors.text.primary },
 });
