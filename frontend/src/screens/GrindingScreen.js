@@ -298,55 +298,112 @@ export default function GrindingScreen({ navigation }) {
   const [availableBins, setAvailableBins] = useState([]);
 
   const handleCompleteProcess = async () => {
-    const totals = {};
-    productionRows.forEach((row) => {
-      (row.productionDetails || []).forEach((detail) => {
-        const fg = finishedGoods.find((f) => f.id === detail.finished_good_id);
-        const bs = bagSizes.find((b) => b.id === detail.bag_size_id);
-        if (!fg || !bs) return;
-        const key = `${fg.product_name} - ${bs.weight_kg}kg`;
-        if (!totals[key])
-          totals[key] = {
-            bags: 0,
-            fgId: detail.finished_good_id,
-            bsId: detail.bag_size_id,
-          };
-        totals[key].bags += parseInt(detail.quantity_bags) || 0;
-      });
-    });
-
-    const formattedSummary = Object.keys(totals).map((key) => ({
-      label: key,
-      value: totals[key].bags,
-      fgId: totals[key].fgId,
-      bsId: totals[key].bsId,
-    }));
-
-    setSummaryData(formattedSummary);
-
-    const initialAllocation = {};
-    formattedSummary.forEach((item) => {
-      initialAllocation[item.label] = [
-        {
-          id: Date.now(),
-          godownId: null,
-          bags: item.value.toString(),
-          fgId: item.fgId,
-          bsId: item.bsId,
-        },
-      ];
-    });
-    setGodownAllocation(initialAllocation);
-
+    setLoading(true);
     try {
       const client = getApiClient();
+      
+      // First, save any unsaved hourly data rows
+      for (const row of productionRows) {
+        if (row.productionDate && row.productionTime && !row.submitted) {
+          const selectedBin = availableBins.find((b) => b.id === row.binId);
+          if (!selectedBin) continue;
+
+          const reprocessQty = parseFloat(row.reprocess || 0);
+          const validDetails = (row.productionDetails || [])
+            .filter(
+              (d) =>
+                d.finished_good_id &&
+                d.finished_good_id !== "REPROCESS" &&
+                (parseInt(d.quantity_bags) || 0) > 0,
+            )
+            .map((d) => ({
+              finished_good_id: parseInt(d.finished_good_id),
+              bag_size_id: parseInt(d.bag_size_id),
+              quantity_bags: parseInt(d.quantity_bags) || 0,
+              quantity_kg: parseFloat(d.quantity_kg) || 0,
+              moisture_percent: parseFloat(d.moisture_percent) || null,
+            }));
+
+          const validSiloDetails = (row.siloDetails || [])
+            .filter((s) => s.silo_id && (parseInt(s.quantity_bags) || 0) > 0)
+            .map((s) => ({
+              silo_id: parseInt(s.silo_id),
+              quantity_bags: parseInt(s.quantity_bags) || 0,
+              quantity_kg: parseFloat(s.quantity_kg) || 0,
+              moisture_percent: parseFloat(s.moisture_percent) || null,
+            }));
+
+          if (
+            validDetails.length === 0 &&
+            validSiloDetails.length === 0 &&
+            reprocessQty === 0
+          )
+            continue;
+
+          await client.post("/grinding/hourly-production", {
+            production_order_id: selectedBin.production_order_id,
+            production_date: row.productionDate,
+            production_time: row.productionTime,
+            b1_scale_reading: parseFloat(row.b1Reading),
+            load_per_hour_tons: parseFloat(row.loadPerHour) || 0,
+            reprocess: reprocessQty,
+            details: validDetails,
+            silo_details: validSiloDetails,
+          });
+        }
+      }
+
+      // Then, calculate totals and show summary
+      const totals = {};
+      productionRows.forEach((row) => {
+        (row.productionDetails || []).forEach((detail) => {
+          const fg = finishedGoods.find((f) => f.id === detail.finished_good_id);
+          const bs = bagSizes.find((b) => b.id === detail.bag_size_id);
+          if (!fg || !bs) return;
+          const key = `${fg.product_name} - ${bs.weight_kg}kg`;
+          if (!totals[key])
+            totals[key] = {
+              bags: 0,
+              fgId: detail.finished_good_id,
+              bsId: detail.bag_size_id,
+            };
+          totals[key].bags += parseInt(detail.quantity_bags) || 0;
+        });
+      });
+
+      const formattedSummary = Object.keys(totals).map((key) => ({
+        label: key,
+        value: totals[key].bags,
+        fgId: totals[key].fgId,
+        bsId: totals[key].bsId,
+      }));
+
+      setSummaryData(formattedSummary);
+
+      const initialAllocation = {};
+      formattedSummary.forEach((item) => {
+        initialAllocation[item.label] = [
+          {
+            id: Date.now(),
+            godownId: null,
+            bags: item.value.toString(),
+            fgId: item.fgId,
+            bsId: item.bsId,
+          },
+        ];
+      });
+      setGodownAllocation(initialAllocation);
+
       const res = await client.get("/finished-goods-godown");
       setGodowns(res.data || []);
-    } catch (e) {
-      console.error("Failed to fetch godowns", e);
-    }
 
-    setShowSummary(true);
+      setShowSummary(true);
+    } catch (e) {
+      console.error("Failed to complete process", e);
+      showAlert("Error", "Failed to save hourly data and complete process: " + (e.message || ""));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addAllocationRow = (label) => {
@@ -424,7 +481,7 @@ export default function GrindingScreen({ navigation }) {
         });
       }
       for (const m of movements) {
-        await client.post("/api/finished-goods-godown-movement", m);
+        await client.post("/finished-goods-godown-movement", m);
       }
       showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
