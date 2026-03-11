@@ -424,7 +424,7 @@ export default function GrindingScreen({ navigation }) {
         });
       }
       for (const m of movements) {
-        await client.post("/finished-goods-godown-movement", m);
+        await client.post("/api/finished-goods-godown-movement", m);
       }
       showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
