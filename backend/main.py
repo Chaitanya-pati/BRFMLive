@@ -1295,6 +1295,55 @@ def create_bag_size(bag_size: schemas.BagSizeCreate, db: Session = Depends(get_d
 
 # --- Grinding / Hourly Production API ---
 
+def check_and_mark_production_order_completed(production_order_id: int, db: Session):
+    """
+    Check if production order can be marked as COMPLETED.
+    Conditions:
+    1. All 24_hours_transfer_records for this production_order_id have status = COMPLETED
+    2. All 12_hours_transfer_records for this production_order_id have status = COMPLETED
+    3. Godown stock data has been submitted
+    
+    If all conditions met, mark production order as COMPLETED.
+    Returns True if marked as completed, False otherwise.
+    """
+    # Check 24-hour transfer records
+    transfer_24h = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == production_order_id
+    ).all()
+    
+    # Check 12-hour transfer records
+    transfer_12h = db.query(models.Transfer12HourRecord).filter(
+        models.Transfer12HourRecord.production_order_id == production_order_id
+    ).all()
+    
+    if not transfer_24h and not transfer_12h:
+        return False
+    
+    # Check if all 24h transfers are completed
+    all_24h_completed = all(t.status == "COMPLETED" for t in transfer_24h) if transfer_24h else True
+    
+    # Check if all 12h transfers are completed
+    all_12h_completed = all(t.status == "COMPLETED" for t in transfer_12h) if transfer_12h else True
+    
+    # Check if godown stock data exists (check for any hourly production with godown stock)
+    godown_stock_submitted = db.query(models.HourlyProduction).filter(
+        models.HourlyProduction.production_order_id == production_order_id,
+        models.HourlyProduction.godown_stock_submitted == True
+    ).first() is not None
+    
+    # If all conditions are met, mark production order as completed
+    if all_24h_completed and all_12h_completed and godown_stock_submitted:
+        production_order = db.query(models.ProductionOrder).filter(
+            models.ProductionOrder.id == production_order_id
+        ).first()
+        if production_order:
+            production_order.status = models.ProductionOrderStatus.COMPLETED
+            db.commit()
+            return True
+    
+    return False
+
+
 @app.get("/api/grinding/available-bins")
 def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     # Bins of type 12HOUR or 12 hours bin
@@ -1318,6 +1367,7 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
         order_number = None
         raw_product_name = None
         created_at = None
+        is_completed = False
         
         if latest_transfer:
             production_order_id = latest_transfer.production_order_id
@@ -1327,16 +1377,20 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
                 created_at = order.created_at.isoformat() if order.created_at else None
                 if order.raw_product:
                     raw_product_name = order.raw_product.product_name
+                # Check if production order is completed - exclude from available bins
+                is_completed = order.status == models.ProductionOrderStatus.COMPLETED
         
-        result.append({
-            "id": bin_obj.id,
-            "bin_number": bin_obj.bin_number,
-            "status": bin_obj.status,
-            "production_order_id": production_order_id,
-            "order_number": order_number,
-            "raw_product_name": raw_product_name,
-            "created_at": created_at
-        })
+        # Only include bins that are not associated with completed production orders
+        if not is_completed:
+            result.append({
+                "id": bin_obj.id,
+                "bin_number": bin_obj.bin_number,
+                "status": bin_obj.status,
+                "production_order_id": production_order_id,
+                "order_number": order_number,
+                "raw_product_name": raw_product_name,
+                "created_at": created_at
+            })
             
     return result
 
@@ -3598,6 +3652,11 @@ def complete_transfer(
     transfer.updated_by = user_id
     db.commit()
     db.refresh(transfer)
+    
+    # Check if production order can be marked as completed
+    if transfer.production_order_id:
+        check_and_mark_production_order_completed(transfer.production_order_id, db)
+    
     return transfer
 
 
