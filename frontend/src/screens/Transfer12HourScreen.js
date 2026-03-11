@@ -245,18 +245,29 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [binsResponse, transferRecordsResponse] = await Promise.all([
+      const [binsResponse, transfer24hResponse, transfer12hResponse] = await Promise.all([
         client.get("/bins"),
-        client.get("/24hour-transfer/records")
+        client.get("/24hour-transfer/records"),
+        client.get("/12hour-transfer/records")
       ]);
       
       const allBins = binsResponse.data || [];
-      const transferRecords = transferRecordsResponse.data || [];
+      const transfer24hRecords = transfer24hResponse.data || [];
+      const transfer12hRecords = transfer12hResponse.data || [];
       
       // Store 24h records for moisture/water lookup
-      const order24hRecords = transferRecords.filter(record => 
+      const order24hRecords = transfer24hRecords.filter(record => 
         Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED"
       );
+
+      // Filter 12-hour records to find completed destination bins for this order
+      const completed12hBinIds = transfer12hRecords
+        .filter(record => 
+          Number(record.production_order_id) === Number(order.id) && record.status === "COMPLETED"
+        )
+        .map(record => Number(record.destination_bin_id));
+
+      console.log("Completed 12h destination bins:", completed12hBinIds);
 
       const validSourceBinIds = order24hRecords.map(record => Number(record.destination_bin_id));
 
@@ -265,10 +276,15 @@ export default function Transfer12HourScreen({ navigation }) {
         bin.status === "Active" && 
         validSourceBinIds.includes(Number(bin.id))
       );
+      
+      // Filter destination bins: exclude completed 12-hour bins
       const filteredDest = allBins.filter(bin => 
         (bin.bin_type === "12 hours bin" || bin.bin_type === "12HOUR" || (bin.bin_type && bin.bin_type.toLowerCase().includes("12"))) && 
-        bin.status === "Active"
+        bin.status === "Active" &&
+        !completed12hBinIds.includes(Number(bin.id)) // Exclude completed bins
       );
+
+      console.log("Available destination bins for order", order.id, ":", filteredDest.map(b => b.bin_number));
 
       setSourceBins(filteredSource);
       setDestinationBins(filteredDest);
@@ -284,6 +300,7 @@ export default function Transfer12HourScreen({ navigation }) {
       setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
       showAlert("Error", "Failed to fetch bins or transfer records");
+      console.error("Error in handleSelectOrder:", error);
     } finally {
       setLoading(false);
     }
