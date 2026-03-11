@@ -62,13 +62,27 @@ export default function Transfer12HourScreen({ navigation }) {
   
   // To track if we need to show parameters modal at start
   const [showStartParamsModal, setShowStartParamsModal] = useState(false);
+  
+  // For transfer details display
+  const [transfer12hRecords, setTransfer12hRecords] = useState([]);
 
   useEffect(() => {
     fetchProductionOrders();
     fetchSessions();
+    fetch12HourRecords();
     fetchAllBins(); // Ensure we have all bins for name lookup
     return () => clearInterval(timerRef.current);
   }, []);
+  
+  const fetch12HourRecords = async () => {
+    try {
+      const client = getApiClient();
+      const response = await client.get("/12hour-transfer/records");
+      setTransfer12hRecords(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch 12-hour records:", error);
+    }
+  };
 
   useEffect(() => {
     if (stage === STAGES.TRANSFER_ACTIVE) {
@@ -332,89 +346,179 @@ export default function Transfer12HourScreen({ navigation }) {
     setStage(STAGES.SELECT_ORDER);
   };
 
-  const renderSelectOrder = () => (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Select Production Order</Text>
-      </View>
-      {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} />
-      ) : (
-        <View>
-          {productionOrders.map((item) => (
-            <TouchableOpacity key={item.id.toString()} onPress={() => handleSelectOrder(item)}>
-              <Card style={styles.orderCard}>
-                <View>
-                  <Text style={styles.orderNumber}>Order No: {item.order_number}</Text>
-                  <Text style={styles.orderDetail}>{item.product_name || 'Wheat Transfer'}</Text>
-                </View>
-                <Text style={styles.selectText}>Select ›</Text>
-              </Card>
-            </TouchableOpacity>
-          ))}
-          {productionOrders.length === 0 && <Text style={styles.emptyText}>No active production orders found</Text>}
+  const renderSelectOrder = () => {
+    const getOrderStats = (orderId) => {
+      const orderRecords = transfer12hRecords.filter(r => r.production_order_id === orderId);
+      const completed = orderRecords.filter(r => r.status === "COMPLETED").length;
+      const inProgress = orderRecords.filter(r => r.status === "IN_PROGRESS").length;
+      return { total: orderRecords.length, completed, inProgress };
+    };
+
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.mainHeading}>Select Production Order</Text>
         </View>
-      )}
-    </ScrollView>
-  );
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} />
+        ) : (
+          <View>
+            {productionOrders.map((item) => {
+              const stats = getOrderStats(item.id);
+              return (
+                <TouchableOpacity key={item.id.toString()} onPress={() => handleSelectOrder(item)}>
+                  <Card style={styles.orderCard}>
+                    <View style={styles.orderCardHeader}>
+                      <View style={styles.orderInfo}>
+                        <Text style={styles.orderNumber}>Order No: {item.order_number}</Text>
+                        <Text style={styles.orderDetail}>{item.product_name || 'Wheat Transfer'}</Text>
+                      </View>
+                      <Text style={styles.selectText}>Select ›</Text>
+                    </View>
+                    
+                    {stats.total > 0 && (
+                      <View style={styles.statsRowCompact}>
+                        <View style={styles.statItemCompact}>
+                          <Text style={styles.statLabelCompact}>Total</Text>
+                          <Text style={styles.statValueCompact}>{stats.total}</Text>
+                        </View>
+                        <View style={styles.statItemCompact}>
+                          <Text style={styles.statLabelCompact}>Completed</Text>
+                          <Text style={[styles.statValueCompact, { color: "#059669" }]}>{stats.completed}</Text>
+                        </View>
+                        <View style={styles.statItemCompact}>
+                          <Text style={styles.statLabelCompact}>In Progress</Text>
+                          <Text style={[styles.statValueCompact, { color: "#f59e0b" }]}>{stats.inProgress}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
+            {productionOrders.length === 0 && <Text style={styles.emptyText}>No active production orders found</Text>}
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
-  const renderConfigureBins = () => (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.mainHeading}>Configure Transfer</Text>
-        <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
-      </View>
+  const renderConfigureBins = () => {
+    const orderTransfers = transfer12hRecords.filter(
+      r => r.production_order_id === selectedOrder?.id && (r.status === "COMPLETED" || r.status === "IN_PROGRESS")
+    );
 
-      <View style={styles.subTypeSelector}>
-        <TouchableOpacity 
-          style={[styles.subTypeTab, transferType === "NORMAL" && styles.activeSubTypeTab]} 
-          onPress={() => {
-            setTransferType("NORMAL");
-            setSelectedSourceBin("");
-            setSelectedDestinationBin("");
-          }}
-        >
-          <Text style={[styles.subTypeTabText, transferType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.subTypeTab, transferType === "SPECIAL" && styles.activeSubTypeTab]} 
-          onPress={() => {
-            setTransferType("SPECIAL");
-            setSpecialSourceBin("");
-            setSpecialDestinationBin("");
-          }}
-        >
-          <Text style={[styles.subTypeTabText, transferType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
-        </TouchableOpacity>
-      </View>
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.mainHeading}>Configure Transfer</Text>
+          <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
+        </View>
 
-      <Card style={styles.mappingCard}>
-        <Text style={styles.cardSectionTitle}>{transferType === "NORMAL" ? "Normal Mapping" : "Special Manual Transfer"}</Text>
-        <SelectDropdown
-          label="Source Bin"
-          value={transferType === "NORMAL" ? selectedSourceBin : specialSourceBin}
-          onValueChange={transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin}
-          options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
-        />
-        <SelectDropdown
-          label="Destination Bin"
-          value={transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin}
-          onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
-          options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
-        />
-      </Card>
-
-          <Button 
-            title="Start Transfer" 
+        <View style={styles.subTypeSelector}>
+          <TouchableOpacity 
+            style={[styles.subTypeTab, transferType === "NORMAL" && styles.activeSubTypeTab]} 
             onPress={() => {
-              console.log("Button 'Start Transfer' clicked");
-              handleStartTransfer();
-            }} 
-            loading={loading} 
+              setTransferType("NORMAL");
+              setSelectedSourceBin("");
+              setSelectedDestinationBin("");
+            }}
+          >
+            <Text style={[styles.subTypeTabText, transferType === "NORMAL" && styles.activeSubTypeTabText]}>Normal Mapping</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.subTypeTab, transferType === "SPECIAL" && styles.activeSubTypeTab]} 
+            onPress={() => {
+              setTransferType("SPECIAL");
+              setSpecialSourceBin("");
+              setSpecialDestinationBin("");
+            }}
+          >
+            <Text style={[styles.subTypeTabText, transferType === "SPECIAL" && styles.activeSubTypeTabText]}>Special Manual Transfer</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Card style={styles.mappingCard}>
+          <Text style={styles.cardSectionTitle}>{transferType === "NORMAL" ? "Normal Mapping" : "Special Manual Transfer"}</Text>
+          <SelectDropdown
+            label="Source Bin"
+            value={transferType === "NORMAL" ? selectedSourceBin : specialSourceBin}
+            onValueChange={transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin}
+            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
           />
-      <Button title="Back" onPress={handleGoBack} variant="secondary" />
-    </ScrollView>
-  );
+          <SelectDropdown
+            label="Destination Bin"
+            value={transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin}
+            onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
+            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
+          />
+        </Card>
+
+        <Button 
+          title="Start Transfer" 
+          onPress={() => {
+            console.log("Button 'Start Transfer' clicked");
+            handleStartTransfer();
+          }} 
+          loading={loading} 
+        />
+
+        {orderTransfers.length > 0 && (
+          <Card style={styles.transferDetailsCard}>
+            <Text style={styles.detailsCardTitle}>Transfer History</Text>
+            {orderTransfers.map((transfer, idx) => (
+              <View key={transfer.id} style={styles.transferHistoryItem}>
+                {idx > 0 && <View style={styles.divider} />}
+                <View style={styles.transferHistoryRow}>
+                  <View style={styles.transferHistoryLeft}>
+                    <Text style={styles.transferHistoryLabel}>
+                      Bin {transfer.source_bin_id} → Bin {transfer.destination_bin_id}
+                    </Text>
+                    <Text style={styles.transferHistoryTime}>
+                      {formatISTDateTime(transfer.transfer_start_time)}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.transferStatusBadge,
+                    { backgroundColor: transfer.status === "COMPLETED" ? "#d1fae5" : "#fef3c7" }
+                  ]}>
+                    <Text style={[
+                      styles.transferStatusText,
+                      { color: transfer.status === "COMPLETED" ? "#059669" : "#b45309" }
+                    ]}>
+                      {transfer.status}
+                    </Text>
+                  </View>
+                </View>
+                {transfer.quantity_transferred !== null && (
+                  <View style={styles.transferDetailsGrid}>
+                    <View style={styles.transferDetailItem}>
+                      <Text style={styles.transferDetailLabel}>Qty</Text>
+                      <Text style={styles.transferDetailValue}>{transfer.quantity_transferred} kg</Text>
+                    </View>
+                    <View style={styles.transferDetailItem}>
+                      <Text style={styles.transferDetailLabel}>Water</Text>
+                      <Text style={styles.transferDetailValue}>
+                        {transfer.water_added !== null ? `${transfer.water_added}L` : "—"}
+                      </Text>
+                    </View>
+                    <View style={styles.transferDetailItem}>
+                      <Text style={styles.transferDetailLabel}>Moisture</Text>
+                      <Text style={styles.transferDetailValue}>
+                        {transfer.moisture_level !== null ? `${transfer.moisture_level}%` : "—"}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))}
+          </Card>
+        )}
+
+        <Button title="Back" onPress={handleGoBack} variant="secondary" />
+      </ScrollView>
+    );
+  };
 
   const renderTransferActive = () => {
     const isManualSpecial = transferType === "SPECIAL";
@@ -664,4 +768,25 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 8 },
   modalSubtitle: { fontSize: 14, color: colors.text.secondary, marginBottom: 16 },
   modalActions: { flexDirection: 'row', marginTop: 20 },
+  // New styles for transfer details
+  orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  orderInfo: { flex: 1 },
+  statsRowCompact: { flexDirection: 'row', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  statItemCompact: { flex: 1, alignItems: 'center', paddingTop: 8 },
+  statLabelCompact: { fontSize: 10, color: colors.text.secondary, fontWeight: '600', marginBottom: 4 },
+  statValueCompact: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  transferDetailsCard: { padding: 12, marginBottom: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8 },
+  detailsCardTitle: { fontSize: 12, fontWeight: '700', color: colors.text.primary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 },
+  transferHistoryItem: { marginBottom: 8 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 8 },
+  transferHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+  transferHistoryLeft: { flex: 1, marginRight: 10 },
+  transferHistoryLabel: { fontSize: 12, fontWeight: '600', color: colors.text.primary, marginBottom: 2 },
+  transferHistoryTime: { fontSize: 10, color: colors.text.secondary },
+  transferStatusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, minWidth: 70, alignItems: 'center' },
+  transferStatusText: { fontSize: 10, fontWeight: '600' },
+  transferDetailsGrid: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  transferDetailItem: { flex: 1, backgroundColor: colors.gray[50], borderRadius: 4, padding: 6, borderWidth: 1, borderColor: colors.border },
+  transferDetailLabel: { fontSize: 9, color: colors.text.secondary, fontWeight: '600', marginBottom: 2 },
+  transferDetailValue: { fontSize: 11, fontWeight: '600', color: colors.text.primary },
 });
