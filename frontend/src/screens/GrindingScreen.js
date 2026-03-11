@@ -23,32 +23,44 @@ export default function GrindingScreen({ navigation }) {
   const [pickerMode, setPickerMode] = useState('date');
 
   const handleDatePicker = (rowId) => {
+    console.log("Opening date picker for row:", rowId);
     setActiveRowId(rowId);
     setPickerMode('date');
     setShowDatePicker(true);
   };
 
   const handleTimePicker = (rowId) => {
+    console.log("Opening time picker for row:", rowId);
     setActiveRowId(rowId);
     setPickerMode('time');
     setShowTimePicker(true);
   };
 
   const onDateChange = (event, selectedDate) => {
-    if (Platform.OS !== 'ios') setShowDatePicker(false);
-    if (selectedDate && activeRowId) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      handleRowUpdate(activeRowId, 'productionDate', dateStr);
-      setActiveRowId(null);
+    try {
+      setShowDatePicker(false);
+      if (selectedDate && activeRowId) {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        console.log("Date selected:", dateStr, "for row:", activeRowId);
+        handleRowUpdate(activeRowId, 'productionDate', dateStr);
+        setActiveRowId(null);
+      }
+    } catch (error) {
+      console.error("Date picker error:", error);
     }
   };
 
   const onTimeChange = (event, selectedTime) => {
-    if (Platform.OS !== 'ios') setShowTimePicker(false);
-    if (selectedTime && activeRowId) {
-      const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      handleRowUpdate(activeRowId, 'productionTime', timeStr);
-      setActiveRowId(null);
+    try {
+      setShowTimePicker(false);
+      if (selectedTime && activeRowId) {
+        const timeStr = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        console.log("Time selected:", timeStr, "for row:", activeRowId);
+        handleRowUpdate(activeRowId, 'productionTime', timeStr);
+        setActiveRowId(null);
+      }
+    } catch (error) {
+      console.error("Time picker error:", error);
     }
   };
   const [showSummary, setShowSummary] = useState(false);
@@ -581,11 +593,27 @@ export default function GrindingScreen({ navigation }) {
             <View style={{ width: 40, justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderColor: '#CCC' }}>
               <Text style={{ fontSize: 10 }}>{rowIdx + 1}</Text>
             </View>
-            <TouchableOpacity style={{ width: 100, padding: 4, justifyContent: 'center', borderWidth: 1, borderColor: '#CCC', borderRadius: 4 }} onPress={() => !row.isSubmitted && handleDatePicker(row.id)} disabled={row.isSubmitted}>
-              <Text style={{ fontSize: 11, color: row.productionDate ? '#000' : '#999' }}>{row.productionDate || 'Select Date'}</Text>
+            <TouchableOpacity 
+              style={{ width: 100, padding: 4, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: row.isSubmitted ? '#DDD' : '#CCC', borderRadius: 4, backgroundColor: row.isSubmitted ? '#F5F5F5' : '#FFF', opacity: row.isSubmitted ? 0.6 : 1 }} 
+              onPress={() => {
+                if (!row.isSubmitted) {
+                  handleDatePicker(row.id);
+                }
+              }}
+              activeOpacity={row.isSubmitted ? 1 : 0.6}
+            >
+              <Text style={{ fontSize: 11, color: row.productionDate ? '#000' : '#999' }}>{row.productionDate || 'Date'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ width: 100, padding: 4, marginLeft: 4, justifyContent: 'center', borderWidth: 1, borderColor: '#CCC', borderRadius: 4 }} onPress={() => !row.isSubmitted && handleTimePicker(row.id)} disabled={row.isSubmitted}>
-              <Text style={{ fontSize: 11, color: row.productionTime ? '#000' : '#999' }}>{row.productionTime || 'Select Time'}</Text>
+            <TouchableOpacity 
+              style={{ width: 100, padding: 4, marginLeft: 4, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: row.isSubmitted ? '#DDD' : '#CCC', borderRadius: 4, backgroundColor: row.isSubmitted ? '#F5F5F5' : '#FFF', opacity: row.isSubmitted ? 0.6 : 1 }} 
+              onPress={() => {
+                if (!row.isSubmitted) {
+                  handleTimePicker(row.id);
+                }
+              }}
+              activeOpacity={row.isSubmitted ? 1 : 0.6}
+            >
+              <Text style={{ fontSize: 11, color: row.productionTime ? '#000' : '#999' }}>{row.productionTime || 'Time'}</Text>
             </TouchableOpacity>
             <View style={{ width: 120, padding: 2 }}><InputField value={row.b1Reading} onChangeText={(v) => handleRowUpdate(row.id, 'b1Reading', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
             <View style={{ width: 120, padding: 2 }}><InputField value={row.loadPerHour} onChangeText={(v) => handleRowUpdate(row.id, 'loadPerHour', v)} keyboardType="decimal-pad" disabled={row.isSubmitted} dense /></View>
