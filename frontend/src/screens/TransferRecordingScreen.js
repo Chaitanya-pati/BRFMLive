@@ -60,13 +60,14 @@ export default function TransferRecordingScreen({ navigation }) {
             (t) => t.production_order_id === order.id
           );
 
-          const allTransfers = [...transfers24h, ...transfers12h];
+          // Only count 24-hour transfers for the details screen
+          const allTransfers = transfers24h;
 
           if (allTransfers.length === 0) {
             return null; // Skip orders with no transfers
           }
 
-          // Calculate combined status
+          // Calculate combined status (based on 24-hour transfers only)
           const completedCount = allTransfers.filter(
             (t) => t.status === "COMPLETED"
           ).length;

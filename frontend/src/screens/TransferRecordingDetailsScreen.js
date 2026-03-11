@@ -224,16 +224,6 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           </View>
         )}
 
-        {order.transfers12h.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>12-Hour Transfers</Text>
-            <Text style={styles.sectionSubtitle}>
-              {order.transfers12h.filter((t) => t.status === "COMPLETED").length}/
-              {order.transfers12h.length} completed
-            </Text>
-            {order.transfers12h.map((t) => renderTransferItem(t, false))}
-          </View>
-        )}
       </ScrollView>
 
       <Modal visible={showParametersModal} transparent animationType="fade">
