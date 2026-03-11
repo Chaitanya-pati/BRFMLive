@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,970 +6,391 @@ import {
   TouchableOpacity,
   ScrollView,
   useWindowDimensions,
-  FlatList,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  Modal,
+  TextInput,
 } from "react-native";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
+import Card from "../components/Card";
 import InputField from "../components/InputField";
 import colors from "../theme/colors";
-import { getApiClient } from "../api/client";
-import { showToast, showAlert } from "../utils/customAlerts";
+import { transfer12HourApi } from "../api/client";
+import { showSuccess, showError } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
-
-const STAGES = {
-  SELECT_ORDER: "SELECT_ORDER",
-  SELECT_BIN: "SELECT_BIN",
-  START_PARAMETERS_INPUT: "START_PARAMETERS_INPUT",
-  TRANSFER_IN_PROGRESS: "TRANSFER_IN_PROGRESS",
-  STOP_PARAMETERS_INPUT: "STOP_PARAMETERS_INPUT",
-  DIVERT_OR_STOP: "DIVERT_OR_STOP",
-  HISTORY: "HISTORY",
-};
 
 export default function TransferRecordingScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  // Data states
-  const [plannedOrders, setPlannedOrders] = useState([]);
-  const [destinationBins, setDestinationBins] = useState([]);
-  const [transferHistory, setTransferHistory] = useState([]);
+  const [productionOrders, setProductionOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // UI states
-  const [stage, setStage] = useState(STAGES.SELECT_ORDER);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [selectedBin, setSelectedBin] = useState(null);
-  const [currentTransfer, setCurrentTransfer] = useState(null);
-  const [timer, setTimer] = useState(0);
-
-  // Parameters states
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [transfers, setTransfers] = useState([]);
+  const [selectedTransfer, setSelectedTransfer] = useState(null);
+  const [showParametersModal, setShowParametersModal] = useState(false);
   const [waterAdded, setWaterAdded] = useState("");
   const [moistureLevel, setMoistureLevel] = useState("");
-  const [quantityTransferred, setQuantityTransferred] = useState("");
-  const [errors, setErrors] = useState({});
+  const [savingParams, setSavingParams] = useState(false);
 
-  // Timer effect
   useEffect(() => {
-    let interval;
-    if (stage === STAGES.TRANSFER_IN_PROGRESS) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [stage]);
-
-  // Fetch planned orders on mount
-  useEffect(() => {
-    fetchPlannedOrders();
+    loadData();
   }, []);
 
-  const fetchPlannedOrders = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const client = getApiClient();
-      const response = await client.get("/transfer/planned-orders");
-      setPlannedOrders(response.data || []);
-    } catch (error) {
-      showAlert("Error", "Failed to fetch planned orders");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const [ordersRes, transfersRes] = await Promise.all([
+        transfer12HourApi.getAvailableProductionOrders(),
+        transfer12HourApi.getSessions(),
+      ]);
 
-  const handleSelectOrder = async (order) => {
-    setSelectedOrder(order);
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      const response = await client.get(`/transfer/destination-bins/${order.id}`);
-      setDestinationBins(response.data || []);
-      
-      // Fetch transfer history for this order
-      const historyResponse = await client.get(`/transfer/order/${order.id}/history`);
-      setTransferHistory(historyResponse.data || []);
-      
-      setStage(STAGES.SELECT_BIN);
-    } catch (error) {
-      showAlert("Error", "Failed to fetch destination bins");
-      setSelectedOrder(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const orders = ordersRes.data || [];
+      const allTransfers = transfersRes.data || [];
 
-  const getSourceBinType = () => {
-    if (!selectedOrder || !selectedOrder.source_bins || selectedOrder.source_bins.length === 0) return null;
-    // Assuming type is consistent for the order's sources or taking the first one
-    const type = selectedOrder.source_bins[0]?.bin?.bin_type;
-    if (type === "24HOUR" || type === "24 hours bin") return "24HR";
-    if (type === "12HOUR" || type === "12 hours bin") return "12HR";
-    return "RAW";
-  };
+      // Get 24-hour transfer records
+      const transfer24hRes = await fetch("/api/24hour-transfer/records");
+      const transfer24h = await transfer24hRes.json();
 
-  const handleInitiateTransfer = (destBin) => {
-    setSelectedBin(destBin);
-    // Don't capture parameters for 24HR transfer at the start
-    const sourceType = getSourceBinType();
-    if (sourceType === "24HR") {
-      handleStartTransfer(destBin, {});
-    } else {
-      setWaterAdded("");
-      setMoistureLevel("");
-      setErrors({});
-      setStage(STAGES.START_PARAMETERS_INPUT);
-    }
-  };
-
-  const handleStartTransfer = async (destBin, startParams = {}) => {
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      const response = await client.post("/transfer/start", {
-        production_order_id: selectedOrder.id,
-        destination_bin_id: destBin.bin_id,
-        // We might need to store these start params in the session if the backend supports it,
-        // or just keep them in local state to send at completion as per current backend.
+      // Combine and sort orders by created_at descending
+      const combinedOrders = orders.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return dateB - dateA;
       });
-      
-      const transferData = {
-        ...response.data,
-        quantity_planned: destBin.quantity,
-        start_parameters: startParams // Store locally to send later
-      };
-      
-      setCurrentTransfer(transferData);
-      setTimer(0);
-      setErrors({});
-      setStage(STAGES.TRANSFER_IN_PROGRESS);
+
+      // Enrich orders with transfer status
+      const enrichedOrders = combinedOrders.map((order) => {
+        const orderTransfers = [
+          ...(allTransfers.filter((t) => t.production_order_id === order.id) || []),
+          ...(transfer24h.filter((t) => t.production_order_id === order.id) || []),
+        ];
+
+        // Determine combined status
+        const completedCount = orderTransfers.filter(
+          (t) => t.status === "COMPLETED"
+        ).length;
+        const totalCount = orderTransfers.length;
+
+        let status = "CREATED";
+        if (totalCount > 0) {
+          if (completedCount === totalCount) {
+            status = "COMPLETED";
+          } else if (completedCount > 0) {
+            status = "IN_PROGRESS";
+          } else {
+            status = "PLANNED";
+          }
+        }
+
+        return {
+          ...order,
+          transfers: orderTransfers,
+          combinedStatus: status,
+          completedCount,
+          totalCount,
+        };
+      });
+
+      setProductionOrders(enrichedOrders);
+      setTransfers([...(allTransfers || []), ...(transfer24h || [])]);
     } catch (error) {
-      showAlert("Error", "Failed to start transfer");
+      showError("Error", "Failed to load data");
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCompleteTransfer = () => {
-    setQuantityTransferred("");
-    // Pre-fill existing parameters for editing
-    setWaterAdded(currentTransfer.water_added?.toString() || "");
-    setMoistureLevel(currentTransfer.moisture_level?.toString() || "");
-    setErrors({});
-    setStage(STAGES.STOP_PARAMETERS_INPUT);
+  const handleCaptureParameters = (transfer) => {
+    setSelectedTransfer(transfer);
+    setWaterAdded(transfer.water_added?.toString() || "");
+    setMoistureLevel(transfer.moisture_level?.toString() || "");
+    setShowParametersModal(true);
   };
 
-  const validateStartParameters = () => {
-    const newErrors = {};
-    const sourceType = getSourceBinType();
+  const handleSaveParameters = async () => {
+    if (!selectedTransfer) return;
 
-    if (sourceType === "24HR") {
-      if (!waterAdded || waterAdded.trim() === "") {
-        newErrors.waterAdded = "Water added is required";
-      } else if (isNaN(parseFloat(waterAdded))) {
-        newErrors.waterAdded = "Must be a number";
-      }
-
-      if (!moistureLevel || moistureLevel.trim() === "") {
-        newErrors.moistureLevel = "Moisture level is required";
-      } else if (isNaN(parseFloat(moistureLevel))) {
-        newErrors.moistureLevel = "Must be a number";
-      }
-    } else if (sourceType === "12HR") {
-      if (!moistureLevel || moistureLevel.trim() === "") {
-        newErrors.moistureLevel = "Moisture level is required";
-      } else if (isNaN(parseFloat(moistureLevel))) {
-        newErrors.moistureLevel = "Must be a number";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStopParameters = () => {
-    const newErrors = {};
-
-    if (!quantityTransferred || quantityTransferred.trim() === "") {
-      newErrors.quantityTransferred = "Quantity transferred is required";
-    } else if (isNaN(parseFloat(quantityTransferred))) {
-      newErrors.quantityTransferred = "Must be a number";
-    } else if (parseFloat(quantityTransferred) <= 0) {
-      newErrors.quantityTransferred = "Must be greater than 0";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleStopTransfer = async () => {
-    if (!validateStopParameters()) return;
-
-    setLoading(true);
+    setSavingParams(true);
     try {
-      const client = getApiClient();
-      const params = {
-        quantity_transferred: parseFloat(quantityTransferred),
-        // Send the parameters captured at the start or updated during stop
-        water_added: waterAdded ? parseFloat(waterAdded) : 0,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : 0,
-      };
+      await transfer12HourApi.updateTransfer(selectedTransfer.id, {
+        water_added: parseFloat(waterAdded) || null,
+        moisture_level: parseFloat(moistureLevel) || null,
+      });
 
-      await client.post(`/transfer/${currentTransfer.id}/complete`, params);
-      showToast("Transfer completed successfully");
-      
-      // Refresh history
-      const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
-      setTransferHistory(historyResponse.data || []);
-      
-      // Reset
-      setCurrentTransfer(null);
-      setQuantityTransferred("");
-      setWaterAdded("");
-      setMoistureLevel("");
-      setStage(STAGES.SELECT_BIN);
+      showSuccess("Success", "Parameters saved successfully");
+      setShowParametersModal(false);
+      loadData();
     } catch (error) {
-      showAlert("Error", "Failed to complete transfer");
+      showError("Error", "Failed to save parameters");
       console.error(error);
     } finally {
-      setLoading(false);
+      setSavingParams(false);
     }
   };
 
-  const handleDivertBin = async (nextBin) => {
-    if (!validateStopParameters()) return;
-
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      // Parameters for completion of current bin
-      const params = {
-        quantity_transferred: parseFloat(quantityTransferred),
-        water_added: parseFloat(currentTransfer.start_parameters?.water_added || 0),
-        moisture_level: parseFloat(currentTransfer.start_parameters?.moisture_level || 0),
-      };
-
-      const response = await client.post(
-        `/transfer/${currentTransfer.id}/divert/${nextBin.bin_id}`,
-        params
-      );
-      
-      showToast("Transfer diverted successfully");
-      
-      // Since it's a divert within the same session, we need to decide 
-      // if the NEXT bin also needs new parameters. 
-      // The prompt says "capture timing... from STOP... to START".
-      // Divert effectively stops current and starts next.
-      // For now, we'll reset and go to START_PARAMETERS_INPUT if needed.
-      
-      const nextBinTransferData = {
-        ...response.data,
-        quantity_planned: nextBin.quantity
-      };
-      
-      setSelectedBin(nextBin);
-      setCurrentTransfer(nextBinTransferData);
-      setTimer(0);
-      setQuantityTransferred("");
-      
-      // Refresh history
-      const historyResponse = await client.get(`/transfer/order/${selectedOrder.id}/history`);
-      setTransferHistory(historyResponse.data || []);
-
-      const sourceType = getSourceBinType();
-      if (sourceType === "24HR" || sourceType === "12HR") {
-        setWaterAdded("");
-        setMoistureLevel("");
-        setErrors({});
-        setStage(STAGES.START_PARAMETERS_INPUT);
-      } else {
-        setStage(STAGES.TRANSFER_IN_PROGRESS);
-      }
-    } catch (error) {
-      showAlert("Error", "Failed to divert transfer");
-      console.error(error);
-    } finally {
-      setLoading(false);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "COMPLETED":
+        return "#059669";
+      case "IN_PROGRESS":
+        return "#f59e0b";
+      case "PLANNED":
+        return "#3b82f6";
+      default:
+        return "#6b7280";
     }
   };
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  };
+  const renderOrderCard = (order) => (
+    <Card key={order.id} style={styles.orderCard}>
+      <TouchableOpacity
+        onPress={() =>
+          setExpandedOrderId(expandedOrderId === order.id ? null : order.id)
+        }
+      >
+        <View style={styles.orderHeader}>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderNumber}>{order.order_number}</Text>
+            <Text style={styles.orderDate}>
+              {formatISTDateTime(order.created_at)}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(order.combinedStatus) },
+            ]}
+          >
+            <Text style={styles.statusText}>{order.combinedStatus}</Text>
+          </View>
+        </View>
 
-  // Calculate available bins for divert using useMemo to prevent hook violations
-  const availableBinsForDivert = useMemo(() => {
-    if (!selectedBin || !destinationBins) return [];
-    
-    // Get completed transfer bin IDs
-    const completedBinIds = transferHistory
-      .filter(t => t.status === 'COMPLETED')
-      .map(t => t.destination_bin_id);
-    
-    return destinationBins.filter(
-      (bin) => bin.bin_id !== selectedBin.bin_id && !completedBinIds.includes(bin.bin_id)
-    );
-  }, [destinationBins, selectedBin, transferHistory]);
+        {order.totalCount > 0 && (
+          <Text style={styles.transferCount}>
+            Transfers: {order.completedCount}/{order.totalCount} completed
+          </Text>
+        )}
+      </TouchableOpacity>
 
-  // STAGE: SELECT ORDER
-  if (stage === STAGES.SELECT_ORDER) {
-    return (
-      <Layout title="24 hour transfer">
-        <ScrollView style={styles.container}>
-          <Text style={styles.title}>24 hour transfer</Text>
-          <Text style={styles.subtitle}>Select Production Order</Text>
-
-          {loading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : plannedOrders.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No planned orders available</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={plannedOrders}
-              scrollEnabled={false}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.orderCard}
-                  onPress={() => handleSelectOrder(item)}
+      {expandedOrderId === order.id && (
+        <View style={styles.expandedContent}>
+          {order.transfers.map((transfer) => (
+            <View key={transfer.id} style={styles.transferDetail}>
+              <View style={styles.transferHeader}>
+                <Text style={styles.transferLabel}>
+                  {transfer.source_bin_number || transfer.source_bin_id} →{" "}
+                  {transfer.destination_bin_number || transfer.destination_bin_id}
+                </Text>
+                <Text
+                  style={[
+                    styles.transferStatus,
+                    {
+                      color:
+                        transfer.status === "COMPLETED" ? "#059669" : "#f59e0b",
+                    },
+                  ]}
                 >
-                  <View style={styles.orderCardContent}>
-                    <Text style={styles.orderNumber}>{item.order_number}</Text>
-                    <Text style={styles.orderDetail}>Qty: {item.quantity} kg</Text>
-                    <Text style={styles.orderDetail}>Target: {formatISTDateTime(item.target_finish_date)}</Text>
-                  </View>
-                  <Text style={styles.arrow}>→</Text>
-                </TouchableOpacity>
+                  {transfer.status}
+                </Text>
+              </View>
+
+              {transfer.status === "COMPLETED" &&
+                (transfer.water_added === null ||
+                  transfer.moisture_level === null) && (
+                  <Button
+                    title="Add Parameters"
+                    onPress={() => handleCaptureParameters(transfer)}
+                    style={styles.paramButton}
+                  />
+                )}
+
+              {transfer.water_added !== null && (
+                <Text style={styles.paramValue}>
+                  Water: {transfer.water_added}L
+                </Text>
               )}
-            />
-          )}
-        </ScrollView>
-      </Layout>
-    );
-  }
-
-  // STAGE: SELECT BIN
-  if (stage === STAGES.SELECT_BIN) {
-    return (
-      <Layout title="24 hour transfer">
-        <ScrollView style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Select Destination Bin</Text>
-            <Button
-              title="← Back"
-              onPress={() => {
-                setStage(STAGES.SELECT_ORDER);
-                setSelectedOrder(null);
-                setDestinationBins([]);
-              }}
-              variant="secondary"
-              style={styles.backBtn}
-            />
-          </View>
-
-          <View style={styles.orderInfoCard}>
-            <Text style={styles.orderInfoTitle}>{selectedOrder.order_number}</Text>
-            <Text style={styles.orderInfoDetail}>Total Quantity: {selectedOrder.quantity} kg</Text>
-          </View>
-
-          <Text style={styles.subtitle}>Available Bins</Text>
-
-          {destinationBins.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No destination bins configured</Text>
+              {transfer.moisture_level !== null && (
+                <Text style={styles.paramValue}>
+                  Moisture: {transfer.moisture_level}%
+                </Text>
+              )}
             </View>
-          ) : (
-            <FlatList
-              data={destinationBins}
-              scrollEnabled={false}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
-                const inProgressTransfer = transferHistory.find(
-                  (t) => t.destination_bin_id === item.bin_id && t.status === "IN_PROGRESS"
-                );
-                const isCompleted = transferHistory.some(
-                  (t) => t.destination_bin_id === item.bin_id && t.status === "COMPLETED"
-                );
+          ))}
+        </View>
+      )}
+    </Card>
+  );
 
-                return (
-                  <View style={styles.binCard}>
-                    <View style={styles.binCardContent}>
-                      <Text style={styles.binNumber}>{item.bin.bin_number}</Text>
-                      <Text style={styles.binDetail}>Capacity: {item.bin.capacity} kg</Text>
-                      <Text style={styles.binDetail}>To Transfer: {item.quantity} kg</Text>
-                    </View>
-                    {inProgressTransfer ? (
-                      <Button
-                        title="VIEW"
-                        onPress={() => {
-                          setCurrentTransfer(inProgressTransfer);
-                          // Calculate elapsed time from transfer_start_time
-                          const startTime = new Date(inProgressTransfer.transfer_start_time).getTime();
-                          const now = new Date().getTime();
-                          setTimer(Math.floor((now - startTime) / 1000));
-                          setStage(STAGES.TRANSFER_IN_PROGRESS);
-                        }}
-                        style={[styles.startBtn, { backgroundColor: "#f97316" }]}
-                      />
-                    ) : isCompleted ? (
-                      <View style={[styles.statusBadge, { backgroundColor: "#10b981", marginLeft: 12 }]}>
-                        <Text style={styles.statusText}>COMPLETED</Text>
-                      </View>
-                    ) : (
-                      <Button
-                        title="START"
-                        onPress={() => handleInitiateTransfer(item)}
-                        style={styles.startBtn}
-                      />
-                    )}
-                  </View>
-                );
-              }}
-            />
-          )}
-
-          {transferHistory.length > 0 && (
-            <View style={styles.historySection}>
-              <Text style={styles.historyTitle}>Recent Transfers</Text>
-              {transferHistory.slice(0, 3).map((transfer) => (
-                <View key={transfer?.id} style={styles.historyCard}>
-                  <Text style={styles.historyBin}>To Bin: {transfer?.destination_bin?.bin_number}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: transfer?.status === 'COMPLETED' ? '#10b981' : '#f97316' }]}>
-                    <Text style={styles.statusText}>{transfer?.status}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      </Layout>
-    );
-  }
-
-  // STAGE: TRANSFER_IN_PROGRESS
-  if (stage === STAGES.TRANSFER_IN_PROGRESS && currentTransfer) {
-    return (
-      <Layout title="24 hour transfer">
-        <ScrollView style={styles.container}>
-          <Text style={styles.title}>Transfer In Progress</Text>
-
-          <View style={styles.monitoringCard}>
-            <View style={styles.timerSection}>
-              <Text style={styles.timerLabel}>Duration</Text>
-              <Text style={styles.timerDisplay}>{formatTime(timer)}</Text>
-            </View>
-
-            <View style={styles.detailsSection}>
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>To Bin:</Text>
-                <Text style={styles.value}>{currentTransfer?.destination_bin?.bin_number}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Qty Planned:</Text>
-                <Text style={styles.value}>{currentTransfer?.quantity_planned} kg</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Started:</Text>
-                <Text style={styles.value}>{formatISTDateTime(currentTransfer?.transfer_start_time)}</Text>
-              </View>
-            </View>
-
-            {selectedOrder?.source_bins && selectedOrder.source_bins.length > 0 && (
-              <View style={styles.blendSection}>
-                <Text style={styles.blendTitle}>Source Blend %:</Text>
-                {selectedOrder.source_bins.map((bin, idx) => (
-                  <View key={idx} style={styles.blendRow}>
-                    <Text style={styles.blendLabel}>{bin?.bin?.bin_number}:</Text>
-                    <Text style={styles.blendValue}>{bin?.blend_percentage}%</Text>
-                  </View>
-                ))}
-              </View>
+  return (
+    <Layout title="24-Hour Transfer Records" navigation={navigation}>
+      <View style={styles.container}>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} />
+        ) : (
+          <ScrollView>
+            {productionOrders.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No production orders found
+              </Text>
+            ) : (
+              productionOrders.map(renderOrderCard)
             )}
-          </View>
+          </ScrollView>
+        )}
 
-          <View style={styles.actionsContainer}>
-            <Button
-              title="Stop Transfer"
-              onPress={handleCompleteTransfer}
-              style={[styles.actionBtn, { backgroundColor: colors.danger || "#ef4444" }]}
-            />
-            {availableBinsForDivert.length > 0 && (
-              <Button
-                title="Divert Transfer"
-                onPress={() => setStage(STAGES.DIVERT_OR_STOP)}
-                variant="secondary"
-                style={styles.actionBtn}
-              />
-            )}
-          </View>
-        </ScrollView>
-      </Layout>
-    );
-  }
+        <Modal visible={showParametersModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
 
-  // STAGE: DIVERT_OR_STOP
-  if (stage === STAGES.DIVERT_OR_STOP) {
-    return (
-      <Layout title="24 hour transfer">
-        <ScrollView style={styles.container}>
-          <Text style={styles.title}>Divert or Stop</Text>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoText}>Select next destination or stop transfer</Text>
-          </View>
-
-          <View style={styles.divertSection}>
-            <Text style={styles.divertLabel}>Divert to:</Text>
-            {availableBinsForDivert.map((item) => (
-              <Button
-                key={item.id.toString()}
-                title={`Divert to ${item.bin.bin_number}`}
-                onPress={() => {
-                  setSelectedBin(item);
-                  setStage(STAGES.STOP_PARAMETERS_INPUT);
-                }}
-                style={styles.divertBtn}
-              />
-            ))}
-          </View>
-
-          <Button
-            title="Stop Transfer"
-            onPress={handleCompleteTransfer}
-            style={[styles.stopBtn, { backgroundColor: colors.danger }]}
-          />
-          
-          <Button
-            title="Cancel"
-            onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
-            variant="secondary"
-            style={styles.backBtn}
-          />
-        </ScrollView>
-      </Layout>
-    );
-  }
-
-  // STAGE: START_PARAMETERS_INPUT
-  if (stage === STAGES.START_PARAMETERS_INPUT) {
-    const sourceType = getSourceBinType();
-    return (
-      <Layout title="24 hour transfer">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
-          <ScrollView style={styles.container}>
-            <Text style={styles.title}>Source Bin Conditioning Parameters</Text>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoText}>Record parameters for source bin outflow</Text>
-            </View>
-
-            {sourceType === "24HR" && (
               <InputField
                 label="Water Added (Litres)"
-                placeholder="Enter amount"
                 value={waterAdded}
                 onChangeText={setWaterAdded}
                 keyboardType="decimal-pad"
-                error={errors.waterAdded}
+                placeholder="0"
               />
-            )}
 
-            {(sourceType === "24HR" || sourceType === "12HR") && (
               <InputField
                 label="Moisture Level (%)"
-                placeholder="0-100"
                 value={moistureLevel}
                 onChangeText={setMoistureLevel}
                 keyboardType="decimal-pad"
-                error={errors.moistureLevel}
+                placeholder="0"
               />
-            )}
 
-            <View style={styles.actionButtons}>
-              <Button
-                title="Confirm & Start"
-                onPress={() => {
-                  if (validateStartParameters()) {
-                    handleStartTransfer(selectedBin, {
-                      water_added: waterAdded,
-                      moisture_level: moistureLevel
-                    });
-                  }
-                }}
-                loading={loading}
-                style={styles.stopBtn}
-              />
-              <Button
-                title="Cancel"
-                onPress={() => setStage(STAGES.SELECT_BIN)}
-                variant="secondary"
-                style={styles.backBtn}
-              />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Layout>
-    );
-  }
-
-  // STAGE: STOP_PARAMETERS_INPUT
-  if (stage === STAGES.STOP_PARAMETERS_INPUT) {
-    return (
-      <Layout title="24 hour transfer">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
-          <ScrollView style={styles.container}>
-            <Text style={styles.title}>Complete Transfer</Text>
-
-            <View style={styles.binContext}>
-              <Text style={styles.binContextLabel}>Destination Bin: {currentTransfer?.destination_bin?.bin_number}</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>Duration: {formatTime(timer)}</Text>
-            </View>
-
-            <InputField
-              label="Quantity Transferred (kg)"
-              placeholder="Enter quantity"
-              value={quantityTransferred}
-              onChangeText={setQuantityTransferred}
-              keyboardType="decimal-pad"
-              error={errors.quantityTransferred}
-            />
-
-            <Text style={styles.subtitle}>Edit Conditioning Parameters (Optional)</Text>
-            <InputField
-              label="Water Added (Litres)"
-              placeholder="Update water added"
-              value={waterAdded}
-              onChangeText={setWaterAdded}
-              keyboardType="decimal-pad"
-            />
-
-            <InputField
-              label="Moisture Level (%)"
-              placeholder="Update moisture level"
-              value={moistureLevel}
-              onChangeText={setMoistureLevel}
-              keyboardType="decimal-pad"
-            />
-
-            <View style={styles.actionButtons}>
-              <Button
-                title="Save & Stop"
-                onPress={handleStopTransfer}
-                loading={loading}
-                style={styles.stopBtn}
-              />
-              <Button
-                title="Cancel"
-                onPress={() => setStage(STAGES.TRANSFER_IN_PROGRESS)}
-                variant="secondary"
-                style={styles.backBtn}
-              />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Layout>
-    );
-  }
-
-  return null;
+              <View style={styles.modalActions}>
+                <Button
+                  title="Cancel"
+                  onPress={() => setShowParametersModal(false)}
+                  variant="secondary"
+                  style={{ flex: 1, marginRight: 8 }}
+                />
+                <Button
+                  title="Save"
+                  onPress={handleSaveParameters}
+                  loading={savingParams}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Card>
+          </View>
+        </Modal>
+      </View>
+    </Layout>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: colors.background,
   },
-  keyboardAvoid: {
-    flex: 1,
+  orderCard: {
+    marginBottom: 12,
+    paddingBottom: 0,
   },
-  centerContainer: {
-    minHeight: 300,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  header: {
+  orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.textPrimary,
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.textSecondary,
-    marginVertical: 12,
-  },
-  emptyContainer: {
-    padding: 20,
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  orderCard: {
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.lightGray,
-  },
-  orderCardContent: {
+  orderInfo: {
     flex: 1,
   },
   orderNumber: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.textPrimary,
-  },
-  orderDetail: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  arrow: {
-    fontSize: 20,
-    color: colors.primary,
-    fontWeight: "bold",
-  },
-  orderInfoCard: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  orderInfoTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
     color: colors.textPrimary,
   },
-  orderInfoDetail: {
+  orderDate: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 4,
-  },
-  binCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 14,
-    marginVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 2,
-    borderColor: colors.primary,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  binCardContent: {
-    flex: 1,
-  },
-  binNumber: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.textPrimary,
-  },
-  binDetail: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  startBtn: {
-    marginLeft: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  historySection: {
-    marginTop: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.lightGray,
-  },
-  historyTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  historyCard: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    padding: 10,
-    marginVertical: 6,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  historyBin: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: colors.textPrimary,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: colors.white,
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
-  monitoringCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    marginBottom: 16,
-  },
-  timerSection: {
-    alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
-    marginBottom: 16,
-  },
-  timerLabel: {
-    fontSize: 14,
+  transferCount: {
+    fontSize: 13,
     color: colors.textSecondary,
+    marginTop: 8,
+  },
+  expandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  transferDetail: {
+    paddingVertical: 8,
     marginBottom: 8,
-  },
-  timerDisplay: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: colors.primary,
-    fontFamily: "monospace",
-  },
-  detailsSection: {
-    backgroundColor: colors.lightGray,
+    backgroundColor: "#f9fafb",
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    padding: 10,
   },
-  detailRow: {
+  transferHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.white,
+    alignItems: "center",
   },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textSecondary,
-  },
-  value: {
+  transferLabel: {
     fontSize: 13,
     fontWeight: "500",
     color: colors.textPrimary,
   },
-  blendSection: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    padding: 10,
-  },
-  blendTitle: {
+  transferStatus: {
     fontSize: 12,
-    fontWeight: "bold",
-    color: colors.textSecondary,
-    marginBottom: 8,
+    fontWeight: "600",
   },
-  blendRow: {
+  paramButton: {
+    marginTop: 8,
+    paddingVertical: 6,
+  },
+  paramValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "90%",
+    maxWidth: 400,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  modalActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 4,
+    gap: 10,
+    marginTop: 20,
   },
-  blendLabel: {
-    fontSize: 11,
-    color: colors.textPrimary,
-  },
-  blendValue: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.primary,
-  },
-  actionsContainer: {
-    gap: 12,
-    marginBottom: 20,
-  },
-  actionBtn: {
-    marginVertical: 8,
-  },
-  infoCard: {
-    backgroundColor: colors.lightGray,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  binContext: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-  },
-  binContextLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  actionButtons: {
-    gap: 12,
-    marginVertical: 20,
-  },
-  divertLabel: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  divertBtn: {
-    marginVertical: 8,
-    backgroundColor: "#06b6d4",
-    paddingVertical: 12,
-  },
-  stopBtn: {
-    marginVertical: 12,
-    backgroundColor: "#10b981",
-    paddingVertical: 14,
-  },
-  divertSection: {
-    marginVertical: 12,
-    padding: 10,
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-  }
 });
