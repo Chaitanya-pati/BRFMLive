@@ -32,6 +32,7 @@ import FinishedGoodsMasterScreen from './src/screens/FinishedGoodsMasterScreen';
 import ProductionOrderScreen from './src/screens/ProductionOrderScreen';
 import ProductionOrderPlanningScreen from './src/screens/ProductionOrderPlanningScreen';
 import TransferRecordingScreen from './src/screens/TransferRecordingScreen';
+import TransferRecordingDetailsScreen from './src/screens/TransferRecordingDetailsScreen';
 import Transfer12HourScreen from './src/screens/Transfer12HourScreen';
 import DispatchManagementScreen from './src/screens/DispatchManagementScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
@@ -154,6 +155,7 @@ export default function App() {
           <Stack.Screen name="ProductionOrderGranulation" component={ProductionOrderGranulationScreen} />
           <Stack.Screen name="MachineManagement" component={MachineManagementScreen} />
           <Stack.Screen name="TransferRecording" component={TransferRecordingScreen} />
+          <Stack.Screen name="TransferRecordingDetails" component={TransferRecordingDetailsScreen} />
           <Stack.Screen name="Transfer12Hour" component={Transfer12HourScreen} />
           <Stack.Screen name="DispatchManagement" component={DispatchManagementScreen} />
           <Stack.Screen name="Grinding" component={GrindingScreen} />
