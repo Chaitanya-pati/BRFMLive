@@ -61,32 +61,39 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   };
 
   const renderTransferItem = (transfer, isFrom24h) => {
-    const hasParameters =
-      transfer.water_added !== null && transfer.moisture_level !== null;
-    const isCompleted = transfer.status === "COMPLETED";
-    const needsParameters = isCompleted && !hasParameters;
+    // Show button if water_added OR moisture_level is missing or 0
+    const needsParameters =
+      transfer.status === "COMPLETED" &&
+      (transfer.water_added === null ||
+        transfer.water_added === 0 ||
+        transfer.moisture_level === null ||
+        transfer.moisture_level === 0);
 
     return (
       <Card key={transfer.id} style={styles.transferCard}>
-        <View style={styles.transferTypeTag}>
-          <Text style={styles.transferTypeText}>
-            {isFrom24h ? "24-HOUR" : "12-HOUR"}
-          </Text>
-        </View>
-
-        <View style={styles.transferContent}>
-          <View style={styles.transferTitleRow}>
-            <Text style={styles.transferTitle}>
-              {transfer.source_bin_id
-                ? `Bin ${transfer.source_bin_id} → Bin ${transfer.destination_bin_id}`
-                : `To Bin ${transfer.destination_bin_id}`}
-            </Text>
+        <View style={styles.transferCardContent}>
+          {/* Header: Bin info and status */}
+          <View style={styles.transferHeader}>
+            <View style={styles.binInfo}>
+              <Text style={styles.binLabel}>
+                {transfer.source_bin_id
+                  ? `Bin ${transfer.source_bin_id} → Bin ${transfer.destination_bin_id}`
+                  : `To Bin ${transfer.destination_bin_id}`}
+              </Text>
+              <Text style={styles.transferTime}>
+                {transfer.transfer_start_time
+                  ? formatISTDateTime(transfer.transfer_start_time)
+                  : ""}
+              </Text>
+            </View>
             <View
               style={[
                 styles.statusPill,
                 {
                   backgroundColor:
-                    transfer.status === "COMPLETED" ? "#d1fae5" : "#fef3c7",
+                    transfer.status === "COMPLETED"
+                      ? colors.success
+                      : colors.warning,
                 },
               ]}
             >
@@ -94,8 +101,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                 style={[
                   styles.statusPillText,
                   {
-                    color:
-                      transfer.status === "COMPLETED" ? "#059669" : "#b45309",
+                    color: transfer.status === "COMPLETED" ? "#fff" : "#fff",
                   },
                 ]}
               >
@@ -104,9 +110,10 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             </View>
           </View>
 
-          <View style={styles.detailsGrid}>
+          {/* Details: Quantity, Water, Moisture */}
+          <View style={styles.detailsRow}>
             {transfer.quantity_transferred && (
-              <View style={styles.detailItem}>
+              <View style={styles.detailBox}>
                 <Text style={styles.detailLabel}>Quantity</Text>
                 <Text style={styles.detailValue}>
                   {transfer.quantity_transferred} kg
@@ -114,15 +121,15 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               </View>
             )}
 
-            <View style={styles.detailItem}>
+            <View style={styles.detailBox}>
               <Text style={styles.detailLabel}>Water Added</Text>
               <Text style={styles.detailValue}>
                 {transfer.water_added !== null ? `${transfer.water_added}L` : "—"}
               </Text>
             </View>
 
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Moisture Level</Text>
+            <View style={styles.detailBox}>
+              <Text style={styles.detailLabel}>Moisture</Text>
               <Text style={styles.detailValue}>
                 {transfer.moisture_level !== null
                   ? `${transfer.moisture_level}%`
@@ -131,19 +138,14 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             </View>
           </View>
 
-          {transfer.transfer_start_time && (
-            <Text style={styles.timestamp}>
-              Started: {formatISTDateTime(transfer.transfer_start_time)}
-            </Text>
-          )}
-
+          {/* Add Parameters Button */}
           {needsParameters && (
             <TouchableOpacity
-              style={styles.paramButtonLarge}
+              style={styles.paramButton}
               onPress={() => handleCaptureParameters(transfer, isFrom24h)}
             >
-              <Text style={styles.paramButtonTextLarge}>
-                ➕ Add Water & Moisture Parameters
+              <Text style={styles.paramButtonText}>
+                ➕ Add Water & Moisture
               </Text>
             </TouchableOpacity>
           )}
@@ -158,7 +160,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <View>
+        <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{order.order_number}</Text>
           <Text style={styles.headerSubtitle}>
             {formatISTDateTime(order.created_at)}
@@ -170,35 +172,24 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             {
               backgroundColor:
                 order.combinedStatus === "COMPLETED"
-                  ? "#d1fae5"
+                  ? colors.success
                   : order.combinedStatus === "IN_PROGRESS"
-                  ? "#fef3c7"
-                  : "#dbeafe",
+                  ? colors.warning
+                  : colors.primaryLight,
             },
           ]}
         >
-          <Text
-            style={[
-              styles.headerStatusText,
-              {
-                color:
-                  order.combinedStatus === "COMPLETED"
-                    ? "#059669"
-                    : order.combinedStatus === "IN_PROGRESS"
-                    ? "#b45309"
-                    : "#1e40af",
-              },
-            ]}
-          >
+          <Text style={styles.headerStatusText}>
             {order.combinedStatus}
           </Text>
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Stats Section */}
         <View style={styles.statsSection}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Total Transfers</Text>
+            <Text style={styles.statLabel}>Total</Text>
             <Text style={styles.statValue}>{order.totalCount}</Text>
           </View>
           <View style={styles.statBox}>
@@ -213,25 +204,30 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           </View>
         </View>
 
+        {/* Transfer List */}
         {order.transfers24h.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>24-Hour Transfers</Text>
-            <Text style={styles.sectionSubtitle}>
-              {order.transfers24h.filter((t) => t.status === "COMPLETED").length}/
-              {order.transfers24h.length} completed
-            </Text>
-            {order.transfers24h.map((t) => renderTransferItem(t, true))}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>24-HOUR TRANSFERS</Text>
+              <Text style={styles.sectionBadge}>
+                {order.transfers24h.filter((t) => t.status === "COMPLETED")
+                  .length}/{order.transfers24h.length}
+              </Text>
+            </View>
+            <View style={styles.transfersList}>
+              {order.transfers24h.map((t) => renderTransferItem(t, true))}
+            </View>
           </View>
         )}
-
       </ScrollView>
 
+      {/* Parameters Modal */}
       <Modal visible={showParametersModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
             <Text style={styles.modalSubtitle}>
-              Enter water and moisture details for this transfer
+              Enter water and moisture details
             </Text>
 
             <InputField
@@ -278,163 +274,170 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: colors.border,
   },
   backButton: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.primary,
   },
+  headerInfo: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: colors.text.primary,
   },
   headerSubtitle: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontSize: 10,
+    color: colors.text.secondary,
     marginTop: 2,
   },
   headerStatusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   headerStatusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    color: "#fff",
   },
   content: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   statsSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: 14,
+    gap: 8,
   },
   statBox: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: colors.border,
   },
   statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: "500",
-    marginBottom: 4,
+    fontSize: 10,
+    color: colors.text.secondary,
+    fontWeight: "600",
+    marginBottom: 3,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: colors.primary,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.primary,
-    marginBottom: 4,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  transferCard: {
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  transferTypeTag: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignItems: "flex-start",
-  },
-  transferTypeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  transferContent: {
-    padding: 12,
-  },
-  transferTitleRow: {
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  transferTitle: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  sectionBadge: {
+    fontSize: 10,
+    color: colors.text.secondary,
     fontWeight: "600",
-    color: colors.textPrimary,
+  },
+  transfersList: {
+    gap: 10,
+  },
+  transferCard: {
+    overflow: "hidden",
+  },
+  transferCardContent: {
+    padding: 12,
+  },
+  transferHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  binInfo: {
     flex: 1,
+    marginRight: 10,
+  },
+  binLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.text.primary,
+    marginBottom: 3,
+  },
+  transferTime: {
+    fontSize: 10,
+    color: colors.text.secondary,
   },
   statusPill: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 12,
+    paddingVertical: 5,
+    borderRadius: 5,
+    minWidth: 70,
+    alignItems: "center",
   },
   statusPillText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
   },
-  detailsGrid: {
+  detailsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
     gap: 8,
+    marginBottom: 10,
   },
-  detailItem: {
+  detailBox: {
     flex: 1,
-    backgroundColor: "#f9fafb",
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: colors.gray[50],
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   detailLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontSize: 9,
+    color: colors.text.secondary,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   detailValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text.primary,
   },
-  timestamp: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  paramButtonLarge: {
-    backgroundColor: colors.info,
-    paddingVertical: 12,
-    borderRadius: 8,
+  paramButton: {
+    backgroundColor: colors.primaryLight,
+    paddingVertical: 9,
+    borderRadius: 6,
     alignItems: "center",
-    marginTop: 12,
   },
-  paramButtonTextLarge: {
+  paramButtonText: {
     color: "#fff",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
   },
   modalOverlay: {
@@ -446,22 +449,22 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "90%",
     maxWidth: 400,
-    padding: 20,
+    padding: 18,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text.primary,
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 16,
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginBottom: 14,
   },
   modalActions: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 20,
+    marginTop: 16,
   },
 });
