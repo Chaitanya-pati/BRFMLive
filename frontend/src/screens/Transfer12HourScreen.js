@@ -644,16 +644,9 @@ export default function Transfer12HourScreen({ navigation }) {
         <Modal visible={showStartParamsModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <Card style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Source Bin Parameters</Text>
-              <Text style={styles.modalSubtitle}>Please enter moisture and water details for the source bin (these values will be saved to this bin's record).</Text>
+              <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
+              <Text style={styles.modalSubtitle}>Enter water and moisture details</Text>
               
-              <InputField
-                label="Moisture Level (%)"
-                value={moistureLevel}
-                onChangeText={setMoistureLevel}
-                keyboardType="decimal-pad"
-                placeholder="0"
-              />
               <InputField
                 label="Water Added (Litres)"
                 value={waterAdded}
@@ -661,16 +654,23 @@ export default function Transfer12HourScreen({ navigation }) {
                 keyboardType="decimal-pad"
                 placeholder="0"
               />
+              <InputField
+                label="Moisture Level (%)"
+                value={moistureLevel}
+                onChangeText={setMoistureLevel}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
 
               <View style={styles.modalActions}>
-                <Button 
-                  title="Cancel" 
-                  onPress={() => setShowStartParamsModal(false)} 
-                  variant="secondary" 
-                  style={{flex: 1, marginRight: 8}}
-                />
-                <Button 
-                  title="Confirm & Start" 
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => setShowStartParamsModal(false)}
+                >
+                  <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalButtonSave]}
                   onPress={() => {
                     const isManualSpecial = transferType === "SPECIAL";
                     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
@@ -680,10 +680,10 @@ export default function Transfer12HourScreen({ navigation }) {
                       return;
                     }
                     proceedWithStartTransfer(source, dest);
-                  }} 
-                  loading={loading}
-                  style={{flex: 1}}
-                />
+                  }}
+                >
+                  <Text style={styles.modalButtonSaveText}>Save</Text>
+                </TouchableOpacity>
               </View>
             </Card>
           </View>
@@ -834,18 +834,19 @@ export default function Transfer12HourScreen({ navigation }) {
               placeholder="0"
             />
             <View style={styles.modalActions}>
-              <Button
-                title="Cancel"
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setShowParametersModal(false)}
-                variant="secondary"
-                style={{ flex: 1, marginRight: 8 }}
-              />
-              <Button
-                title="Save"
+              >
+                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSave]}
                 onPress={handleSaveParameters}
-                loading={savingParams}
-                style={{ flex: 1 }}
-              />
+                disabled={savingParams}
+              >
+                <Text style={styles.modalButtonSaveText}>{savingParams ? "Saving..." : "Save"}</Text>
+              </TouchableOpacity>
             </View>
           </Card>
         </View>
@@ -960,4 +961,10 @@ const styles = StyleSheet.create({
   transferActionButtons: { marginTop: 12, flexDirection: 'column', gap: 8 },
   transferActionButton: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 6, alignItems: 'center' },
   transferActionButtonText: { color: '#fff', fontWeight: '600', fontSize: 12 },
+  // Modal button styles
+  modalButton: { flex: 1, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  modalButtonCancel: { backgroundColor: '#10b981', marginRight: 8 },
+  modalButtonCancelText: { color: '#000', fontWeight: '700', fontSize: 16 },
+  modalButtonSave: { backgroundColor: '#2563eb' },
+  modalButtonSaveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
