@@ -60,7 +60,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     }
   };
 
-  const renderTransferItem = (transfer, isFrom24h) => {
+  const renderTransferItem = (transfer, isFrom24h, label) => {
     // Show button if water_added OR moisture_level is missing or 0
     const needsParameters =
       transfer.status === "COMPLETED" &&
@@ -80,6 +80,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   ? `Bin ${transfer.source_bin_id} → Bin ${transfer.destination_bin_id}`
                   : `To Bin ${transfer.destination_bin_id}`}
               </Text>
+              <Text style={styles.typeLabel}>{label}</Text>
               <Text style={styles.transferTime}>
                 {transfer.transfer_start_time
                   ? formatISTDateTime(transfer.transfer_start_time)
@@ -93,18 +94,13 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   backgroundColor:
                     transfer.status === "COMPLETED"
                       ? colors.success
-                      : colors.warning,
+                      : transfer.status === "IN_PROGRESS"
+                      ? colors.warning
+                      : colors.primaryLight,
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  {
-                    color: transfer.status === "COMPLETED" ? "#fff" : "#fff",
-                  },
-                ]}
-              >
+              <Text style={styles.statusPillText}>
                 {transfer.status}
               </Text>
             </View>
@@ -154,6 +150,11 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     );
   };
 
+  // Filter 12-hour transfers that are COMPLETED or IN_PROGRESS
+  const active12hTransfers = (order.transfers12h || []).filter(
+    (t) => t.status === "COMPLETED" || t.status === "IN_PROGRESS"
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.headerBar}>
@@ -189,22 +190,22 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
         {/* Stats Section */}
         <View style={styles.statsSection}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={styles.statLabel}>24h Total</Text>
             <Text style={styles.statValue}>{order.totalCount}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Completed</Text>
+            <Text style={styles.statLabel}>24h Completed</Text>
             <Text style={styles.statValue}>{order.completedCount}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>24h Pending</Text>
             <Text style={styles.statValue}>
               {order.totalCount - order.completedCount}
             </Text>
           </View>
         </View>
 
-        {/* Transfer List */}
+        {/* 24-Hour Transfer List */}
         {order.transfers24h.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -215,7 +216,23 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               </Text>
             </View>
             <View style={styles.transfersList}>
-              {order.transfers24h.map((t) => renderTransferItem(t, true))}
+              {order.transfers24h.map((t) => renderTransferItem(t, true, "24-Hour"))}
+            </View>
+          </View>
+        )}
+
+        {/* 12-Hour Transfer List - Only Active Ones */}
+        {active12hTransfers.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>12-HOUR TRANSFERS</Text>
+              <Text style={styles.sectionBadge}>
+                {active12hTransfers.filter((t) => t.status === "COMPLETED")
+                  .length}/{active12hTransfers.length}
+              </Text>
+            </View>
+            <View style={styles.transfersList}>
+              {active12hTransfers.map((t) => renderTransferItem(t, false, "12-Hour"))}
             </View>
           </View>
         )}
@@ -389,6 +406,12 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 3,
   },
+  typeLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: colors.primary,
+    marginBottom: 2,
+  },
   transferTime: {
     fontSize: 10,
     color: colors.text.secondary,
@@ -403,6 +426,7 @@ const styles = StyleSheet.create({
   statusPillText: {
     fontSize: 10,
     fontWeight: "700",
+    color: "#fff",
   },
   detailsRow: {
     flexDirection: "row",

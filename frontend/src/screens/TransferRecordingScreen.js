@@ -163,19 +163,19 @@ export default function TransferRecordingScreen({ navigation }) {
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Total</Text>
-            <Text style={styles.statValue}>{order.totalCount}</Text>
+            <Text style={styles.statLabel}>24h | 12h</Text>
+            <Text style={styles.statValue}>{order.totalCount} | {order.transfers12h.length}</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Completed</Text>
             <Text style={[styles.statValue, { color: "#059669" }]}>
-              {order.completedCount}
+              {order.completedCount} | {order.transfers12h.filter(t => t.status === "COMPLETED").length}
             </Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Pending</Text>
             <Text style={[styles.statValue, { color: "#f59e0b" }]}>
-              {order.totalCount - order.completedCount}
+              {order.totalCount - order.completedCount} | {order.transfers12h.filter(t => t.status !== "COMPLETED").length}
             </Text>
           </View>
           <View style={styles.statItem}>
