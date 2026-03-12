@@ -71,7 +71,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
           let cellContent = '-';
           try {
             if (col.render) {
-              cellContent = col.render(row);
+              cellContent = col.render(row[col.field || col.key], row);
             } else if (col.type === 'datetime' && row[col.key]) {
               cellContent = formatISTDateTime(row[col.key]);
             } else if (col.type === 'date' && row[col.key]) {
@@ -172,7 +172,7 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
                 let cellContent = '-';
                 try {
                   if (col.render) {
-                    cellContent = col.render(row);
+                    cellContent = col.render(row[col.field || col.key], row);
                   } else if (col.type === 'datetime' && row[col.key]) {
                     cellContent = formatISTDateTime(row[col.key]);
                   } else if (col.type === 'date' && row[col.key]) {
