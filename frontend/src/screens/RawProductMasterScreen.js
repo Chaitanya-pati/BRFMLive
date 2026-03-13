@@ -119,7 +119,7 @@ export default function RawProductMasterScreen({ navigation }) {
   const columns = [
     { key: 'product_name', title: 'Product Name', width: 200 },
     { key: 'product_initial', title: 'Initial', width: 100 },
-    { key: 'created_at', title: 'Created', width: 150, render: (item) => formatISTDate(item.created_at) },
+    { key: 'created_at', title: 'Created', width: 150, render: (val) => formatISTDate(val) },
   ];
 
   const renderActions = (item) => (

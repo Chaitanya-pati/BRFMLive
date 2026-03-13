@@ -228,63 +228,65 @@ export default function DispatchManagementScreen({ navigation }) {
     { key: "dispatch_id", label: "ID" },
     { 
       key: "order_id", 
-      label: "Order", 
-      render: (item) => item.order?.order_code || `Order #${item.order_id}`
+      label: "Order",
+      field: "order_id",
+      render: (val, row) => row.order?.order_code || `Order #${row.order_id}`
     },
     { 
       key: "driver_id", 
-      label: "Driver", 
-      render: (item) => item.driver?.driver_name || `Driver #${item.driver_id}`
+      label: "Driver",
+      field: "driver_id",
+      render: (val, row) => row.driver?.driver_name || `Driver #${row.driver_id}`
     },
     { 
       key: "quantity", 
       label: "Quantity",
-      render: (item) => {
-        if (item.items && item.items.length > 0) {
-          const totalTons = item.items.reduce((acc, i) => acc + (i.dispatched_qty_ton || 0), 0);
-          return `${item.items.length} items | ${totalTons.toFixed(2)} Tons`;
+      field: "dispatch_id",
+      render: (val, row) => {
+        if (row.items && row.items.length > 0) {
+          const totalTons = row.items.reduce((acc, i) => acc + (i.dispatched_qty_ton || 0), 0);
+          return `${row.items.length} items | ${totalTons.toFixed(2)} Tons`;
         }
-        if (item.dispatched_bags > 0) {
-          const bagSizeStr = item.bag_size ? ` (${item.bag_size.weight_kg}kg)` : "";
-          return `${item.dispatched_bags} Bags${bagSizeStr}`;
+        if (row.dispatched_bags > 0) {
+          const bagSizeStr = row.bag_size ? ` (${row.bag_size.weight_kg}kg)` : "";
+          return `${row.dispatched_bags} Bags${bagSizeStr}`;
         }
-        return `${item.dispatched_quantity_ton} Tons`;
+        return `${row.dispatched_quantity_ton || 0} Tons`;
       }
     },
     { key: "status", label: "Status" },
     {
       key: "actions",
       label: "Actions",
-      render: (item) => (
+      field: "dispatch_id",
+      render: (val, row) => (
         <View style={styles.actionButtons}>
           <TouchableOpacity onPress={() => {
-            setEditingDispatch(item);
+            setEditingDispatch(row);
             setFormData({
-              order_id: item.order_id.toString(),
-              driver_id: item.driver_id.toString(),
-              state: item.state || "",
-              city: item.city || "",
-              warehouse_loader: item.warehouse_loader || "",
-              actual_dispatch_date: new Date(item.actual_dispatch_date),
-              delivery_date: item.delivery_date ? new Date(item.delivery_date) : new Date(),
-              status: item.status,
-              remarks: item.remarks || "",
+              order_id: row.order_id.toString(),
+              driver_id: row.driver_id.toString(),
+              state: row.state || "",
+              city: row.city || "",
+              warehouse_loader: row.warehouse_loader || "",
+              actual_dispatch_date: new Date(row.actual_dispatch_date),
+              delivery_date: row.delivery_date ? new Date(row.delivery_date) : new Date(),
+              status: row.status,
+              remarks: row.remarks || "",
             });
             // Map existing items
-            if (item.items && item.items.length > 0) {
-              setDispatchItems(item.items.map(di => {
+            if (row.items && row.items.length > 0) {
+              setDispatchItems(row.items.map(di => {
                 const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
                 const orderedQty = di.order_item?.quantity_ton > 0 
                   ? di.order_item.quantity_ton 
                   : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
 
-                // Get the total dispatched for this order item from the order_item's aggregates
                 const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
                 const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
                 const currentDispatchQty = di.dispatched_qty_ton || 0;
                 const currentDispatchBags = di.dispatched_bags || 0;
                 
-                // Dispatched by OTHER dispatches (not this one being edited)
                 const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
                 const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
                 
@@ -313,7 +315,7 @@ export default function DispatchManagementScreen({ navigation }) {
           }}>
             <FaEdit color={colors.primary} size={18} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDelete(item.dispatch_id)}>
+          <TouchableOpacity onPress={() => handleDelete(row.dispatch_id)}>
             <FaTrash color={colors.error} size={18} />
           </TouchableOpacity>
         </View>

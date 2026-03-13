@@ -244,14 +244,14 @@ export default function ProductionOrderScreen({ navigation }) {
       key: "raw_product",
       label: "Product",
       flex: 1,
-      render: (item) => item.raw_product?.product_name || "N/A",
+      render: (val) => val?.product_name || "N/A",
     },
     {
       key: "quantity",
       label: "Quantity (kg)",
       flex: 1,
       align: "center",
-      render: (item) => `${item.quantity} kg`,
+      render: (val) => `${val} kg`,
     },
     {
       key: "order_date",
@@ -272,14 +272,14 @@ export default function ProductionOrderScreen({ navigation }) {
       label: "Status",
       flex: 1,
       align: "center",
-      render: (item) => (
+      render: (val) => (
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) },
+            { backgroundColor: getStatusColor(val) },
           ]}
         >
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={styles.statusText}>{val}</Text>
         </View>
       ),
     },
