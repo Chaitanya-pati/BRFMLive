@@ -3616,6 +3616,25 @@ def complete_transfer(
         transfer.duration_minutes = int(duration.total_seconds() / 60)
     
     transfer.updated_by = user_id
+
+    # Update bin master quantities for 24-hour transfer
+    if data.quantity_transferred:
+        # Subtract proportionally from production order source bins
+        source_bins = db.query(models.ProductionOrderSourceBin).filter(
+            models.ProductionOrderSourceBin.production_order_id == transfer.production_order_id
+        ).all()
+        total_percentage = sum(sb.blend_percentage for sb in source_bins) or 100.0
+        for sb in source_bins:
+            bin_obj = db.query(models.Bin).filter(models.Bin.id == sb.bin_id).first()
+            if bin_obj:
+                deduct = data.quantity_transferred * (sb.blend_percentage / total_percentage)
+                bin_obj.current_quantity = max(0.0, (bin_obj.current_quantity or 0.0) - deduct)
+
+        # Add to destination bin
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == transfer.destination_bin_id).first()
+        if dest_bin:
+            dest_bin.current_quantity = (dest_bin.current_quantity or 0.0) + data.quantity_transferred
+
     db.commit()
     db.refresh(transfer)
     
@@ -3647,7 +3666,23 @@ def divert_transfer(
         transfer.duration_minutes = int(duration.total_seconds() / 60)
     
     transfer.updated_by = user_id
-    
+
+    # Update bin master quantities for the completed portion of the 24-hour transfer
+    if data.quantity_transferred:
+        source_bins = db.query(models.ProductionOrderSourceBin).filter(
+            models.ProductionOrderSourceBin.production_order_id == transfer.production_order_id
+        ).all()
+        total_percentage = sum(sb.blend_percentage for sb in source_bins) or 100.0
+        for sb in source_bins:
+            bin_obj = db.query(models.Bin).filter(models.Bin.id == sb.bin_id).first()
+            if bin_obj:
+                deduct = data.quantity_transferred * (sb.blend_percentage / total_percentage)
+                bin_obj.current_quantity = max(0.0, (bin_obj.current_quantity or 0.0) - deduct)
+
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == transfer.destination_bin_id).first()
+        if dest_bin:
+            dest_bin.current_quantity = (dest_bin.current_quantity or 0.0) + data.quantity_transferred
+
     # Create new transfer for next destination bin
     # Get the planned quantity for the next bin from the production order destination bins
     dest_bin_config = db.query(models.ProductionOrderDestinationBin).filter(
