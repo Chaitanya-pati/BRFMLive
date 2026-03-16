@@ -487,6 +487,15 @@ export default function GrindingScreen({ navigation }) {
         const response = await client.post("/finished-goods-godown-movement", m);
         console.log("✅ Movement saved:", response.data);
       }
+
+      // Mark the production order as COMPLETED
+      if (selectedBin?.production_order_id) {
+        await client.put(`/production-orders/${selectedBin.production_order_id}`, {
+          status: "COMPLETED",
+        });
+        console.log("✅ Production order marked as COMPLETED:", selectedBin.production_order_id);
+      }
+
       showToast("Success", "Process completed and stock updated in godowns");
       setShowSummary(false);
       setIsGrindingStarted(false);
