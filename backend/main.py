@@ -49,8 +49,8 @@ IST = pytz.timezone('Asia/Kolkata')
 
 
 def get_utc_now():
-    """Get current time in UTC as naive datetime for database storage"""
-    return datetime.utcnow()
+    """Get current time in IST as naive datetime for database storage"""
+    return datetime.now(IST).replace(tzinfo=None)
 
 
 def get_ist_display_now():
@@ -68,10 +68,9 @@ def format_ist_iso(dt):
     if dt is None:
         return None
     if dt.tzinfo is None:
-        utc_dt = dt.replace(tzinfo=pytz.UTC)
+        ist_dt = IST.localize(dt)
     else:
-        utc_dt = dt.astimezone(pytz.UTC)
-    ist_dt = utc_dt.astimezone(IST)
+        ist_dt = dt.astimezone(IST)
     return ist_dt.isoformat()
 
 
