@@ -4151,6 +4151,21 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
                 "production_quantity": h.load_per_hour_tons,
                 "timestamp": h.production_date.isoformat() if h.production_date else None,
                 "branch_id": h.branch_id,
+                "details": [
+                    {
+                        "product_name": d.finished_good.product_name if d.finished_good else f"Product #{d.finished_good_id}",
+                        "quantity_bags": d.quantity_bags,
+                    }
+                    for d in (h.details or [])
+                ],
+                "silo_details": [
+                    {
+                        "product_name": s.finished_good.product_name if s.finished_good else f"Product #{s.finished_good_id}",
+                        "silo_name": s.silo.silo_name if s.silo else f"Silo #{s.silo_id}",
+                        "quantity_kg": s.quantity_kg,
+                    }
+                    for s in (h.silo_details or [])
+                ],
             }
             for h in hourly
         ],

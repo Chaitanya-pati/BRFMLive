@@ -82,7 +82,7 @@ export default function LiveAddScreen({ navigation }) {
 
   if (loading) {
     return (
-      <Layout title="Live Add" navigation={navigation} currentRoute="LiveAdd">
+      <Layout title="Live" navigation={navigation} currentRoute="LiveAdd">
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading live production orders...</Text>
@@ -97,7 +97,7 @@ export default function LiveAddScreen({ navigation }) {
     const hasHourly = detail && detail.hourly_productions && detail.hourly_productions.length > 0;
 
     return (
-      <Layout title="Live Add" navigation={navigation} currentRoute="LiveAdd">
+      <Layout title="Live" navigation={navigation} currentRoute="LiveAdd">
         <ScrollView
           style={[styles.container, isWide && styles.containerWide]}
           showsVerticalScrollIndicator={false}
@@ -169,7 +169,7 @@ export default function LiveAddScreen({ navigation }) {
   const cardWidth = isWide ? Math.min(300, (width - 80) / Math.floor((width - 80) / 280)) : '100%';
 
   return (
-    <Layout title="Live Add" navigation={navigation} currentRoute="LiveAdd">
+    <Layout title="Live" navigation={navigation} currentRoute="LiveAdd">
       <ScrollView
         style={[styles.container, isWide && styles.containerWide]}
         showsVerticalScrollIndicator={false}
@@ -260,6 +260,9 @@ function TransferCard({ record, isWide }) {
 }
 
 function HourlyCard({ record, isWide }) {
+  const hasDetails = record.details && record.details.length > 0;
+  const hasSiloDetails = record.silo_details && record.silo_details.length > 0;
+
   return (
     <View style={styles.recordCard}>
       <View style={[styles.recordGrid, isWide && styles.recordGridWide]}>
@@ -267,6 +270,32 @@ function HourlyCard({ record, isWide }) {
         <RecordField label="Production Qty" value={record.production_quantity != null ? `${record.production_quantity} t` : 'N/A'} />
         <RecordField label="Timestamp" value={record.timestamp ? formatISTDateTime(record.timestamp) : 'N/A'} />
       </View>
+
+      {hasDetails && (
+        <View style={styles.productList}>
+          {record.details.map((d, i) => (
+            <View key={i} style={styles.productRow}>
+              <Text style={styles.productName}>{d.product_name}</Text>
+              <Text style={styles.productQty}>
+                {d.quantity_bags != null ? `${d.quantity_bags} bags` : 'N/A'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {hasSiloDetails && (
+        <View style={styles.productList}>
+          {record.silo_details.map((s, i) => (
+            <View key={i} style={styles.productRow}>
+              <Text style={styles.productName}>{s.product_name}</Text>
+              <Text style={styles.productQty}>
+                {s.quantity_kg != null ? `${s.quantity_kg} kg` : 'N/A'}{s.silo_name ? ` · ${s.silo_name}` : ''}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -437,6 +466,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  productList: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    gap: 6,
+  },
+  productRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productName: { fontSize: 13, color: '#374151', fontWeight: '500', flexShrink: 1 },
+  productQty: { fontSize: 13, color: '#10b981', fontWeight: '700', marginLeft: 8 },
   recordCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
