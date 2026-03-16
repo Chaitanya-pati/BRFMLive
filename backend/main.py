@@ -19,8 +19,7 @@ import models
 import schemas
 import drivers
 import customer_orders
-# from utils.image_utils import get_image_url, save_image_path
-# from utils.datetime_utils import format_ist_iso, parse_datetime
+from utils.datetime_utils import ist_now, format_ist, parse_ist, IST
 
 def get_image_url(path):
     if not path:
@@ -30,7 +29,6 @@ def get_image_url(path):
     return f"/uploads/{path}"
 
 def save_image_path(upload_file):
-    # Mock implementation if needed by endpoints
     return None
 
 
@@ -44,49 +42,21 @@ def get_branch_id(x_branch_id: Optional[str] = Header(None)) -> Optional[int]:
     return None
 
 
-# IST timezone
-IST = pytz.timezone('Asia/Kolkata')
-
-
+# Aliases so all existing callers continue working without changes
 def get_utc_now():
-    """Get current time in IST as naive datetime for database storage"""
-    return datetime.now(IST).replace(tzinfo=None)
-
-
-def get_ist_display_now():
-    """Get current time in IST timezone"""
-    return datetime.now(IST)
-
+    return ist_now()
 
 def get_ist_now():
-    """Deprecated: use get_utc_now(). Get current time in UTC for database storage"""
-    return datetime.utcnow()
+    return ist_now()
 
+def get_ist_display_now():
+    return ist_now()
 
 def format_ist_iso(dt):
-    """Format datetime to ISO string with IST offset (+05:30)"""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        ist_dt = IST.localize(dt)
-    else:
-        ist_dt = dt.astimezone(IST)
-    return ist_dt.isoformat()
-
+    return format_ist(dt)
 
 def parse_ist_datetime(datetime_str):
-    """Parse IST datetime string and return UTC datetime for storage"""
-    if not datetime_str:
-        return None
-    try:
-        dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
-        if dt.tzinfo:
-            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
-        else:
-            ist_dt = IST.localize(dt)
-            return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
-    except:
-        return datetime.utcnow()
+    return parse_ist(datetime_str)
 
 
 def sanitize_float(value):

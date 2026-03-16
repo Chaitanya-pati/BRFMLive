@@ -2,12 +2,7 @@ from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import Optional, List
 from enum import Enum
-# from utils.image_utils import get_image_url
-# from utils.datetime_utils import format_ist_iso, parse_datetime # Missing module
-import pytz
-
-# IST timezone
-IST = pytz.timezone('Asia/Kolkata')
+from utils.datetime_utils import format_ist, parse_ist
 
 def get_image_url(path):
     if not path:
@@ -16,32 +11,12 @@ def get_image_url(path):
         return path
     return f"/uploads/{path}"
 
+# Aliases used by Pydantic json_encoders and validators in this file
 def format_ist_iso(dt):
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        ist_dt = IST.localize(dt)
-    else:
-        ist_dt = dt.astimezone(IST)
-    return ist_dt.isoformat()
+    return format_ist(dt)
 
-def parse_datetime(datetime_str):
-    if not datetime_str:
-        return None
-    from datetime import datetime as dt_class
-    if isinstance(datetime_str, dt_class):
-        if datetime_str.tzinfo:
-            return datetime_str.astimezone(pytz.UTC).replace(tzinfo=None)
-        return datetime_str
-    try:
-        dt = dt_class.fromisoformat(str(datetime_str).replace('Z', '+00:00'))
-        if dt.tzinfo:
-            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
-        else:
-            ist_dt = IST.localize(dt)
-            return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
-    except:
-        return None
+def parse_datetime(value):
+    return parse_ist(value)
 
 class ISTModel(BaseModel):
     """Base model with IST datetime serialization"""

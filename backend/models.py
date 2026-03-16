@@ -4,18 +4,7 @@ from datetime import datetime
 from database import Base
 import enum
 import pytz
-
-# IST timezone helper
-IST = pytz.timezone('Asia/Kolkata')
-UTC = pytz.timezone('UTC')
-
-def get_ist_now():
-    """Get current IST time as naive datetime"""
-    return datetime.now(IST).replace(tzinfo=None)
-
-def get_utc_now():
-    """Get current UTC time as naive datetime"""
-    return datetime.now(UTC).replace(tzinfo=None)
+from utils.datetime_utils import ist_now
 
 class FinishedGoodGranulationTemplate(Base):
     __tablename__ = "finished_good_granulation_template"
@@ -24,7 +13,7 @@ class FinishedGoodGranulationTemplate(Base):
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     columns_definition = Column(JSON, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     finished_good = relationship("FinishedGood")
@@ -36,7 +25,7 @@ class ProductionOrderGranulation(Base):
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     granulation_values = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     production_order = relationship("ProductionOrder")
@@ -53,7 +42,7 @@ class ProductionOrderMaidaResult(Base):
     dry_gluten_percent = Column(Numeric(6, 2))
     wet_gluten_percent = Column(Numeric(6, 2))
     sv_value = Column(Numeric(6, 2))
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     production_order = relationship("ProductionOrder")
@@ -66,29 +55,18 @@ class ProductionOrderExtraction(Base):
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     extraction_percent = Column(Numeric(6, 2), nullable=False)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     production_order = relationship("ProductionOrder")
     finished_good = relationship("FinishedGood")
-IST = pytz.timezone('Asia/Kolkata')
-UTC = pytz.timezone('UTC')
-
-def get_ist_now():
-    """Get current IST time as naive datetime"""
-    return datetime.now(IST).replace(tzinfo=None)
-
-def get_utc_now():
-    """Get current UTC time as naive datetime"""
-    return datetime.now(UTC).replace(tzinfo=None)
-
 class BagSize(Base):
     __tablename__ = "bag_sizes"
     id = Column(Integer, primary_key=True, index=True)
     weight_kg = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
     
     branch = relationship("Branch")
     order_items = relationship("OrderItem", back_populates="bag_size")
@@ -108,9 +86,9 @@ class Customer(Base):
     pin_code = Column(String(10))
     gst_number = Column(String(20))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
     # Removing updated_at temporarily to fix persistent DB error
-    # updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    # updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     orders = relationship("CustomerOrder", back_populates="customer")
@@ -122,7 +100,7 @@ class CustomerOrder(Base):
     order_code = Column(String(50), unique=True, nullable=False)
     customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable=False)
     order_status = Column(String(30), default='PENDING')
-    order_date = Column(DateTime, default=get_utc_now)
+    order_date = Column(DateTime, default=ist_now)
     completed_time = Column(DateTime)
     remarks = Column(Text)
 
@@ -142,7 +120,7 @@ class OrderItem(Base):
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"))
     number_of_bags = Column(Integer)
     price_per_bag = Column(Float)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     branch = relationship("Branch")
     order = relationship("CustomerOrder", back_populates="items")
@@ -156,8 +134,8 @@ class RawProduct(Base):
     product_name = Column(String(255), nullable=False)
     product_initial = Column(String(50), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     production_orders = relationship("ProductionOrder", back_populates="raw_product")
@@ -173,7 +151,7 @@ class Driver(Base):
     city = Column(String(100))
     state = Column(String(100))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     branch = relationship("Branch")
     dispatches = relationship("Dispatch", back_populates="driver")
@@ -195,7 +173,7 @@ class Dispatch(Base):
     status = Column(String(30), default='DISPATCHED') # DISPATCHED, DELIVERED, PARTIAL, CANCELLED
     driver_photo = Column(Text)
     remarks = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     branch = relationship("Branch")
     order = relationship("CustomerOrder", back_populates="dispatches")
@@ -213,7 +191,7 @@ class DispatchItem(Base):
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=True)
     dispatched_bags = Column(Integer, nullable=True)
     item_status = Column(String(30), default='DELIVERED') # Status of this specific dispatch item
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     dispatch = relationship("Dispatch", back_populates="items")
     order_item = relationship("OrderItem", back_populates="dispatch_items")
@@ -231,7 +209,7 @@ class HourlyProduction(Base):
     reprocess = Column(Float)
     refraction = Column(Float)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     production_order = relationship("ProductionOrder")
     details = relationship("HourlyProductionDetail", back_populates="hourly_production")
@@ -257,7 +235,7 @@ class HourlyProductionSilo(Base):
     silo_id = Column(Integer, ForeignKey("silo_master.silo_id"), nullable=False)
     quantity_kg = Column(Float, nullable=False)
     moisture_percent = Column(Float)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
     hourly_production = relationship("HourlyProduction", back_populates="silo_details")
     finished_good = relationship("FinishedGood")
@@ -300,8 +278,8 @@ class Supplier(Base):
     zip_code = Column(String(20))
     gstin = Column(String(15))
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     vehicle_entries = relationship("VehicleEntry", back_populates="supplier")
@@ -315,7 +293,7 @@ class VehicleEntry(Base):
     bill_no = Column(String(100), nullable=False)
     driver_name = Column(String(255))
     driver_phone = Column(String(20))
-    arrival_time = Column(DateTime, default=get_utc_now)
+    arrival_time = Column(DateTime, default=ist_now)
     empty_weight = Column(Float, default=0.0)
     gross_weight = Column(Float, default=0.0)
     supplier_bill_photo = Column(LargeBinary)
@@ -328,8 +306,8 @@ class VehicleEntry(Base):
     transportation_copy = Column(LargeBinary)
     notes = Column(Text)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     supplier = relationship("Supplier", back_populates="vehicle_entries")
@@ -340,7 +318,7 @@ class LabTest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     vehicle_entry_id = Column(Integer, ForeignKey("vehicle_entries.id"), nullable=False)
-    test_date = Column(DateTime, default=get_utc_now)
+    test_date = Column(DateTime, default=ist_now)
 
     wheat_variety = Column(String(100))
     bill_number = Column(String(100))
@@ -383,8 +361,8 @@ class LabTest(Base):
     raise_claim = Column(Integer, default=0)
     branch_id = Column(Integer, ForeignKey("branches.id"))
 
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     vehicle_entry = relationship("VehicleEntry", back_populates="lab_tests")
@@ -399,9 +377,9 @@ class Claim(Base):
     claim_type = Column(Enum(ClaimType), nullable=True)
     claim_amount = Column(Float, nullable=True)
     claim_status = Column(Enum(ClaimStatus), default=ClaimStatus.OPEN, nullable=False)
-    claim_date = Column(DateTime, default=get_utc_now)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    claim_date = Column(DateTime, default=ist_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     lab_test = relationship("LabTest", back_populates="claims")
 
@@ -413,8 +391,8 @@ class GodownMaster(Base):
     type = Column(String(50), nullable=False)
     current_storage = Column(Float, default=0.0)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     unloading_entries = relationship("UnloadingEntry", back_populates="godown")
@@ -431,8 +409,8 @@ class SiloMaster(Base):
     status = Column(String(20), nullable=False, default='Active')
     last_cleaning_date = Column(DateTime)
     remarks = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
     branch_id = Column(Integer, ForeignKey("branches.id"))
 
 class UnloadingEntry(Base):
@@ -449,13 +427,13 @@ class UnloadingEntry(Base):
     before_unloading_image = Column(String(500))
     after_unloading_image = Column(String(500))
 
-    unloading_start_time = Column(DateTime, default=get_utc_now)
-    unloading_end_time = Column(DateTime, default=get_utc_now)
+    unloading_start_time = Column(DateTime, default=ist_now)
+    unloading_end_time = Column(DateTime, default=ist_now)
     notes = Column(Text)
     branch_id = Column(Integer, ForeignKey("branches.id"))
 
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     vehicle_entry = relationship("VehicleEntry")
@@ -472,8 +450,8 @@ class Bin(Base):
     bin_type = Column(String(50))
     status = Column(String(20), default="Active", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     source_bins = relationship("ProductionOrderSourceBin", back_populates="bin", cascade="all, delete-orphan")
@@ -496,7 +474,7 @@ class FinishedGoodsGodownMaster(Base):
     capacity_bags = Column(Integer)
     location = Column(String(200))
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     stock = relationship("FinishedGoodsGodownStock", back_populates="godown", cascade="all, delete-orphan")
@@ -509,7 +487,7 @@ class FinishedGoodsGodownStock(Base):
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
     quantity_bags = Column(Integer, default=0, nullable=False)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now, nullable=False)
 
     branch = relationship("Branch")
     godown = relationship("FinishedGoodsGodownMaster", back_populates="stock")
@@ -528,7 +506,7 @@ class FinishedGoodsGodownMovement(Base):
     quantity_bags = Column(Integer, nullable=False)
     reference_id = Column(Integer)
     remarks = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
 
     branch = relationship("Branch")
     from_godown = relationship("FinishedGoodsGodownMaster", foreign_keys=[from_godown_id])
@@ -544,8 +522,8 @@ class Magnet(Base):
     description = Column(Text)
     status = Column(String(20), default="Active", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
 
@@ -560,8 +538,8 @@ class Machine(Base):
     description = Column(Text)
     status = Column(String(20), default="Active", nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
 
@@ -574,8 +552,8 @@ class RouteMagnetMapping(Base):
     source_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=True)
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     magnet = relationship("Magnet")
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
@@ -589,8 +567,8 @@ class RouteConfiguration(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     stages = relationship("RouteStage", back_populates="route", cascade="all, delete-orphan", order_by="RouteStage.sequence_no")
@@ -604,8 +582,8 @@ class RouteStage(Base):
     component_type = Column(String(20), nullable=False)
     component_id = Column(Integer, nullable=False)
     interval_hours = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     route = relationship("RouteConfiguration", back_populates="stages")
 
@@ -617,7 +595,7 @@ class TransferSession(Base):
     destination_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     current_bin_id = Column(Integer, ForeignKey("bins.id"), nullable=True)
     magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=True)
-    start_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
+    start_timestamp = Column(DateTime, default=ist_now, nullable=False)
     current_bin_start_timestamp = Column(DateTime, nullable=True)
     stop_timestamp = Column(DateTime, nullable=True)
     transferred_quantity = Column(Float, nullable=True)
@@ -625,8 +603,8 @@ class TransferSession(Base):
     status = Column(String(20), default="active", nullable=False)
     cleaning_interval_hours = Column(Integer, default=3, nullable=False)
     notes = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     source_godown = relationship("GodownMaster", foreign_keys=[source_godown_id])
     destination_bin = relationship("Bin", foreign_keys=[destination_bin_id], back_populates="transfer_sessions_dest")
@@ -645,8 +623,8 @@ class TransferSessionMagnet(Base):
     magnet_id = Column(Integer, ForeignKey("magnets.id"), nullable=False)
     cleaning_interval_hours = Column(Float, nullable=False)
     sequence_no = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     transfer_session = relationship("TransferSession", back_populates="session_magnets")
     magnet = relationship("Magnet")
@@ -661,8 +639,8 @@ class BinTransfer(Base):
     end_timestamp = Column(DateTime, nullable=True)
     quantity = Column(Float, nullable=True)
     sequence = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     transfer_session = relationship("TransferSession", back_populates="bin_transfers")
     bin = relationship("Bin", back_populates="transfers")
@@ -673,12 +651,12 @@ class MagnetCleaningRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     magnet_id = Column(Integer, ForeignKey("magnets.id", ondelete="CASCADE"), nullable=False, index=True)
     transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id", ondelete="SET NULL"), nullable=True, index=True)
-    cleaning_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
+    cleaning_timestamp = Column(DateTime, default=ist_now, nullable=False)
     before_cleaning_photo = Column(String(500))
     after_cleaning_photo = Column(String(500))
     notes = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     magnet = relationship("Magnet")
     transfer_session = relationship("TransferSession", back_populates="cleaning_records")
@@ -691,11 +669,11 @@ class WasteEntry(Base):
     godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
     waste_weight = Column(Float, nullable=False)
     waste_type = Column(String(100))
-    recorded_timestamp = Column(DateTime, default=get_utc_now, nullable=False)
+    recorded_timestamp = Column(DateTime, default=ist_now, nullable=False)
     recorded_by = Column(String(255))
     notes = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     transfer_session = relationship("TransferSession")
     godown = relationship("GodownMaster")
@@ -706,8 +684,8 @@ class Branch(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True)
     description = Column(Text)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     users = relationship("User", secondary="user_branches", back_populates="branches")
 
@@ -717,7 +695,7 @@ class UserBranch(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
 
 class User(Base):
     __tablename__ = "users"
@@ -729,8 +707,8 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(50))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branches = relationship("Branch", secondary="user_branches", back_populates="users")
 
@@ -741,8 +719,8 @@ class FinishedGood(Base):
     product_name = Column(String(255), nullable=False)
     product_initial = Column(String(10), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
 
@@ -760,12 +738,12 @@ class ProductionOrder(Base):
     order_number = Column(String(100), nullable=False, unique=True)
     raw_product_id = Column(Integer, ForeignKey("raw_products.id"), nullable=False)
     quantity = Column(Float, nullable=False)
-    order_date = Column(DateTime, default=get_utc_now)
+    order_date = Column(DateTime, default=ist_now)
     target_finish_date = Column(DateTime, nullable=False)
     status = Column(Enum(ProductionOrderStatus), default=ProductionOrderStatus.CREATED, nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     branch = relationship("Branch")
     raw_product = relationship("RawProduct", back_populates="production_orders")
@@ -780,8 +758,8 @@ class ProductionOrderSourceBin(Base):
     bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     blend_percentage = Column(Float, nullable=False)
     quantity = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     production_order = relationship("ProductionOrder", back_populates="source_bins")
     bin = relationship("Bin", back_populates="source_bins")
@@ -793,8 +771,8 @@ class ProductionOrderDestinationBin(Base):
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
     bin_id = Column(Integer, ForeignKey("bins.id"), nullable=False)
     quantity = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     production_order = relationship("ProductionOrder", back_populates="destination_bins")
     bin = relationship("Bin", back_populates="destination_bins")
@@ -828,8 +806,8 @@ class TransferRecording(Base):
     water_added = Column(Float)
     moisture_level = Column(Float)
     branch_id = Column(Integer, ForeignKey("branches.id"))
-    created_at = Column(DateTime, default=get_utc_now)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
     created_by = Column(Integer, ForeignKey("users.id"))
     updated_by = Column(Integer, ForeignKey("users.id"))
 
@@ -856,8 +834,8 @@ class Transfer12HourRecord(Base):
     transfer_start_time = Column(DateTime)
     transfer_end_time = Column(DateTime)
     created_by = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=get_utc_now, nullable=False)
-    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
+    created_at = Column(DateTime, default=ist_now, nullable=False)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now, nullable=False)
     transfer_type = Column(String(50))
     branch_id = Column(Integer, ForeignKey("branches.id"))
     production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False)
