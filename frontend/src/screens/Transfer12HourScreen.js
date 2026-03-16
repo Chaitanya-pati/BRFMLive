@@ -79,6 +79,11 @@ export default function Transfer12HourScreen({ navigation }) {
   const [showStopModal, setShowStopModal] = useState(false);
   const [selectedTransferToStop, setSelectedTransferToStop] = useState(null);
   const [stoppingTransfer, setStoppingTransfer] = useState(false);
+
+  // Divert destination selection modal state
+  const [showDivertDestModal, setShowDivertDestModal] = useState(false);
+  const [divertNewDestBin, setDivertNewDestBin] = useState("");
+  const [divertingTransfer, setDivertingTransfer] = useState(false);
   
   // Track active transfer being viewed in TRANSFER_ACTIVE stage
   const [activeTransferRecord, setActiveTransferRecord] = useState(null);
@@ -430,6 +435,14 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
+    if (pendingStatus === "DIVERTED") {
+      // For divert: close params modal and open destination bin selection
+      setShowDataModal(false);
+      setDivertNewDestBin("");
+      setShowDivertDestModal(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const client = getApiClient();
@@ -441,31 +454,56 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_end_time: new Date().toISOString()
       });
 
-      showToast("Success", `Transfer ${pendingStatus.toLowerCase()}`);
-      
-      const statusWasDiverted = pendingStatus === "DIVERTED";
-      
-      // Reset data entry fields
+      showToast("Success", "Transfer completed");
+
       setTransferQuantity("");
       setWaterAdded("");
       setMoistureLevel("");
       setShowDataModal(false);
-      
-      if (statusWasDiverted) {
-        // If diverted, go back to configuration to select NEW destination
-        // Keep selected order and source bin, but reset destination
-        setSelectedDestinationBin(null);
-        setSpecialDestinationBin(null);
-        setStage(STAGES.CONFIGURE_BINS);
-      } else {
-        // If completed, go back to order selection or records
-        handleGoBack();
-        fetchSessions();
-      }
+
+      // Completed: go back to order selection
+      handleGoBack();
+      fetchSessions();
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to update transfer");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmDivert = async () => {
+    if (!divertNewDestBin) {
+      showAlert("Validation Error", "Please select a destination bin");
+      return;
+    }
+
+    setDivertingTransfer(true);
+    try {
+      const client = getApiClient();
+      const response = await client.post(
+        `/12hour-transfer/records/${currentRecordId}/divert/${divertNewDestBin}`,
+        {
+          quantity_transferred: parseFloat(transferQuantity),
+          water_added: waterAdded ? parseFloat(waterAdded) : null,
+          moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
+        }
+      );
+
+      // New record created — update state to reflect it
+      const newRecord = response.data;
+      setCurrentRecordId(newRecord.id);
+      setSelectedDestinationBin(newRecord.destination_bin_id?.toString() || "");
+      setTimer(0);
+      setTransferQuantity("");
+      setWaterAdded("");
+      setMoistureLevel("");
+      setShowDivertDestModal(false);
+      showToast("Success", "Transfer diverted. New transfer started.");
+      fetchSessions();
+    } catch (error) {
+      showAlert("Error", error.response?.data?.detail || "Failed to divert transfer");
+    } finally {
+      setDivertingTransfer(false);
     }
   };
 
@@ -763,11 +801,51 @@ export default function Transfer12HourScreen({ navigation }) {
                   style={{flex: 1, marginRight: 8}}
                 />
                 <Button 
-                  title="Save & Proceed" 
+                  title={pendingStatus === "DIVERTED" ? "Next: Select Bin" : "Save & Proceed"}
                   onPress={handleSaveAndAction} 
                   loading={loading}
                   style={{flex: 1}}
                 />
+              </View>
+            </Card>
+          </View>
+        </Modal>
+
+        {/* Divert — Destination Bin Selection Modal */}
+        <Modal visible={showDivertDestModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Card style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select New Destination Bin</Text>
+              <Text style={styles.modalSubtitle}>
+                The current transfer will be stopped and a new transfer will start to the selected bin using the same source bin.
+              </Text>
+
+              <SelectDropdown
+                label="Destination Bin"
+                value={divertNewDestBin}
+                onValueChange={(val) => setDivertNewDestBin(val)}
+                options={destinationBins
+                  .filter(b => b.id.toString() !== (activeTransferRecord?.destination_bin_id?.toString() || selectedDestinationBin))
+                  .map(b => ({ label: b.bin_number, value: b.id.toString() }))}
+                placeholder="Select destination bin"
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => setShowDivertDestModal(false)}
+                >
+                  <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonSave, divertingTransfer && { opacity: 0.7 }]}
+                  onPress={handleConfirmDivert}
+                  disabled={divertingTransfer}
+                >
+                  <Text style={styles.modalButtonSaveText}>
+                    {divertingTransfer ? "Diverting..." : "Confirm Divert"}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </Card>
           </View>
