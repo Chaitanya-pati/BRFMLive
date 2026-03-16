@@ -29,17 +29,20 @@ def format_ist_iso(dt):
 def parse_datetime(datetime_str):
     if not datetime_str:
         return None
+    from datetime import datetime as dt_class
+    if isinstance(datetime_str, dt_class):
+        if datetime_str.tzinfo:
+            return datetime_str.astimezone(pytz.UTC).replace(tzinfo=None)
+        return datetime_str
     try:
-        from datetime import datetime
-        dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+        dt = dt_class.fromisoformat(str(datetime_str).replace('Z', '+00:00'))
         if dt.tzinfo:
             return dt.astimezone(pytz.UTC).replace(tzinfo=None)
         else:
             ist_dt = IST.localize(dt)
             return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
     except:
-        from datetime import datetime
-        return datetime.utcnow()
+        return None
 
 class ISTModel(BaseModel):
     """Base model with IST datetime serialization"""

@@ -63,17 +63,13 @@ export default function TransferRecordingScreen({ navigation }) {
           // Only count 24-hour transfers for the details screen
           const allTransfers = transfers24h;
 
-          if (allTransfers.length === 0) {
-            return null; // Skip orders with no transfers
-          }
-
           // Calculate combined status (based on 24-hour transfers only)
           const completedCount = allTransfers.filter(
             (t) => t.status === "COMPLETED"
           ).length;
           const totalCount = allTransfers.length;
 
-          let combinedStatus = "CREATED";
+          let combinedStatus = "PLANNED";
           if (totalCount > 0) {
             if (completedCount === totalCount) {
               combinedStatus = "COMPLETED";
@@ -94,7 +90,6 @@ export default function TransferRecordingScreen({ navigation }) {
             combinedStatus,
           };
         })
-        .filter((order) => order !== null)
         // Sort by created_at descending
         .sort((a, b) => {
           const dateA = new Date(a.created_at || 0);
