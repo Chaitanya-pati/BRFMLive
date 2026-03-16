@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 import enum
-import pytz
 from utils.datetime_utils import ist_now
 
 class FinishedGoodGranulationTemplate(Base):

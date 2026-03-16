@@ -12,7 +12,6 @@ import os
 import uuid
 from pathlib import Path
 import math
-import pytz
 
 from database import engine, get_db, Base
 import models
@@ -2403,7 +2402,6 @@ async def create_magnet_cleaning_record(
         after_cleaning_photo: Optional[UploadFile] = File(None),
         db: Session = Depends(get_db)):
     from datetime import timedelta
-    import pytz
 
     # Validate magnet exists
     magnet = db.query(
@@ -2449,13 +2447,11 @@ async def create_magnet_cleaning_record(
     db.commit()
     db.refresh(db_record)
 
-    # Convert saved UTC timestamp back to IST for logging
-    saved_ist = pytz.UTC.localize(db_record.cleaning_timestamp).astimezone(IST)
+    # Convert saved timestamp to IST for logging
+    saved_ist_str = format_ist(db_record.cleaning_timestamp)
     print(f"   ✅ Created record ID {db_record.id}")
-    print(f"   ✅ Saved timestamp (UTC): {db_record.cleaning_timestamp}")
-    print(
-        f"   ✅ Saved timestamp (IST): {saved_ist.strftime('%Y-%m-%d %I:%M:%S %p IST')}"
-    )
+    print(f"   ✅ Saved timestamp: {db_record.cleaning_timestamp}")
+    print(f"   ✅ Saved timestamp (IST): {saved_ist_str}")
     print(
         f"   ✅ Returning to frontend: {db_record.cleaning_timestamp.isoformat() if db_record.cleaning_timestamp else 'None'}"
     )
