@@ -3798,6 +3798,31 @@ def get_24hour_transfer_records(
     return records
 
 
+@app.get("/api/12hour-transfer/eligible-production-orders", response_model=List[schemas.ProductionOrderWithProduct])
+def get_eligible_production_orders_for_12hour(
+    branch_id: Optional[int] = Depends(get_branch_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns production orders that have at least one COMPLETED 24-hour transfer record.
+    Only these orders are eligible to appear in the 12-hour transfer selection screen.
+    """
+    completed_po_ids = db.query(models.TransferRecording.production_order_id).filter(
+        models.TransferRecording.status == "COMPLETED"
+    ).distinct().subquery()
+
+    query = db.query(models.ProductionOrder).options(
+        joinedload(models.ProductionOrder.raw_product)
+    ).filter(
+        models.ProductionOrder.id.in_(completed_po_ids)
+    )
+
+    if branch_id:
+        query = query.filter(models.ProductionOrder.branch_id == branch_id)
+
+    return query.order_by(models.ProductionOrder.created_at.desc()).all()
+
+
 @app.post("/api/12hour-transfer/records", response_model=schemas.Transfer12HourRecord)
 def create_12hour_transfer_record(
     record: schemas.Transfer12HourRecordCreate,

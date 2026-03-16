@@ -220,7 +220,7 @@ export default function Transfer12HourScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const response = await client.get("/production-orders");
+      const response = await client.get("/12hour-transfer/eligible-production-orders");
       setProductionOrders(response.data || []);
     } catch (error) {
       showAlert("Error", "Failed to fetch production orders");
