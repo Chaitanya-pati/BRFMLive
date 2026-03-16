@@ -3735,9 +3735,9 @@ def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
                     "water_added": r.water_added,
                     "moisture_level": r.moisture_level,
                     "duration_minutes": r.duration_minutes,
-                    "transfer_start_time": r.transfer_start_time,
-                    "transfer_end_time": r.transfer_end_time,
-                    "created_at": r.created_at
+                    "transfer_start_time": format_ist_iso(r.transfer_start_time) if r.transfer_start_time else None,
+                    "transfer_end_time": format_ist_iso(r.transfer_end_time) if r.transfer_end_time else None,
+                    "created_at": format_ist_iso(r.created_at) if r.created_at else None
                 })
             except Exception:
                 continue
