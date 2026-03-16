@@ -3582,6 +3582,13 @@ def start_transfer(
     if not dest_bin_config:
         raise HTTPException(status_code=404, detail="Destination bin not configured for this order")
     
+    # Mark production order as IN_PROGRESS when the first 24h transfer is started
+    if prod_order.status in (
+        models.ProductionOrderStatus.PLANNED,
+        models.ProductionOrderStatus.CREATED,
+    ):
+        prod_order.status = models.ProductionOrderStatus.IN_PROGRESS
+
     # Create transfer recording
     transfer = models.TransferRecording(
         production_order_id=data.production_order_id,
