@@ -228,7 +228,7 @@ export default function Layout({ children, title, currentRoute }) {
 
 const menuItems = [
     { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: "Home" },
-    { name: "Live Add", route: "LiveAdd", icon: SvgLiveIcon, section: "Home" },
+    { name: "Live", route: "LiveAdd", icon: SvgLiveIcon, section: "Home" },
 
     // Masters Section
     {
