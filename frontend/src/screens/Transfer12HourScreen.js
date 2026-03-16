@@ -426,6 +426,9 @@ export default function Transfer12HourScreen({ navigation }) {
 
   const initiateStopOrDivert = (status) => {
     setPendingStatus(status);
+    setTransferQuantity("");
+    setWaterAdded("");
+    setMoistureLevel("");
     setShowDataModal(true);
   };
 
@@ -454,16 +457,21 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_end_time: new Date().toISOString()
       });
 
-      showToast("Success", "Transfer completed");
+      showToast("Success", "Transfer stopped successfully");
 
       setTransferQuantity("");
       setWaterAdded("");
       setMoistureLevel("");
+      setCurrentRecordId(null);
+      setActiveTransferRecord(null);
       setShowDataModal(false);
 
-      // Completed: go back to order selection
-      handleGoBack();
-      fetchSessions();
+      // Refresh records so the completed card appears immediately in the list
+      await Promise.all([fetch12HourRecords(), fetchSessions()]);
+
+      // Go back to configure bins (not order selection) so the user
+      // can see the newly completed card right away
+      setStage(STAGES.CONFIGURE_BINS);
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to update transfer");
     } finally {
@@ -499,7 +507,8 @@ export default function Transfer12HourScreen({ navigation }) {
       setMoistureLevel("");
       setShowDivertDestModal(false);
       showToast("Success", "Transfer diverted. New transfer started.");
-      fetchSessions();
+      // Refresh both lists so the completed + new cards appear immediately
+      await Promise.all([fetch12HourRecords(), fetchSessions()]);
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to divert transfer");
     } finally {
