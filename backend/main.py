@@ -3654,10 +3654,6 @@ def complete_transfer(
     db.commit()
     db.refresh(transfer)
     
-    # Check if production order can be marked as completed
-    if transfer.production_order_id:
-        check_and_mark_production_order_completed(transfer.production_order_id, db)
-    
     return transfer
 
 
