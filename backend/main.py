@@ -1340,7 +1340,7 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
                 if order.raw_product:
                     raw_product_name = order.raw_product.product_name
                 # Check if production order is completed - exclude from available bins
-                is_completed = order.status == models.ProductionOrderStatus.COMPLETED
+                is_completed = getattr(order.status, "value", order.status) == "COMPLETED"
         
         # Only include bins that are not associated with completed production orders
         if not is_completed:
