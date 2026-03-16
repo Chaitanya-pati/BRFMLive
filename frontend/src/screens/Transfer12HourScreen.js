@@ -62,6 +62,8 @@ export default function Transfer12HourScreen({ navigation }) {
   
   // To track if we need to show parameters modal at start
   const [showStartParamsModal, setShowStartParamsModal] = useState(false);
+  const [missingParamsBinNumber, setMissingParamsBinNumber] = useState("");
+  const [missingParamsList, setMissingParamsList] = useState([]);
   
   // For transfer details display
   const [transfer12hRecords, setTransfer12hRecords] = useState([]);
@@ -344,6 +346,15 @@ export default function Transfer12HourScreen({ navigation }) {
       console.log("Parameters missing, showing capture modal. Has water:", hasWater, "Has moisture:", hasMoisture);
       setWaterAdded(autoDetails?.water_added?.toString() || "");
       setMoistureLevel(autoDetails?.moisture_level?.toString() || "");
+
+      // Build missing parameters info for the modal message
+      const srcBin = sourceBins.find(b => b.id.toString() === source.toString());
+      setMissingParamsBinNumber(srcBin?.bin_number || `Bin #${source}`);
+      const missing = [];
+      if (!hasWater) missing.push("Water Added");
+      if (!hasMoisture) missing.push("Moisture Level");
+      setMissingParamsList(missing);
+
       setShowStartParamsModal(true);
     }
   };
@@ -859,8 +870,10 @@ export default function Transfer12HourScreen({ navigation }) {
       <Modal visible={showStartParamsModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
-            <Text style={styles.modalSubtitle}>Enter water and moisture details</Text>
+            <Text style={styles.modalTitle}>Parameters Not Captured</Text>
+            <Text style={styles.modalSubtitle}>
+              {`For source bin ${missingParamsBinNumber}, the ${missingParamsList.join(" and ")} ${missingParamsList.length === 1 ? "is" : "are"} not captured. Please enter the ${missingParamsList.length === 1 ? "value" : "values"} below.`}
+            </Text>
             
             <InputField
               label="Water Added (Litres)"
