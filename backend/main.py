@@ -3729,6 +3729,9 @@ def get_transfer_history(order_id: int, db: Session = Depends(get_db)):
                     } if r.destination_bin else None,
                     "status": r.status,
                     "quantity_transferred": r.quantity_transferred,
+                    "water_added": r.water_added,
+                    "moisture_level": r.moisture_level,
+                    "duration_minutes": r.duration_minutes,
                     "transfer_start_time": r.transfer_start_time,
                     "transfer_end_time": r.transfer_end_time,
                     "created_at": r.created_at

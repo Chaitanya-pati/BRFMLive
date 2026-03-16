@@ -321,8 +321,8 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             <Section title="COMPLETED" color="#059669">
               {completedTransfers.map((t) => {
                 const needsParams =
-                  (t.water_added == null || t.water_added === 0) ||
-                  (t.moisture_level == null || t.moisture_level === 0);
+                  t.water_added == null ||
+                  t.moisture_level == null;
                 return (
                   <Card key={t.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
