@@ -1325,14 +1325,8 @@ def check_and_mark_production_order_completed(production_order_id: int, db: Sess
     # Check if all 12h transfers are completed
     all_12h_completed = all(t.status == "COMPLETED" for t in transfer_12h) if transfer_12h else True
     
-    # Check if godown stock data exists (check for any hourly production with godown stock)
-    godown_stock_submitted = db.query(models.HourlyProduction).filter(
-        models.HourlyProduction.production_order_id == production_order_id,
-        models.HourlyProduction.godown_stock_submitted == True
-    ).first() is not None
-    
-    # If all conditions are met, mark production order as completed
-    if all_24h_completed and all_12h_completed and godown_stock_submitted:
+    # If all transfer conditions are met, mark production order as completed
+    if all_24h_completed and all_12h_completed:
         production_order = db.query(models.ProductionOrder).filter(
             models.ProductionOrder.id == production_order_id
         ).first()

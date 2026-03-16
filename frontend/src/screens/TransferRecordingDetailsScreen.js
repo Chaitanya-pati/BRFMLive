@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
-  Platform,
 } from "react-native";
 import Card from "../components/Card";
 import Button from "../components/Button";
@@ -17,21 +16,61 @@ import { getApiClient } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
 
+// ----- Live elapsed timer hook -----
+function useElapsedTimer(startTimeStr) {
+  const [elapsed, setElapsed] = useState("");
+  useEffect(() => {
+    if (!startTimeStr) return;
+    const tick = () => {
+      const start = new Date(startTimeStr);
+      const now = new Date();
+      const diffMs = now - start;
+      if (diffMs < 0) { setElapsed("0s"); return; }
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      const s = Math.floor((diffMs % 60000) / 1000);
+      if (h > 0) setElapsed(`${h}h ${m}m ${s}s`);
+      else if (m > 0) setElapsed(`${m}m ${s}s`);
+      else setElapsed(`${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTimeStr]);
+  return elapsed;
+}
+
+// ----- Timer badge component -----
+function TimerBadge({ startTime }) {
+  const elapsed = useElapsedTimer(startTime);
+  return (
+    <View style={styles.timerBadge}>
+      <View style={styles.timerDot} />
+      <Text style={styles.timerText}>{elapsed}</Text>
+    </View>
+  );
+}
+
 export default function TransferRecordingDetailsScreen({ route, navigation }) {
   const { order } = route.params;
 
   const [destBins, setDestBins] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [startingBinId, setStartingBinId] = useState(null); // bin being started
 
-  // Modal state — shared for Start, Complete, and Parameters actions
-  const [modal, setModal] = useState(null);
-  // modal = { type: 'start'|'complete'|'params', transfer?: {}, bin?: {} }
-
+  // Complete modal state
+  const [completeModal, setCompleteModal] = useState(null); // { transfer, plannedQty }
   const [formQty, setFormQty] = useState("");
   const [formWater, setFormWater] = useState("");
   const [formMoisture, setFormMoisture] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Params modal (add water/moisture to completed)
+  const [paramsModal, setParamsModal] = useState(null);
+  const [paramWater, setParamWater] = useState("");
+  const [paramMoisture, setParamMoisture] = useState("");
+  const [savingParams, setSavingParams] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -51,89 +90,67 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     }
   }, [order.id]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // ---------- helpers ----------
+  // ---------- derived state ----------
   const getTransferForBin = (binId) =>
     transfers.find((t) => t.destination_bin_id === binId);
 
-  // Bins from destination config that don't yet have any active/completed record
-  const plannedBins = destBins.filter((db_) => {
-    const existing = getTransferForBin(db_.bin_id);
-    return !existing; // no record at all
-  });
+  const plannedBins = destBins.filter((db_) => !getTransferForBin(db_.bin_id));
+  const inProgressTransfers = transfers.filter((t) => t.status === "IN_PROGRESS");
+  const completedTransfers = transfers.filter((t) => t.status === "COMPLETED");
 
-  const inProgressTransfers = transfers.filter(
-    (t) => t.status === "IN_PROGRESS"
-  );
-
-  const completedTransfers = transfers.filter(
-    (t) => t.status === "COMPLETED"
-  );
-
-  // ---------- Open modals ----------
-  const openStartModal = (bin) => {
-    setFormWater("");
-    setFormMoisture("");
-    setModal({ type: "start", bin });
+  // Helper: find planned qty for a given destination_bin_id
+  const plannedQtyForBin = (binId) => {
+    const b = destBins.find((d) => d.bin_id === binId);
+    return b?.quantity ?? 0;
   };
 
-  const openCompleteModal = (transfer) => {
-    setFormQty("");
-    setFormWater(transfer.water_added?.toString() || "");
-    setFormMoisture(transfer.moisture_level?.toString() || "");
-    setModal({ type: "complete", transfer });
-  };
-
-  const openParamsModal = (transfer) => {
-    setFormWater(transfer.water_added?.toString() || "");
-    setFormMoisture(transfer.moisture_level?.toString() || "");
-    setModal({ type: "params", transfer });
-  };
-
-  const closeModal = () => setModal(null);
-
-  // ---------- Actions ----------
-  const handleStart = async () => {
-    if (!modal?.bin) return;
-    setSaving(true);
+  // ---------- START (no modal — immediate) ----------
+  const handleStart = async (bin) => {
+    setStartingBinId(bin.bin_id);
     try {
       const client = getApiClient();
       await client.post("/transfer/start", {
         production_order_id: order.id,
-        destination_bin_id: modal.bin.bin_id,
-        water_added: formWater ? parseFloat(formWater) : null,
-        moisture_level: formMoisture ? parseFloat(formMoisture) : null,
+        destination_bin_id: bin.bin_id,
       });
-      await showSuccess("Transfer started successfully");
-      closeModal();
+      await showSuccess("Transfer started");
       loadData();
     } catch (err) {
       console.error("Start error:", err);
       showError("Error", err?.response?.data?.detail || "Failed to start transfer");
     } finally {
-      setSaving(false);
+      setStartingBinId(null);
     }
   };
 
+  // ---------- COMPLETE modal ----------
+  const openCompleteModal = (transfer) => {
+    const pq = plannedQtyForBin(transfer.destination_bin_id);
+    setFormQty(pq > 0 ? String(pq) : "");
+    setFormWater(transfer.water_added?.toString() || "");
+    setFormMoisture(transfer.moisture_level?.toString() || "");
+    setCompleteModal({ transfer, plannedQty: pq });
+  };
+
   const handleComplete = async () => {
-    if (!modal?.transfer) return;
-    if (!formQty || isNaN(parseFloat(formQty))) {
+    if (!completeModal) return;
+    const qty = parseFloat(formQty);
+    if (!formQty || isNaN(qty) || qty <= 0) {
       showError("Validation", "Please enter a valid quantity");
       return;
     }
     setSaving(true);
     try {
       const client = getApiClient();
-      await client.post(`/transfer/${modal.transfer.id}/complete`, {
-        quantity_transferred: parseFloat(formQty),
+      await client.post(`/transfer/${completeModal.transfer.id}/complete`, {
+        quantity_transferred: qty,
         water_added: formWater ? parseFloat(formWater) : null,
         moisture_level: formMoisture ? parseFloat(formMoisture) : null,
       });
       await showSuccess("Transfer completed");
-      closeModal();
+      setCompleteModal(null);
       loadData();
     } catch (err) {
       console.error("Complete error:", err);
@@ -143,43 +160,39 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     }
   };
 
+  // ---------- PARAMS modal (add water/moisture to completed) ----------
+  const openParamsModal = (transfer) => {
+    setParamWater(transfer.water_added?.toString() || "");
+    setParamMoisture(transfer.moisture_level?.toString() || "");
+    setParamsModal(transfer);
+  };
+
   const handleSaveParams = async () => {
-    if (!modal?.transfer) return;
-    setSaving(true);
+    if (!paramsModal) return;
+    setSavingParams(true);
     try {
       const client = getApiClient();
-      await client.patch(`/24hour-transfer/records/${modal.transfer.id}`, {
-        water_added: formWater ? parseFloat(formWater) : null,
-        moisture_level: formMoisture ? parseFloat(formMoisture) : null,
+      await client.patch(`/24hour-transfer/records/${paramsModal.id}`, {
+        water_added: paramWater ? parseFloat(paramWater) : null,
+        moisture_level: paramMoisture ? parseFloat(paramMoisture) : null,
       });
       await showSuccess("Parameters saved");
-      closeModal();
+      setParamsModal(null);
       loadData();
     } catch (err) {
       console.error("Params error:", err);
       showError("Error", "Failed to save parameters");
     } finally {
-      setSaving(false);
+      setSavingParams(false);
     }
   };
 
-  const totalCount = transfers.length;
-  const completedCount = completedTransfers.length;
+  // ---------- name helpers ----------
+  const binDisplayName = (bin) =>
+    bin?.bin?.bin_number || `Bin #${bin?.bin_id ?? "?"}`;
 
-  // ---------- Render helpers ----------
-  const binDisplayName = (bin) => {
-    if (bin?.bin) return bin.bin.bin_number || `Bin #${bin.bin_id}`;
-    if (bin?.bin_number) return bin.bin_number;
-    return `Bin #${bin?.bin_id ?? "?"}`;
-  };
-
-  const transferBinName = (t) => {
-    if (t.destination_bin?.bin_number) return t.destination_bin.bin_number;
-    return `Bin #${t.destination_bin_id}`;
-  };
-
-  const statusColor = (s) =>
-    s === "COMPLETED" ? "#059669" : s === "IN_PROGRESS" ? "#f59e0b" : "#3b82f6";
+  const transferBinName = (t) =>
+    t.destination_bin?.bin_number || `Bin #${t.destination_bin_id}`;
 
   // ---------- UI ----------
   return (
@@ -210,20 +223,22 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           <View style={styles.statsRow}>
             <StatBox label="Planned" value={plannedBins.length} color="#3b82f6" />
             <StatBox label="In Progress" value={inProgressTransfers.length} color="#f59e0b" />
-            <StatBox label="Completed" value={completedCount} color="#059669" />
+            <StatBox label="Completed" value={completedTransfers.length} color="#059669" />
             <StatBox label="Total Bins" value={destBins.length} color={colors.primary} />
           </View>
 
-          {/* PLANNED BINS */}
+          {/* ---- PLANNED BINS ---- */}
           {plannedBins.length > 0 && (
             <Section title="PLANNED — NOT STARTED" color="#3b82f6">
               {plannedBins.map((bin) => (
                 <Card key={bin.id} style={styles.itemCard}>
                   <View style={styles.itemRow}>
                     <View style={styles.itemLeft}>
-                      <Text style={styles.itemTitle}>→ {binDisplayName(bin)}</Text>
+                      <Text style={styles.itemTitle}>
+                        Destination: {binDisplayName(bin)}
+                      </Text>
                       <Text style={styles.itemSub}>
-                        Planned Qty: {bin.quantity} kg
+                        Planned Quantity: {bin.quantity} kg
                       </Text>
                     </View>
                     <View style={[styles.statusPill, { backgroundColor: "#3b82f622", borderColor: "#3b82f6" }]}>
@@ -231,36 +246,65 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                     </View>
                   </View>
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: "#3b82f6" }]}
-                    onPress={() => openStartModal(bin)}
+                    style={[styles.actionBtn, { backgroundColor: "#3b82f6", opacity: startingBinId === bin.bin_id ? 0.6 : 1 }]}
+                    onPress={() => handleStart(bin)}
+                    disabled={startingBinId === bin.bin_id}
                   >
-                    <Text style={styles.actionBtnText}>▶ Start Transfer</Text>
+                    {startingBinId === bin.bin_id ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.actionBtnText}>▶ Start Transfer</Text>
+                    )}
                   </TouchableOpacity>
                 </Card>
               ))}
             </Section>
           )}
 
-          {/* IN PROGRESS */}
+          {/* ---- IN PROGRESS ---- */}
           {inProgressTransfers.length > 0 && (
             <Section title="IN PROGRESS" color="#f59e0b">
               {inProgressTransfers.map((t) => (
                 <Card key={t.id} style={styles.itemCard}>
                   <View style={styles.itemRow}>
                     <View style={styles.itemLeft}>
-                      <Text style={styles.itemTitle}>→ {transferBinName(t)}</Text>
+                      <Text style={styles.itemTitle}>
+                        Destination: {transferBinName(t)}
+                      </Text>
                       <Text style={styles.itemSub}>
                         Started: {t.transfer_start_time ? formatISTDateTime(t.transfer_start_time) : "—"}
                       </Text>
                     </View>
-                    <View style={[styles.statusPill, { backgroundColor: "#f59e0b22", borderColor: "#f59e0b" }]}>
-                      <Text style={[styles.statusPillText, { color: "#f59e0b" }]}>IN PROGRESS</Text>
+                    <View style={{ alignItems: "flex-end", gap: 6 }}>
+                      <View style={[styles.statusPill, { backgroundColor: "#f59e0b22", borderColor: "#f59e0b" }]}>
+                        <Text style={[styles.statusPillText, { color: "#f59e0b" }]}>IN PROGRESS</Text>
+                      </View>
+                      {t.transfer_start_time && (
+                        <TimerBadge startTime={t.transfer_start_time} />
+                      )}
                     </View>
                   </View>
+
+                  {/* Transfer details row */}
                   <View style={styles.detailsRow}>
-                    <DetailBox label="Water Added" value={t.water_added != null ? `${t.water_added} L` : "—"} />
-                    <DetailBox label="Moisture" value={t.moisture_level != null ? `${t.moisture_level}%` : "—"} />
+                    <DetailBox
+                      label="Destination Bin"
+                      value={transferBinName(t)}
+                    />
+                    <DetailBox
+                      label="Planned Qty"
+                      value={`${plannedQtyForBin(t.destination_bin_id)} kg`}
+                    />
+                    <DetailBox
+                      label="Water Added"
+                      value={t.water_added != null ? `${t.water_added} L` : "—"}
+                    />
+                    <DetailBox
+                      label="Moisture"
+                      value={t.moisture_level != null ? `${t.moisture_level}%` : "—"}
+                    />
                   </View>
+
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: "#059669" }]}
                     onPress={() => openCompleteModal(t)}
@@ -272,18 +316,20 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             </Section>
           )}
 
-          {/* COMPLETED */}
+          {/* ---- COMPLETED ---- */}
           {completedTransfers.length > 0 && (
             <Section title="COMPLETED" color="#059669">
               {completedTransfers.map((t) => {
                 const needsParams =
-                  (t.water_added === null || t.water_added === 0) ||
-                  (t.moisture_level === null || t.moisture_level === 0);
+                  (t.water_added == null || t.water_added === 0) ||
+                  (t.moisture_level == null || t.moisture_level === 0);
                 return (
                   <Card key={t.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
                       <View style={styles.itemLeft}>
-                        <Text style={styles.itemTitle}>→ {transferBinName(t)}</Text>
+                        <Text style={styles.itemTitle}>
+                          Destination: {transferBinName(t)}
+                        </Text>
                         <Text style={styles.itemSub}>
                           {t.transfer_start_time ? formatISTDateTime(t.transfer_start_time) : "—"}
                           {t.transfer_end_time ? ` → ${formatISTDateTime(t.transfer_end_time)}` : ""}
@@ -294,7 +340,8 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                       </View>
                     </View>
                     <View style={styles.detailsRow}>
-                      <DetailBox label="Quantity" value={t.quantity_transferred != null ? `${t.quantity_transferred} kg` : "—"} />
+                      <DetailBox label="Destination Bin" value={transferBinName(t)} />
+                      <DetailBox label="Qty Transferred" value={t.quantity_transferred != null ? `${t.quantity_transferred} kg` : "—"} />
                       <DetailBox label="Water Added" value={t.water_added != null ? `${t.water_added} L` : "—"} />
                       <DetailBox label="Moisture" value={t.moisture_level != null ? `${t.moisture_level}%` : "—"} />
                     </View>
@@ -318,7 +365,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               <Text style={styles.emptyTitle}>No Transfer Data</Text>
               <Text style={styles.emptySub}>
                 No destination bins have been planned for this order yet.{"\n"}
-                Go to Production Planning to set up bins first.
+                Go to Production Planning to configure bins first.
               </Text>
             </View>
           )}
@@ -327,15 +374,22 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
         </ScrollView>
       )}
 
-      {/* ---- START TRANSFER MODAL ---- */}
-      <Modal visible={modal?.type === "start"} transparent animationType="fade">
+      {/* ---- COMPLETE TRANSFER MODAL ---- */}
+      <Modal visible={!!completeModal} transparent animationType="fade">
         <View style={styles.overlay}>
           <Card style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Start Transfer</Text>
+            <Text style={styles.modalTitle}>Complete Transfer</Text>
             <Text style={styles.modalSub}>
-              Bin: {modal?.bin ? binDisplayName(modal.bin) : ""}{"\n"}
-              Planned Qty: {modal?.bin?.quantity} kg
+              Bin: {completeModal ? transferBinName(completeModal.transfer) : ""}
             </Text>
+
+            <InputField
+              label="Quantity Transferred (kg)"
+              value={formQty}
+              onChangeText={setFormQty}
+              keyboardType="decimal-pad"
+              placeholder="Enter quantity"
+            />
             <InputField
               label="Water Added (Litres) — optional"
               value={formWater}
@@ -351,73 +405,56 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               placeholder="0"
             />
             <View style={styles.modalActions}>
-              <Button title="Cancel" onPress={closeModal} variant="secondary" style={{ flex: 1, marginRight: 8 }} />
-              <Button title="Start" onPress={handleStart} loading={saving} style={{ flex: 1 }} />
-            </View>
-          </Card>
-        </View>
-      </Modal>
-
-      {/* ---- COMPLETE TRANSFER MODAL ---- */}
-      <Modal visible={modal?.type === "complete"} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <Card style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Complete Transfer</Text>
-            <Text style={styles.modalSub}>
-              Bin: {modal?.transfer ? transferBinName(modal.transfer) : ""}
-            </Text>
-            <InputField
-              label="Quantity Transferred (kg)"
-              value={formQty}
-              onChangeText={setFormQty}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-            <InputField
-              label="Water Added (Litres)"
-              value={formWater}
-              onChangeText={setFormWater}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-            <InputField
-              label="Moisture Level (%)"
-              value={formMoisture}
-              onChangeText={setFormMoisture}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-            <View style={styles.modalActions}>
-              <Button title="Cancel" onPress={closeModal} variant="secondary" style={{ flex: 1, marginRight: 8 }} />
-              <Button title="Complete" onPress={handleComplete} loading={saving} style={{ flex: 1 }} />
+              <Button
+                title="Cancel"
+                onPress={() => setCompleteModal(null)}
+                variant="secondary"
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="Complete"
+                onPress={handleComplete}
+                loading={saving}
+                style={{ flex: 1 }}
+              />
             </View>
           </Card>
         </View>
       </Modal>
 
       {/* ---- ADD PARAMS MODAL ---- */}
-      <Modal visible={modal?.type === "params"} transparent animationType="fade">
+      <Modal visible={!!paramsModal} transparent animationType="fade">
         <View style={styles.overlay}>
           <Card style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
             <Text style={styles.modalSub}>Update water and moisture details</Text>
             <InputField
               label="Water Added (Litres)"
-              value={formWater}
-              onChangeText={setFormWater}
+              value={paramWater}
+              onChangeText={setParamWater}
               keyboardType="decimal-pad"
               placeholder="0"
             />
             <InputField
               label="Moisture Level (%)"
-              value={formMoisture}
-              onChangeText={setFormMoisture}
+              value={paramMoisture}
+              onChangeText={setParamMoisture}
               keyboardType="decimal-pad"
               placeholder="0"
             />
             <View style={styles.modalActions}>
-              <Button title="Cancel" onPress={closeModal} variant="secondary" style={{ flex: 1, marginRight: 8 }} />
-              <Button title="Save" onPress={handleSaveParams} loading={saving} style={{ flex: 1 }} />
+              <Button
+                title="Cancel"
+                onPress={() => setParamsModal(null)}
+                variant="secondary"
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="Save"
+                onPress={handleSaveParams}
+                loading={savingParams}
+                style={{ flex: 1 }}
+              />
             </View>
           </Card>
         </View>
@@ -426,6 +463,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   );
 }
 
+// ---------- Sub-components ----------
 function Section({ title, color, children }) {
   return (
     <View style={styles.section}>
@@ -481,14 +519,9 @@ const styles = StyleSheet.create({
   refreshBtnText: { fontSize: 16, color: colors.primary },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-
   content: { flex: 1, padding: 14 },
 
-  statsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
+  statsRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
   statBox: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -532,9 +565,34 @@ const styles = StyleSheet.create({
   },
   statusPillText: { fontSize: 10, fontWeight: "700" },
 
-  detailsRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  timerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef3c7",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#f59e0b",
+  },
+  timerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ef4444",
+  },
+  timerText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#92400e",
+    fontVariant: ["tabular-nums"],
+  },
+
+  detailsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
   detailBox: {
     flex: 1,
+    minWidth: 80,
     backgroundColor: "#f9fafb",
     borderRadius: 6,
     paddingVertical: 8,
@@ -546,9 +604,11 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 12, fontWeight: "700", color: "#374151" },
 
   actionBtn: {
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 40,
   },
   actionBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
@@ -563,11 +623,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  modalCard: {
-    width: "90%",
-    maxWidth: 420,
-    padding: 20,
-  },
+  modalCard: { width: "90%", maxWidth: 420, padding: 20 },
   modalTitle: { fontSize: 16, fontWeight: "700", color: "#111", marginBottom: 4 },
   modalSub: { fontSize: 12, color: "#6b7280", marginBottom: 14, lineHeight: 18 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
