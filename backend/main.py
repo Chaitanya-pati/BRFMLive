@@ -4091,7 +4091,7 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
         if not bin_id:
             return "N/A"
         b = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
-        return b.bin_name if b else f"Bin #{bin_id}"
+        return b.bin_number if b else f"Bin #{bin_id}"
 
     records_24h = (
         db.query(models.TransferRecording)
