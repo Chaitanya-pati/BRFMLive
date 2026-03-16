@@ -43,6 +43,7 @@ import GodownStockViewScreen from './src/screens/GodownStockViewScreen';
 import ProductionOrderGranulationScreen from './src/screens/ProductionOrderGranulationScreen';
 import ProductionOrderTraceabilityScreen from './src/screens/ProductionOrderTraceabilityScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
+import LiveAddScreen from './src/screens/LiveAddScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -163,6 +164,7 @@ export default function App() {
           <Stack.Screen name="GranulationTemplate" component={GranulationTemplateScreen} />
           <Stack.Screen name="ProductionOrderTraceability" component={ProductionOrderTraceabilityScreen} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+          <Stack.Screen name="LiveAdd" component={LiveAddScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

@@ -4043,6 +4043,134 @@ def divert_12hour_transfer(
     db.refresh(new_record)
     return new_record
 
+# =============================================================================
+# LIVE PRODUCTION MONITOR
+# =============================================================================
+
+@app.get("/api/live-production")
+def get_live_production_orders(db: Session = Depends(get_db)):
+    """Returns distinct production orders that have any IN_PROGRESS transfer record."""
+
+    live_map = {}
+
+    rows_24h = (
+        db.query(models.TransferRecording.production_order_id, models.TransferRecording.branch_id)
+        .filter(models.TransferRecording.status == "IN_PROGRESS")
+        .distinct()
+        .all()
+    )
+    for r in rows_24h:
+        live_map[(r.production_order_id, r.branch_id)] = True
+
+    rows_12h = (
+        db.query(models.Transfer12HourRecord.production_order_id, models.Transfer12HourRecord.branch_id)
+        .filter(models.Transfer12HourRecord.status == "IN_PROGRESS")
+        .distinct()
+        .all()
+    )
+    for r in rows_12h:
+        live_map[(r.production_order_id, r.branch_id)] = True
+
+    result = []
+    for (po_id, branch_id) in live_map:
+        po = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == po_id).first()
+        branch = db.query(models.Branch).filter(models.Branch.id == branch_id).first() if branch_id else None
+        result.append({
+            "production_order_id": po_id,
+            "order_number": po.order_number if po else f"PO{po_id}",
+            "branch_id": branch_id,
+            "branch_name": branch.name if branch else (f"Branch {branch_id}" if branch_id else "N/A"),
+            "status": "LIVE",
+        })
+
+    return sorted(result, key=lambda x: x["production_order_id"])
+
+
+@app.get("/api/live-production/{po_id}")
+def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
+    """Returns 24h records, 12h records, and hourly production for a given production order."""
+
+    def bin_name(bin_id):
+        if not bin_id:
+            return "N/A"
+        b = db.query(models.Bin).filter(models.Bin.id == bin_id).first()
+        return b.bin_name if b else f"Bin #{bin_id}"
+
+    records_24h = (
+        db.query(models.TransferRecording)
+        .filter(
+            models.TransferRecording.production_order_id == po_id,
+            models.TransferRecording.status.in_(["IN_PROGRESS", "COMPLETED"]),
+        )
+        .order_by(models.TransferRecording.transfer_start_time)
+        .all()
+    )
+
+    records_12h = (
+        db.query(models.Transfer12HourRecord)
+        .filter(
+            models.Transfer12HourRecord.production_order_id == po_id,
+            models.Transfer12HourRecord.status.in_(["IN_PROGRESS", "COMPLETED"]),
+        )
+        .order_by(models.Transfer12HourRecord.transfer_start_time)
+        .all()
+    )
+
+    hourly = (
+        db.query(models.HourlyProduction)
+        .filter(models.HourlyProduction.production_order_id == po_id)
+        .order_by(models.HourlyProduction.production_date, models.HourlyProduction.production_time)
+        .all()
+    )
+
+    po = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == po_id).first()
+
+    return {
+        "production_order_id": po_id,
+        "order_number": po.order_number if po else f"PO{po_id}",
+        "records_24h": [
+            {
+                "id": r.id,
+                "from_bin": "Input",
+                "to_bin": bin_name(r.destination_bin_id),
+                "start_time": r.transfer_start_time.isoformat() if r.transfer_start_time else None,
+                "end_time": r.transfer_end_time.isoformat() if r.transfer_end_time else None,
+                "quantity_transferred": r.quantity_transferred,
+                "water_added": r.water_added,
+                "moisture": r.moisture_level,
+                "status": r.status,
+                "branch_id": r.branch_id,
+            }
+            for r in records_24h
+        ],
+        "records_12h": [
+            {
+                "id": r.id,
+                "from_bin": bin_name(r.source_bin_id),
+                "to_bin": bin_name(r.destination_bin_id),
+                "start_time": r.transfer_start_time.isoformat() if r.transfer_start_time else None,
+                "end_time": r.transfer_end_time.isoformat() if r.transfer_end_time else None,
+                "quantity_transferred": r.quantity_transferred,
+                "water_added": r.water_added,
+                "moisture": r.moisture_level,
+                "status": r.status,
+                "branch_id": r.branch_id,
+            }
+            for r in records_12h
+        ],
+        "hourly_productions": [
+            {
+                "id": h.id,
+                "hour": h.production_time,
+                "production_quantity": h.load_per_hour_tons,
+                "timestamp": h.production_date.isoformat() if h.production_date else None,
+                "branch_id": h.branch_id,
+            }
+            for h in hourly
+        ],
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

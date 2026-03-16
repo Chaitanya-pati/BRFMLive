@@ -1,0 +1,182 @@
+Create a new View/Page called Live Add.
+
+1. Navigation Placement
+
+Add Live Add directly in the main Navigation Bar.
+
+Do NOT place it inside any TreeView or submenu.
+
+It must appear as a top-level menu item.
+
+2. Purpose of the View
+
+The Live Add view should display currently running production processes.
+
+The system should identify Production Orders where any process is currently live (In_Progress).
+
+Display one card per Production Order ID.
+
+Only show production orders where at least one process is currently in progress.
+
+3. Tables to Check for Live Processes
+
+Check the following tables for records with:
+
+status = 'In_Progress'
+Tables
+
+24hours_transfer_records
+
+12_hours_transfer_records
+
+If a record exists with status = In_Progress, fetch:
+
+production_order_id
+branch_id
+4. Card Display (Initial View)
+
+Display cards like:
+
+-------------------------
+Production Order ID : PO12345
+Branch : B01
+Status : LIVE
+-------------------------
+
+Each card should be clickable.
+
+5. On Card Click → Show Full Process Details
+
+When the user clicks a card:
+
+Fetch all records related to that production_order_id from:
+
+1️⃣ 24 Hours Transfer Records
+
+Table:
+
+24hours_transfer_records
+
+Show details in order:
+
+From Bin
+To Bin
+Start Time
+End Time
+Quantity Transferred
+Water Added
+Moisture
+Status
+Branch ID
+
+Display completed + in_progress records.
+
+2️⃣ 12 Hours Transfer Records
+
+Table:
+
+12_hours_transfer_records
+
+Show details:
+
+From Bin
+To Bin
+Start Time
+End Time
+Quantity Transferred
+Water Added
+Moisture
+Status
+Branch ID
+
+Again show completed + in_progress records.
+
+3️⃣ Hourly Production Details
+
+Check table:
+
+hourly_productions
+
+If records exist for the same:
+
+production_order_id
+branch_id
+
+Display:
+
+Hour
+Production Quantity
+Operator
+Timestamp
+Branch ID
+6. Display Order (Very Important)
+
+The details must be displayed in this exact sequence:
+
+1️⃣ 24 Hours Transfer Details
+2️⃣ 12 Hours Transfer Details
+3️⃣ Hourly Production Details
+7. Additional Rules
+
+Include Branch ID in all sections.
+
+Show both Completed and In_Progress processes for the selected production order.
+
+If no hourly production exists, display:
+
+"No hourly production recorded yet"
+8. UI Layout Suggestion
+First Screen
+
+Grid of Cards
+
+[ PO101 | Branch 1 | LIVE ]
+[ PO102 | Branch 2 | LIVE ]
+[ PO108 | Branch 1 | LIVE ]
+After Click
+
+Detailed Process Timeline
+
+Production Order : PO101
+Branch : 1
+
+---- 24 HOURS TRANSFER ----
+Bin A → Bin B
+Quantity : 500kg
+Water Added : 20L
+Moisture : 14%
+Status : Completed
+
+---- 12 HOURS TRANSFER ----
+Bin B → Bin C
+Quantity : 500kg
+Water Added : 10L
+Moisture : 13%
+Status : In Progress
+
+---- HOURLY PRODUCTION ----
+10:00 → 120kg
+11:00 → 140kg
+12:00 → 135kg
+9. Performance Optimization
+
+Use queries like:
+
+SELECT DISTINCT production_order_id, branch_id
+FROM 24hours_transfer_records
+WHERE status = 'In_Progress'
+
+UNION
+
+SELECT DISTINCT production_order_id, branch_id
+FROM 12_hours_transfer_records
+WHERE status = 'In_Progress'
+10. Expected Result
+
+The page acts like a Live Production Monitor where users can instantly see:
+
+Which production orders are currently active
+
+Which process stage is running
+
+All transfer + production details

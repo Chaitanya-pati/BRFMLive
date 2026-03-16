@@ -29,6 +29,7 @@ import {
   FaUserCog, // For Branch Master Admin Icon
   FaTag,
   FaChartBar,
+  FaCircle,
 } from "react-icons/fa";
 import { Checkbox } from 'react-native-web'; // Assuming a checkbox component for web
 
@@ -174,6 +175,15 @@ const SvgChartIcon = ({ active }) => {
   );
 };
 
+const SvgLiveIcon = ({ active }) => {
+  const color = active ? "#ffffff" : "#ef4444";
+  return (
+    <View style={styles.iconContainer}>
+      <FaCircle color={color} size={12} />
+    </View>
+  );
+};
+
 export default function Layout({ children, title, currentRoute }) {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
@@ -218,7 +228,8 @@ export default function Layout({ children, title, currentRoute }) {
 
 const menuItems = [
     { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: "Home" },
-    
+    { name: "Live Add", route: "LiveAdd", icon: SvgLiveIcon, section: "Home" },
+
     // Masters Section
     {
       name: "Masters",
@@ -549,7 +560,9 @@ const menuItems = [
           <View style={styles.sidebarHeader} />
 
           <ScrollView style={styles.menuContainer}>
-            {renderMenuItem(menuItems[0], 0)}
+            {menuItems
+              .filter(item => item.section === "Home")
+              .map((item, index) => renderMenuItem(item, index))}
 
             {/* Section Divider for Operations, only show if sidebar is not collapsed or menu is open */}
             {(!sidebarCollapsed || mobileMenuOpen) && (
