@@ -4046,41 +4046,28 @@ def divert_12hour_transfer(
 
 @app.get("/api/live-production")
 def get_live_production_orders(db: Session = Depends(get_db)):
-    """Returns distinct production orders that have any IN_PROGRESS transfer record."""
+    """Returns production orders whose status is not PLANNED or COMPLETED."""
 
-    live_map = {}
-
-    rows_24h = (
-        db.query(models.TransferRecording.production_order_id, models.TransferRecording.branch_id)
-        .filter(models.TransferRecording.status == "IN_PROGRESS")
-        .distinct()
+    live_orders = (
+        db.query(models.ProductionOrder)
+        .filter(
+            models.ProductionOrder.status.notin_(["PLANNED", "COMPLETED"])
+        )
+        .order_by(models.ProductionOrder.id)
         .all()
     )
-    for r in rows_24h:
-        live_map[(r.production_order_id, r.branch_id)] = True
-
-    rows_12h = (
-        db.query(models.Transfer12HourRecord.production_order_id, models.Transfer12HourRecord.branch_id)
-        .filter(models.Transfer12HourRecord.status == "IN_PROGRESS")
-        .distinct()
-        .all()
-    )
-    for r in rows_12h:
-        live_map[(r.production_order_id, r.branch_id)] = True
 
     result = []
-    for (po_id, branch_id) in live_map:
-        po = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == po_id).first()
-        branch = db.query(models.Branch).filter(models.Branch.id == branch_id).first() if branch_id else None
+    for po in live_orders:
+        branch = db.query(models.Branch).filter(models.Branch.id == po.branch_id).first() if po.branch_id else None
         result.append({
-            "production_order_id": po_id,
-            "order_number": po.order_number if po else f"PO{po_id}",
-            "branch_id": branch_id,
-            "branch_name": branch.name if branch else (f"Branch {branch_id}" if branch_id else "N/A"),
+            "production_order_id": po.id,
+            "order_number": po.order_number,
+            "branch_name": branch.name if branch else (f"Branch {po.branch_id}" if po.branch_id else "N/A"),
             "status": "LIVE",
         })
 
-    return sorted(result, key=lambda x: x["production_order_id"])
+    return result
 
 
 @app.get("/api/live-production/{po_id}")
