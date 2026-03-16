@@ -644,19 +644,30 @@ export default function GrindingScreen({ navigation }) {
     try {
       const client = getApiClient();
       const transferRecords = await client.get("/12hour-transfer/records");
-      const matchingRecord = (transferRecords.data || []).find(
+      const allRecords = transferRecords.data || [];
+      const matchingRecord = allRecords.find(
         (r) =>
           Number(r.destination_bin_id) === Number(bin.id) &&
           Number(r.production_order_id) === Number(bin.production_order_id) &&
           r.status === "IN_PROGRESS",
       );
+      const latestRecord = allRecords
+        .filter(
+          (r) =>
+            Number(r.destination_bin_id) === Number(bin.id) &&
+            Number(r.production_order_id) === Number(bin.production_order_id),
+        )
+        .sort((a, b) => b.id - a.id)[0];
+      const recordWithParams = latestRecord;
       if (
-        matchingRecord &&
-        matchingRecord.moisture_level !== null &&
-        matchingRecord.water_added !== null
+        recordWithParams &&
+        recordWithParams.moisture_level !== null &&
+        recordWithParams.moisture_level !== undefined &&
+        recordWithParams.water_added !== null &&
+        recordWithParams.water_added !== undefined
       ) {
-        setSourceMoisture(matchingRecord.moisture_level?.toString() || "");
-        setSourceWater(matchingRecord.water_added?.toString() || "");
+        setSourceMoisture(recordWithParams.moisture_level?.toString() || "");
+        setSourceWater(recordWithParams.water_added?.toString() || "");
         setIsGrindingStarted(true);
         try {
           const templateKey = `grinding_template_${bin.production_order_id}`;
@@ -673,8 +684,8 @@ export default function GrindingScreen({ navigation }) {
         }
         showToast("Success", "Parameters already saved, starting grinding");
       } else {
-        setSourceMoisture(matchingRecord?.moisture_level?.toString() || "");
-        setSourceWater(matchingRecord?.water_added?.toString() || "");
+        setSourceMoisture(recordWithParams?.moisture_level?.toString() || "");
+        setSourceWater(recordWithParams?.water_added?.toString() || "");
         setShowSourceParamsModal(true);
       }
     } catch (e) {
