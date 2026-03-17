@@ -95,6 +95,7 @@ export default function LiveAddScreen({ navigation }) {
     const has24h = detail && detail.records_24h && detail.records_24h.length > 0;
     const has12h = detail && detail.records_12h && detail.records_12h.length > 0;
     const hasHourly = detail && detail.hourly_productions && detail.hourly_productions.length > 0;
+    const hasSourceBins = detail && detail.source_bins && detail.source_bins.length > 0;
 
     return (
       <Layout title="Live" navigation={navigation} currentRoute="LiveAdd">
@@ -123,6 +124,28 @@ export default function LiveAddScreen({ navigation }) {
             </View>
           ) : detail ? (
             <>
+              {hasSourceBins && (
+                <Section title="SOURCE BINS" color="#0891b2">
+                  <View style={[styles.sourceBinsGrid, isWide && styles.sourceBinsGridWide]}>
+                    {detail.source_bins.map((sb, i) => (
+                      <View key={sb.bin_id || i} style={[styles.sourceBinCard, isWide && styles.sourceBinCardWide]}>
+                        <Text style={styles.sourceBinName}>{sb.bin_number}</Text>
+                        <View style={styles.sourceBinRow}>
+                          <View style={styles.sourceBinField}>
+                            <Text style={styles.sourceBinLabel}>Quantity</Text>
+                            <Text style={styles.sourceBinValue}>{sb.quantity} kg</Text>
+                          </View>
+                          <View style={styles.sourceBinField}>
+                            <Text style={styles.sourceBinLabel}>Blend %</Text>
+                            <Text style={[styles.sourceBinValue, { color: '#0891b2' }]}>{sb.blend_percentage}%</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </Section>
+              )}
+
               {has24h && (
                 <Section title="24 HOURS TRANSFER DETAILS" color="#3b82f6">
                   {detail.records_24h.map((r, i) => (
@@ -458,6 +481,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   sectionBody: { padding: 14, gap: 10 },
+
+  sourceBinsGrid: { flexDirection: 'column', gap: 8 },
+  sourceBinsGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  sourceBinCard: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  sourceBinCardWide: { flex: 1, minWidth: 160 },
+  sourceBinName: { fontSize: 15, fontWeight: '700', color: '#0c4a6e', marginBottom: 8 },
+  sourceBinRow: { flexDirection: 'row', gap: 16 },
+  sourceBinField: { flex: 1 },
+  sourceBinLabel: { fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 },
+  sourceBinValue: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
 
   recordCard: {
     backgroundColor: '#f9fafb',

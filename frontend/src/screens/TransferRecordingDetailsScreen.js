@@ -55,6 +55,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   const { order } = route.params;
 
   const [destBins, setDestBins] = useState([]);
+  const [sourceBins, setSourceBins] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startingBinId, setStartingBinId] = useState(null); // bin being started
@@ -76,12 +77,14 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [binsRes, historyRes] = await Promise.all([
+      const [binsRes, historyRes, planningRes] = await Promise.all([
         client.get(`/transfer/destination-bins/${order.id}`),
         client.get(`/transfer/order/${order.id}/history`),
+        client.get(`/production-orders/${order.id}/planning`).catch(() => ({ data: null })),
       ]);
       setDestBins(binsRes.data || []);
       setTransfers(historyRes.data || []);
+      setSourceBins(planningRes.data?.source_bins || []);
     } catch (err) {
       console.error("Error loading transfer details:", err);
       showError("Error", "Failed to load transfer data");
@@ -226,6 +229,30 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             <StatBox label="Completed" value={completedTransfers.length} color="#059669" />
             <StatBox label="Total Bins" value={destBins.length} color={colors.primary} />
           </View>
+
+          {/* ---- SOURCE BINS ---- */}
+          {sourceBins.length > 0 && (
+            <Section title="SOURCE BINS" color="#0891b2">
+              {sourceBins.map((sb) => (
+                <Card key={sb.id || sb.bin_id} style={styles.itemCard}>
+                  <View style={styles.itemRow}>
+                    <View style={styles.itemLeft}>
+                      <Text style={styles.itemTitle}>
+                        {sb.bin?.bin_number || `Bin #${sb.bin_id}`}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusPill, { backgroundColor: "#0891b222", borderColor: "#0891b2" }]}>
+                      <Text style={[styles.statusPillText, { color: "#0891b2" }]}>SOURCE</Text>
+                    </View>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <DetailBox label="Quantity" value={`${sb.quantity} kg`} />
+                    <DetailBox label="Blend %" value={`${sb.blend_percentage}%`} />
+                  </View>
+                </Card>
+              ))}
+            </Section>
+          )}
 
           {/* ---- PLANNED BINS ---- */}
           {plannedBins.length > 0 && (

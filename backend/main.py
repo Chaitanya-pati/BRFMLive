@@ -4195,6 +4195,17 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
             }
             for h in hourly
         ],
+        "source_bins": [
+            {
+                "bin_id": sb.bin_id,
+                "bin_number": sb.bin.bin_number if sb.bin else f"Bin #{sb.bin_id}",
+                "blend_percentage": sb.blend_percentage,
+                "quantity": sb.quantity,
+            }
+            for sb in db.query(models.ProductionOrderSourceBin)
+                .filter(models.ProductionOrderSourceBin.production_order_id == po_id)
+                .all()
+        ],
     }
 
 
