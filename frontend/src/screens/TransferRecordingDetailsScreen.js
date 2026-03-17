@@ -15,6 +15,7 @@ import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
+import { redirectAfterAllTransfersComplete } from "../utils/processRedirects";
 
 // ----- Live elapsed timer hook -----
 function useElapsedTimer(startTimeStr) {
@@ -154,7 +155,26 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
       });
       await showSuccess("Transfer completed");
       setCompleteModal(null);
-      loadData();
+
+      // Fetch fresh data and check if ALL planned bins are now complete
+      const [freshDest, freshHistory] = await Promise.all([
+        client.get(`/transfer/destination-bins/${order.id}`),
+        client.get(`/transfer/order/${order.id}/history`),
+      ]);
+      const freshDestBins = freshDest.data || [];
+      const freshTransfers = freshHistory.data || [];
+      const freshCompleted = freshTransfers.filter((t) => t.status === "COMPLETED");
+      const allDone =
+        freshDestBins.length > 0 &&
+        freshCompleted.length >= freshDestBins.length;
+
+      // Update UI with fresh data
+      setDestBins(freshDestBins);
+      setTransfers(freshTransfers);
+
+      if (allDone) {
+        redirectAfterAllTransfersComplete(navigation);
+      }
     } catch (err) {
       console.error("Complete error:", err);
       showError("Error", err?.response?.data?.detail || "Failed to complete transfer");

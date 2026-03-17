@@ -14,6 +14,7 @@ import { productionOrderApi, planningBinsApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { formatISTDate } from '../utils/dateUtils';
+import { redirectAfterPlanningSetup } from '../utils/processRedirects';
 
 export default function ProductionOrderPlanningScreen({ route, navigation }) {
   const initialOrderId = route.params?.orderId;
@@ -250,7 +251,11 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
 
       await productionOrderApi.savePlanning(selectedOrderId, payload);
       showSuccess('Planning saved successfully');
-      navigation.goBack();
+      redirectAfterPlanningSetup(navigation, {
+        id: selectedOrderId,
+        order_number: order?.order_number,
+        branch_name: order?.branch_name,
+      });
     } catch (error) {
       console.error('Save error:', error);
       showError(error.response?.data?.detail || 'Failed to save planning');
