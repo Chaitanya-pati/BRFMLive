@@ -117,6 +117,50 @@ export default function LiveAddScreen({ navigation }) {
             </View>
           </View>
 
+          {/* ---- SHORTCUTS ---- */}
+          <View style={styles.shortcutsWrap}>
+            <Text style={styles.shortcutsLabel}>GO TO</Text>
+            <View style={[styles.shortcutsRow, isWide && styles.shortcutsRowWide]}>
+              <TouchableOpacity
+                style={[styles.shortcutBtn, { backgroundColor: '#3b82f6' }]}
+                onPress={() => navigation.navigate('TransferRecordingDetails', {
+                  order: {
+                    id: selectedOrder.production_order_id,
+                    order_number: selectedOrder.order_number,
+                    branch_name: selectedOrder.branch_name,
+                  },
+                })}
+              >
+                <Text style={styles.shortcutIcon}>🔁</Text>
+                <Text style={styles.shortcutBtnText}>24h Transfer</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.shortcutBtn, { backgroundColor: '#8b5cf6' }]}
+                onPress={() => navigation.navigate('Transfer12Hour')}
+              >
+                <Text style={styles.shortcutIcon}>⏱</Text>
+                <Text style={styles.shortcutBtnText}>12h Transfer</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.shortcutBtn, { backgroundColor: '#f59e0b' }]}
+                onPress={() => navigation.navigate('Grinding')}
+              >
+                <Text style={styles.shortcutIcon}>⚙️</Text>
+                <Text style={styles.shortcutBtnText}>Grinding</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.shortcutBtn, { backgroundColor: '#10b981' }]}
+                onPress={() => navigation.navigate('DispatchManagement')}
+              >
+                <Text style={styles.shortcutIcon}>🚛</Text>
+                <Text style={styles.shortcutBtnText}>Dispatch</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {detailLoading ? (
             <View style={styles.center}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -484,6 +528,48 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   sectionBody: { padding: 14, gap: 10 },
+
+  shortcutsWrap: {
+    marginBottom: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 12,
+  },
+  shortcutsLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  shortcutsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  shortcutsRowWide: {
+    flexWrap: 'nowrap',
+  },
+  shortcutBtn: {
+    flex: 1,
+    minWidth: 80,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    gap: 4,
+  },
+  shortcutIcon: { fontSize: 18 },
+  shortcutBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
 
   srcBreakdownWrap: {
     marginTop: 10,
