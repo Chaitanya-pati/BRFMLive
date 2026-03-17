@@ -95,7 +95,6 @@ export default function LiveAddScreen({ navigation }) {
     const has24h = detail && detail.records_24h && detail.records_24h.length > 0;
     const has12h = detail && detail.records_12h && detail.records_12h.length > 0;
     const hasHourly = detail && detail.hourly_productions && detail.hourly_productions.length > 0;
-    const hasSourceBins = detail && detail.source_bins && detail.source_bins.length > 0;
 
     return (
       <Layout title="Live" navigation={navigation} currentRoute="LiveAdd">
@@ -124,32 +123,10 @@ export default function LiveAddScreen({ navigation }) {
             </View>
           ) : detail ? (
             <>
-              {hasSourceBins && (
-                <Section title="SOURCE BINS" color="#0891b2">
-                  <View style={[styles.sourceBinsGrid, isWide && styles.sourceBinsGridWide]}>
-                    {detail.source_bins.map((sb, i) => (
-                      <View key={sb.bin_id || i} style={[styles.sourceBinCard, isWide && styles.sourceBinCardWide]}>
-                        <Text style={styles.sourceBinName}>{sb.bin_number}</Text>
-                        <View style={styles.sourceBinRow}>
-                          <View style={styles.sourceBinField}>
-                            <Text style={styles.sourceBinLabel}>Quantity</Text>
-                            <Text style={styles.sourceBinValue}>{sb.quantity} kg</Text>
-                          </View>
-                          <View style={styles.sourceBinField}>
-                            <Text style={styles.sourceBinLabel}>Blend %</Text>
-                            <Text style={[styles.sourceBinValue, { color: '#0891b2' }]}>{sb.blend_percentage}%</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </Section>
-              )}
-
               {has24h && (
                 <Section title="24 HOURS TRANSFER DETAILS" color="#3b82f6">
                   {detail.records_24h.map((r, i) => (
-                    <TransferCard key={r.id || i} record={r} isWide={isWide} />
+                    <TransferCard key={r.id || i} record={r} isWide={isWide} sourceBins={detail.source_bins || []} />
                   ))}
                 </Section>
               )}
@@ -259,7 +236,30 @@ function Section({ title, color, children }) {
   );
 }
 
-function TransferCard({ record, isWide }) {
+function SourceBinsBreakdown({ sourceBins, destQty }) {
+  if (!sourceBins || sourceBins.length === 0 || destQty == null) return null;
+  const qty = parseFloat(destQty) || 0;
+  return (
+    <View style={styles.srcBreakdownWrap}>
+      <Text style={styles.srcBreakdownTitle}>Source Bin Breakdown</Text>
+      {sourceBins.map((sb, i) => {
+        const contributed = ((sb.blend_percentage / 100) * qty).toFixed(2);
+        const binName = sb.bin_number || (sb.bin && sb.bin.bin_number) || `Bin #${sb.bin_id}`;
+        return (
+          <View key={sb.bin_id || i} style={styles.srcBreakdownRow}>
+            <Text style={styles.srcBreakdownBin}>{binName}</Text>
+            <View style={styles.srcBreakdownRight}>
+              <Text style={styles.srcBreakdownPct}>{sb.blend_percentage}%</Text>
+              <Text style={styles.srcBreakdownQty}>{contributed} kg</Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function TransferCard({ record, isWide, sourceBins }) {
   const statusColor = STATUS_COLOR[record.status] || '#6b7280';
   return (
     <View style={styles.recordCard}>
@@ -278,6 +278,9 @@ function TransferCard({ record, isWide }) {
         <RecordField label="Water Added" value={record.water_added != null ? `${record.water_added} L` : 'N/A'} />
         <RecordField label="Moisture" value={record.moisture != null ? `${record.moisture}%` : 'N/A'} />
       </View>
+      {sourceBins && sourceBins.length > 0 && (
+        <SourceBinsBreakdown sourceBins={sourceBins} destQty={record.quantity_transferred} />
+      )}
     </View>
   );
 }
@@ -482,21 +485,35 @@ const styles = StyleSheet.create({
   },
   sectionBody: { padding: 14, gap: 10 },
 
-  sourceBinsGrid: { flexDirection: 'column', gap: 8 },
-  sourceBinsGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  sourceBinCard: {
+  srcBreakdownWrap: {
+    marginTop: 10,
     backgroundColor: '#f0f9ff',
     borderRadius: 8,
-    padding: 12,
     borderWidth: 1,
     borderColor: '#bae6fd',
+    padding: 10,
+    gap: 4,
   },
-  sourceBinCardWide: { flex: 1, minWidth: 160 },
-  sourceBinName: { fontSize: 15, fontWeight: '700', color: '#0c4a6e', marginBottom: 8 },
-  sourceBinRow: { flexDirection: 'row', gap: 16 },
-  sourceBinField: { flex: 1 },
-  sourceBinLabel: { fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 },
-  sourceBinValue: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
+  srcBreakdownTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0891b2',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  srcBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0f2fe',
+  },
+  srcBreakdownBin: { fontSize: 13, fontWeight: '600', color: '#0c4a6e' },
+  srcBreakdownRight: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  srcBreakdownPct: { fontSize: 12, color: '#0891b2', fontWeight: '600', minWidth: 36, textAlign: 'right' },
+  srcBreakdownQty: { fontSize: 13, fontWeight: '700', color: '#1e293b', minWidth: 60, textAlign: 'right' },
 
   recordCard: {
     backgroundColor: '#f9fafb',

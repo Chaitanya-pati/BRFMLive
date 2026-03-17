@@ -230,30 +230,6 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             <StatBox label="Total Bins" value={destBins.length} color={colors.primary} />
           </View>
 
-          {/* ---- SOURCE BINS ---- */}
-          {sourceBins.length > 0 && (
-            <Section title="SOURCE BINS" color="#0891b2">
-              {sourceBins.map((sb) => (
-                <Card key={sb.id || sb.bin_id} style={styles.itemCard}>
-                  <View style={styles.itemRow}>
-                    <View style={styles.itemLeft}>
-                      <Text style={styles.itemTitle}>
-                        {sb.bin?.bin_number || `Bin #${sb.bin_id}`}
-                      </Text>
-                    </View>
-                    <View style={[styles.statusPill, { backgroundColor: "#0891b222", borderColor: "#0891b2" }]}>
-                      <Text style={[styles.statusPillText, { color: "#0891b2" }]}>SOURCE</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailsRow}>
-                    <DetailBox label="Quantity" value={`${sb.quantity} kg`} />
-                    <DetailBox label="Blend %" value={`${sb.blend_percentage}%`} />
-                  </View>
-                </Card>
-              ))}
-            </Section>
-          )}
-
           {/* ---- PLANNED BINS ---- */}
           {plannedBins.length > 0 && (
             <Section title="PLANNED — NOT STARTED" color="#3b82f6">
@@ -272,6 +248,9 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                       <Text style={[styles.statusPillText, { color: "#3b82f6" }]}>PLANNED</Text>
                     </View>
                   </View>
+                  {sourceBins.length > 0 && (
+                    <SourceBinsBreakdown sourceBins={sourceBins} destQty={bin.quantity} />
+                  )}
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: "#3b82f6", opacity: startingBinId === bin.bin_id ? 0.6 : 1 }]}
                     onPress={() => handleStart(bin)}
@@ -332,6 +311,10 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                     />
                   </View>
 
+                  {sourceBins.length > 0 && (
+                    <SourceBinsBreakdown sourceBins={sourceBins} destQty={plannedQtyForBin(t.destination_bin_id)} />
+                  )}
+
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: "#059669" }]}
                     onPress={() => openCompleteModal(t)}
@@ -372,6 +355,12 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                       <DetailBox label="Water Added" value={t.water_added != null ? `${t.water_added} L` : "—"} />
                       <DetailBox label="Moisture" value={t.moisture_level != null ? `${t.moisture_level}%` : "—"} />
                     </View>
+                    {sourceBins.length > 0 && (
+                      <SourceBinsBreakdown
+                        sourceBins={sourceBins}
+                        destQty={t.quantity_transferred ?? plannedQtyForBin(t.destination_bin_id)}
+                      />
+                    )}
                     {needsParams && (
                       <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: "#6366f1" }]}
@@ -486,6 +475,30 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           </Card>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+// ---------- Source bins per-destination breakdown ----------
+function SourceBinsBreakdown({ sourceBins, destQty }) {
+  if (!sourceBins || sourceBins.length === 0 || destQty == null) return null;
+  const qty = parseFloat(destQty) || 0;
+  return (
+    <View style={styles.srcBreakdownWrap}>
+      <Text style={styles.srcBreakdownTitle}>Source Bin Breakdown</Text>
+      {sourceBins.map((sb, i) => {
+        const contributed = ((sb.blend_percentage / 100) * qty).toFixed(2);
+        const binName = sb.bin_number || (sb.bin && sb.bin.bin_number) || `Bin #${sb.bin_id}`;
+        return (
+          <View key={sb.bin_id || i} style={styles.srcBreakdownRow}>
+            <Text style={styles.srcBreakdownBin}>{binName}</Text>
+            <View style={styles.srcBreakdownRight}>
+              <Text style={styles.srcBreakdownPct}>{sb.blend_percentage}%</Text>
+              <Text style={styles.srcBreakdownQty}>{contributed} kg</Text>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -638,6 +651,37 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   actionBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+
+  srcBreakdownWrap: {
+    marginTop: 10,
+    marginBottom: 4,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    padding: 10,
+    gap: 6,
+  },
+  srcBreakdownTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0891b2',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  srcBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0f2fe',
+  },
+  srcBreakdownBin: { fontSize: 13, fontWeight: '600', color: '#0c4a6e' },
+  srcBreakdownRight: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  srcBreakdownPct: { fontSize: 12, color: '#0891b2', fontWeight: '600', minWidth: 36, textAlign: 'right' },
+  srcBreakdownQty: { fontSize: 13, fontWeight: '700', color: '#1e293b', minWidth: 60, textAlign: 'right' },
 
   emptyState: { alignItems: "center", paddingTop: 60 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
