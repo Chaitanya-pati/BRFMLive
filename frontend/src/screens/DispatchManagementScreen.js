@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
@@ -17,7 +16,8 @@ import DatePicker from "../components/DatePicker";
 import Button from "../components/Button";
 import colors from "../theme/colors";
 import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, stateCityApi } from "../api/client";
-import { FaTruck, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
+import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
   const [dispatches, setDispatches] = useState([]);
@@ -123,7 +123,7 @@ export default function DispatchManagementScreen({ navigation }) {
       setBagSizes(bagSizeRes.data || []);
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
-      Alert.alert("Error", "Failed to fetch data");
+      showError("Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -149,14 +149,14 @@ export default function DispatchManagementScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!formData.order_id || !formData.driver_id) {
-      Alert.alert("Error", "Please fill required fields");
+      showError("Please fill required fields");
       return;
     }
 
     const itemsToDispatch = dispatchItems.filter(item => parseFloat(item.dispatched_qty_ton) > 0 || parseInt(item.dispatched_bags) > 0);
     
     if (itemsToDispatch.length === 0) {
-      Alert.alert("Error", "At least ONE item must have quantity > 0");
+      showError("At least ONE item must have quantity > 0");
       return;
     }
 
@@ -166,13 +166,13 @@ export default function DispatchManagementScreen({ navigation }) {
       const bags = parseInt(item.dispatched_bags || 0);
 
       if (qty > item.remaining_qty + 0.0001) {
-        Alert.alert("Error", `Quantity for ${item.product_name} exceeds remaining amount (${item.remaining_qty.toFixed(2)}t)`);
+        showError(`Quantity for ${item.product_name} exceeds remaining amount (${item.remaining_qty.toFixed(2)}t)`);
         return;
       }
       
       const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
       if (isBagType && bags > item.remaining_bags) {
-        Alert.alert("Error", `Bag count for ${item.product_name} exceeds remaining bags (${item.remaining_bags})`);
+        showError(`Bag count for ${item.product_name} exceeds remaining bags (${item.remaining_bags})`);
         return;
       }
     }
@@ -199,29 +199,25 @@ export default function DispatchManagementScreen({ navigation }) {
         await dispatchApi.create(payload);
       }
       setModalVisible(false);
+      showSuccess(editingDispatch ? "Dispatch updated successfully" : "Dispatch created successfully");
       fetchData();
     } catch (error) {
       console.error("Error saving dispatch:", error);
-      Alert.alert("Error", "Failed to save dispatch");
+      showError("Failed to save dispatch");
     }
   };
 
   const handleDelete = async (id) => {
-    Alert.alert("Delete", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await dispatchApi.delete(id);
-            fetchData();
-          } catch (error) {
-            console.error("Error deleting dispatch:", error);
-          }
-        },
-      },
-    ]);
+    const confirmed = await showConfirm("Delete Dispatch", "Are you sure you want to delete this dispatch?");
+    if (!confirmed) return;
+    try {
+      await dispatchApi.delete(id);
+      showSuccess("Dispatch deleted successfully");
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting dispatch:", error);
+      showError("Failed to delete dispatch");
+    }
   };
 
   const columns = [
@@ -356,62 +352,6 @@ export default function DispatchManagementScreen({ navigation }) {
           <DataTable 
             data={dispatches} 
             columns={columns}
-            onEdit={(item) => {
-              setEditingDispatch(item);
-              setFormData({
-                order_id: item.order_id.toString(),
-                driver_id: item.driver_id.toString(),
-                state: item.state || "",
-                city: item.city || "",
-                warehouse_loader: item.warehouse_loader || "",
-                actual_dispatch_date: new Date(item.actual_dispatch_date),
-                delivery_date: item.delivery_date ? new Date(item.delivery_date) : new Date(),
-                status: item.status,
-                remarks: item.remarks || "",
-              });
-              
-              // Map existing items
-              if (item.items && item.items.length > 0) {
-                setDispatchItems(item.items.map(di => {
-                  const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
-                  const orderedQty = di.order_item?.quantity_ton > 0 
-                    ? di.order_item.quantity_ton 
-                    : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
-
-                  // Get the total dispatched for this order item from the order_item's aggregates
-                  const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
-                  const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
-                  const currentDispatchQty = di.dispatched_qty_ton || 0;
-                  const currentDispatchBags = di.dispatched_bags || 0;
-                  
-                  // Dispatched by OTHER dispatches (not this one being edited)
-                  const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
-                  const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
-                  
-                  const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
-                  const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
-
-                  return {
-                    order_item_id: di.order_item_id,
-                    finished_good_id: di.finished_good_id,
-                    product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
-                    unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? 'Bag' : 'Ton'),
-                    ordered_qty: orderedQty,
-                    dispatched_so_far: dispatchedByOthers, 
-                    dispatched_bags_so_far: dispatchedBagsByOthers,
-                    remaining_qty: remainingQty,
-                    ordered_bags: di.order_item?.number_of_bags || 0,
-                    remaining_bags: remainingBags,
-                    dispatched_qty_ton: di.dispatched_qty_ton.toString(),
-                    bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
-                    dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
-                    weight_kg: weightKg
-                  };
-                }));
-              }
-              setModalVisible(true);
-            }}
-            onDelete={(item) => handleDelete(item.dispatch_id)}
           />
         )}
 
@@ -435,10 +375,12 @@ export default function DispatchManagementScreen({ navigation }) {
               value={formData.order_id}
               onValueChange={(val) => {
                 const order = orders.find(o => String(o.order_id) === val);
+                const customerStateName = order?.customer?.state;
+                const matchedState = states.find(s => s.state_name === customerStateName);
                 setFormData({ 
                   ...formData, 
                   order_id: val,
-                  state: order?.customer?.state || formData.state,
+                  state: matchedState ? matchedState.state_id.toString() : formData.state,
                   city: order?.customer?.city || formData.city,
                 });
               }}
