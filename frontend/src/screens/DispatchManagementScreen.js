@@ -17,7 +17,7 @@ import Button from "../components/Button";
 import colors from "../theme/colors";
 import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, stateCityApi } from "../api/client";
 import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaTrash, FaTruck } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
   const [dispatches, setDispatches] = useState([]);
@@ -250,72 +250,54 @@ export default function DispatchManagementScreen({ navigation }) {
       }
     },
     { key: "status", label: "Status" },
-    {
-      key: "actions",
-      label: "Actions",
-      field: "dispatch_id",
-      render: (val, row) => (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={() => {
-            setEditingDispatch(row);
-            setFormData({
-              order_id: row.order_id.toString(),
-              driver_id: row.driver_id.toString(),
-              state: row.state || "",
-              city: row.city || "",
-              warehouse_loader: row.warehouse_loader || "",
-              actual_dispatch_date: new Date(row.actual_dispatch_date),
-              delivery_date: row.delivery_date ? new Date(row.delivery_date) : new Date(),
-              remarks: row.remarks || "",
-            });
-            // Map existing items
-            if (row.items && row.items.length > 0) {
-              setDispatchItems(row.items.map(di => {
-                const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
-                const orderedQty = di.order_item?.quantity_ton > 0 
-                  ? di.order_item.quantity_ton 
-                  : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
-
-                const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
-                const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
-                const currentDispatchQty = di.dispatched_qty_ton || 0;
-                const currentDispatchBags = di.dispatched_bags || 0;
-                
-                const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
-                const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
-                
-                const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
-                const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
-
-                return {
-                  order_item_id: di.order_item_id,
-                  finished_good_id: di.finished_good_id,
-                  product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
-                  unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? 'Bag' : 'Ton'),
-                  ordered_qty: orderedQty,
-                  dispatched_so_far: dispatchedByOthers, 
-                  dispatched_bags_so_far: dispatchedBagsByOthers,
-                  remaining_qty: remainingQty,
-                  ordered_bags: di.order_item?.number_of_bags || 0,
-                  remaining_bags: remainingBags,
-                  dispatched_qty_ton: di.dispatched_qty_ton.toString(),
-                  bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
-                  dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
-                  weight_kg: weightKg
-                };
-              }));
-            }
-            setModalVisible(true);
-          }}>
-            <FaEdit color={colors.primary} size={18} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDelete(row.dispatch_id)}>
-            <FaTrash color={colors.error} size={18} />
-          </TouchableOpacity>
-        </View>
-      ),
-    },
   ];
+
+  const handleEditDispatch = (row) => {
+    setEditingDispatch(row);
+    setFormData({
+      order_id: row.order_id.toString(),
+      driver_id: row.driver_id.toString(),
+      state: row.state || "",
+      city: row.city || "",
+      warehouse_loader: row.warehouse_loader || "",
+      actual_dispatch_date: new Date(row.actual_dispatch_date),
+      delivery_date: row.delivery_date ? new Date(row.delivery_date) : new Date(),
+      remarks: row.remarks || "",
+    });
+    if (row.items && row.items.length > 0) {
+      setDispatchItems(row.items.map(di => {
+        const weightKg = di.bag_size?.weight_kg || di.order_item?.bag_size_weight || 0;
+        const orderedQty = di.order_item?.quantity_ton > 0
+          ? di.order_item.quantity_ton
+          : ((di.order_item?.number_of_bags || 0) * weightKg) / 1000;
+        const totalDispatchedForItem = di.order_item?.dispatched_qty || 0;
+        const totalDispatchedBagsForItem = di.order_item?.dispatched_bags_total || 0;
+        const currentDispatchQty = di.dispatched_qty_ton || 0;
+        const currentDispatchBags = di.dispatched_bags || 0;
+        const dispatchedByOthers = Math.max(0, totalDispatchedForItem - currentDispatchQty);
+        const dispatchedBagsByOthers = Math.max(0, totalDispatchedBagsForItem - currentDispatchBags);
+        const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
+        const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
+        return {
+          order_item_id: di.order_item_id,
+          finished_good_id: di.finished_good_id,
+          product_name: di.product_name || di.finished_good?.product_name || di.order_item?.product_name || di.order_item?.product?.product_name || di.order_item?.product?.name || di.order_item?.finished_good?.name || "Unknown Product",
+          unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? 'Bag' : 'Ton'),
+          ordered_qty: orderedQty,
+          dispatched_so_far: dispatchedByOthers,
+          dispatched_bags_so_far: dispatchedBagsByOthers,
+          remaining_qty: remainingQty,
+          ordered_bags: di.order_item?.number_of_bags || 0,
+          remaining_bags: remainingBags,
+          dispatched_qty_ton: di.dispatched_qty_ton.toString(),
+          bag_size_id: di.bag_size_id ? di.bag_size_id.toString() : "",
+          dispatched_bags: di.dispatched_bags ? di.dispatched_bags.toString() : "0",
+          weight_kg: weightKg
+        };
+      }));
+    }
+    setModalVisible(true);
+  };
 
   return (
     <Layout title="Dispatch Management" navigation={navigation}>
@@ -346,9 +328,30 @@ export default function DispatchManagementScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
-          <DataTable 
-            data={dispatches} 
+          <DataTable
+            data={dispatches}
             columns={columns}
+            renderActions={(row) => (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.deliveryBtn}
+                  onPress={() =>
+                    navigation.navigate("DriverDelivery", {
+                      driverId: row.driver_id?.toString(),
+                    })
+                  }
+                >
+                  <FaTruck color="#fff" size={15} />
+                  <Text style={styles.deliveryBtnText}>Delivery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => handleDelete(row.dispatch_id)}
+                >
+                  <FaTrash color={colors.error} size={16} />
+                </TouchableOpacity>
+              </View>
+            )}
           />
         )}
 
@@ -525,7 +528,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: { fontSize: 20, fontWeight: "bold" },
-  actionButtons: { flexDirection: "row", gap: 15 },
+  actionButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
+  deliveryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  deliveryBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  deleteBtn: {
+    backgroundColor: "#fef2f2",
+    padding: 7,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   tabContainer: {
     flexDirection: "row",
     marginBottom: 20,

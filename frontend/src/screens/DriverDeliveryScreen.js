@@ -26,9 +26,11 @@ const STATUS_COLOR = {
   CANCELLED: "#ef4444",
 };
 
-export default function DriverDeliveryScreen({ navigation }) {
+export default function DriverDeliveryScreen({ navigation, route }) {
   const [drivers, setDrivers] = useState([]);
-  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [selectedDriverId, setSelectedDriverId] = useState(
+    route?.params?.driverId ? route.params.driverId.toString() : ""
+  );
   const [dispatches, setDispatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
