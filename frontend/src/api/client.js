@@ -489,10 +489,30 @@ export const dispatchApi = {
   create: (data) => api.post("/dispatches", data),
   update: (id, data) => api.put(`/dispatches/${id}`, data),
   delete: (id) => api.delete(`/dispatches/${id}`),
-  uploadDeliveryProof: (id, formData) =>
-    api.post(`/dispatches/${id}/delivery-proof`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+  uploadDeliveryProof: async (id, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${id}/delivery-proof`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || `Upload failed with status ${response.status}`);
+    }
+    return { data: await response.json() };
+  },
 };
 
 export const finishedGoodsGodownApi = {

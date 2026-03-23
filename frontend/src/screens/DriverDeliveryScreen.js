@@ -166,7 +166,7 @@ export default function DriverDeliveryScreen({ navigation, route }) {
       loadUserAndDispatches();
     } catch (e) {
       console.error("Upload error:", e);
-      showError("Failed to upload delivery proof");
+      showError(e?.message || "Failed to upload delivery proof");
     } finally {
       setSubmitting(false);
     }
