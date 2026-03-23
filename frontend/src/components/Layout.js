@@ -287,6 +287,7 @@ const menuItems = [
       subItems: [
         { name: "Customer Orders", route: "CustomerOrderMaster", icon: SvgFileTextIcon },
         { name: "Dispatch Management", route: "DispatchManagement", icon: SvgTruckIcon },
+        { name: "Driver Delivery", route: "DriverDelivery", icon: SvgTruckIcon },
       ]
     },
 

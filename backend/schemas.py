@@ -721,6 +721,7 @@ class LoginResponse(ISTModel):
     email: str
     role: str | None = None
     branches: list[Branch] = []
+    driver_id: Optional[int] = None
 
 class ProductionOrderStatusEnum(str, Enum):
     CREATED = "CREATED"

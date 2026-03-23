@@ -10,14 +10,14 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Layout from "../components/Layout";
-import SelectDropdown from "../components/SelectDropdown";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
 import DatePicker from "../components/DatePicker";
 import colors from "../theme/colors";
-import { dispatchApi, driverApi } from "../api/client";
+import { dispatchApi } from "../api/client";
 import { showError, showSuccess } from "../utils/customAlerts";
 import { API_BASE_URL } from "../api/client";
+import { storage } from "../utils/storage";
 
 const STATUS_COLOR = {
   DISPATCHED: "#f59e0b",
@@ -27,12 +27,10 @@ const STATUS_COLOR = {
 };
 
 export default function DriverDeliveryScreen({ navigation, route }) {
-  const [drivers, setDrivers] = useState([]);
-  const [selectedDriverId, setSelectedDriverId] = useState(
-    route?.params?.driverId ? route.params.driverId.toString() : ""
-  );
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [dispatches, setDispatches] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDispatch, setSelectedDispatch] = useState(null);
   const [proofPhoto, setProofPhoto] = useState(null);
@@ -40,37 +38,58 @@ export default function DriverDeliveryScreen({ navigation, route }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchDrivers();
+    loadUserAndDispatches();
   }, []);
 
-  useEffect(() => {
-    if (selectedDriverId) {
-      fetchDispatches();
-    } else {
-      setDispatches([]);
-    }
-  }, [selectedDriverId]);
-
-  const fetchDrivers = async () => {
+  const loadUserAndDispatches = async () => {
     try {
-      const res = await driverApi.getAll();
-      setDrivers(res.data || []);
-    } catch {
-      showError("Failed to load drivers");
+      const userData = await storage.getUserData();
+      if (!userData) {
+        showError("Could not load user data. Please log in again.");
+        return;
+      }
+      setCurrentUser(userData);
+      const admin = userData.role === "admin";
+      setIsAdmin(admin);
+      await fetchDispatches(userData, admin);
+    } catch (e) {
+      console.error("Error loading user data:", e);
+      showError("Failed to load user data");
     }
   };
 
-  const fetchDispatches = async () => {
+  const fetchDispatches = async (userData, admin) => {
     setLoading(true);
     try {
       const res = await dispatchApi.getAll();
       const all = res.data || [];
-      const filtered = all.filter(
-        (d) =>
-          d.driver_id.toString() === selectedDriverId &&
-          d.status === "DISPATCHED"
-      );
-      setDispatches(filtered);
+      const dispatched = all.filter((d) => d.status === "DISPATCHED");
+
+      if (admin) {
+        setDispatches(dispatched);
+      } else {
+        // Filter by the driver_id linked to the logged-in user
+        const userDriverId = userData.driver_id
+          ? userData.driver_id.toString()
+          : null;
+
+        // Also try to match by name if driver_id not directly stored
+        const driverName = (userData.full_name || userData.username || "")
+          .toLowerCase()
+          .trim();
+
+        const filtered = dispatched.filter((d) => {
+          if (userDriverId && d.driver_id?.toString() === userDriverId) {
+            return true;
+          }
+          // Fallback: match driver name
+          const dispatchDriverName = (
+            d.driver?.driver_name || ""
+          ).toLowerCase().trim();
+          return driverName && dispatchDriverName === driverName;
+        });
+        setDispatches(filtered);
+      }
     } catch {
       showError("Failed to load dispatches");
     } finally {
@@ -144,7 +163,7 @@ export default function DriverDeliveryScreen({ navigation, route }) {
 
       showSuccess("Delivery proof uploaded. Status updated automatically.");
       setModalVisible(false);
-      fetchDispatches();
+      loadUserAndDispatches();
     } catch (e) {
       console.error("Upload error:", e);
       showError("Failed to upload delivery proof");
@@ -162,117 +181,124 @@ export default function DriverDeliveryScreen({ navigation, route }) {
     });
   };
 
+  const driverName = currentUser?.full_name || currentUser?.username || "";
+
   return (
     <Layout title="Driver Delivery" navigation={navigation}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Driver Delivery Proof</Text>
-        <Text style={styles.subtitle}>
-          Select a driver to view their pending deliveries
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.title}>Driver Delivery Proof</Text>
+            <Text style={styles.subtitle}>
+              {isAdmin
+                ? "Showing all pending deliveries across all drivers"
+                : driverName
+                ? `Showing deliveries assigned to: ${driverName}`
+                : "Showing your assigned deliveries"}
+            </Text>
+          </View>
+          {isAdmin && (
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeText}>Admin View</Text>
+            </View>
+          )}
+        </View>
 
-        <SelectDropdown
-          label="Select Driver"
-          options={drivers.map((d) => ({
-            label: d.driver_name,
-            value: d.driver_id.toString(),
-          }))}
-          value={selectedDriverId}
-          onValueChange={setSelectedDriverId}
-        />
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={{ marginTop: 60 }}
+          />
+        ) : dispatches.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>✓</Text>
+            <Text style={styles.emptyTitle}>No Pending Deliveries</Text>
+            <Text style={styles.emptyText}>
+              {isAdmin
+                ? "There are no dispatches awaiting proof upload."
+                : "You have no dispatches awaiting proof upload."}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            <Text style={styles.sectionLabel}>
+              {dispatches.length} Pending{" "}
+              {dispatches.length === 1 ? "Delivery" : "Deliveries"}
+            </Text>
+            {dispatches.map((dispatch) => {
+              const customerName =
+                dispatch.order?.customer?.customer_name || "Unknown Customer";
+              const orderCode =
+                dispatch.order?.order_code || `Order #${dispatch.order_id}`;
+              const totalQty = dispatch.dispatched_quantity_ton || 0;
+              const statusColor = STATUS_COLOR[dispatch.status] || "#64748b";
+              const dispatchDriverName =
+                dispatch.driver?.driver_name || `Driver #${dispatch.driver_id}`;
 
-        {selectedDriverId && (
-          <>
-            {loading ? (
-              <ActivityIndicator
-                size="large"
-                color={colors.primary}
-                style={{ marginTop: 40 }}
-              />
-            ) : dispatches.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyIcon}>✓</Text>
-                <Text style={styles.emptyTitle}>No Pending Deliveries</Text>
-                <Text style={styles.emptyText}>
-                  This driver has no dispatches awaiting proof upload.
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.list}>
-                <Text style={styles.sectionLabel}>
-                  {dispatches.length} Pending{" "}
-                  {dispatches.length === 1 ? "Delivery" : "Deliveries"}
-                </Text>
-                {dispatches.map((dispatch) => {
-                  const customerName =
-                    dispatch.order?.customer?.customer_name ||
-                    "Unknown Customer";
-                  const orderCode =
-                    dispatch.order?.order_code || `Order #${dispatch.order_id}`;
-                  const totalQty = dispatch.dispatched_quantity_ton || 0;
-                  const statusColor =
-                    STATUS_COLOR[dispatch.status] || "#64748b";
-
-                  return (
-                    <View key={dispatch.dispatch_id} style={styles.card}>
-                      <View style={styles.cardHeader}>
-                        <View>
-                          <Text style={styles.orderCode}>{orderCode}</Text>
-                          <Text style={styles.customerName}>{customerName}</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.badge,
-                            { backgroundColor: statusColor },
-                          ]}
-                        >
-                          <Text style={styles.badgeText}>{dispatch.status}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        {dispatch.city ? (
-                          <Text style={styles.infoText}>
-                            📍 {dispatch.city}
-                            {dispatch.state ? `, ${dispatch.state}` : ""}
-                          </Text>
-                        ) : null}
-                        <Text style={styles.infoText}>
-                          📅 Dispatched: {formatDate(dispatch.actual_dispatch_date)}
-                        </Text>
-                        <Text style={styles.infoText}>
-                          ⚖️ Total: {totalQty.toFixed(2)} Tons
-                        </Text>
-                      </View>
-
-                      {dispatch.items && dispatch.items.length > 0 && (
-                        <View style={styles.itemsBox}>
-                          <Text style={styles.itemsLabel}>Items:</Text>
-                          {dispatch.items.map((item, idx) => (
-                            <Text key={idx} style={styles.itemText}>
-                              •{" "}
-                              {item.product_name ||
-                                item.finished_good?.product_name ||
-                                `Item ${idx + 1}`}
-                              : {(item.dispatched_qty_ton || 0).toFixed(2)} t
-                              {item.dispatched_bags
-                                ? ` (${item.dispatched_bags} bags)`
-                                : ""}
-                            </Text>
-                          ))}
-                        </View>
-                      )}
-
-                      <Button
-                        title="Upload Delivery Proof"
-                        onPress={() => openModal(dispatch)}
-                        style={styles.uploadBtn}
-                      />
+              return (
+                <View key={dispatch.dispatch_id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderCode}>{orderCode}</Text>
+                      <Text style={styles.customerName}>{customerName}</Text>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </>
+                    <View
+                      style={[styles.badge, { backgroundColor: statusColor }]}
+                    >
+                      <Text style={styles.badgeText}>{dispatch.status}</Text>
+                    </View>
+                  </View>
+
+                  {isAdmin && (
+                    <View style={styles.driverRow}>
+                      <Text style={styles.driverLabel}>🚚 Driver: </Text>
+                      <Text style={styles.driverValue}>{dispatchDriverName}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.infoRow}>
+                    {dispatch.city ? (
+                      <Text style={styles.infoText}>
+                        📍 {dispatch.city}
+                        {dispatch.state ? `, ${dispatch.state}` : ""}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.infoText}>
+                      📅 Dispatched: {formatDate(dispatch.actual_dispatch_date)}
+                    </Text>
+                    <Text style={styles.infoText}>
+                      ⚖️ Total: {totalQty.toFixed(2)} Tons
+                    </Text>
+                  </View>
+
+                  {dispatch.items && dispatch.items.length > 0 && (
+                    <View style={styles.itemsBox}>
+                      <Text style={styles.itemsLabel}>Items:</Text>
+                      {dispatch.items.map((item, idx) => (
+                        <Text key={idx} style={styles.itemText}>
+                          •{" "}
+                          {item.product_name ||
+                            item.finished_good?.product_name ||
+                            `Item ${idx + 1}`}
+                          : {(item.dispatched_qty_ton || 0).toFixed(2)} t
+                          {item.dispatched_bags
+                            ? ` (${item.dispatched_bags} bags)`
+                            : ""}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
+                  <Button
+                    title="Upload Delivery Proof"
+                    onPress={() => openModal(dispatch)}
+                    style={styles.uploadBtn}
+                  />
+                </View>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
 
@@ -344,8 +370,22 @@ export default function DriverDeliveryScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: "bold", color: "#0f172a", marginBottom: 6 },
-  subtitle: { fontSize: 14, color: "#64748b", marginBottom: 20 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  title: { fontSize: 22, fontWeight: "bold", color: "#0f172a", marginBottom: 4 },
+  subtitle: { fontSize: 14, color: "#64748b", maxWidth: 340 },
+  adminBadge: {
+    backgroundColor: "#7c3aed",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+  },
+  adminBadgeText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   sectionLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -383,7 +423,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   orderCode: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
   customerName: { fontSize: 13, color: "#475569", marginTop: 2 },
@@ -393,6 +433,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   badgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  driverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  driverLabel: { fontSize: 13, color: "#475569", fontWeight: "600" },
+  driverValue: { fontSize: 13, color: "#0f172a", fontWeight: "700" },
   infoRow: { marginBottom: 10, gap: 3 },
   infoText: { fontSize: 13, color: "#64748b" },
   itemsBox: {

@@ -3839,12 +3839,18 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
                                 detail="Invalid username or password")
 
     print(f"✅ Login successful for user: {credentials.username}")
+    # Try to find a driver record matching the user's full name
+    matched_driver = db.query(models.Driver).filter(
+        models.Driver.driver_name.ilike(user.full_name)
+    ).first()
+    driver_id = matched_driver.driver_id if matched_driver else None
     return schemas.LoginResponse(user_id=user.id,
                                  username=user.username,
                                  full_name=user.full_name,
                                  email=user.email,
                                  role=user.role,
-                                 branches=user.branches)
+                                 branches=user.branches,
+                                 driver_id=driver_id)
 
 
 # ============================================================================
