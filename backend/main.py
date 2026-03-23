@@ -288,7 +288,7 @@ def update_dispatch_status(dispatch_id: int, db: Session):
             models.DispatchItem.order_item_id == item.order_item_id
         ).scalar() or 0.0
 
-        weight_kg = item.bag_size.weight_kg if item.bag_size else (item.bag_size_weight or 0)
+        weight_kg = item.bag_size.weight_kg if item.bag_size else 0
         ordered_qty = item.quantity_ton if (item.quantity_ton and item.quantity_ton > 0) else ((item.number_of_bags * weight_kg / 1000.0) if (item.number_of_bags and weight_kg) else 0.0)
 
         if total_dispatched < ordered_qty - 0.0001:
@@ -299,7 +299,7 @@ def update_dispatch_status(dispatch_id: int, db: Session):
     if all_delivered:
         dispatch.status = "DELIVERED"
     elif any_delivered:
-        dispatch.status = "PARTIALLY DELIVERED"
+        dispatch.status = "PARTIAL"
     else:
         dispatch.status = "DISPATCHED"
     
@@ -447,6 +447,9 @@ def update_dispatch(dispatch_id: int,
     
     update_data = dispatch_update.dict(exclude_unset=True)
     
+    # Status is managed automatically — never allow manual overrides
+    update_data.pop('status', None)
+    
     # Handle dispatch_items update if provided
     items_data = update_data.pop('dispatch_items', None)
     
@@ -482,6 +485,39 @@ def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
     db.delete(db_dispatch)
     db.commit()
     return {"message": "Dispatch deleted successfully"}
+
+@app.post("/api/dispatches/{dispatch_id}/delivery-proof", response_model=schemas.DispatchWithDetails)
+async def upload_delivery_proof(
+    dispatch_id: int,
+    driver_photo: UploadFile = File(...),
+    delivery_date: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    db_dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not db_dispatch:
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+
+    photo_path = await save_upload_file(driver_photo)
+    db_dispatch.driver_photo = photo_path
+
+    if delivery_date:
+        try:
+            db_dispatch.delivery_date = datetime.fromisoformat(delivery_date.replace('Z', '+00:00'))
+        except Exception:
+            db_dispatch.delivery_date = datetime.now()
+    else:
+        db_dispatch.delivery_date = datetime.now()
+
+    db.commit()
+
+    update_dispatch_status(dispatch_id, db)
+
+    result = db.query(models.Dispatch).options(
+        joinedload(models.Dispatch.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.Dispatch.driver),
+        joinedload(models.Dispatch.items)
+    ).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    return result
 
 
 @app.get("/api/bag-sizes", response_model=List[schemas.BagSize])

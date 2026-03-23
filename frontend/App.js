@@ -35,6 +35,7 @@ import TransferRecordingScreen from './src/screens/TransferRecordingScreen';
 import TransferRecordingDetailsScreen from './src/screens/TransferRecordingDetailsScreen';
 import Transfer12HourScreen from './src/screens/Transfer12HourScreen';
 import DispatchManagementScreen from './src/screens/DispatchManagementScreen';
+import DriverDeliveryScreen from './src/screens/DriverDeliveryScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
@@ -159,6 +160,7 @@ export default function App() {
           <Stack.Screen name="TransferRecordingDetails" component={TransferRecordingDetailsScreen} />
           <Stack.Screen name="Transfer12Hour" component={Transfer12HourScreen} />
           <Stack.Screen name="DispatchManagement" component={DispatchManagementScreen} />
+          <Stack.Screen name="DriverDelivery" component={DriverDeliveryScreen} />
           <Stack.Screen name="Grinding" component={GrindingScreen} />
           <Stack.Screen name="GrindingExcelView" component={GrindingExcelViewScreen} />
           <Stack.Screen name="GranulationTemplate" component={GranulationTemplateScreen} />

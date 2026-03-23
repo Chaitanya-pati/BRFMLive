@@ -181,6 +181,13 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
+      title: "Driver Delivery",
+      route: "DriverDelivery",
+      icon: "camera",
+      color: "#10b981",
+      adminOnly: false,
+    },
+    {
       title: "Branch Master",
       route: "BranchMaster",
       icon: "storefront",

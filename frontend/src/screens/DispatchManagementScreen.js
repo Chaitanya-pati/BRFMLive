@@ -37,7 +37,6 @@ export default function DispatchManagementScreen({ navigation }) {
     warehouse_loader: "",
     actual_dispatch_date: new Date(),
     delivery_date: new Date(),
-    status: "DISPATCHED",
     remarks: "",
   });
   const [dispatchItems, setDispatchItems] = useState([]);
@@ -267,7 +266,6 @@ export default function DispatchManagementScreen({ navigation }) {
               warehouse_loader: row.warehouse_loader || "",
               actual_dispatch_date: new Date(row.actual_dispatch_date),
               delivery_date: row.delivery_date ? new Date(row.delivery_date) : new Date(),
-              status: row.status,
               remarks: row.remarks || "",
             });
             // Map existing items
@@ -337,7 +335,6 @@ export default function DispatchManagementScreen({ navigation }) {
                 warehouse_loader: "",
                 actual_dispatch_date: new Date(),
                 delivery_date: new Date(),
-                status: "DISPATCHED",
                 remarks: "",
               });
               setModalVisible(true);
@@ -479,17 +476,6 @@ export default function DispatchManagementScreen({ navigation }) {
               onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
             />
 
-            <SelectDropdown
-              label="Status"
-              options={[
-                { label: "Dispatched", value: "DISPATCHED" },
-                { label: "Delivered", value: "DELIVERED" },
-                { label: "Partially Delivered", value: "PARTIAL" },
-                { label: "Cancelled", value: "CANCELLED" },
-              ]}
-              value={formData.status}
-              onValueChange={(val) => setFormData({ ...formData, status: val })}
-            />
             <InputField
               label="Warehouse Loader"
               value={formData.warehouse_loader}

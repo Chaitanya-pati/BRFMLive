@@ -489,6 +489,10 @@ export const dispatchApi = {
   create: (data) => api.post("/dispatches", data),
   update: (id, data) => api.put(`/dispatches/${id}`, data),
   delete: (id) => api.delete(`/dispatches/${id}`),
+  uploadDeliveryProof: (id, formData) =>
+    api.post(`/dispatches/${id}/delivery-proof`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };
 
 export const finishedGoodsGodownApi = {
