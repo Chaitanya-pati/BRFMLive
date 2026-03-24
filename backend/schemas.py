@@ -996,7 +996,7 @@ class DispatchItem(DispatchItemBase):
     remaining_qty_ton: Optional[float] = 0.0
 
 class DispatchBase(ISTModel):
-    order_id: int
+    order_id: Optional[int] = None
     driver_id: int
     dispatched_quantity_ton: float = 0.0
     dispatched_bags: Optional[int] = 0

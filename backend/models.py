@@ -159,7 +159,7 @@ class Dispatch(Base):
     __tablename__ = "dispatch"
     dispatch_id = Column(Integer, primary_key=True, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=True)
     driver_id = Column(Integer, ForeignKey("drivers.driver_id"), nullable=False)
     dispatched_quantity_ton = Column(Float, nullable=False, default=0.0)
     dispatched_bags = Column(Integer, nullable=True, default=0)
