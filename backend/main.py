@@ -242,9 +242,17 @@ def update_order_statuses(order_id: int, db: Session):
 
     all_items_fully_delivered = True
     any_item_has_delivery = False
-    any_dispatch_exists = db.query(models.Dispatch).filter(
-        models.Dispatch.order_id == order_id
-    ).first() is not None
+    # Check via both direct order_id link (legacy) and item-level join (multi-order)
+    any_dispatch_exists = (
+        db.query(models.Dispatch).filter(models.Dispatch.order_id == order_id).first() is not None
+        or db.query(models.Dispatch).join(
+            models.DispatchItem, models.DispatchItem.dispatch_id == models.Dispatch.dispatch_id
+        ).join(
+            models.OrderItem, models.OrderItem.order_item_id == models.DispatchItem.order_item_id
+        ).filter(
+            models.OrderItem.order_id == order_id
+        ).first() is not None
+    )
 
     for item in order.items:
         ordered_qty = get_order_item_qty_ton(item)
@@ -293,8 +301,16 @@ def update_dispatch_status(dispatch_id: int, db: Session):
     dispatch.status = "DELIVERED" if dispatch.delivery_date else "DISPATCHED"
     db.commit()
 
+    # Derive all unique order IDs from dispatch items (supports multi-order dispatches)
+    order_ids_to_update = set()
+    for di in dispatch.items:
+        if di.order_item:
+            order_ids_to_update.add(di.order_item.order_id)
+    # Also include direct order_id if set (legacy single-order dispatches)
     if dispatch.order_id:
-        update_order_statuses(dispatch.order_id, db)
+        order_ids_to_update.add(dispatch.order_id)
+    for oid in order_ids_to_update:
+        update_order_statuses(oid, db)
 
 @app.post("/api/dispatches", response_model=schemas.Dispatch)
 def create_dispatch(dispatch: schemas.DispatchCreate,
@@ -364,12 +380,20 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
             db.add(db_item)
             
         db.commit()
-        
-        # Update order status to DISPATCHED
-        order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == db_dispatch.order_id).first()
-        if order:
-            order.order_status = 'DISPATCHED'
-            db.commit()
+
+        # Derive unique order IDs from items (supports multi-order dispatches)
+        order_ids_to_update = set()
+        for item_data in dispatch_items_data:
+            order_item = db.query(models.OrderItem).filter(
+                models.OrderItem.order_item_id == item_data['order_item_id']
+            ).first()
+            if order_item:
+                order_ids_to_update.add(order_item.order_id)
+        # Also include direct order_id if set
+        if db_dispatch.order_id:
+            order_ids_to_update.add(db_dispatch.order_id)
+        for oid in order_ids_to_update:
+            update_order_statuses(oid, db)
 
         db.refresh(db_dispatch)
         return db_dispatch
@@ -413,7 +437,16 @@ def get_dispatches(skip: int = 0,
                     di.product_name = getattr(order_item.product, 'product_name', getattr(order_item.product, 'name', "Unknown Product"))
                 else:
                     di.product_name = "Unknown Product"
-                
+
+        # Compute order_codes derived from dispatch items (supports multi-order dispatches)
+        codes = set()
+        if d.order and d.order.order_code:
+            codes.add(d.order.order_code)
+        for di in d.items:
+            if di.order_item and di.order_item.order and di.order_item.order.order_code:
+                codes.add(di.order_item.order.order_code)
+        d.order_codes = sorted(codes)
+
     return dispatches
 
 @app.get("/api/dispatches/{dispatch_id}", response_model=schemas.DispatchWithDetails)

@@ -1059,6 +1059,7 @@ class DispatchWithDetails(Dispatch):
     driver_photo: Optional[str] = None
     delivery_date: Optional[datetime] = None
     actual_dispatch_date: Optional[datetime] = None
+    order_codes: List[str] = []
 
     @validator('actual_dispatch_date', 'delivery_date', pre=True)
     def _parse_dwdetails_dates(cls, v):

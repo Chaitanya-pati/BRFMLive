@@ -215,7 +215,15 @@ export default function DriverDeliveryScreen({ navigation, route }) {
             </Text>
             {dispatches.map((dispatch) => {
               const customerName = dispatch.order?.customer?.customer_name || "Unknown Customer";
-              const orderCode = dispatch.order?.order_code || `Order #${dispatch.order_id}`;
+              const orderCodes =
+                dispatch.order_codes && dispatch.order_codes.length > 0
+                  ? dispatch.order_codes
+                  : dispatch.order?.order_code
+                  ? [dispatch.order.order_code]
+                  : dispatch.order_id
+                  ? [`Order #${dispatch.order_id}`]
+                  : ["—"];
+              const displayCode = orderCodes.join(", ");
               const totalQty = dispatch.dispatched_quantity_ton || 0;
               const statusColor = STATUS_COLOR[dispatch.status] || "#64748b";
               const dispatchDriverName = dispatch.driver?.driver_name || `Driver #${dispatch.driver_id}`;
@@ -224,8 +232,10 @@ export default function DriverDeliveryScreen({ navigation, route }) {
                 <View key={dispatch.dispatch_id} style={styles.card}>
                   <View style={styles.cardHeader}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.orderCode}>{orderCode}</Text>
-                      <Text style={styles.customerName}>{customerName}</Text>
+                      <Text style={styles.orderCode}>{displayCode}</Text>
+                      {orderCodes.length === 1 && (
+                        <Text style={styles.customerName}>{customerName}</Text>
+                      )}
                     </View>
                     <View style={[styles.badge, { backgroundColor: statusColor }]}>
                       <Text style={styles.badgeText}>{dispatch.status}</Text>
@@ -290,50 +300,78 @@ export default function DriverDeliveryScreen({ navigation, route }) {
               <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                   <Text style={styles.detailSectionIcon}>🧾</Text>
-                  <Text style={styles.detailSectionTitle}>Customer Order</Text>
+                  <Text style={styles.detailSectionTitle}>Customer Orders</Text>
                 </View>
 
-                <View style={styles.detailCard}>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailFlex}>
-                      <Text style={styles.detailLabel}>Order Code</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedDispatch.order?.order_code || `#${selectedDispatch.order_id}`}
-                      </Text>
-                    </View>
-                    <View style={[
-                      styles.statusPill,
-                      {
-                        backgroundColor: STATUS_BG[selectedDispatch.order?.order_status] || "#f1f5f9",
-                        borderColor: STATUS_COLOR[selectedDispatch.order?.order_status] || "#94a3b8",
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.statusPillText,
-                        { color: STATUS_COLOR[selectedDispatch.order?.order_status] || "#64748b" }
-                      ]}>
-                        {selectedDispatch.order?.order_status || "—"}
-                      </Text>
-                    </View>
-                  </View>
+                {(() => {
+                  const modalOrderCodes =
+                    selectedDispatch.order_codes && selectedDispatch.order_codes.length > 0
+                      ? selectedDispatch.order_codes
+                      : selectedDispatch.order?.order_code
+                      ? [selectedDispatch.order.order_code]
+                      : [];
 
-                  <View style={styles.divider} />
+                  if (modalOrderCodes.length > 1) {
+                    // Multi-order dispatch
+                    return (
+                      <View style={styles.detailCard}>
+                        <View style={{ padding: 12 }}>
+                          <Text style={styles.detailLabel}>Orders in this dispatch</Text>
+                          {modalOrderCodes.map((code, idx) => (
+                            <Text key={idx} style={[styles.detailValue, { marginTop: 4 }]}>
+                              • {code}
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  }
 
-                  <View style={styles.detailGrid}>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Customer</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedDispatch.order?.customer?.customer_name || "—"}
-                      </Text>
+                  // Single order (legacy or first-order)
+                  return (
+                    <View style={styles.detailCard}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailFlex}>
+                          <Text style={styles.detailLabel}>Order Code</Text>
+                          <Text style={styles.detailValue}>
+                            {modalOrderCodes[0] || `#${selectedDispatch.order_id}` || "—"}
+                          </Text>
+                        </View>
+                        <View style={[
+                          styles.statusPill,
+                          {
+                            backgroundColor: STATUS_BG[selectedDispatch.order?.order_status] || "#f1f5f9",
+                            borderColor: STATUS_COLOR[selectedDispatch.order?.order_status] || "#94a3b8",
+                          }
+                        ]}>
+                          <Text style={[
+                            styles.statusPillText,
+                            { color: STATUS_COLOR[selectedDispatch.order?.order_status] || "#64748b" }
+                          ]}>
+                            {selectedDispatch.order?.order_status || "—"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.detailGrid}>
+                        <View style={styles.detailCell}>
+                          <Text style={styles.detailLabel}>Customer</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedDispatch.order?.customer?.customer_name || "—"}
+                          </Text>
+                        </View>
+                        <View style={styles.detailCell}>
+                          <Text style={styles.detailLabel}>Order Date</Text>
+                          <Text style={styles.detailValue}>
+                            {formatDate(selectedDispatch.order?.order_date)}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Order Date</Text>
-                      <Text style={styles.detailValue}>
-                        {formatDate(selectedDispatch.order?.order_date)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+                  );
+                })()}
               </View>
 
               {/* ── Dispatch Details ── */}
