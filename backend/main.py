@@ -497,8 +497,11 @@ async def upload_delivery_proof(
     if not db_dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")
 
-    photo_path = await save_upload_file(driver_photo)
-    db_dispatch.driver_photo = photo_path
+    try:
+        photo_path = await save_upload_file(driver_photo)
+        db_dispatch.driver_photo = photo_path
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save photo: {str(e)}")
 
     if delivery_date:
         try:
@@ -510,14 +513,24 @@ async def upload_delivery_proof(
 
     db.commit()
 
-    update_dispatch_status(dispatch_id, db)
+    try:
+        update_dispatch_status(dispatch_id, db)
+    except Exception as e:
+        print(f"Warning: update_dispatch_status failed: {e}")
 
-    result = db.query(models.Dispatch).options(
-        joinedload(models.Dispatch.order).joinedload(models.CustomerOrder.customer),
-        joinedload(models.Dispatch.driver),
-        joinedload(models.Dispatch.items)
-    ).filter(models.Dispatch.dispatch_id == dispatch_id).first()
-    return result
+    try:
+        result = db.query(models.Dispatch).options(
+            joinedload(models.Dispatch.order).joinedload(models.CustomerOrder.customer),
+            joinedload(models.Dispatch.driver),
+            joinedload(models.Dispatch.items).joinedload(models.DispatchItem.order_item),
+            joinedload(models.Dispatch.items).joinedload(models.DispatchItem.finished_good),
+            joinedload(models.Dispatch.bag_size)
+        ).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+        return result
+    except Exception as e:
+        print(f"Warning: Failed to load full dispatch details: {e}")
+        db.refresh(db_dispatch)
+        return db_dispatch
 
 
 @app.get("/api/bag-sizes", response_model=List[schemas.BagSize])

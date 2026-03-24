@@ -509,7 +509,17 @@ export const dispatchApi = {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(err.detail || `Upload failed with status ${response.status}`);
+      let detailMsg;
+      if (typeof err.detail === 'string') {
+        detailMsg = err.detail;
+      } else if (Array.isArray(err.detail)) {
+        detailMsg = err.detail.map(e => (typeof e === 'object' && e.msg) ? `${e.loc ? e.loc.join(' -> ') : 'field'}: ${e.msg}` : JSON.stringify(e)).join(', ');
+      } else if (err.detail && typeof err.detail === 'object') {
+        detailMsg = JSON.stringify(err.detail);
+      } else {
+        detailMsg = `Upload failed with status ${response.status}`;
+      }
+      throw new Error(detailMsg);
     }
     return { data: await response.json() };
   },

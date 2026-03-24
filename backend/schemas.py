@@ -980,7 +980,7 @@ class DispatchItemBase(ISTModel):
     finished_good_id: int
     dispatched_qty_ton: float
     bag_size_id: Optional[int] = None
-    dispatched_bags: Optional[int] = 0
+    dispatched_bags: Optional[int] = None
     item_status: Optional[str] = "DELIVERED"
 
 class DispatchItemCreate(DispatchItemBase):
@@ -989,6 +989,7 @@ class DispatchItemCreate(DispatchItemBase):
 class DispatchItem(DispatchItemBase):
     id: int
     dispatch_id: int
+    item_status: Optional[str] = "DELIVERED"
     created_at: datetime
     product_name: Optional[str] = None
     ordered_qty_ton: Optional[float] = 0.0
@@ -1008,62 +1009,9 @@ class DispatchBase(ISTModel):
     status: Optional[str] = "DISPATCHED"
     remarks: Optional[str] = None
 
-class DispatchCreate(DispatchBase):
-    branch_id: Optional[int] = None
-    dispatch_items: List[DispatchItemCreate]
-
-class DispatchUpdate(ISTModel):
-    order_id: Optional[int] = None
-    driver_id: Optional[int] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    warehouse_loader: Optional[str] = None
-    actual_dispatch_date: Optional[datetime] = None
-    delivery_date: Optional[datetime] = None
-    status: Optional[str] = None
-    remarks: Optional[str] = None
-    dispatch_items: Optional[List[DispatchItemCreate]] = None
-
-class Dispatch(DispatchBase):
-    dispatch_id: int
-    branch_id: int
-    created_at: datetime
-
-class DispatchWithDetails(Dispatch):
-    order: Optional[CustomerOrder] = None
-    driver: Optional[Driver] = None
-    items: List[DispatchItem] = []
-    bag_size: Optional[BagSize] = None
-    dispatched_bags: Optional[int] = 0
-    bag_size_id: Optional[int] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    warehouse_loader: Optional[str] = None
-    actual_dispatch_date: datetime
-    delivery_date: Optional[datetime] = None
-    status: Optional[str] = 'DISPATCHED'
-    driver_photo: Optional[str] = None
-    remarks: Optional[str] = None
-
     @validator('actual_dispatch_date', 'delivery_date', pre=True)
     def _parse_dispatch_dates(cls, v):
         return parse_datetime(v)
-
-class DispatchItemBase(ISTModel):
-    order_item_id: int
-    finished_good_id: int
-    dispatched_qty_ton: float
-    bag_size_id: Optional[int] = None
-    dispatched_bags: Optional[int] = None
-
-class DispatchItemCreate(DispatchItemBase):
-    pass
-
-class DispatchItem(DispatchItemBase):
-    id: int
-    dispatch_id: int
-    item_status: str
-    created_at: datetime
 
 class DispatchCreate(DispatchBase):
     branch_id: Optional[int] = None
@@ -1108,6 +1056,13 @@ class DispatchWithDetails(Dispatch):
     driver: Optional[Driver] = None
     bag_size: Optional[BagSize] = None
     items: List[DispatchItemWithDetails] = []
+    driver_photo: Optional[str] = None
+    delivery_date: Optional[datetime] = None
+    actual_dispatch_date: Optional[datetime] = None
+
+    @validator('actual_dispatch_date', 'delivery_date', pre=True)
+    def _parse_dwdetails_dates(cls, v):
+        return parse_datetime(v)
 
 class ProductionOrderBase(ISTModel):
     order_number: str
