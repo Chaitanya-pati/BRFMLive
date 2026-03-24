@@ -1,0 +1,51 @@
+Plan: Multi-Order Dispatch
+The Core Problem
+Right now Dispatch.order_id is a hard non-nullable FK to one customer order. However, DispatchItem.order_item_id already links each line item to its own OrderItem (which knows its own order_id). The DB already supports multi-order items at the item level — the only real blocker is the single order_id on the Dispatch header.
+
+DB Change Required (1 migration, unavoidable)
+What	Why
+Make Dispatch.order_id nullable	A dispatch route serving 3 customers has no single "order" — the orders are derived from its items
+This is one ALTER TABLE dispatch ALTER COLUMN order_id DROP NOT NULL statement. Everything else is a code change.
+
+Backend Changes
+models.py
+
+Dispatch.order_id = Column(Integer, ForeignKey(...), nullable=True) — remove nullable=False
+schemas.py
+
+DispatchBase.order_id: Optional[int] = None
+main.py
+
+Endpoint / Function	Change
+create_dispatch	Accept order_id = None; derive all affected order IDs from dispatch_items → order_item → order_id; after saving, call update_order_statuses for each unique order found in items
+update_dispatch_status	Same — derive order IDs from dispatch items, not from dispatch.order_id
+update_order_statuses	No change needed — already takes a single order_id, just needs to be called once per unique order
+GET /dispatches list column	Show all unique order codes derived from items
+Frontend Changes
+DispatchManagementScreen.js — Create/Edit form (biggest change)
+
+The new form will work in two stages:
+
+Stage 1 — Add Customer Orders to this dispatch
+
+A searchable "Add Order" picker (only shows orders with remaining unfulfilled items)
+Each added order appears as a collapsible card showing its customer name + items
+Can add 1 to N orders
+Can remove an order from the dispatch
+Stage 2 — Per-order item quantity entry
+
+Inside each order card: same item-wise quantity/bag input as today
+Shows Ordered / Already Dispatched / Remaining / Entering Now
+Items with zero qty entered are excluded from payload
+Summary bar at the bottom
+
+Total tons across all orders
+Total bag count
+Number of orders being dispatched
+List table columns updated:
+
+"Order" column → shows all order codes, e.g. ORD-001, ORD-002, ORD-003 (derived from items)
+DriverDeliveryScreen.js — Delivery proof modal
+
+Items already grouped by dispatch item → order_item → order so the existing structure already handles multiple orders
+The "Customer Order" section in the modal will show a list of all orders instead of a single one
