@@ -229,12 +229,11 @@ def get_order_item_qty_ton(order_item):
 
 def update_order_statuses(order_id: int, db: Session):
     """
-    Update CustomerOrder.order_status based on DELIVERED quantities only.
-    Statuses:
-      PENDING    - no dispatches exist
-      DISPATCHED - dispatches exist but none have a delivery proof yet
-      PARTIAL    - some quantity delivered (proof uploaded) but not all
-      DELIVERED  - all ordered quantity has delivery proof
+    Update CustomerOrder.order_status based on DELIVERED quantities (delivery proof uploads).
+    Only transitions between the 3 post-dispatch statuses:
+      DISPATCHED          - set at dispatch creation time (not here)
+      PARTIALLY DELIVERED - some qty delivered (proof uploaded) but not all
+      DELIVERED           - all ordered qty has delivery proof
     """
     order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
     if not order or not order.items:
@@ -242,17 +241,6 @@ def update_order_statuses(order_id: int, db: Session):
 
     all_items_fully_delivered = True
     any_item_has_delivery = False
-    # Check via both direct order_id link (legacy) and item-level join (multi-order)
-    any_dispatch_exists = (
-        db.query(models.Dispatch).filter(models.Dispatch.order_id == order_id).first() is not None
-        or db.query(models.Dispatch).join(
-            models.DispatchItem, models.DispatchItem.dispatch_id == models.Dispatch.dispatch_id
-        ).join(
-            models.OrderItem, models.OrderItem.order_item_id == models.DispatchItem.order_item_id
-        ).filter(
-            models.OrderItem.order_id == order_id
-        ).first() is not None
-    )
 
     for item in order.items:
         ordered_qty = get_order_item_qty_ton(item)
@@ -279,11 +267,8 @@ def update_order_statuses(order_id: int, db: Session):
         if not order.completed_time:
             order.completed_time = datetime.now()
     elif any_item_has_delivery:
-        order.order_status = 'PARTIAL'
-    elif any_dispatch_exists:
-        order.order_status = 'DISPATCHED'
-    else:
-        order.order_status = 'PENDING'
+        order.order_status = 'PARTIALLY DELIVERED'
+    # If no delivery proof yet, leave status as DISPATCHED (set at dispatch creation)
 
     db.commit()
 
@@ -392,8 +377,30 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
         # Also include direct order_id if set
         if db_dispatch.order_id:
             order_ids_to_update.add(db_dispatch.order_id)
+
+        # Set each affected order to DISPATCHED only if no prior dispatch existed for it
         for oid in order_ids_to_update:
-            update_order_statuses(oid, db)
+            order = db.query(models.CustomerOrder).filter(
+                models.CustomerOrder.order_id == oid
+            ).first()
+            if not order:
+                continue
+            # Check for any other dispatch referencing this order (excluding the one just created)
+            prior_dispatch_via_items = db.query(models.Dispatch).join(
+                models.DispatchItem, models.DispatchItem.dispatch_id == models.Dispatch.dispatch_id
+            ).join(
+                models.OrderItem, models.OrderItem.order_item_id == models.DispatchItem.order_item_id
+            ).filter(
+                models.OrderItem.order_id == oid,
+                models.Dispatch.dispatch_id != db_dispatch.dispatch_id
+            ).first()
+            prior_dispatch_direct = db.query(models.Dispatch).filter(
+                models.Dispatch.order_id == oid,
+                models.Dispatch.dispatch_id != db_dispatch.dispatch_id
+            ).first()
+            if not prior_dispatch_via_items and not prior_dispatch_direct:
+                order.order_status = 'DISPATCHED'
+        db.commit()
 
         db.refresh(db_dispatch)
         return db_dispatch

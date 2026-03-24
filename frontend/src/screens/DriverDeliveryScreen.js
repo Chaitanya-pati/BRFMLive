@@ -21,6 +21,7 @@ import { storage } from "../utils/storage";
 
 const STATUS_COLOR = {
   DISPATCHED: "#f59e0b",
+  "PARTIALLY DELIVERED": "#3b82f6",
   PARTIAL: "#3b82f6",
   DELIVERED: "#10b981",
   CANCELLED: "#ef4444",
@@ -28,6 +29,7 @@ const STATUS_COLOR = {
 
 const STATUS_BG = {
   DISPATCHED: "#fffbeb",
+  "PARTIALLY DELIVERED": "#eff6ff",
   PARTIAL: "#eff6ff",
   DELIVERED: "#f0fdf4",
   CANCELLED: "#fef2f2",
