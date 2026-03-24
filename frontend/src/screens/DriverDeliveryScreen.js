@@ -145,11 +145,13 @@ export default function DriverDeliveryScreen({ navigation, route }) {
     try {
       const form = new FormData();
 
-      if (proofPhoto.uri.startsWith("data:")) {
-        const response = await fetch(proofPhoto.uri);
-        const blob = await response.blob();
+      if (proofPhoto.uri.startsWith("data:") || proofPhoto.uri.startsWith("blob:")) {
+        // Web: both data: and blob: URIs can be fetched and converted to blob
+        const fetchResponse = await fetch(proofPhoto.uri);
+        const blob = await fetchResponse.blob();
         form.append("driver_photo", blob, "delivery_proof.jpg");
       } else {
+        // Native (iOS/Android): React Native object format
         form.append("driver_photo", {
           uri: proofPhoto.uri,
           type: proofPhoto.mimeType || "image/jpeg",
