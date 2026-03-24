@@ -228,85 +228,73 @@ def get_order_item_qty_ton(order_item):
     return 0.0
 
 def update_order_statuses(order_id: int, db: Session):
+    """
+    Update CustomerOrder.order_status based on DELIVERED quantities only.
+    Statuses:
+      PENDING    - no dispatches exist
+      DISPATCHED - dispatches exist but none have a delivery proof yet
+      PARTIAL    - some quantity delivered (proof uploaded) but not all
+      DELIVERED  - all ordered quantity has delivery proof
+    """
     order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
-    if not order:
+    if not order or not order.items:
         return
 
-    all_items_delivered = True
-    any_item_partial = False
-    
-    for item in order.items:
-        dispatched_total = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-            models.DispatchItem.order_item_id == item.order_item_id
-        ).scalar() or 0.0
-        
-        ordered_qty = get_order_item_qty_ton(item)
-        
-        if dispatched_total >= ordered_qty - 0.0001:
-            # Fully delivered
-            pass 
-        elif dispatched_total > 0:
-            all_items_delivered = False
-            any_item_partial = True
-        else:
-            all_items_delivered = False
+    all_items_fully_delivered = True
+    any_item_has_delivery = False
+    any_dispatch_exists = db.query(models.Dispatch).filter(
+        models.Dispatch.order_id == order_id
+    ).first() is not None
 
-    if all_items_delivered:
-        order.order_status = 'DELIVERED'
-    elif any_item_partial:
-        order.order_status = 'PARTIAL'
-    else:
-        # Check if any dispatch exists for this order at all
-        any_dispatch = db.query(models.Dispatch).filter(models.Dispatch.order_id == order_id).first()
-        if any_dispatch:
-            order.order_status = 'PARTIAL'
+    for item in order.items:
+        ordered_qty = get_order_item_qty_ton(item)
+
+        # Only count qty from dispatches that have a delivery proof (delivery_date set)
+        delivered_qty = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).join(
+            models.Dispatch,
+            models.DispatchItem.dispatch_id == models.Dispatch.dispatch_id
+        ).filter(
+            models.DispatchItem.order_item_id == item.order_item_id,
+            models.Dispatch.delivery_date.isnot(None)
+        ).scalar() or 0.0
+
+        if delivered_qty >= ordered_qty - 0.0001:
+            any_item_has_delivery = True
+        elif delivered_qty > 0:
+            any_item_has_delivery = True
+            all_items_fully_delivered = False
         else:
-            order.order_status = 'PENDING'
+            all_items_fully_delivered = False
+
+    if all_items_fully_delivered and any_item_has_delivery:
+        order.order_status = 'DELIVERED'
+        if not order.completed_time:
+            order.completed_time = datetime.now()
+    elif any_item_has_delivery:
+        order.order_status = 'PARTIAL'
+    elif any_dispatch_exists:
+        order.order_status = 'DISPATCHED'
+    else:
+        order.order_status = 'PENDING'
+
+    db.commit()
 
 def update_dispatch_status(dispatch_id: int, db: Session):
+    """
+    Update Dispatch.status:
+      DISPATCHED - no delivery proof yet
+      DELIVERED  - delivery proof uploaded
+    Then cascade to update the parent CustomerOrder status.
+    """
     dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
     if not dispatch:
         return
 
-    # If no delivery date, it's just DISPATCHED
-    if not dispatch.delivery_date:
-        dispatch.status = "DISPATCHED"
-        db.commit()
-        return
-
-    # Check order items to see if everything is delivered
-    order = dispatch.order
-    if not order:
-        return
-
-    all_delivered = True
-    any_delivered = False
-
-    for item in order.items:
-        # Calculate total dispatched for this item across all dispatches
-        total_dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-            models.DispatchItem.order_item_id == item.order_item_id
-        ).scalar() or 0.0
-
-        weight_kg = item.bag_size.weight_kg if item.bag_size else 0
-        ordered_qty = item.quantity_ton if (item.quantity_ton and item.quantity_ton > 0) else ((item.number_of_bags * weight_kg / 1000.0) if (item.number_of_bags and weight_kg) else 0.0)
-
-        if total_dispatched < ordered_qty - 0.0001:
-            all_delivered = False
-        if total_dispatched > 0:
-            any_delivered = True
-
-    if all_delivered:
-        dispatch.status = "DELIVERED"
-    elif any_delivered:
-        dispatch.status = "PARTIAL"
-    else:
-        dispatch.status = "DISPATCHED"
-    
+    dispatch.status = "DELIVERED" if dispatch.delivery_date else "DISPATCHED"
     db.commit()
-    
-    # Also update the parent order status
-    update_order_statuses(order.order_id, db)
+
+    if dispatch.order_id:
+        update_order_statuses(dispatch.order_id, db)
 
 @app.post("/api/dispatches", response_model=schemas.Dispatch)
 def create_dispatch(dispatch: schemas.DispatchCreate,
