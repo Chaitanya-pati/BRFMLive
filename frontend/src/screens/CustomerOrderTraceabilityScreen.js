@@ -468,6 +468,42 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
             </View>
           </View>
 
+          {/* Delivery Progress - For PARTIALLY DELIVERED Orders */}
+          {orderTraceability.order_status === 'PARTIALLY DELIVERED' && (
+            <View style={styles.deliveryProgressSection}>
+              <Text style={styles.deliveryProgressTitle}>Delivery Progress</Text>
+              <View style={styles.deliveryProgressContainer}>
+                <View style={styles.deliveryMetrics}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Ordered</Text>
+                    <Text style={styles.metricValue}>
+                      {orderTraceability.items?.reduce((sum, item) => {
+                        return sum + (item.quantity_ton > 0 ? item.quantity_ton : (item.number_of_bags || 0));
+                      }, 0).toFixed(2)}
+                      {orderTraceability.items?.some(item => item.quantity_ton > 0) ? 'T' : ' Bags'}
+                    </Text>
+                  </View>
+                  <View style={styles.metricDivider} />
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Delivered</Text>
+                    <Text style={styles.metricValueDelivered}>
+                      {orderTraceability.total_dispatched_tons.toFixed(2)}T
+                    </Text>
+                  </View>
+                  <View style={styles.metricDivider} />
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Pending</Text>
+                    <Text style={styles.metricValuePending}>
+                      {(orderTraceability.items?.reduce((sum, item) => {
+                        return sum + (item.quantity_ton > 0 ? item.quantity_ton : 0);
+                      }, 0) - orderTraceability.total_dispatched_tons).toFixed(2)}T
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Timeline Section */}
           <View style={styles.timelineSection}>
             <Text style={styles.timelineTitle}>Order Timeline</Text>
@@ -972,5 +1008,61 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+  deliveryProgressSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deliveryProgressTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  deliveryProgressContainer: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+  },
+  deliveryMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  metricValueDelivered: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.success,
+  },
+  metricValuePending: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF9800',
+  },
+  metricDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e0e0e0',
+    marginHorizontal: 8,
   },
 });
