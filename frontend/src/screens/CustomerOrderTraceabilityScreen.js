@@ -66,11 +66,26 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
       let filteredData = response.data || [];
       console.log('Total orders received:', filteredData.length);
 
+      // Fetch traceability data for each order to get dispatch info
+      const ordersWithTraceability = await Promise.all(
+        filteredData.map(async (order) => {
+          try {
+            const client = getApiClient();
+            const traceRes = await client.get(`/customer-orders/${order.order_id}/traceability`);
+            return { ...order, traceability: traceRes.data };
+          } catch (error) {
+            console.error(`Error fetching traceability for order ${order.order_id}:`, error);
+            return { ...order, traceability: null };
+          }
+        })
+      );
+
+      filteredData = ordersWithTraceability;
+
       // Filter by date range
       filteredData = filteredData.filter(order => {
         const orderDate = new Date(order.order_date);
         const inRange = orderDate >= startDate && orderDate <= endDate;
-        console.log(`Order ${order.order_code}: ${orderDate.toISOString()} - In range: ${inRange}`);
         return inRange;
       });
 
@@ -81,11 +96,34 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
         );
       }
 
-      // Sort by date descending
-      filteredData.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+      // Sort by most recent dispatch date
+      filteredData.sort((a, b) => {
+        const lastDispatchA = a.traceability?.timeline
+          ? new Date(
+              Math.max(
+                ...a.traceability.timeline
+                  .filter(t => t.name.includes('Dispatch'))
+                  .map(t => new Date(t.date).getTime()),
+                new Date(a.order_date).getTime()
+              )
+            )
+          : new Date(a.order_date);
+
+        const lastDispatchB = b.traceability?.timeline
+          ? new Date(
+              Math.max(
+                ...b.traceability.timeline
+                  .filter(t => t.name.includes('Dispatch'))
+                  .map(t => new Date(t.date).getTime()),
+                new Date(b.order_date).getTime()
+              )
+            )
+          : new Date(b.order_date);
+
+        return lastDispatchB.getTime() - lastDispatchA.getTime();
+      });
 
       console.log('Final filtered orders count:', filteredData.length);
-      console.log('Filtered orders sample:', filteredData.slice(0, 2));
       setOrders(filteredData);
       applySearch(filteredData, searchText);
     } catch (error) {
@@ -234,77 +272,79 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
 
     return (
       <ScrollView style={styles.timelineContainer} showsVerticalScrollIndicator={true}>
-        {filteredOrders.map((order, index) => (
-          <View key={order.order_id} style={styles.orderWrapper}>
-            <View style={styles.timelineItem}>
-              <View style={styles.timelineLineContainer}>
-                <View
-                  style={[
-                    styles.timelineDot,
-                    { backgroundColor: getStatusColor(order.order_status) },
-                  ]}
-                />
-                {index < filteredOrders.length - 1 && <View style={styles.timelineLine} />}
-              </View>
+        {filteredOrders.map((order) => {
+          const lastDispatchDate = order.traceability?.timeline
+            ? order.traceability.timeline
+                .filter(t => t.name.includes('Dispatch'))
+                .map(t => new Date(t.date))
+                .sort((a, b) => b.getTime() - a.getTime())[0]
+            : null;
 
-              <TouchableOpacity
-                style={styles.orderCard}
-                onPress={() => fetchOrderTraceability(order.order_id)}
-              >
-                <View style={styles.orderHeader}>
-                  <View style={styles.orderInfo}>
-                    <Text style={styles.orderCode}>{order.order_code}</Text>
-                    <Text style={styles.customerName}>
+          return (
+            <TouchableOpacity
+              key={order.order_id}
+              style={styles.orderCardWrapper}
+              onPress={() => fetchOrderTraceability(order.order_id)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.orderCardContent}>
+                {/* Card Header */}
+                <View style={styles.orderCardHeader}>
+                  <View style={styles.orderCardInfo}>
+                    <Text style={styles.orderCardCode}>{order.order_code}</Text>
+                    <Text style={styles.orderCardCustomer}>
                       {order.customer?.customer_name || 'Unknown Customer'}
                     </Text>
                   </View>
                   <View
                     style={[
-                      styles.statusBadge,
+                      styles.orderCardBadge,
                       { backgroundColor: getStatusColor(order.order_status) },
                     ]}
                   >
-                    <Text style={styles.statusText}>{order.order_status}</Text>
+                    <Text style={styles.orderCardBadgeText}>{order.order_status}</Text>
                   </View>
                 </View>
 
-                <View style={styles.orderDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Order Date:</Text>
-                    <Text style={styles.detailValue}>
-                      {formatISTDate(order.order_date)}
+                {/* Card Body - Key Info */}
+                <View style={styles.orderCardBody}>
+                  <View style={styles.cardInfoRow}>
+                    <Text style={styles.cardInfoLabel}>Order Date:</Text>
+                    <Text style={styles.cardInfoValue}>
+                      {formatISTDate(order.order_date).split(' ')[0]}
                     </Text>
                   </View>
 
-                  {order.completed_time && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Completed:</Text>
-                      <Text style={styles.detailValue}>
-                        {formatISTDate(order.completed_time)}
+                  {lastDispatchDate && (
+                    <View style={styles.cardInfoRow}>
+                      <Text style={styles.cardInfoLabel}>Last Dispatch:</Text>
+                      <Text style={styles.cardInfoValue}>
+                        {formatISTDate(lastDispatchDate).split(' ')[0]}
                       </Text>
                     </View>
                   )}
 
-                  {order.items && order.items.length > 0 && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Items:</Text>
-                      <Text style={styles.detailValue}>{order.items.length} item(s)</Text>
-                    </View>
-                  )}
+                  <View style={styles.cardInfoRow}>
+                    <Text style={styles.cardInfoLabel}>Items:</Text>
+                    <Text style={styles.cardInfoValue}>{order.items?.length || 0}</Text>
+                  </View>
 
-                  {order.remarks && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Remarks:</Text>
-                      <Text style={styles.detailValue} numberOfLines={2}>
-                        {order.remarks}
-                      </Text>
+                  {order.traceability && (
+                    <View style={styles.cardInfoRow}>
+                      <Text style={styles.cardInfoLabel}>Dispatches:</Text>
+                      <Text style={styles.cardInfoValue}>{order.traceability.dispatch_count}</Text>
                     </View>
                   )}
                 </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+
+                {/* Card Footer - CTA */}
+                <View style={styles.orderCardFooter}>
+                  <Text style={styles.viewDetailsText}>View Traceability →</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     );
   };
@@ -609,92 +649,90 @@ const styles = StyleSheet.create({
   timelineContainer: {
     flex: 1,
   },
-  orderWrapper: {
-    marginBottom: 8,
+  orderCardWrapper: {
+    marginBottom: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  timelineItem: {
-    flexDirection: 'row',
-  },
-  timelineLineContainer: {
-    width: 30,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  timelineDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    zIndex: 1,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: '#ddd',
-    marginVertical: -8,
-  },
-  orderCard: {
-    flex: 1,
+  orderCardContent: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginLeft: 12,
-    marginVertical: 8,
+    borderRadius: 10,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  orderHeader: {
+  orderCardHeader: {
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  orderInfo: {
+  orderCardInfo: {
     flex: 1,
+    marginRight: 12,
   },
-  orderCode: {
+  orderCardCode: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
-  customerName: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  statusText: {
-    fontSize: 11,
+  orderCardCustomer: {
+    fontSize: 12,
     fontWeight: '600',
+    color: colors.primary,
+  },
+  orderCardBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 85,
+    alignItems: 'center',
+  },
+  orderCardBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
     color: '#fff',
+    textAlign: 'center',
   },
-  orderDetails: {
-    gap: 8,
+  orderCardBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  detailRow: {
+  cardInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  detailLabel: {
+  cardInfoLabel: {
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '500',
   },
-  detailValue: {
+  cardInfoValue: {
     fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
-    flex: 1,
-    textAlign: 'right',
+  },
+  orderCardFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#fafafa',
+  },
+  viewDetailsText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
   },
   emptyState: {
     flex: 1,
