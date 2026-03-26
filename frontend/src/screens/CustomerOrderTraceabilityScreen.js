@@ -33,6 +33,8 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [orderTraceability, setOrderTraceability] = useState(null);
 
   useEffect(() => {
     loadCustomers();
@@ -151,12 +153,30 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
         return '#2196F3';
       case 'DISPATCHED':
         return '#9C27B0';
+      case 'PARTIALLY DELIVERED':
+        return '#00BCD4';
       case 'DELIVERED':
         return colors.success;
       case 'CANCELLED':
         return '#F44336';
       default:
         return colors.textSecondary;
+    }
+  };
+
+  const fetchOrderTraceability = async (orderId) => {
+    try {
+      setLoading(true);
+      const client = getApiClient();
+      const response = await client.get(`/customer-orders/${orderId}/traceability`);
+      console.log('Order traceability data:', response.data);
+      setOrderTraceability(response.data);
+      setSelectedOrderId(orderId);
+    } catch (error) {
+      console.error('Error fetching order traceability:', error);
+      showError('Failed to fetch order traceability');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -229,9 +249,7 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.orderCard}
-                onPress={() => {
-                  navigation.navigate('CustomerOrderMaster');
-                }}
+                onPress={() => fetchOrderTraceability(order.order_id)}
               >
                 <View style={styles.orderHeader}>
                   <View style={styles.orderInfo}>
@@ -348,12 +366,113 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading orders...</Text>
           </View>
+        ) : orderTraceability ? (
+          renderTraceabilityDetails()
         ) : (
           renderOrderTimeline()
         )}
       </View>
     </Layout>
   );
+
+  function renderTraceabilityDetails() {
+    return (
+      <ScrollView style={styles.traceabilityContainer} showsVerticalScrollIndicator={true}>
+        <TouchableOpacity
+          onPress={() => setOrderTraceability(null)}
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>← Back to Orders</Text>
+        </TouchableOpacity>
+
+        <Card style={styles.traceabilityCard}>
+          <Text style={styles.traceabilityTitle}>{orderTraceability.order_code}</Text>
+          <Text style={styles.traceabilitySubtitle}>{orderTraceability.customer_name}</Text>
+
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Status</Text>
+              <View
+                style={[
+                  styles.statusBadgeSmall,
+                  { backgroundColor: getStatusColor(orderTraceability.order_status) },
+                ]}
+              >
+                <Text style={styles.statusTextSmall}>{orderTraceability.order_status}</Text>
+              </View>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Items</Text>
+              <Text style={styles.summaryValue}>{orderTraceability.total_items}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Dispatches</Text>
+              <Text style={styles.summaryValue}>{orderTraceability.dispatch_count}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Dispatched</Text>
+              <Text style={styles.summaryValue}>
+                {orderTraceability.total_dispatched_tons.toFixed(2)} T
+              </Text>
+            </View>
+          </View>
+        </Card>
+
+        <Card style={styles.traceabilityCard}>
+          <Text style={styles.sectionTitle}>Order Timeline</Text>
+          {orderTraceability.timeline && orderTraceability.timeline.map((stage, index) => (
+            <View key={index} style={styles.timelineItemDetail}>
+              <View style={styles.timelineLineDetailContainer}>
+                <View
+                  style={[
+                    styles.timelineDotDetail,
+                    {
+                      backgroundColor:
+                        stage.status === 'Completed' ? colors.success : colors.textLight,
+                    },
+                  ]}
+                />
+                {index < orderTraceability.timeline.length - 1 && (
+                  <View style={styles.timelineLineDetail} />
+                )}
+              </View>
+
+              <View style={styles.timelineContentDetail}>
+                <Text style={styles.stageNameDetail}>{stage.name}</Text>
+                <Text style={styles.stageStatusDetail}>
+                  {stage.status} • {formatISTDate(stage.date)}
+                </Text>
+                <Text style={styles.stageDetailsDetail}>{stage.details}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
+
+        {orderTraceability.items && orderTraceability.items.length > 0 && (
+          <Card style={styles.traceabilityCard}>
+            <Text style={styles.sectionTitle}>Order Items</Text>
+            {orderTraceability.items.map((item, index) => (
+              <View key={index} style={styles.itemRow}>
+                <View>
+                  <Text style={styles.itemName}>{item.product_name}</Text>
+                  <Text style={styles.itemDetails}>
+                    {item.quantity_ton > 0
+                      ? `${item.quantity_ton} tons`
+                      : `${item.number_of_bags} bags`}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.itemPrice}>
+                    ₹{(item.price_per_ton || item.price_per_bag || 0).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
+      </ScrollView>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -576,5 +695,145 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  traceabilityContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  backButton: {
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  traceabilityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  traceabilityTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  traceabilitySubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: 100,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  statusBadgeSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  statusTextSmall: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  timelineItemDetail: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  timelineLineDetailContainer: {
+    width: 30,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  timelineDotDetail: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    zIndex: 1,
+  },
+  timelineLineDetail: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#ddd',
+    marginVertical: -8,
+  },
+  timelineContentDetail: {
+    flex: 1,
+    paddingLeft: 12,
+  },
+  stageNameDetail: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  stageStatusDetail: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  stageDetailsDetail: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  itemName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  itemDetails: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  itemPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

@@ -224,6 +224,114 @@ def update_order(order_id: int,
     db.refresh(db_order)
     return db_order
 
+@router.get("/{order_id}/traceability", response_model=dict)
+def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
+    """
+    Get complete order traceability timeline with dispatch and delivery history
+    """
+    order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    from sqlalchemy.orm import joinedload
+    order = db.query(models.CustomerOrder).filter(
+        models.CustomerOrder.order_id == order_id
+    ).options(
+        joinedload(models.CustomerOrder.customer),
+        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.finished_good),
+        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.bag_size)
+    ).first()
+    
+    # Get all dispatches related to this order
+    dispatches = db.query(models.Dispatch).filter(
+        models.Dispatch.order_id == order_id
+    ).options(
+        joinedload(models.Dispatch.driver)
+    ).order_by(models.Dispatch.actual_dispatch_date.asc()).all()
+    
+    # Build timeline stages
+    timeline = []
+    
+    # Stage 1: Order Created
+    timeline.append({
+        "stage": 1,
+        "name": "Order Created",
+        "status": "Completed",
+        "date": order.order_date,
+        "details": f"Order {order.order_code} created for {order.customer.customer_name if order.customer else 'Unknown'}"
+    })
+    
+    # Stage 2: Order Confirmed
+    timeline.append({
+        "stage": 2,
+        "name": "Order Confirmed",
+        "status": "Completed" if order.order_status != 'PENDING' else "Pending",
+        "date": order.order_date,
+        "details": f"Order status: {order.order_status}"
+    })
+    
+    # Stage 3-N: Dispatches
+    for idx, dispatch in enumerate(dispatches, start=3):
+        driver_name = f"{dispatch.driver.driver_name}" if dispatch.driver else "Unknown"
+        timeline.append({
+            "stage": idx,
+            "name": f"Dispatch #{dispatch.dispatch_id}",
+            "status": dispatch.status or "DISPATCHED",
+            "date": dispatch.actual_dispatch_date,
+            "details": f"Dispatched by {driver_name} | {dispatch.dispatched_quantity_ton} tons | {dispatch.dispatched_bags or 0} bags | To: {dispatch.city}, {dispatch.state}"
+        })
+    
+    # Final Stage: Delivery
+    if order.completed_time:
+        timeline.append({
+            "stage": len(timeline) + 1,
+            "name": "Order Completed",
+            "status": "Completed",
+            "date": order.completed_time,
+            "details": f"Order fully delivered and completed"
+        })
+    elif dispatches and any(d.status == "DELIVERED" for d in dispatches):
+        last_delivery = max([d.delivery_date for d in dispatches if d.delivery_date], default=None)
+        if last_delivery:
+            timeline.append({
+                "stage": len(timeline) + 1,
+                "name": "Delivery Received",
+                "status": "Completed",
+                "date": last_delivery,
+                "details": f"Order delivered to customer"
+            })
+    
+    # Calculate order summary
+    total_dispatched = sum(d.dispatched_quantity_ton for d in dispatches)
+    total_dispatched_bags = sum(d.dispatched_bags or 0 for d in dispatches)
+    
+    return {
+        "order_id": order.order_id,
+        "order_code": order.order_code,
+        "customer_name": order.customer.customer_name if order.customer else "Unknown",
+        "customer_city": order.customer.city if order.customer else "",
+        "order_status": order.order_status,
+        "order_date": order.order_date,
+        "completed_time": order.completed_time,
+        "remarks": order.remarks,
+        "total_items": len(order.items),
+        "dispatch_count": len(dispatches),
+        "total_dispatched_tons": total_dispatched,
+        "total_dispatched_bags": total_dispatched_bags,
+        "timeline": timeline,
+        "items": [
+            {
+                "order_item_id": item.order_item_id,
+                "product_name": item.finished_good.product_name if item.finished_good else "Unknown",
+                "quantity_ton": item.quantity_ton,
+                "number_of_bags": item.number_of_bags,
+                "price_per_ton": item.price_per_ton,
+                "price_per_bag": item.price_per_bag
+            }
+            for item in order.items
+        ]
+    }
+
 @router.delete("/{order_id}")
 def delete_order(order_id: int, db: Session = Depends(get_db)):
     db_order = db.query(models.CustomerOrder).filter(models.CustomerOrder.order_id == order_id).first()
