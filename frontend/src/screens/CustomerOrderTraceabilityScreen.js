@@ -376,6 +376,8 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
   );
 
   function renderTraceabilityDetails() {
+    const isSmallScreen = width < 600;
+    
     return (
       <ScrollView style={styles.traceabilityContainer} showsVerticalScrollIndicator={true}>
         <TouchableOpacity
@@ -385,91 +387,115 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
           <Text style={styles.backButtonText}>← Back to Orders</Text>
         </TouchableOpacity>
 
-        <Card style={styles.traceabilityCard}>
-          <Text style={styles.traceabilityTitle}>{orderTraceability.order_code}</Text>
-          <Text style={styles.traceabilitySubtitle}>{orderTraceability.customer_name}</Text>
-
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Status</Text>
-              <View
-                style={[
-                  styles.statusBadgeSmall,
-                  { backgroundColor: getStatusColor(orderTraceability.order_status) },
-                ]}
-              >
-                <Text style={styles.statusTextSmall}>{orderTraceability.order_status}</Text>
-              </View>
+        {/* Order Card with Header and Timeline */}
+        <View style={styles.mainCard}>
+          {/* Card Header */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <Text style={styles.cardOrderCode}>{orderTraceability.order_code}</Text>
+              <Text style={styles.cardCustomerName}>{orderTraceability.customer_name}</Text>
+              {orderTraceability.customer_city && (
+                <Text style={styles.cardCity}>{orderTraceability.customer_city}</Text>
+              )}
             </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Items</Text>
-              <Text style={styles.summaryValue}>{orderTraceability.total_items}</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Dispatches</Text>
-              <Text style={styles.summaryValue}>{orderTraceability.dispatch_count}</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Dispatched</Text>
-              <Text style={styles.summaryValue}>
-                {orderTraceability.total_dispatched_tons.toFixed(2)} T
-              </Text>
+            <View
+              style={[
+                styles.cardHeaderStatus,
+                { backgroundColor: getStatusColor(orderTraceability.order_status) },
+              ]}
+            >
+              <Text style={styles.cardHeaderStatusText}>{orderTraceability.order_status}</Text>
             </View>
           </View>
-        </Card>
 
-        <Card style={styles.traceabilityCard}>
-          <Text style={styles.sectionTitle}>Order Timeline</Text>
-          {orderTraceability.timeline && orderTraceability.timeline.map((stage, index) => (
-            <View key={index} style={styles.timelineItemDetail}>
-              <View style={styles.timelineLineDetailContainer}>
-                <View
-                  style={[
-                    styles.timelineDotDetail,
-                    {
-                      backgroundColor:
-                        stage.status === 'Completed' ? colors.success : colors.textLight,
-                    },
-                  ]}
-                />
-                {index < orderTraceability.timeline.length - 1 && (
-                  <View style={styles.timelineLineDetail} />
-                )}
-              </View>
-
-              <View style={styles.timelineContentDetail}>
-                <Text style={styles.stageNameDetail}>{stage.name}</Text>
-                <Text style={styles.stageStatusDetail}>
-                  {stage.status} • {formatISTDate(stage.date)}
-                </Text>
-                <Text style={styles.stageDetailsDetail}>{stage.details}</Text>
-              </View>
+          {/* Summary Stats */}
+          <View style={[styles.summarySection, isSmallScreen && styles.summaryGridMobile]}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Order Date</Text>
+              <Text style={styles.statValue}>{formatISTDate(orderTraceability.order_date).split(' ')[0]}</Text>
             </View>
-          ))}
-        </Card>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Items</Text>
+              <Text style={styles.statValue}>{orderTraceability.total_items}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Dispatches</Text>
+              <Text style={styles.statValue}>{orderTraceability.dispatch_count}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Dispatched</Text>
+              <Text style={styles.statValue}>{orderTraceability.total_dispatched_tons.toFixed(2)}T</Text>
+            </View>
+          </View>
 
-        {orderTraceability.items && orderTraceability.items.length > 0 && (
-          <Card style={styles.traceabilityCard}>
-            <Text style={styles.sectionTitle}>Order Items</Text>
-            {orderTraceability.items.map((item, index) => (
-              <View key={index} style={styles.itemRow}>
-                <View>
-                  <Text style={styles.itemName}>{item.product_name}</Text>
-                  <Text style={styles.itemDetails}>
-                    {item.quantity_ton > 0
-                      ? `${item.quantity_ton} tons`
-                      : `${item.number_of_bags} bags`}
-                  </Text>
+          {/* Timeline Section */}
+          <View style={styles.timelineSection}>
+            <Text style={styles.timelineTitle}>Order Timeline</Text>
+            
+            <View style={styles.timelineTrack}>
+              {orderTraceability.timeline && orderTraceability.timeline.map((stage, index) => (
+                <View key={index} style={styles.timelineStageContainer}>
+                  {/* Timeline Line */}
+                  <View style={styles.timelineConnector}>
+                    <View
+                      style={[
+                        styles.timelineNodeCircle,
+                        {
+                          backgroundColor:
+                            stage.status === 'Completed' ? colors.success : colors.primary,
+                        },
+                      ]}
+                    />
+                    {index < orderTraceability.timeline.length - 1 && (
+                      <View
+                        style={[
+                          styles.timelineConnectorLine,
+                          {
+                            backgroundColor:
+                              stage.status === 'Completed' ? colors.success : '#ddd',
+                          },
+                        ]}
+                      />
+                    )}
+                  </View>
+
+                  {/* Stage Content */}
+                  <View style={styles.timelineStageContent}>
+                    <Text style={styles.stageName}>{stage.name}</Text>
+                    <Text style={styles.stageDateTime}>
+                      {formatISTDate(stage.date)}
+                    </Text>
+                    <Text style={styles.stageDescription}>{stage.details}</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.itemPrice}>
-                    ₹{(item.price_per_ton || item.price_per_bag || 0).toLocaleString()}
-                  </Text>
+              ))}
+            </View>
+          </View>
+
+          {/* Order Items Section */}
+          {orderTraceability.items && orderTraceability.items.length > 0 && (
+            <View style={styles.itemsSection}>
+              <Text style={styles.itemsSectionTitle}>Order Items ({orderTraceability.items.length})</Text>
+              {orderTraceability.items.map((item, index) => (
+                <View key={index} style={[styles.itemCard, index !== orderTraceability.items.length - 1 && styles.itemCardBorder]}>
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemProductName}>{item.product_name}</Text>
+                    <Text style={styles.itemPrice}>
+                      ₹{(item.price_per_ton || item.price_per_bag || 0).toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.itemMeta}>
+                    <Text style={styles.itemMetaText}>
+                      {item.quantity_ton > 0
+                        ? `${item.quantity_ton} tons`
+                        : `${item.number_of_bags} bags`}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </Card>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     );
   }
@@ -699,6 +725,7 @@ const styles = StyleSheet.create({
   traceabilityContainer: {
     flex: 1,
     padding: 16,
+    backgroundColor: colors.background || '#f5f5f5',
   },
   backButton: {
     marginBottom: 16,
@@ -706,134 +733,206 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   backButtonText: {
     color: colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
-  traceabilityCard: {
+  mainCard: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  traceabilityTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  traceabilitySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 16,
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 12,
-  },
-  summaryItem: {
-    flex: 1,
-    minWidth: 100,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  statusBadgeSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  statusTextSmall: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  timelineItemDetail: {
-    flexDirection: 'row',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
     marginBottom: 20,
   },
-  timelineLineDetailContainer: {
-    width: 30,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  timelineDotDetail: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    zIndex: 1,
-  },
-  timelineLineDetail: {
-    width: 2,
-    flex: 1,
-    backgroundColor: '#ddd',
-    marginVertical: -8,
-  },
-  timelineContentDetail: {
-    flex: 1,
-    paddingLeft: 12,
-  },
-  stageNameDetail: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  stageStatusDetail: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  stageDetailsDetail: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  itemRow: {
+  cardHeader: {
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cardHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  cardOrderCode: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  cardCustomerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  cardCity: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  cardHeaderStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 100,
     alignItems: 'center',
-    paddingVertical: 12,
+  },
+  cardHeaderStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  summarySection: {
+    flexDirection: 'row',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 8,
+  },
+  summaryGridMobile: {
+    flexWrap: 'wrap',
+  },
+  statBox: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    minWidth: 80,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  timelineSection: {
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  itemName: {
+  timelineTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  timelineTrack: {
+    paddingLeft: 8,
+  },
+  timelineStageContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  timelineConnector: {
+    alignItems: 'center',
+    marginRight: 16,
+    minWidth: 28,
+  },
+  timelineNodeCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    zIndex: 2,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  timelineConnectorLine: {
+    width: 2,
+    height: 50,
+    marginTop: -4,
+  },
+  timelineStageContent: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  stageName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  stageDateTime: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  stageDescription: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 18,
+  },
+  itemsSection: {
+    padding: 16,
+  },
+  itemsSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemCard: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  itemCardBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  itemProductName: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.text,
-  },
-  itemDetails: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
+    flex: 1,
   },
   itemPrice: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
+    marginLeft: 12,
+  },
+  itemMeta: {
+    marginTop: 4,
+  },
+  itemMetaText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });
