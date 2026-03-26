@@ -333,6 +333,7 @@ const menuItems = [
         { name: "Daily Report", route: "DailyReport", icon: SvgFileTextIcon },
         { name: "Main Reports", route: "Reports", icon: SvgFileTextIcon },
         { name: "Grinding Excel", route: "GrindingExcelView", icon: SvgFileTextIcon },
+        { name: "Customer Order Traceability", route: "CustomerOrderTraceability", icon: SvgFileTextIcon },
       ]
     }
   ];
