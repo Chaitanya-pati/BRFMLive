@@ -24,7 +24,7 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+  const [startDate, setStartDate] = useState(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000));
   const [endDate, setEndDate] = useState(new Date());
   const [customers, setCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -46,6 +46,7 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
     try {
       setLoading(true);
       const response = await customerApi.getAll();
+      console.log('Customers loaded:', response.data);
       setCustomers(response.data || []);
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -59,12 +60,16 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
     try {
       setLoading(true);
       const response = await customerOrderApi.getAll();
+      console.log('Orders API Response:', response.data);
       let filteredData = response.data || [];
+      console.log('Total orders received:', filteredData.length);
 
       // Filter by date range
       filteredData = filteredData.filter(order => {
         const orderDate = new Date(order.order_date);
-        return orderDate >= startDate && orderDate <= endDate;
+        const inRange = orderDate >= startDate && orderDate <= endDate;
+        console.log(`Order ${order.order_code}: ${orderDate.toISOString()} - In range: ${inRange}`);
+        return inRange;
       });
 
       // Filter by selected customers
@@ -77,6 +82,8 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
       // Sort by date descending
       filteredData.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
+      console.log('Final filtered orders count:', filteredData.length);
+      console.log('Filtered orders sample:', filteredData.slice(0, 2));
       setOrders(filteredData);
       applySearch(filteredData, searchText);
     } catch (error) {
@@ -132,7 +139,7 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
   const clearFilters = () => {
     setSelectedCustomerIds([]);
     setSearchText('');
-    setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    setStartDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000));
     setEndDate(new Date());
   };
 
