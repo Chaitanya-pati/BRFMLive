@@ -49,11 +49,34 @@ function CrossPlatformDatePicker({
     setTempValue(currentValue || "");
   }, [visible, currentValue]);
 
+  // Convert 24-hour format (HH:MM) to 12-hour format (HH:MM AM/PM)
+  const convertTo12HourFormat = (time24) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12;
+    return `${String(hours12).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
+
+  // Convert 12-hour format (HH:MM AM/PM) back to 24-hour format (HH:MM)
+  const convertTo24HourFormat = (time12) => {
+    if (!time12) return "";
+    const match = time12.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
+    if (!match) return time12;
+    let [, hours, minutes, period] = match;
+    hours = parseInt(hours);
+    if (period.toUpperCase() === "PM" && hours !== 12) hours += 12;
+    if (period.toUpperCase() === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  };
+
   if (!visible) return null;
 
   // ── WEB ──────────────────────────────────────────────────────────────────
   if (Platform.OS === "web") {
     const inputType = mode === "date" ? "date" : "time";
+    const displayValue = mode === "time" ? convertTo12HourFormat(tempValue) : tempValue;
+    
     return (
       <Modal visible={visible} transparent animationType="fade">
         <View style={pickerStyles.overlay}>
@@ -61,21 +84,44 @@ function CrossPlatformDatePicker({
             <Text style={pickerStyles.title}>
               {mode === "date" ? "Select Date" : "Select Time"}
             </Text>
-            <input
-              type={inputType}
-              value={tempValue}
-              onChange={(e) => setTempValue(e.target.value)}
-              style={{
-                fontSize: 18,
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #CBD5E1",
-                marginVertical: 16,
-                width: "100%",
-                boxSizing: "border-box",
-                outline: "none",
-              }}
-            />
+            {mode === "date" ? (
+              <input
+                type="date"
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                style={{
+                  fontSize: 18,
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid #CBD5E1",
+                  marginVertical: 16,
+                  width: "100%",
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            ) : (
+              <View style={{marginVertical: 16, width: "100%"}}>
+                <input
+                  type="time"
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  style={{
+                    fontSize: 18,
+                    padding: 10,
+                    borderRadius: 8,
+                    border: "1px solid #CBD5E1",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    outline: "none",
+                    marginBottom: 10,
+                  }}
+                />
+                <Text style={{fontSize: 16, color: "#0066CC", textAlign: "center", fontWeight: "600"}}>
+                  {displayValue}
+                </Text>
+              </View>
+            )}
             <View style={pickerStyles.webBtnRow}>
               <TouchableOpacity
                 style={pickerStyles.cancelBtn}
@@ -85,7 +131,7 @@ function CrossPlatformDatePicker({
               </TouchableOpacity>
               <TouchableOpacity
                 style={pickerStyles.confirmBtn}
-                onPress={() => tempValue && onConfirm(tempValue)}
+                onPress={() => tempValue && onConfirm(convertTo12HourFormat(tempValue))}
               >
                 <Text style={pickerStyles.confirmText}>Confirm</Text>
               </TouchableOpacity>
