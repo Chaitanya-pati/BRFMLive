@@ -3996,6 +3996,7 @@ def update_12hour_transfer_record(
         raise HTTPException(status_code=404, detail="Record not found")
         
     update_data = record_update.dict(exclude_unset=True)
+    print(f"[12HOUR-TRANSFER] Updating record {record_id} with data: {update_data}")
     
     # If the status is terminal (COMPLETED), ensure it's recorded correctly.
     if "status" in update_data and update_data["status"] == "DIVERTED":
@@ -4013,6 +4014,7 @@ def update_12hour_transfer_record(
             dest_bin.current_quantity += diff
             
     for key, value in update_data.items():
+        print(f"[12HOUR-TRANSFER] Setting {key} = {value}")
         setattr(db_record, key, value)
         
     # Terminal status logic matching 24h transfer
@@ -4021,6 +4023,7 @@ def update_12hour_transfer_record(
         
     db.commit()
     db.refresh(db_record)
+    print(f"[12HOUR-TRANSFER] Successfully updated record {record_id}: moisture_level={db_record.moisture_level}, water_added={db_record.water_added}")
     return db_record
 
 @app.post("/api/12hour-transfer/records/{record_id}/complete", response_model=schemas.Transfer12HourRecord)

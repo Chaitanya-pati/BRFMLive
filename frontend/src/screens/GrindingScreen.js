@@ -730,10 +730,14 @@ export default function GrindingScreen({ navigation }) {
       }
     } catch (e) {
       console.error("Failed to save grinding parameters", e);
-      showAlert(
-        "Warning",
-        "Parameters not saved, but grinding process started",
-      );
+      if (e.response?.data?.detail) {
+        showError(e.response.data.detail);
+      } else {
+        showError(
+          "Failed to save parameters. Please try again.",
+        );
+      }
+      return; // Don't proceed if parameters couldn't be saved
     }
     try {
       const templateKey = `grinding_template_${bin.production_order_id}`;
@@ -748,6 +752,7 @@ export default function GrindingScreen({ navigation }) {
       console.error("Failed to load template", e);
     }
     fetchExistingProductionData(bin.production_order_id);
+    setShowSourceParamsModal(false);
     showToast("Success", `Grinding started for Bin ${bin.bin_number}`);
   };
 
