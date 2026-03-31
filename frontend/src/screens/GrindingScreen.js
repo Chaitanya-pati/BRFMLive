@@ -709,24 +709,43 @@ export default function GrindingScreen({ navigation }) {
 
   const proceedWithGrinding = async () => {
     const bin = selectedBin;
-    setIsGrindingStarted(true);
-    setShowSourceParamsModal(false);
+    setLoading(true);
     try {
       const client = getApiClient();
       const transferRecords = await client.get("/12hour-transfer/records");
+      console.log("All transfer records:", transferRecords.data);
+      console.log("Looking for: destination_bin_id=" + bin.id + ", production_order_id=" + bin.production_order_id + ", status=IN_PROGRESS");
       const matchingRecord = (transferRecords.data || []).find(
-        (r) =>
-          Number(r.destination_bin_id) === Number(bin.id) &&
-          Number(r.production_order_id) === Number(bin.production_order_id) &&
-          r.status === "IN_PROGRESS",
+        (r) => {
+          const match = Number(r.destination_bin_id) === Number(bin.id) &&
+            Number(r.production_order_id) === Number(bin.production_order_id) &&
+            r.status === "IN_PROGRESS";
+          console.log("Checking record:", r.id, "destination_bin_id=" + r.destination_bin_id, "production_order_id=" + r.production_order_id, "status=" + r.status, "matches=" + match);
+          return match;
+        }
       );
+      console.log("Matching record found:", matchingRecord);
+      
       if (matchingRecord) {
-        await client.patch(`/12hour-transfer/records/${matchingRecord.id}`, {
-          moisture_level: sourceMoisture ? parseFloat(sourceMoisture) : null,
-          water_added: sourceWater ? parseFloat(sourceWater) : null,
-        });
+        console.log("Sending PATCH request to update record", matchingRecord.id);
+        const moistureVal = sourceMoisture && sourceMoisture.trim() ? parseFloat(sourceMoisture) : null;
+        const waterVal = sourceWater && sourceWater.trim() ? parseFloat(sourceWater) : null;
+        
+        console.log("Raw sourceMoisture:", JSON.stringify(sourceMoisture), "->", moistureVal);
+        console.log("Raw sourceWater:", JSON.stringify(sourceWater), "->", waterVal);
+        
+        const patchData = {
+          moisture_level: moistureVal,
+          water_added: waterVal,
+        };
+        console.log("PATCH data:", patchData);
+        const response = await client.patch(`/12hour-transfer/records/${matchingRecord.id}`, patchData);
+        console.log("PATCH response:", response.data);
+        showToast("Success", "Parameters saved successfully");
       } else {
         showAlert("Warning", "Could not find transfer record for this bin");
+        setLoading(false);
+        return;
       }
     } catch (e) {
       console.error("Failed to save grinding parameters", e);
@@ -737,8 +756,12 @@ export default function GrindingScreen({ navigation }) {
           "Failed to save parameters. Please try again.",
         );
       }
+      setLoading(false);
       return; // Don't proceed if parameters couldn't be saved
     }
+    
+    setIsGrindingStarted(true);
+    setShowSourceParamsModal(false);
     try {
       const templateKey = `grinding_template_${bin.production_order_id}`;
       const savedTemplate = await AsyncStorage.getItem(templateKey);
