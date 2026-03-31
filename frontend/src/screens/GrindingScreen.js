@@ -102,22 +102,92 @@ function CrossPlatformDatePicker({
               />
             ) : (
               <View style={{marginVertical: 16, width: "100%"}}>
-                <input
-                  type="time"
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
-                  style={{
-                    fontSize: 18,
-                    padding: 10,
-                    borderRadius: 8,
-                    border: "1px solid #CBD5E1",
-                    width: "100%",
-                    boxSizing: "border-box",
-                    outline: "none",
-                    marginBottom: 10,
-                  }}
-                />
-                <Text style={{fontSize: 16, color: "#0066CC", textAlign: "center", fontWeight: "600"}}>
+                <View style={{display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 16}}>
+                  <View style={{flex: 1, alignItems: "center"}}>
+                    <Text style={{fontSize: 12, color: "#666", marginBottom: 4}}>Hour</Text>
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={tempValue ? parseInt(tempValue.split(":")[0]) % 12 || 12 : ""}
+                      onChange={(e) => {
+                        const hour = parseInt(e.target.value) || 12;
+                        const [_, minutes] = tempValue.split(":").map(Number);
+                        const period = tempValue.includes("PM") || parseInt(tempValue.split(":")[0]) >= 12 ? "PM" : "AM";
+                        const hour24 = period === "PM" && hour !== 12 ? hour + 12 : period === "AM" && hour === 12 ? 0 : hour;
+                        setTempValue(`${String(hour24).padStart(2, "0")}:${String(minutes || 0).padStart(2, "0")}`);
+                      }}
+                      style={{
+                        fontSize: 24,
+                        padding: 8,
+                        borderRadius: 6,
+                        border: "1px solid #CBD5E1",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        outline: "none",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    />
+                  </View>
+                  <Text style={{fontSize: 24, fontWeight: "600"}}>:</Text>
+                  <View style={{flex: 1, alignItems: "center"}}>
+                    <Text style={{fontSize: 12, color: "#666", marginBottom: 4}}>Minutes</Text>
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={tempValue ? String(parseInt(tempValue.split(":")[1])).padStart(2, "0") : ""}
+                      onChange={(e) => {
+                        const [hours] = tempValue.split(":").map(Number);
+                        const minutes = parseInt(e.target.value) || 0;
+                        setTempValue(`${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+                      }}
+                      style={{
+                        fontSize: 24,
+                        padding: 8,
+                        borderRadius: 6,
+                        border: "1px solid #CBD5E1",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        outline: "none",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    />
+                  </View>
+                  <View style={{flex: 1, alignItems: "center"}}>
+                    <Text style={{fontSize: 12, color: "#666", marginBottom: 4}}>Period</Text>
+                    <select
+                      value={tempValue && (parseInt(tempValue.split(":")[0]) >= 12 ? "PM" : "AM")}
+                      onChange={(e) => {
+                        const [hours, minutes] = tempValue.split(":").map(Number);
+                        const currentPeriod = hours >= 12 ? "PM" : "AM";
+                        const newPeriod = e.target.value;
+                        let newHours = hours;
+                        if (currentPeriod !== newPeriod) {
+                          newHours = (hours + 12) % 24;
+                        }
+                        setTempValue(`${String(newHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+                      }}
+                      style={{
+                        fontSize: 18,
+                        padding: 8,
+                        borderRadius: 6,
+                        border: "1px solid #CBD5E1",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        outline: "none",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </View>
+                </View>
+                <Text style={{fontSize: 18, color: "#0066CC", textAlign: "center", fontWeight: "600", backgroundColor: "#EFF6FF", padding: 10, borderRadius: 6}}>
                   {displayValue}
                 </Text>
               </View>
