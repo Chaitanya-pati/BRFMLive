@@ -413,6 +413,41 @@ export default function GrindingScreen({ navigation }) {
   const [godownAllocation, setGodownAllocation] = useState({});
   const [availableBins, setAvailableBins] = useState([]);
 
+  const handleChangeBin = async () => {
+    if (!selectedBin) return;
+    
+    setLoading(true);
+    try {
+      const client = getApiClient();
+      
+      // Reset the current bin's quantity to 0 in the database
+      console.log("Resetting bin", selectedBin.id, "quantity to 0");
+      await client.put(`/bins/${selectedBin.id}`, {
+        current_quantity: 0,
+      });
+      console.log("✅ Bin quantity reset successfully");
+      
+      // Clear the selected bin (go back to bin selection view)
+      setSelectedBin(null);
+      setIsGrindingStarted(false);
+      
+      // Refresh available bins to show updated quantities
+      const response = await client.get("/grinding/available-bins");
+      setAvailableBins(response.data || []);
+      console.log("✅ Available bins refreshed");
+      
+      showToast("Success", `Bin ${selectedBin.bin_number} reset. Select another bin to continue grinding.`);
+    } catch (error) {
+      console.error("Failed to change bin:", error);
+      showAlert(
+        "Error",
+        "Failed to reset bin: " + (error.response?.data?.detail || error.message),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCompleteProcess = async () => {
     setLoading(true);
     try {
@@ -1551,8 +1586,10 @@ export default function GrindingScreen({ navigation }) {
                     Bin {selectedBin?.bin_number}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setIsGrindingStarted(false)}>
-                  <Text style={styles.changeText}>Change Bin</Text>
+                <TouchableOpacity onPress={handleChangeBin} disabled={loading}>
+                  <Text style={[styles.changeText, loading && {opacity: 0.6}]}>
+                    {loading ? "Resetting..." : "Change Bin"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Card>
