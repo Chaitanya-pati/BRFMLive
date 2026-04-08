@@ -119,6 +119,23 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
     <Layout title="Order Traceability" navigation={navigation}>
       <View style={styles.container}>
         <Card style={styles.searchCard}>
+          <View style={styles.headerBanner}>
+            <Text style={styles.headerKicker}>Traceability Center</Text>
+            <Text style={styles.headerTitle}>Production Order Traceability</Text>
+            <Text style={styles.headerSubtitle}>Search, inspect, and review the full production lifecycle.</Text>
+          </View>
+
+          <View style={styles.filterGrid}>
+            <View style={styles.filterChip}>
+              <Text style={styles.filterChipLabel}>Date Range</Text>
+              <Text style={styles.filterChipValue}>{formatISTDate(startDate).split(" ")[0]} → {formatISTDate(endDate).split(" ")[0]}</Text>
+            </View>
+            <View style={styles.filterChip}>
+              <Text style={styles.filterChipLabel}>Orders Loaded</Text>
+              <Text style={styles.filterChipValue}>{filteredOrders.length}</Text>
+            </View>
+          </View>
+
           <Text style={styles.label}>Date Range Filter</Text>
           <View style={styles.dateRow}>
             <View style={{ flex: 1, marginRight: 8 }}>
@@ -180,6 +197,7 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     <Text style={styles.heroSubTitle}>
                       {lifecycleData.raw_product_name || lifecycleData.product_name || "Production traceability"}
                     </Text>
+                    <View style={styles.heroLine} />
                     <View style={styles.heroStatsRow}>
                       <View style={styles.heroStat}>
                         <Text style={styles.heroStatLabel}>Stages</Text>
@@ -248,7 +266,16 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  searchCard: { padding: 16, marginBottom: 16, borderRadius: 16, backgroundColor: "#fff", elevation: 3 },
+  searchCard: { padding: 16, marginBottom: 16, borderRadius: 18, backgroundColor: "#fff", elevation: 4 },
+  headerBanner: { backgroundColor: "#0F172A", borderRadius: 16, padding: 16, marginBottom: 14 },
+  headerKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
+  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginBottom: 4 },
+  headerSubtitle: { color: "#D4DDF5", fontSize: 13, lineHeight: 18 },
+  heroLine: { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginBottom: 14 },
+  filterGrid: { flexDirection: "row", gap: 10, marginBottom: 14 },
+  filterChip: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
+  filterChipLabel: { fontSize: 10, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontWeight: "600" },
+  filterChipValue: { fontSize: 13, color: colors.text, fontWeight: "800" },
   dateRow: { flexDirection: 'row', marginBottom: 12 },
   label: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: colors.text },
   searchRow: { flexDirection: 'row', marginBottom: 12 },
@@ -258,9 +285,9 @@ const styles = StyleSheet.create({
   pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 16, backgroundColor: '#fff', overflow: 'hidden' },
   picker: { height: 45 },
   searchBtn: { marginTop: 8 },
-  resultsContainer: { flex: 1 },
+  resultsContainer: { flex: 1, marginTop: 4 },
   detailShell: { gap: 14, paddingBottom: 20 },
-  heroCard: { backgroundColor: "#0F172A", borderRadius: 18, padding: 18 },
+  heroCard: { backgroundColor: "#0F172A", borderRadius: 18, padding: 18, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   heroKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
   heroTitle: { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 4 },
   heroSubTitle: { color: "#D4DDF5", fontSize: 13, marginBottom: 14 },
@@ -269,8 +296,8 @@ const styles = StyleSheet.create({
   heroStatLabel: { color: "#AFC0E8", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 4, fontWeight: "600" },
   heroStatValue: { color: "#fff", fontSize: 16, fontWeight: "800" },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.4 },
-  timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2 },
-  breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2 },
+  timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   breakdownGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   breakdownChip: { width: "48%", backgroundColor: "#F8FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E5ECFF" },
   breakdownProduct: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 4 },
