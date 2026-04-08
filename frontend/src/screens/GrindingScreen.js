@@ -630,6 +630,7 @@ export default function GrindingScreen({ navigation }) {
             finished_good_id: parseInt(row.fgId),
             bag_size_id: parseInt(row.bsId),
             quantity_bags: parseInt(row.bags),
+            production_order_id: selectedBin?.production_order_id || null,
             remarks: `Grinding completion: ${label}`,
           };
           console.log("📦 Movement payload:", movement);
