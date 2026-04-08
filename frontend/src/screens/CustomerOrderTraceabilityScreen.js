@@ -7,9 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  FlatList,
   useWindowDimensions,
-  Platform,
 } from 'react-native';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
@@ -202,6 +200,29 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
     }
   };
 
+  const getOrderBreakdown = (traceability) => {
+    const items = traceability?.items || [];
+    const map = new Map();
+    let totalBags = 0;
+
+    items.forEach((item) => {
+      const productName = item.product_name || 'Unknown Product';
+      const bagSize = item.bag_size || item.bag_size_name || (item.quantity_ton > 0 ? `${item.quantity_ton}T` : 'Bagged');
+      const bags = Number(item.number_of_bags || item.quantity_bags || item.bags_produced || 0) || 0;
+      totalBags += bags;
+      const key = `${productName}__${bagSize}`;
+      const current = map.get(key) || { productName, bagSize, bags: 0 };
+      current.bags += bags;
+      map.set(key, current);
+    });
+
+    return {
+      totalBags,
+      totalItems: items.length,
+      breakdown: Array.from(map.values()),
+    };
+  };
+
   const fetchOrderTraceability = async (orderId) => {
     try {
       setLoading(true);
@@ -288,12 +309,15 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
               activeOpacity={0.7}
             >
               <View style={styles.orderCardContent}>
-                {/* Card Header */}
+                <View style={styles.orderCardAccent} />
                 <View style={styles.orderCardHeader}>
                   <View style={styles.orderCardInfo}>
                     <Text style={styles.orderCardCode}>{order.order_code}</Text>
                     <Text style={styles.orderCardCustomer}>
                       {order.customer?.customer_name || 'Unknown Customer'}
+                    </Text>
+                    <Text style={styles.orderCardMeta}>
+                      {formatISTDate(order.order_date).split(' ')[0]} • {order.items?.length || 0} items
                     </Text>
                   </View>
                   <View
@@ -306,38 +330,34 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
                   </View>
                 </View>
 
-                {/* Card Body - Key Info */}
-                <View style={styles.orderCardBody}>
-                  <View style={styles.cardInfoRow}>
-                    <Text style={styles.cardInfoLabel}>Order Date:</Text>
-                    <Text style={styles.cardInfoValue}>
-                      {formatISTDate(order.order_date).split(' ')[0]}
-                    </Text>
+                <View style={styles.cardStatsRow}>
+                  <View style={styles.cardStatPill}>
+                    <Text style={styles.cardStatLabel}>Items</Text>
+                    <Text style={styles.cardStatValue}>{order.items?.length || 0}</Text>
                   </View>
-
-                  {lastDispatchDate && (
-                    <View style={styles.cardInfoRow}>
-                      <Text style={styles.cardInfoLabel}>Last Dispatch:</Text>
-                      <Text style={styles.cardInfoValue}>
-                        {formatISTDate(lastDispatchDate).split(' ')[0]}
-                      </Text>
-                    </View>
-                  )}
-
-                  <View style={styles.cardInfoRow}>
-                    <Text style={styles.cardInfoLabel}>Items:</Text>
-                    <Text style={styles.cardInfoValue}>{order.items?.length || 0}</Text>
+                  <View style={styles.cardStatPill}>
+                    <Text style={styles.cardStatLabel}>Dispatches</Text>
+                    <Text style={styles.cardStatValue}>{order.traceability?.dispatch_count || 0}</Text>
                   </View>
-
-                  {order.traceability && (
-                    <View style={styles.cardInfoRow}>
-                      <Text style={styles.cardInfoLabel}>Dispatches:</Text>
-                      <Text style={styles.cardInfoValue}>{order.traceability.dispatch_count}</Text>
-                    </View>
-                  )}
+                  <View style={styles.cardStatPill}>
+                    <Text style={styles.cardStatLabel}>Last Dispatch</Text>
+                    <Text style={styles.cardStatValue}>{lastDispatchDate ? formatISTDate(lastDispatchDate).split(' ')[0] : '—'}</Text>
+                  </View>
                 </View>
 
-                {/* Card Footer - CTA */}
+                {order.traceability?.items?.length > 0 && (
+                  <View style={styles.previewBreakdown}>
+                    {getOrderBreakdown(order.traceability).breakdown.slice(0, 2).map((row, index) => (
+                      <View key={`${row.productName}-${row.bagSize}-${index}`} style={styles.previewChip}>
+                        <Text style={styles.previewChipText} numberOfLines={1}>
+                          {row.productName} • {row.bagSize}
+                        </Text>
+                        <Text style={styles.previewChipCount}>{row.bags} bags</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 <View style={styles.orderCardFooter}>
                   <Text style={styles.viewDetailsText}>View Traceability →</Text>
                 </View>
@@ -417,6 +437,7 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
 
   function renderTraceabilityDetails() {
     const isSmallScreen = width < 600;
+    const summary = getOrderBreakdown(orderTraceability);
     
     return (
       <ScrollView style={styles.traceabilityContainer} showsVerticalScrollIndicator={true}>
@@ -429,6 +450,29 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
 
         {/* Order Card with Header and Timeline */}
         <View style={styles.mainCard}>
+          <View style={styles.heroBanner}>
+            <Text style={styles.heroKicker}>Traceability Overview</Text>
+            <Text style={styles.heroTitle}>{orderTraceability.order_code}</Text>
+            <Text style={styles.heroSubTitle}>
+              {orderTraceability.customer_name}
+              {orderTraceability.customer_city ? ` • ${orderTraceability.customer_city}` : ''}
+            </Text>
+            <View style={styles.heroTags}>
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagLabel}>Status</Text>
+                <Text style={styles.heroTagValue}>{orderTraceability.order_status}</Text>
+              </View>
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagLabel}>Products</Text>
+                <Text style={styles.heroTagValue}>{summary.totalItems}</Text>
+              </View>
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagLabel}>Bags</Text>
+                <Text style={styles.heroTagValue}>{summary.totalBags}</Text>
+              </View>
+            </View>
+          </View>
+
           {/* Card Header */}
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -467,6 +511,21 @@ export default function CustomerOrderTraceabilityScreen({ navigation }) {
               <Text style={styles.statValue}>{orderTraceability.total_dispatched_tons.toFixed(2)}T</Text>
             </View>
           </View>
+
+          {summary.breakdown.length > 0 && (
+            <View style={styles.productionBreakdownSection}>
+              <Text style={styles.timelineTitle}>Produced Bags by Product & Bag Size</Text>
+              <View style={styles.breakdownGrid}>
+                {summary.breakdown.map((row, index) => (
+                  <View key={`${row.productName}-${row.bagSize}-${index}`} style={styles.breakdownCard}>
+                    <Text style={styles.breakdownProduct}>{row.productName}</Text>
+                    <Text style={styles.breakdownBag}>{row.bagSize}</Text>
+                    <Text style={styles.breakdownCount}>{row.bags} bags</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Delivery Progress - For PARTIALLY DELIVERED Orders */}
           {orderTraceability.order_status === 'PARTIALLY DELIVERED' && (
@@ -699,6 +758,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
+  orderCardAccent: {
+    height: 5,
+    backgroundColor: colors.primary,
+  },
   orderCardHeader: {
     backgroundColor: '#f9f9f9',
     paddingHorizontal: 16,
@@ -724,6 +787,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.primary,
+  },
+  orderCardMeta: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   orderCardBadge: {
     paddingHorizontal: 10,
@@ -759,6 +827,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
+  },
+  cardStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  cardStatPill: {
+    flex: 1,
+    backgroundColor: '#F7FAFF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E6EEF9',
+  },
+  cardStatLabel: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  cardStatValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  previewBreakdown: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 8,
+  },
+  previewChip: {
+    backgroundColor: '#F8F8FF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#EAE7FF',
+  },
+  previewChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  previewChipCount: {
+    fontSize: 11,
+    color: colors.primary,
+    marginTop: 4,
+    fontWeight: '700',
   },
   orderCardFooter: {
     paddingHorizontal: 16,
@@ -824,6 +946,54 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     marginBottom: 20,
+  },
+  heroBanner: {
+    padding: 18,
+    backgroundColor: '#0F172A',
+  },
+  heroKicker: {
+    color: '#8FB3FF',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  heroSubTitle: {
+    color: '#D4DDF5',
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  heroTags: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  heroTag: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minWidth: 90,
+  },
+  heroTagLabel: {
+    color: '#AFC0E8',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 3,
+    fontWeight: '600',
+  },
+  heroTagValue: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardHeader: {
     backgroundColor: '#f9f9f9',
@@ -901,6 +1071,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
+  },
+  productionBreakdownSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  breakdownGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  breakdownCard: {
+    width: '48%',
+    backgroundColor: '#F8FAFF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5ECFF',
+  },
+  breakdownProduct: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  breakdownBag: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  breakdownCount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.primary,
   },
   timelineSection: {
     padding: 16,
