@@ -4240,6 +4240,7 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
     fg_movements = (
         db.query(models.FinishedGoodsGodownMovement)
         .filter(models.FinishedGoodsGodownMovement.production_order_id == po_id)
+        .order_by(models.FinishedGoodsGodownMovement.created_at)
         .all()
     )
     for m in fg_movements:
@@ -4264,6 +4265,21 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
     return {
         "production_order_id": po_id,
         "order_number": po.order_number if po else f"PO{po_id}",
+        "finished_goods_movements": [
+            {
+                "id": m.id,
+                "movement_type": m.movement_type,
+                "finished_good_id": m.finished_good_id,
+                "product_name": m.finished_good.product_name if m.finished_good else f"Product #{m.finished_good_id}",
+                "bag_size_id": m.bag_size_id,
+                "bag_size": f"{m.bag_size.weight_kg} Kg" if m.bag_size and m.bag_size.weight_kg is not None else (f"Bag #{m.bag_size_id}" if m.bag_size_id else "N/A"),
+                "quantity_bags": m.quantity_bags,
+                "quantity_kg": float(m.quantity_bags or 0) * (float(m.bag_size.weight_kg) if m.bag_size and m.bag_size.weight_kg is not None else 0.0),
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "remarks": m.remarks,
+            }
+            for m in fg_movements
+        ],
         "records_24h": [
             {
                 "id": r.id,
