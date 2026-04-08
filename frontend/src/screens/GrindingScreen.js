@@ -415,6 +415,7 @@ export default function GrindingScreen({ navigation }) {
 
   const handleChangeBin = async () => {
     if (!selectedBin) return;
+    const binToRemove = selectedBin;
     
     setLoading(true);
     try {
@@ -434,11 +435,11 @@ export default function GrindingScreen({ navigation }) {
       // Refresh available bins to show updated quantities
       const response = await client.get("/grinding/available-bins");
       setAvailableBins(
-        (response.data || []).filter((bin) => bin.id !== selectedBin.id),
+        (response.data || []).filter((bin) => bin.id !== binToRemove.id),
       );
       console.log("✅ Available bins refreshed");
       
-      showToast("Success", `Bin ${selectedBin.bin_number} reset. Select another bin to continue grinding.`);
+      showToast("Success", `Bin ${binToRemove.bin_number} reset. Select another bin to continue grinding.`);
     } catch (error) {
       console.error("Failed to change bin:", error);
       showAlert(
