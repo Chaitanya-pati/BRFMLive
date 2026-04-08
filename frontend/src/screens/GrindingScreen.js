@@ -433,7 +433,9 @@ export default function GrindingScreen({ navigation }) {
       
       // Refresh available bins to show updated quantities
       const response = await client.get("/grinding/available-bins");
-      setAvailableBins(response.data || []);
+      setAvailableBins(
+        (response.data || []).filter((bin) => bin.id !== selectedBin.id),
+      );
       console.log("✅ Available bins refreshed");
       
       showToast("Success", `Bin ${selectedBin.bin_number} reset. Select another bin to continue grinding.`);
