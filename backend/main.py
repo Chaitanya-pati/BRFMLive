@@ -696,6 +696,64 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
             "details": "Final product granulation analysis"
         })
 
+    # 6. Product details with godown storage breakdown
+    fg_movements = db.query(models.FinishedGoodsGodownMovement).filter(
+        models.FinishedGoodsGodownMovement.production_order_id == order_id,
+        models.FinishedGoodsGodownMovement.movement_type == "IN"
+    ).all()
+
+    godown_summary_map = {}
+    for m in fg_movements:
+        fg_name = m.finished_good.product_name if m.finished_good else f"Product #{m.finished_good_id}"
+        bag_label = f"{m.bag_size.weight_kg} Kg" if m.bag_size and m.bag_size.weight_kg is not None else (f"Bag #{m.bag_size_id}" if m.bag_size_id else "N/A")
+        godown_name = m.to_godown.godown_name if m.to_godown else "Unknown Godown"
+        godown_code = m.to_godown.godown_code if m.to_godown else ""
+        key = (m.finished_good_id, fg_name, m.bag_size_id, bag_label, godown_name, godown_code)
+        if key not in godown_summary_map:
+            godown_summary_map[key] = {"total_bags": 0, "total_quantity_kg": 0.0}
+        qty = int(m.quantity_bags or 0)
+        bag_weight = float(m.bag_size.weight_kg) if m.bag_size and m.bag_size.weight_kg is not None else 0.0
+        godown_summary_map[key]["total_bags"] += qty
+        godown_summary_map[key]["total_quantity_kg"] += qty * bag_weight
+
+    godown_breakdown = [
+        {
+            "product_name": fg_name,
+            "bag_size": bag_label,
+            "godown_name": godown_name,
+            "godown_code": godown_code,
+            "total_bags": data["total_bags"],
+            "total_quantity_kg": round(data["total_quantity_kg"], 2),
+        }
+        for (_, fg_name, _, bag_label, godown_name, godown_code), data in godown_summary_map.items()
+    ]
+
+    # Overall product summary (all godowns combined)
+    overall_summary_map = {}
+    for m in fg_movements:
+        fg_name = m.finished_good.product_name if m.finished_good else f"Product #{m.finished_good_id}"
+        bag_label = f"{m.bag_size.weight_kg} Kg" if m.bag_size and m.bag_size.weight_kg is not None else (f"Bag #{m.bag_size_id}" if m.bag_size_id else "N/A")
+        key = (m.finished_good_id, fg_name, m.bag_size_id, bag_label)
+        if key not in overall_summary_map:
+            overall_summary_map[key] = {"total_bags": 0, "total_quantity_kg": 0.0}
+        qty = int(m.quantity_bags or 0)
+        bag_weight = float(m.bag_size.weight_kg) if m.bag_size and m.bag_size.weight_kg is not None else 0.0
+        overall_summary_map[key]["total_bags"] += qty
+        overall_summary_map[key]["total_quantity_kg"] += qty * bag_weight
+
+    production_summary = [
+        {
+            "product_name": fg_name,
+            "bag_size": bag_label,
+            "total_bags": data["total_bags"],
+            "total_quantity_kg": round(data["total_quantity_kg"], 2),
+        }
+        for (_, fg_name, _, bag_label), data in overall_summary_map.items()
+    ]
+
+    traceability["production_summary"] = production_summary
+    traceability["godown_breakdown"] = godown_breakdown
+
     return traceability
 
 @app.get("/")

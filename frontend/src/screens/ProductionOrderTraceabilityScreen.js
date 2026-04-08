@@ -98,10 +98,12 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
   const getProductionSummary = () => {
     const breakdown = lifecycleData?.production_summary || [];
     const totalBags = breakdown.reduce((sum, item) => sum + (item.total_bags || 0), 0);
+    const godownBreakdown = lifecycleData?.godown_breakdown || [];
     return {
       totalBags,
       totalItems: breakdown.length,
       breakdown,
+      godownBreakdown,
     };
   };
 
@@ -180,6 +182,38 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     </View>
                   )}
 
+                  {summary.godownBreakdown.length > 0 && (
+                    <View style={styles.breakdownCard}>
+                      <Text style={styles.sectionTitle}>Godown Storage Details</Text>
+                      {(() => {
+                        const grouped = {};
+                        summary.godownBreakdown.forEach(item => {
+                          const key = item.product_name;
+                          if (!grouped[key]) grouped[key] = [];
+                          grouped[key].push(item);
+                        });
+                        return Object.entries(grouped).map(([productName, items]) => (
+                          <View key={productName} style={styles.godownProductGroup}>
+                            <Text style={styles.godownProductName}>{productName}</Text>
+                            {items.map((item, idx) => (
+                              <View key={idx} style={styles.godownRow}>
+                                <View style={styles.godownRowLeft}>
+                                  <Text style={styles.godownName}>{item.godown_name}</Text>
+                                  {item.godown_code ? <Text style={styles.godownCode}>{item.godown_code}</Text> : null}
+                                </View>
+                                <View style={styles.godownRowRight}>
+                                  <Text style={styles.godownBagSize}>{item.bag_size}</Text>
+                                  <Text style={styles.godownBags}>{item.total_bags} bags</Text>
+                                  <Text style={styles.godownQty}>{Number(item.total_quantity_kg || 0).toFixed(2)} kg</Text>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        ));
+                      })()}
+                    </View>
+                  )}
+
                   <View style={styles.timelineCard}>
                     <Text style={styles.sectionTitle}>Lifecycle Timeline</Text>
                     {lifecycleData.stages.map((stage, index) => (
@@ -254,5 +288,15 @@ const styles = StyleSheet.create({
   stageStatus: { fontSize: 12, fontWeight: 'bold', color: colors.textSecondary },
   stageDetails: { fontSize: 14, color: '#666', marginTop: 4, lineHeight: 20 },
   stageDate: { fontSize: 12, color: colors.primary, marginTop: 4 },
-  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' }
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center' },
+  godownProductGroup: { marginBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingBottom: 10 },
+  godownProductName: { fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 8 },
+  godownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFF', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 6, borderWidth: 1, borderColor: '#E5ECFF' },
+  godownRowLeft: { flex: 1, marginRight: 8 },
+  godownName: { fontSize: 13, fontWeight: '700', color: colors.text },
+  godownCode: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+  godownRowRight: { alignItems: 'flex-end' },
+  godownBagSize: { fontSize: 11, color: colors.textSecondary },
+  godownBags: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  godownQty: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' }
 });
