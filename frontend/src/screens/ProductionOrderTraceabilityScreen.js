@@ -170,20 +170,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     <Text style={styles.heroSubTitle}>
                       {lifecycleData.raw_product_name || lifecycleData.product_name || "Production traceability"}
                     </Text>
-                    <View style={styles.heroStatsRow}>
-                      <View style={styles.heroStat}>
-                        <Text style={styles.heroStatLabel}>Stages</Text>
-                        <Text style={styles.heroStatValue}>{lifecycleData.stages?.length || 0}</Text>
-                      </View>
-                      <View style={styles.heroStat}>
-                        <Text style={styles.heroStatLabel}>Items</Text>
-                        <Text style={styles.heroStatValue}>{summary.totalItems}</Text>
-                      </View>
-                      <View style={styles.heroStat}>
-                        <Text style={styles.heroStatLabel}>Bags</Text>
-                        <Text style={styles.heroStatValue}>{summary.totalBags}</Text>
-                      </View>
-                    </View>
                   </View>
 
                   {summary.breakdown.length > 0 && (
@@ -255,10 +241,6 @@ const styles = StyleSheet.create({
   heroKicker: { color: colors.primary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
   heroTitle: { color: colors.text, fontSize: 22, fontWeight: "800", marginBottom: 4 },
   heroSubTitle: { color: colors.textSecondary, fontSize: 13, marginBottom: 14 },
-  heroStatsRow: { flexDirection: "row", gap: 8 },
-  heroStat: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
-  heroStatLabel: { color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 4, fontWeight: "600" },
-  heroStatValue: { color: colors.text, fontSize: 16, fontWeight: "800" },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.4 },
   timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
   breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
