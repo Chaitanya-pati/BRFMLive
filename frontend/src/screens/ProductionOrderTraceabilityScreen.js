@@ -164,14 +164,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
               const summary = getProductionSummary();
               return (
                 <View style={styles.detailShell}>
-                  <View style={styles.heroCard}>
-                    <Text style={styles.heroKicker}>Production Order Traceability</Text>
-                    <Text style={styles.heroTitle}>{lifecycleData.order_number}</Text>
-                    <Text style={styles.heroSubTitle}>
-                      {lifecycleData.raw_product_name || lifecycleData.product_name || "Production traceability"}
-                    </Text>
-                  </View>
-
                   {summary.breakdown.length > 0 && (
                     <View style={styles.breakdownCard}>
                       <Text style={styles.sectionTitle}>Produced Bags by Product & Bag Size</Text>
