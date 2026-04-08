@@ -503,6 +503,7 @@ class FinishedGoodsGodownMovement(Base):
     finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=False)
     quantity_bags = Column(Integer, nullable=False)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=True)
     reference_id = Column(Integer)
     remarks = Column(Text)
     created_at = Column(DateTime, default=ist_now, nullable=False)

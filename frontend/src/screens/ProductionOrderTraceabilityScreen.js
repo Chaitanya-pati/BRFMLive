@@ -122,7 +122,7 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
           <View style={styles.headerBanner}>
             <Text style={styles.headerKicker}>Traceability Center</Text>
             <Text style={styles.headerTitle}>Production Order Traceability</Text>
-            <Text style={styles.headerSubtitle}>Search, inspect, and review the full production lifecycle.</Text>
+            <Text style={styles.headerSubtitle}>Search and review the full production lifecycle.</Text>
           </View>
 
           <View style={styles.filterGrid}>
@@ -197,7 +197,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     <Text style={styles.heroSubTitle}>
                       {lifecycleData.raw_product_name || lifecycleData.product_name || "Production traceability"}
                     </Text>
-                    <View style={styles.heroLine} />
                     <View style={styles.heroStatsRow}>
                       <View style={styles.heroStat}>
                         <Text style={styles.heroStatLabel}>Stages</Text>
@@ -218,11 +217,20 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     <View style={styles.breakdownCard}>
                       <Text style={styles.sectionTitle}>Produced Bags by Product & Bag Size</Text>
                       <View style={styles.breakdownGrid}>
-                        {summary.breakdown.map((item, index) => (
+                        {Object.values(
+                          summary.breakdown.reduce((acc, item) => {
+                            const key = `${item.productName}__${item.bagSize}`;
+                            if (!acc[key]) acc[key] = { ...item, totalQty: 0, count: 0 };
+                            acc[key].totalQty += Number(item.quantity_ton || 0);
+                            acc[key].count += 1;
+                            return acc;
+                          }, {})
+                        ).map((item, index) => (
                           <View key={`${item.productName}-${item.bagSize}-${index}`} style={styles.breakdownChip}>
                             <Text style={styles.breakdownProduct}>{item.productName}</Text>
                             <Text style={styles.breakdownBag}>{item.bagSize}</Text>
                             <Text style={styles.breakdownCount}>{item.bags} bags</Text>
+                            <Text style={styles.breakdownQty}>{item.totalQty.toFixed(2)} qty</Text>
                           </View>
                         ))}
                       </View>
@@ -271,7 +279,6 @@ const styles = StyleSheet.create({
   headerKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
   headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginBottom: 4 },
   headerSubtitle: { color: "#D4DDF5", fontSize: 13, lineHeight: 18 },
-  heroLine: { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginBottom: 14 },
   filterGrid: { flexDirection: "row", gap: 10, marginBottom: 14 },
   filterChip: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
   filterChipLabel: { fontSize: 10, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontWeight: "600" },
@@ -287,22 +294,23 @@ const styles = StyleSheet.create({
   searchBtn: { marginTop: 8 },
   resultsContainer: { flex: 1, marginTop: 4 },
   detailShell: { gap: 14, paddingBottom: 20 },
-  heroCard: { backgroundColor: "#0F172A", borderRadius: 18, padding: 18, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  heroCard: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 18, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   heroKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
-  heroTitle: { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 4 },
-  heroSubTitle: { color: "#D4DDF5", fontSize: 13, marginBottom: 14 },
+  heroTitle: { color: colors.text, fontSize: 22, fontWeight: "800", marginBottom: 4 },
+  heroSubTitle: { color: colors.textSecondary, fontSize: 13, marginBottom: 14 },
   heroStatsRow: { flexDirection: "row", gap: 8 },
-  heroStat: { flex: 1, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12, padding: 12 },
-  heroStatLabel: { color: "#AFC0E8", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 4, fontWeight: "600" },
-  heroStatValue: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  heroStat: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
+  heroStatLabel: { color: colors.textSecondary, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 4, fontWeight: "600" },
+  heroStatValue: { color: colors.text, fontSize: 16, fontWeight: "800" },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.4 },
-  timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
+  breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
   breakdownGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   breakdownChip: { width: "48%", backgroundColor: "#F8FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E5ECFF" },
   breakdownProduct: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 4 },
   breakdownBag: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
   breakdownCount: { fontSize: 15, fontWeight: "800", color: colors.primary },
+  breakdownQty: { fontSize: 12, color: colors.textSecondary, marginTop: 2, fontWeight: "600" },
   stageItem: { flexDirection: 'row', marginBottom: 0 },
   stageLineContainer: { width: 30, alignItems: 'center' },
   stageDot: { width: 14, height: 14, borderRadius: 7, zIndex: 1 },

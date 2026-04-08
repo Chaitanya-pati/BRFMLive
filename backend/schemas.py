@@ -797,6 +797,7 @@ class FinishedGoodsGodownMovementBase(ISTModel):
     finished_good_id: int
     bag_size_id: int
     quantity_bags: int
+    production_order_id: Optional[int] = None
     reference_id: Optional[int] = None
     remarks: Optional[str] = None
 
