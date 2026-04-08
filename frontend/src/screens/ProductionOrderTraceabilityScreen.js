@@ -164,56 +164,9 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
           <ScrollView style={styles.resultsContainer}>
             {(() => {
               const summary = getProductionSummary();
+              const godownBreakdown = summary.godownBreakdown;
               return (
                 <View style={styles.detailShell}>
-                  {summary.breakdown.length > 0 && (
-                    <View style={styles.breakdownCard}>
-                      <Text style={styles.sectionTitle}>Produced Bags by Product & Bag Size</Text>
-                      <View style={styles.breakdownGrid}>
-                        {summary.breakdown.map((item, index) => (
-                          <View key={`${item.product_name}-${item.bag_size}-${index}`} style={styles.breakdownChip}>
-                            <Text style={styles.breakdownProduct}>{item.product_name}</Text>
-                            <Text style={styles.breakdownBag}>{item.bag_size}</Text>
-                            <Text style={styles.breakdownCount}>{item.total_bags} bags</Text>
-                            <Text style={styles.breakdownQty}>{Number(item.total_quantity_kg || 0).toFixed(2)} kg</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {summary.godownBreakdown.length > 0 && (
-                    <View style={styles.breakdownCard}>
-                      <Text style={styles.sectionTitle}>Godown Storage Details</Text>
-                      {(() => {
-                        const grouped = {};
-                        summary.godownBreakdown.forEach(item => {
-                          const key = item.product_name;
-                          if (!grouped[key]) grouped[key] = [];
-                          grouped[key].push(item);
-                        });
-                        return Object.entries(grouped).map(([productName, items]) => (
-                          <View key={productName} style={styles.godownProductGroup}>
-                            <Text style={styles.godownProductName}>{productName}</Text>
-                            {items.map((item, idx) => (
-                              <View key={idx} style={styles.godownRow}>
-                                <View style={styles.godownRowLeft}>
-                                  <Text style={styles.godownName}>{item.godown_name}</Text>
-                                  {item.godown_code ? <Text style={styles.godownCode}>{item.godown_code}</Text> : null}
-                                </View>
-                                <View style={styles.godownRowRight}>
-                                  <Text style={styles.godownBagSize}>{item.bag_size}</Text>
-                                  <Text style={styles.godownBags}>{item.total_bags} bags</Text>
-                                  <Text style={styles.godownQty}>{Number(item.total_quantity_kg || 0).toFixed(2)} kg</Text>
-                                </View>
-                              </View>
-                            ))}
-                          </View>
-                        ));
-                      })()}
-                    </View>
-                  )}
-
                   <View style={styles.timelineCard}>
                     <Text style={styles.sectionTitle}>Lifecycle Timeline</Text>
                     {lifecycleData.stages.map((stage, index) => (
@@ -229,6 +182,37 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                           </View>
                           <Text style={styles.stageDetails}>{stage.details}</Text>
                           {stage.date && <Text style={styles.stageDate}>{formatISTDate(stage.date)}</Text>}
+
+                          {stage.name === "Hourly Grinding Results" && godownBreakdown.length > 0 && (
+                            <View style={styles.inlineGodownContainer}>
+                              <Text style={styles.inlineGodownTitle}>Godown Storage Details</Text>
+                              {(() => {
+                                const grouped = {};
+                                godownBreakdown.forEach(item => {
+                                  if (!grouped[item.product_name]) grouped[item.product_name] = [];
+                                  grouped[item.product_name].push(item);
+                                });
+                                return Object.entries(grouped).map(([productName, items]) => (
+                                  <View key={productName} style={styles.godownProductGroup}>
+                                    <Text style={styles.godownProductName}>{productName}</Text>
+                                    {items.map((item, idx) => (
+                                      <View key={idx} style={styles.godownRow}>
+                                        <View style={styles.godownRowLeft}>
+                                          <Text style={styles.godownName}>{item.godown_name}</Text>
+                                          {item.godown_code ? <Text style={styles.godownCode}>{item.godown_code}</Text> : null}
+                                        </View>
+                                        <View style={styles.godownRowRight}>
+                                          <Text style={styles.godownBagSize}>{item.bag_size}</Text>
+                                          <Text style={styles.godownBags}>{item.total_bags} bags</Text>
+                                          <Text style={styles.godownQty}>{Number(item.total_quantity_kg || 0).toFixed(2)} kg</Text>
+                                        </View>
+                                      </View>
+                                    ))}
+                                  </View>
+                                ));
+                              })()}
+                            </View>
+                          )}
                         </View>
                       </View>
                     ))}
@@ -263,19 +247,10 @@ const styles = StyleSheet.create({
   searchBtn: { marginTop: 8 },
   resultsContainer: { flex: 1, marginTop: 4 },
   detailShell: { gap: 14, paddingBottom: 20 },
-  heroCard: { backgroundColor: "#fff", borderRadius: 18, padding: 16, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  heroKicker: { color: colors.primary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
-  heroTitle: { color: colors.text, fontSize: 22, fontWeight: "800", marginBottom: 4 },
-  heroSubTitle: { color: colors.textSecondary, fontSize: 13, marginBottom: 14 },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.4 },
   timelineCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
-  breakdownCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 1, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
-  breakdownGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  breakdownChip: { width: "48%", backgroundColor: "#F8FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E5ECFF" },
-  breakdownProduct: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 4 },
-  breakdownBag: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
-  breakdownCount: { fontSize: 15, fontWeight: "800", color: colors.primary },
-  breakdownQty: { fontSize: 12, color: colors.textSecondary, marginTop: 2, fontWeight: "600" },
+  inlineGodownContainer: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EBEBEB' },
+  inlineGodownTitle: { fontSize: 12, fontWeight: '700', color: colors.text, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 },
   stageItem: { flexDirection: 'row', marginBottom: 0 },
   stageLineContainer: { width: 30, alignItems: 'center' },
   stageDot: { width: 14, height: 14, borderRadius: 7, zIndex: 1 },
