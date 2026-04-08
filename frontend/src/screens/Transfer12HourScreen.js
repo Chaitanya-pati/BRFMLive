@@ -906,8 +906,8 @@ export default function Transfer12HourScreen({ navigation }) {
             </View>
             <Text style={styles.sessionDetail}>Type: {item.transfer_type}</Text>
             <Text style={styles.sessionDetail}>Order: {item.production_order_number || 'N/A'}</Text>
-            <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || item.source_bin_id}</Text>
-            <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || item.destination_bin_id}</Text>
+            <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || `Bin ${item.source_bin_id}`}</Text>
+            <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || `Bin ${item.destination_bin_id}`}</Text>
             <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} units</Text>
             <Text style={styles.sessionDetail}>Water: {item.water_added !== null ? `${item.water_added}L` : "—"}</Text>
             <Text style={styles.sessionDetail}>Moisture: {item.moisture_level !== null ? `${item.moisture_level}%` : "—"}</Text>
