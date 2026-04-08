@@ -3569,6 +3569,18 @@ def validate_production_order_planning(
     if abs(total_distribution - db_order.quantity) > 0.01:
         errors.append(f"Total distribution ({total_distribution}) must equal order quantity ({db_order.quantity})")
     
+    grouped_summary = [
+        {
+            "finished_good_id": key[0],
+            "product_name": key[1],
+            "bag_size_id": key[2],
+            "bag_size": key[3],
+            "total_bags": value["total_bags"],
+            "total_quantity_kg": value["total_quantity_kg"],
+        }
+        for key, value in sorted(summary_map.items(), key=lambda item: (item[0][1], item[0][3]))
+    ]
+
     return {
         "valid": len(errors) == 0,
         "errors": errors,
@@ -4231,6 +4243,18 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
         .all()
     )
 
+    summary_map = {}
+    for h in hourly:
+        for d in (h.details or []):
+            fg_name = d.finished_good.product_name if d.finished_good else f"Product #{d.finished_good_id}"
+            bag_size_label = f"{d.bag_size.weight_kg} Kg" if d.bag_size and d.bag_size.weight_kg is not None else (f"Bag #{d.bag_size_id}" if d.bag_size_id else "N/A")
+            key = (d.finished_good_id, fg_name, d.bag_size_id, bag_size_label)
+            if key not in summary_map:
+                summary_map[key] = {"total_bags": 0, "total_quantity_kg": 0.0}
+            qty = int(d.quantity_bags or 0)
+            summary_map[key]["total_bags"] += qty
+            summary_map[key]["total_quantity_kg"] += qty * (float(d.bag_size.weight_kg) if d.bag_size and d.bag_size.weight_kg is not None else 0.0)
+
     po = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == po_id).first()
 
     return {
@@ -4302,6 +4326,7 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
                 .filter(models.ProductionOrderSourceBin.production_order_id == po_id)
                 .all()
         ],
+        "production_summary": grouped_summary,
     }
 
 

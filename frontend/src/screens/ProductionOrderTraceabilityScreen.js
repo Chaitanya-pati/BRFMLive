@@ -96,21 +96,11 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
   };
 
   const getProductionSummary = () => {
-    const items = lifecycleData?.items || [];
-    const breakdown = [];
-    let totalBags = 0;
-
-    items.forEach((item) => {
-      const productName = item.product_name || item.raw_product_name || "Unknown Product";
-      const bagSize = item.bag_size || item.bag_size_name || (item.quantity_ton ? `${item.quantity_ton}T` : "Bagged");
-      const bags = Number(item.number_of_bags || item.quantity_bags || item.bags_produced || 0) || 0;
-      totalBags += bags;
-      breakdown.push({ productName, bagSize, bags });
-    });
-
+    const breakdown = lifecycleData?.production_summary || [];
+    const totalBags = breakdown.reduce((sum, item) => sum + (item.total_bags || 0), 0);
     return {
       totalBags,
-      totalItems: items.length,
+      totalItems: breakdown.length,
       breakdown,
     };
   };
@@ -119,12 +109,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
     <Layout title="Order Traceability" navigation={navigation}>
       <View style={styles.container}>
         <Card style={styles.searchCard}>
-          <View style={styles.headerBanner}>
-            <Text style={styles.headerKicker}>Traceability Center</Text>
-            <Text style={styles.headerTitle}>Production Order Traceability</Text>
-            <Text style={styles.headerSubtitle}>Search and review the full production lifecycle.</Text>
-          </View>
-
           <View style={styles.filterGrid}>
             <View style={styles.filterChip}>
               <Text style={styles.filterChipLabel}>Date Range</Text>
@@ -217,20 +201,12 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                     <View style={styles.breakdownCard}>
                       <Text style={styles.sectionTitle}>Produced Bags by Product & Bag Size</Text>
                       <View style={styles.breakdownGrid}>
-                        {Object.values(
-                          summary.breakdown.reduce((acc, item) => {
-                            const key = `${item.productName}__${item.bagSize}`;
-                            if (!acc[key]) acc[key] = { ...item, totalQty: 0, count: 0 };
-                            acc[key].totalQty += Number(item.quantity_ton || 0);
-                            acc[key].count += 1;
-                            return acc;
-                          }, {})
-                        ).map((item, index) => (
-                          <View key={`${item.productName}-${item.bagSize}-${index}`} style={styles.breakdownChip}>
-                            <Text style={styles.breakdownProduct}>{item.productName}</Text>
-                            <Text style={styles.breakdownBag}>{item.bagSize}</Text>
-                            <Text style={styles.breakdownCount}>{item.bags} bags</Text>
-                            <Text style={styles.breakdownQty}>{item.totalQty.toFixed(2)} qty</Text>
+                        {summary.breakdown.map((item, index) => (
+                          <View key={`${item.product_name}-${item.bag_size}-${index}`} style={styles.breakdownChip}>
+                            <Text style={styles.breakdownProduct}>{item.product_name}</Text>
+                            <Text style={styles.breakdownBag}>{item.bag_size}</Text>
+                            <Text style={styles.breakdownCount}>{item.total_bags} bags</Text>
+                            <Text style={styles.breakdownQty}>{Number(item.total_quantity_kg || 0).toFixed(2)} kg</Text>
                           </View>
                         ))}
                       </View>
@@ -274,12 +250,8 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  searchCard: { padding: 16, marginBottom: 16, borderRadius: 18, backgroundColor: "#fff", elevation: 4 },
-  headerBanner: { backgroundColor: "#0F172A", borderRadius: 16, padding: 16, marginBottom: 14 },
-  headerKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
-  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginBottom: 4 },
-  headerSubtitle: { color: "#D4DDF5", fontSize: 13, lineHeight: 18 },
-  filterGrid: { flexDirection: "row", gap: 10, marginBottom: 14 },
+  searchCard: { padding: 16, marginBottom: 16, borderRadius: 18, backgroundColor: "#fff", elevation: 3 },
+  filterGrid: { flexDirection: "row", gap: 10, marginBottom: 10 },
   filterChip: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
   filterChipLabel: { fontSize: 10, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontWeight: "600" },
   filterChipValue: { fontSize: 13, color: colors.text, fontWeight: "800" },
@@ -294,8 +266,8 @@ const styles = StyleSheet.create({
   searchBtn: { marginTop: 8 },
   resultsContainer: { flex: 1, marginTop: 4 },
   detailShell: { gap: 14, paddingBottom: 20 },
-  heroCard: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: 18, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  heroKicker: { color: "#8FB3FF", fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
+  heroCard: { backgroundColor: "#fff", borderRadius: 18, padding: 16, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  heroKicker: { color: colors.primary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
   heroTitle: { color: colors.text, fontSize: 22, fontWeight: "800", marginBottom: 4 },
   heroSubTitle: { color: colors.textSecondary, fontSize: 13, marginBottom: 14 },
   heroStatsRow: { flexDirection: "row", gap: 8 },
