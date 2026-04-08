@@ -109,17 +109,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
     <Layout title="Order Traceability" navigation={navigation}>
       <View style={styles.container}>
         <Card style={styles.searchCard}>
-          <View style={styles.filterGrid}>
-            <View style={styles.filterChip}>
-              <Text style={styles.filterChipLabel}>Date Range</Text>
-              <Text style={styles.filterChipValue}>{formatISTDate(startDate).split(" ")[0]} → {formatISTDate(endDate).split(" ")[0]}</Text>
-            </View>
-            <View style={styles.filterChip}>
-              <Text style={styles.filterChipLabel}>Orders Loaded</Text>
-              <Text style={styles.filterChipValue}>{filteredOrders.length}</Text>
-            </View>
-          </View>
-
           <Text style={styles.label}>Date Range Filter</Text>
           <View style={styles.dateRow}>
             <View style={{ flex: 1, marginRight: 8 }}>
@@ -251,10 +240,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   searchCard: { padding: 16, marginBottom: 16, borderRadius: 18, backgroundColor: "#fff", elevation: 3 },
-  filterGrid: { flexDirection: "row", gap: 10, marginBottom: 10 },
-  filterChip: { flex: 1, backgroundColor: "#F7FAFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E6EEF9" },
-  filterChipLabel: { fontSize: 10, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontWeight: "600" },
-  filterChipValue: { fontSize: 13, color: colors.text, fontWeight: "800" },
   dateRow: { flexDirection: 'row', marginBottom: 12 },
   label: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: colors.text },
   searchRow: { flexDirection: 'row', marginBottom: 12 },
