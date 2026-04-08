@@ -3623,6 +3623,16 @@ def start_transfer(
     ).first()
     if not dest_bin_config:
         raise HTTPException(status_code=404, detail="Destination bin not configured for this order")
+
+    active_transfer = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == data.production_order_id,
+        models.TransferRecording.status == models.TransferRecordingStatus.IN_PROGRESS,
+    ).first()
+    if active_transfer:
+        raise HTTPException(
+            status_code=400,
+            detail="A 24-hour transfer is already in progress for this production order",
+        )
     
     # Mark production order as IN_PROGRESS when the first 24h transfer is started
     if prod_order.status in (
