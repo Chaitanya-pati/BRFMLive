@@ -105,8 +105,6 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
     };
   };
 
-  const movementRows = lifecycleData?.finished_goods_movements || [];
-
   return (
     <Layout title="Order Traceability" navigation={navigation}>
       <View style={styles.container}>
@@ -190,30 +188,14 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                       </View>
                       <View style={styles.heroStat}>
                         <Text style={styles.heroStatLabel}>Items</Text>
-                        <Text style={styles.heroStatValue}>{movementRows.length || summary.totalItems}</Text>
+                        <Text style={styles.heroStatValue}>{summary.totalItems}</Text>
                       </View>
                       <View style={styles.heroStat}>
                         <Text style={styles.heroStatLabel}>Bags</Text>
-                        <Text style={styles.heroStatValue}>{movementRows.reduce((sum, row) => sum + (row.quantity_bags || 0), 0) || summary.totalBags}</Text>
+                        <Text style={styles.heroStatValue}>{summary.totalBags}</Text>
                       </View>
                     </View>
                   </View>
-
-                  {movementRows.length > 0 && (
-                    <View style={styles.breakdownCard}>
-                      <Text style={styles.sectionTitle}>Finished Goods Movements</Text>
-                      <View style={styles.breakdownGrid}>
-                        {movementRows.map((item, index) => (
-                          <View key={`${item.id}-${index}`} style={styles.breakdownChip}>
-                            <Text style={styles.breakdownProduct}>{item.product_name}</Text>
-                            <Text style={styles.breakdownBag}>{item.bag_size}</Text>
-                            <Text style={styles.breakdownCount}>{item.quantity_bags} bags</Text>
-                            <Text style={styles.breakdownQty}>{Number(item.quantity_kg || 0).toFixed(2)} kg</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
 
                   {summary.breakdown.length > 0 && (
                     <View style={styles.breakdownCard}>
