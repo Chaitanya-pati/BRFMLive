@@ -4327,6 +4327,18 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
 
     po = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == po_id).first()
 
+    grouped_summary = [
+        {
+            "finished_good_id": k[0],
+            "product_name": k[1],
+            "bag_size_id": k[2],
+            "bag_size": k[3],
+            "total_bags": v["total_bags"],
+            "total_quantity_kg": v["total_quantity_kg"],
+        }
+        for k, v in summary_map.items()
+    ]
+
     return {
         "production_order_id": po_id,
         "order_number": po.order_number if po else f"PO{po_id}",
