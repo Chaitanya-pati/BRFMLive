@@ -160,7 +160,7 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
               {filteredOrders.map(o => (
                 <Picker.Item
                   key={o.id}
-                  label={`${o.order_number}  ·  ${o.raw_product?.product_name || 'N/A'}  ·  ${o.quantity_kg || 0} kg`}
+                  label={`${o.order_number}  ·  ${o.raw_product?.product_name || 'N/A'}  ·  ${o.quantity || 0} kg`}
                   value={o.id}
                 />
               ))}
@@ -178,7 +178,7 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                   <View style={styles.orderHeaderLeft}>
                     <Text style={styles.orderHeaderKicker}>Production Order</Text>
                     <Text style={styles.orderHeaderNumber}>{selectedOrder.order_number}</Text>
-                    <Text style={styles.orderHeaderSub}>{selectedOrder.raw_product?.product_name || 'N/A'}  ·  {selectedOrder.quantity_kg || 0} kg</Text>
+                    <Text style={styles.orderHeaderSub}>{selectedOrder.raw_product?.product_name || 'N/A'}  ·  {selectedOrder.quantity || 0} kg</Text>
                   </View>
                   <View style={styles.orderHeaderRight}>
                     <Text style={styles.orderProgressNum}>{completedCount}/{totalCount}</Text>

@@ -656,7 +656,12 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
     
     if hourly_prods:
         details = []
+        seen_slots = set()
         for p in hourly_prods:
+            slot_key = (str(p.production_date), str(p.production_time))
+            if slot_key in seen_slots:
+                continue
+            seen_slots.add(slot_key)
             details.append(f"Time: {p.production_time} | Load: {p.load_per_hour_tons}T/h | Scale: {p.b1_scale_reading}")
         
         traceability["stages"].append({
