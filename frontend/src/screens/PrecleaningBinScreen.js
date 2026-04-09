@@ -145,6 +145,8 @@ export default function PrecleaningBinScreen({ navigation }) {
     quantity_transferred: "",
   });
 
+  const [now, setNow] = useState(new Date());
+
   const statusOptions = [
     { label: "Active", value: "Active" },
     { label: "Inactive", value: "Inactive" },
@@ -232,6 +234,16 @@ export default function PrecleaningBinScreen({ navigation }) {
       fetchTransferSessions();
     }
   }, [activeTab]);
+
+  // Live timer: tick every second whenever there is at least one active session
+  useEffect(() => {
+    const hasActive = transferSessions.some(
+      (s) => s.status?.toLowerCase() === "active"
+    );
+    if (!hasActive) return;
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, [transferSessions]);
 
   // Sort bins by last digit sequentially
   const getSortedBinsByLastDigit = (binsList) => {
@@ -367,6 +379,28 @@ export default function PrecleaningBinScreen({ navigation }) {
       });
     };
   }, []);
+
+  const formatElapsed = (startTs) => {
+    const diffMs = now - new Date(startTs);
+    if (diffMs < 0) return "00:00:00";
+    const diffSec = Math.floor(diffMs / 1000);
+    const h = Math.floor(diffSec / 3600);
+    const m = Math.floor((diffSec % 3600) / 60);
+    const s = diffSec % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const formatDuration = (startTs, endTs) => {
+    const diffMs = new Date(endTs) - new Date(startTs);
+    if (diffMs < 0) return "-";
+    const diffSec = Math.floor(diffMs / 1000);
+    const h = Math.floor(diffSec / 3600);
+    const m = Math.floor((diffSec % 3600) / 60);
+    const s = diffSec % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
 
   const handleStartTransfer = () => {
     setSelectedSourceGodown("");
@@ -1147,21 +1181,280 @@ export default function PrecleaningBinScreen({ navigation }) {
               />
             </View>
 
-            <DataTable
-              columns={transferSessionColumns}
-              data={transferSessions}
-              onView={(session) => {
-                if (session.status?.toLowerCase() === "active") {
-                  handleViewActiveTransfer(session);
-                }
-              }}
-              onDelete={handleDeleteTransferSession}
-              loading={loading}
-              emptyMessage="No transfer sessions found"
-              viewLabel={(row) =>
-                row.status?.toLowerCase() === "active" ? "View" : null
-              }
-            />
+            {loading ? (
+              <Text style={styles.loadingText}>Loading...</Text>
+            ) : transferSessions.length === 0 ? (
+              <Text style={styles.emptyText}>No transfer sessions found</Text>
+            ) : (
+              <ScrollView>
+                {transferSessions.map((session) => {
+                  const isSessionActive =
+                    session.status?.toLowerCase() === "active";
+                  const sortedTransfers = [
+                    ...(session.bin_transfers || []),
+                  ].sort((a, b) => a.sequence - b.sequence);
+                  const maxSeq =
+                    sortedTransfers.length > 0
+                      ? sortedTransfers[sortedTransfers.length - 1].sequence
+                      : -1;
+
+                  return (
+                    <View key={session.id} style={styles.sessionCard}>
+                      {/* Session header */}
+                      <View style={styles.sessionHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.sessionTitle}>
+                            {session.source_godown?.name || "Unknown Godown"}
+                          </Text>
+                          <Text style={styles.sessionMeta}>
+                            Started:{" "}
+                            {formatISTDateTime(session.start_timestamp)}
+                          </Text>
+                        </View>
+                        <View style={styles.sessionHeaderRight}>
+                          <View
+                            style={[
+                              styles.sessionStatusBadge,
+                              isSessionActive
+                                ? styles.sessionStatusActive
+                                : styles.sessionStatusDone,
+                            ]}
+                          >
+                            <Text style={styles.sessionStatusText}>
+                              {isSessionActive ? "ACTIVE" : "COMPLETED"}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() =>
+                              handleDeleteTransferSession(session)
+                            }
+                            style={styles.sessionDeleteBtn}
+                          >
+                            <Text style={styles.sessionDeleteBtnText}>
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Per-BinTransfer process rows */}
+                      {sortedTransfers.length === 0 ? (
+                        <Text style={styles.noProcessText}>
+                          No transfers recorded yet
+                        </Text>
+                      ) : (
+                        <View style={styles.processTable}>
+                          {/* Table column headers */}
+                          <View style={styles.processTableHeader}>
+                            <Text
+                              style={[
+                                styles.processHeaderCell,
+                                { flex: 0.4 },
+                              ]}
+                            >
+                              #
+                            </Text>
+                            <Text
+                              style={[
+                                styles.processHeaderCell,
+                                { flex: 1.1 },
+                              ]}
+                            >
+                              Bin
+                            </Text>
+                            <Text
+                              style={[
+                                styles.processHeaderCell,
+                                { flex: 1.6 },
+                              ]}
+                            >
+                              Start Time
+                            </Text>
+                            <Text
+                              style={[
+                                styles.processHeaderCell,
+                                { flex: 1.4 },
+                              ]}
+                            >
+                              Timer / Duration
+                            </Text>
+                            <Text
+                              style={[styles.processHeaderCell, { flex: 0.9 }]}
+                            >
+                              Qty (t)
+                            </Text>
+                            <Text
+                              style={[styles.processHeaderCell, { flex: 1 }]}
+                            >
+                              Status
+                            </Text>
+                            <Text
+                              style={[
+                                styles.processHeaderCell,
+                                { flex: 1.4 },
+                              ]}
+                            >
+                              Actions
+                            </Text>
+                          </View>
+
+                          {sortedTransfers.map((bt) => {
+                            const isCurrentBt = !bt.end_timestamp;
+                            const isLastSeq = bt.sequence === maxSeq;
+                            const processStatus = isCurrentBt
+                              ? "In Process"
+                              : !isSessionActive && isLastSeq
+                              ? "Completed"
+                              : "Diverted";
+
+                            return (
+                              <View
+                                key={bt.id}
+                                style={[
+                                  styles.processRow,
+                                  isCurrentBt && styles.processRowActive,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.processCell,
+                                    { flex: 0.4 },
+                                  ]}
+                                >
+                                  {bt.sequence}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.processCell,
+                                    { flex: 1.1 },
+                                  ]}
+                                >
+                                  {bt.bin?.bin_number ||
+                                    `#${bt.bin_id}`}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.processCell,
+                                    styles.processCellSmall,
+                                    { flex: 1.6 },
+                                  ]}
+                                >
+                                  {formatISTDateTime(bt.start_timestamp)}
+                                </Text>
+                                <View
+                                  style={{
+                                    flex: 1.4,
+                                    justifyContent: "center",
+                                    paddingHorizontal: 4,
+                                  }}
+                                >
+                                  {isCurrentBt ? (
+                                    <Text style={styles.timerText}>
+                                      {formatElapsed(bt.start_timestamp)}
+                                    </Text>
+                                  ) : (
+                                    <Text
+                                      style={[
+                                        styles.processCell,
+                                        styles.processCellSmall,
+                                      ]}
+                                    >
+                                      {formatDuration(
+                                        bt.start_timestamp,
+                                        bt.end_timestamp
+                                      )}
+                                    </Text>
+                                  )}
+                                </View>
+                                <Text
+                                  style={[
+                                    styles.processCell,
+                                    { flex: 0.9 },
+                                  ]}
+                                >
+                                  {bt.quantity != null
+                                    ? bt.quantity.toFixed(2)
+                                    : "-"}
+                                </Text>
+                                <View
+                                  style={{
+                                    flex: 1,
+                                    justifyContent: "center",
+                                    paddingHorizontal: 4,
+                                  }}
+                                >
+                                  <View
+                                    style={[
+                                      styles.procStatusBadge,
+                                      processStatus === "In Process"
+                                        ? styles.procStatusInProcess
+                                        : processStatus === "Completed"
+                                        ? styles.procStatusCompleted
+                                        : styles.procStatusDiverted,
+                                    ]}
+                                  >
+                                    <Text style={styles.procStatusText}>
+                                      {processStatus}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View
+                                  style={[
+                                    styles.processActionsCell,
+                                    { flex: 1.4 },
+                                  ]}
+                                >
+                                  {isCurrentBt && isSessionActive && (
+                                    <>
+                                      <TouchableOpacity
+                                        style={styles.procActionDivert}
+                                        onPress={() => {
+                                          setActiveTransferSession(session);
+                                          setDivertTransferFormData({
+                                            new_bin_id: "",
+                                            quantity_transferred: "",
+                                          });
+                                          setDivertTransferModal(true);
+                                        }}
+                                      >
+                                        <Text
+                                          style={styles.procActionText}
+                                        >
+                                          Divert
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.procActionStop,
+                                          { marginTop: 4 },
+                                        ]}
+                                        onPress={() => {
+                                          setActiveTransferSession(session);
+                                          setStopTransferFormData({
+                                            transferred_quantity: "",
+                                          });
+                                          setStopTransferModal(true);
+                                        }}
+                                      >
+                                        <Text
+                                          style={styles.procActionText}
+                                        >
+                                          Stop
+                                        </Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  )}
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
           </>
         ) : null}{" "}
         {/* No content for routeMappings tab as it's removed */}
@@ -2060,5 +2353,181 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 4,
+  },
+
+  // Transfer sessions process-card styles
+  loadingText: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 32,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 32,
+    fontStyle: "italic",
+  },
+  sessionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sessionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f4ff",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sessionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  sessionMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  sessionHeaderRight: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  sessionStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  sessionStatusActive: {
+    backgroundColor: "#d1fae5",
+  },
+  sessionStatusDone: {
+    backgroundColor: "#e5e7eb",
+  },
+  sessionStatusText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  sessionDeleteBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.error || "#ef4444",
+  },
+  sessionDeleteBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.error || "#ef4444",
+  },
+  noProcessText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontStyle: "italic",
+    textAlign: "center",
+    padding: 16,
+  },
+  processTable: {
+    overflow: "hidden",
+  },
+  processTableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  processHeaderCell: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    paddingHorizontal: 4,
+  },
+  processRow: {
+    flexDirection: "row",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  processRowActive: {
+    backgroundColor: "#fffbeb",
+  },
+  processCell: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    paddingHorizontal: 4,
+  },
+  processCellSmall: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#d97706",
+    fontVariant: ["tabular-nums"],
+  },
+  procStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  procStatusInProcess: {
+    backgroundColor: "#fef3c7",
+  },
+  procStatusCompleted: {
+    backgroundColor: "#d1fae5",
+  },
+  procStatusDiverted: {
+    backgroundColor: "#dbeafe",
+  },
+  procStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  processActionsCell: {
+    flexDirection: "column",
+    paddingHorizontal: 4,
+    justifyContent: "center",
+  },
+  procActionDivert: {
+    backgroundColor: "#f59e0b",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  procActionStop: {
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  procActionText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
