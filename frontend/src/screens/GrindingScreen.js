@@ -459,7 +459,6 @@ export default function GrindingScreen({ navigation }) {
       // First, save any unsaved hourly data rows
       for (const row of productionRows) {
         if (row.productionDate && row.productionTime && !row.submitted) {
-          const selectedBin = selectedBinRef?.current;
           if (!selectedBin) continue;
 
           const reprocessQty = parseFloat(row.reprocess || 0);
