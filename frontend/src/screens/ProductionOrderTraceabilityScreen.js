@@ -228,17 +228,18 @@ export default function ProductionOrderTraceabilityScreen({ navigation }) {
                             {(() => {
                               const grouped = {};
                               godownBreakdown.forEach(item => {
-                                if (!grouped[item.product_name]) grouped[item.product_name] = [];
-                                grouped[item.product_name].push(item);
+                                const key = item.godown_name;
+                                if (!grouped[key]) grouped[key] = { godown_code: item.godown_code, items: [] };
+                                grouped[key].items.push(item);
                               });
-                              return Object.entries(grouped).map(([productName, items]) => (
-                                <View key={productName} style={styles.godownProductBlock}>
-                                  <Text style={styles.godownProductName}>{productName}</Text>
+                              return Object.entries(grouped).map(([godownName, { godown_code, items }]) => (
+                                <View key={godownName} style={styles.godownProductBlock}>
+                                  <Text style={styles.godownProductName}>{godownName}</Text>
+                                  {godown_code ? <Text style={[styles.godownCode, { marginTop: -6, marginBottom: 6 }]}>{godown_code}</Text> : null}
                                   {items.map((item, idx) => (
                                     <View key={idx} style={styles.godownRow}>
                                       <View style={styles.godownRowLeft}>
-                                        <Text style={styles.godownGodownName}>{item.godown_name}</Text>
-                                        {item.godown_code ? <Text style={styles.godownCode}>{item.godown_code}</Text> : null}
+                                        <Text style={styles.godownGodownName}>{item.product_name}</Text>
                                       </View>
                                       <View style={styles.godownRowRight}>
                                         <Text style={styles.godownBagSize}>{item.bag_size}</Text>
