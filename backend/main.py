@@ -3442,12 +3442,13 @@ def delete_finished_good(product_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/production-orders", response_model=schemas.ProductionOrder)
 def create_production_order(order: schemas.ProductionOrderCreate, branch_id: Optional[int] = Header(None), db: Session = Depends(get_db)):
+    resolved_order_date = order.order_date or get_utc_now()
     db_order = models.ProductionOrder(
         order_number=order.order_number,
         raw_product_id=order.raw_product_id,
         quantity=order.quantity,
-        order_date=order.order_date or get_utc_now(),
-        target_finish_date=order.target_finish_date,
+        order_date=resolved_order_date,
+        target_finish_date=order.target_finish_date or resolved_order_date,
         status=order.status or "CREATED",
         branch_id=branch_id or order.branch_id
     )

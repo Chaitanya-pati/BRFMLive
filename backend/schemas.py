@@ -1071,7 +1071,7 @@ class ProductionOrderBase(ISTModel):
     raw_product_id: int
     quantity: float
     order_date: Optional[datetime] = None
-    target_finish_date: datetime
+    target_finish_date: Optional[datetime] = None
     status: Optional[ProductionOrderStatusEnum] = ProductionOrderStatusEnum.CREATED
 
     @validator('order_date', 'target_finish_date', pre=True)

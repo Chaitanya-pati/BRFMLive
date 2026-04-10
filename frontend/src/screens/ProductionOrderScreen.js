@@ -32,6 +32,17 @@ const ORDER_STATUSES = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
+const todayStr = () => new Date().toISOString().split("T")[0];
+
+const getJulianDay = (dateStr) => {
+  const date = new Date(dateStr + "T00:00:00");
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date - start;
+  const oneDay = 1000 * 60 * 60 * 24;
+  const day = Math.floor(diff / oneDay);
+  return String(day).padStart(3, "0");
+};
+
 export default function ProductionOrderScreen({ navigation }) {
   const { activeBranch } = useBranch();
   const [orders, setOrders] = useState([]);
@@ -41,16 +52,13 @@ export default function ProductionOrderScreen({ navigation }) {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Date picker state - simplified
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dateField, setDateField] = useState(null); // 'order_date' or 'target_finish_date'
 
   const [formData, setFormData] = useState({
     order_number: "",
     raw_product_id: "",
     quantity: "",
-    order_date: new Date().toISOString().split("T")[0],
-    target_finish_date: "",
+    order_date: todayStr(),
     status: "CREATED",
   });
 
@@ -77,28 +85,36 @@ export default function ProductionOrderScreen({ navigation }) {
     }
   };
 
-  const generateOrderNumber = () => {
-    const product = rawProducts.find(
-      (p) => p.id.toString() === formData.raw_product_id,
-    );
-    const initial = product ? product.product_initial : "PO";
-    const date = new Date();
-    const dateStr =
-      date.getFullYear() +
-      String(date.getMonth() + 1).padStart(2, "0") +
-      String(date.getDate()).padStart(2, "0");
+  const generateOrderNumber = (productId, orderDateStr, existingOrders, excludeId = null) => {
+    const product = rawProducts.find((p) => p.id.toString() === productId);
+    if (!product) return "";
 
-    const currentYear = date.getFullYear();
-    const productOrdersInYear = orders.filter((o) => {
-      const orderDate = new Date(o.order_date);
+    const initial = product.product_initial || "PO";
+    const julianStr = getJulianDay(orderDateStr);
+    const baseNumber = `${initial}-${julianStr}`;
+
+    const sameProductSameDay = existingOrders.filter((o) => {
+      if (excludeId && o.id === excludeId) return false;
+      const existingDate = o.order_date ? o.order_date.split("T")[0] : "";
       return (
-        o.raw_product_id.toString() === formData.raw_product_id &&
-        orderDate.getFullYear() === currentYear
+        o.raw_product_id.toString() === productId &&
+        existingDate === orderDateStr
       );
     });
 
-    const nextCount = productOrdersInYear.length + 1;
-    return `${initial}-${dateStr}-${nextCount}`;
+    if (sameProductSameDay.length === 0) {
+      return baseNumber;
+    }
+
+    const suffixes = "abcdefghijklmnopqrstuvwxyz".split("");
+    for (const suffix of suffixes) {
+      const candidate = `${baseNumber}-${suffix}`;
+      const taken = existingOrders.some(
+        (o) => o.order_number === candidate && o.id !== excludeId
+      );
+      if (!taken) return candidate;
+    }
+    return `${baseNumber}-${Date.now()}`;
   };
 
   const openAddModal = () => {
@@ -108,26 +124,18 @@ export default function ProductionOrderScreen({ navigation }) {
       order_number: "",
       raw_product_id: "",
       quantity: "",
-      order_date: new Date().toISOString().split("T")[0],
-      target_finish_date: "",
+      order_date: todayStr(),
       status: "CREATED",
     });
     setModalVisible(true);
   };
 
   useEffect(() => {
-    if (
-      modalVisible &&
-      !editMode &&
-      formData.raw_product_id &&
-      rawProducts.length > 0
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        order_number: generateOrderNumber(),
-      }));
+    if (modalVisible && !editMode && formData.raw_product_id && formData.order_date && rawProducts.length > 0) {
+      const newNum = generateOrderNumber(formData.raw_product_id, formData.order_date, orders, null);
+      setFormData((prev) => ({ ...prev, order_number: newNum }));
     }
-  }, [formData.raw_product_id, modalVisible, editMode]);
+  }, [formData.raw_product_id, formData.order_date, modalVisible, editMode, orders, rawProducts]);
 
   const openEditModal = (order) => {
     setEditMode(true);
@@ -136,10 +144,7 @@ export default function ProductionOrderScreen({ navigation }) {
       order_number: order.order_number,
       raw_product_id: order.raw_product_id?.toString() || "",
       quantity: order.quantity?.toString() || "",
-      order_date: order.order_date ? order.order_date.split("T")[0] : "",
-      target_finish_date: order.target_finish_date
-        ? order.target_finish_date.split("T")[0]
-        : "",
+      order_date: order.order_date ? order.order_date.split("T")[0] : todayStr(),
       status: order.status || "CREATED",
     });
     setModalVisible(true);
@@ -149,26 +154,13 @@ export default function ProductionOrderScreen({ navigation }) {
     const trimmedOrderNumber = formData.order_number?.trim();
     const quantity = parseFloat(formData.quantity);
 
-    if (
-      !trimmedOrderNumber ||
-      !formData.raw_product_id ||
-      !quantity ||
-      !formData.target_finish_date
-    ) {
-      await showAlert(
-        "Validation Error",
-        "Please fill in all required fields",
-        "error",
-      );
+    if (!trimmedOrderNumber || !formData.raw_product_id || !quantity) {
+      await showAlert("Validation Error", "Please fill in all required fields", "error");
       return;
     }
 
     if (isNaN(quantity) || quantity <= 0) {
-      await showAlert(
-        "Validation Error",
-        "Quantity must be a positive number",
-        "error",
-      );
+      await showAlert("Validation Error", "Quantity must be a positive number", "error");
       return;
     }
 
@@ -180,7 +172,6 @@ export default function ProductionOrderScreen({ navigation }) {
         order_date: formData.order_date
           ? new Date(formData.order_date).toISOString()
           : new Date().toISOString(),
-        target_finish_date: new Date(formData.target_finish_date).toISOString(),
         status: formData.status,
         branch_id: activeBranch?.id,
       };
@@ -189,7 +180,6 @@ export default function ProductionOrderScreen({ navigation }) {
         await productionOrderApi.update(currentOrder.id, {
           order_number: payload.order_number,
           quantity: payload.quantity,
-          target_finish_date: payload.target_finish_date,
           status: payload.status,
         });
         await showSuccess("Production order updated successfully");
@@ -223,18 +213,12 @@ export default function ProductionOrderScreen({ navigation }) {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "CREATED":
-        return colors.info;
-      case "PLANNED":
-        return colors.primary;
-      case "IN_PROGRESS":
-        return colors.warning;
-      case "COMPLETED":
-        return colors.success;
-      case "CANCELLED":
-        return colors.danger;
-      default:
-        return colors.textLight;
+      case "CREATED": return colors.info;
+      case "PLANNED": return colors.primary;
+      case "IN_PROGRESS": return colors.warning;
+      case "COMPLETED": return colors.success;
+      case "CANCELLED": return colors.danger;
+      default: return colors.textLight;
     }
   };
 
@@ -261,24 +245,12 @@ export default function ProductionOrderScreen({ navigation }) {
       type: "date",
     },
     {
-      key: "target_finish_date",
-      label: "Target Date",
-      flex: 1,
-      align: "center",
-      type: "date",
-    },
-    {
       key: "status",
       label: "Status",
       flex: 1,
       align: "center",
       render: (val) => (
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(val) },
-          ]}
-        >
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(val) }]}>
           <Text style={styles.statusText}>{val}</Text>
         </View>
       ),
@@ -289,60 +261,31 @@ export default function ProductionOrderScreen({ navigation }) {
     navigation.navigate("ProductionOrderPlanning", { orderId: order.id });
   };
 
-  // FIXED: Proper date change handler
   const onDateChange = (event, selectedDate) => {
-    // On Android, we need to close the picker first
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
-
+    if (Platform.OS === "android") setShowDatePicker(false);
     if (selectedDate) {
       const dateString = selectedDate.toISOString().split("T")[0];
-      setFormData((prev) => ({
-        ...prev,
-        [dateField]: dateString,
-      }));
+      setFormData((prev) => ({ ...prev, order_date: dateString }));
     }
   };
 
-  // FIXED: Open date picker for specific field
-  const openDatePicker = (field) => {
-    setDateField(field);
-    setShowDatePicker(true);
+  const handleWebDateChange = (value) => {
+    setFormData((prev) => ({ ...prev, order_date: value }));
   };
 
-  // FIXED: Web date input handler
-  const handleWebDateChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Helper to get date value for picker
   const getPickerDate = () => {
-    const dateStr = formData[dateField];
-    return dateStr ? new Date(dateStr) : new Date();
+    return formData.order_date ? new Date(formData.order_date + "T00:00:00") : new Date();
   };
 
   const renderActions = (item) => (
     <View style={styles.actionButtons}>
-      <TouchableOpacity
-        style={styles.planButton}
-        onPress={() => handlePlan(item)}
-      >
+      <TouchableOpacity style={styles.planButton} onPress={() => handlePlan(item)}>
         <Text style={styles.buttonText}>Plan</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => openEditModal(item)}
-      >
+      <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
         <Text style={styles.buttonText}>Edit</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDelete(item)}
-      >
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
         <Text style={styles.buttonText}>Delete</Text>
       </TouchableOpacity>
     </View>
@@ -374,12 +317,53 @@ export default function ProductionOrderScreen({ navigation }) {
           title={editMode ? "Edit Production Order" : "Create Production Order"}
         >
           <View style={styles.form}>
+
+            {/* 1. Order Date */}
+            <Text style={styles.label}>Order Date *</Text>
+            {Platform.OS === "web" ? (
+              <input
+                type="date"
+                value={formData.order_date}
+                onChange={(e) => handleWebDateChange(e.target.value)}
+                disabled={editMode}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #ced4da",
+                  fontSize: "14px",
+                  backgroundColor: editMode ? "#f5f5f5" : "#fff",
+                  marginBottom: "16px",
+                  boxSizing: "border-box",
+                }}
+              />
+            ) : (
+              <TouchableOpacity
+                style={[styles.input, editMode && { backgroundColor: colors.lightGray }]}
+                onPress={() => !editMode && setShowDatePicker(true)}
+              >
+                <Text style={{ color: formData.order_date ? colors.textPrimary : colors.textSecondary }}>
+                  {formData.order_date || "Select order date"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {Platform.OS !== "web" && showDatePicker && (
+              <DateTimePicker
+                value={getPickerDate()}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={onDateChange}
+              />
+            )}
+
+            {/* 2. Raw Product */}
             <Text style={styles.label}>Raw Product *</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={formData.raw_product_id}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, raw_product_id: value })
+                  setFormData((prev) => ({ ...prev, raw_product_id: value }))
                 }
                 style={styles.picker}
                 enabled={!editMode}
@@ -395,113 +379,26 @@ export default function ProductionOrderScreen({ navigation }) {
               </Picker>
             </View>
 
-            <Text style={styles.label}>Order Number *</Text>
+            {/* 3. Order Number (auto-generated) */}
+            <Text style={styles.label}>Order Number</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.lightGray }]}
               value={formData.order_number}
-              onChangeText={(text) =>
-                setFormData({ ...formData, order_number: text })
-              }
-              placeholder="Select a product to generate"
+              placeholder="Select date & product to generate"
               editable={false}
             />
 
+            {/* 4. Quantity */}
             <Text style={styles.label}>Quantity (kg) *</Text>
             <TextInput
               style={styles.input}
               value={formData.quantity}
               onChangeText={(text) =>
-                setFormData({ ...formData, quantity: text })
+                setFormData((prev) => ({ ...prev, quantity: text }))
               }
               placeholder="e.g., 5000"
               keyboardType="numeric"
             />
-
-            {/* FIXED: Order Date Field */}
-            <Text style={styles.label}>Order Date</Text>
-            {Platform.OS === "web" ? (
-              <input
-                type="date"
-                value={formData.order_date}
-                onChange={(e) => handleWebDateChange("order_date", e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid #ced4da',
-                  fontSize: '14px',
-                  backgroundColor: '#fff',
-                  marginBottom: '16px',
-                }}
-              />
-            ) : (
-              // Native: Use TouchableOpacity to open DateTimePicker
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => openDatePicker("order_date")}
-              >
-                <Text
-                  style={{
-                    color: formData.order_date
-                      ? colors.textPrimary
-                      : colors.textSecondary,
-                  }}
-                >
-                  {formData.order_date
-                    ? formData.order_date
-                    : "Select order date"}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* FIXED: Target Finish Date Field */}
-            <Text style={styles.label}>Target Finish Date *</Text>
-            {Platform.OS === "web" ? (
-              <input
-                type="date"
-                value={formData.target_finish_date}
-                onChange={(e) =>
-                  handleWebDateChange("target_finish_date", e.target.value)
-                }
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid #ced4da',
-                  fontSize: '14px',
-                  backgroundColor: '#fff',
-                  marginBottom: '16px',
-                }}
-              />
-            ) : (
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => openDatePicker("target_finish_date")}
-              >
-                <Text
-                  style={{
-                    color: formData.target_finish_date
-                      ? colors.textPrimary
-                      : colors.textSecondary,
-                  }}
-                >
-                  {formData.target_finish_date
-                    ? formData.target_finish_date
-                    : "Select target date"}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* FIXED: Native DateTimePicker - shown when showDatePicker is true */}
-            {Platform.OS !== "web" && showDatePicker && (
-              <DateTimePicker
-                value={getPickerDate()}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onDateChange}
-                // For iOS, you might want to add a done button or handle it differently
-              />
-            )}
 
             {editMode && (
               <>
@@ -510,7 +407,7 @@ export default function ProductionOrderScreen({ navigation }) {
                   <Picker
                     selectedValue={formData.status}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, status: value })
+                      setFormData((prev) => ({ ...prev, status: value }))
                     }
                     style={styles.picker}
                   >
@@ -527,10 +424,7 @@ export default function ProductionOrderScreen({ navigation }) {
             )}
 
             <TouchableOpacity
-              style={[
-                styles.submitButton,
-                isSubmitting && styles.disabledButton,
-              ]}
+              style={[styles.submitButton, isSubmitting && styles.disabledButton]}
               onPress={handleSubmit}
               disabled={isSubmitting}
             >
@@ -550,31 +444,21 @@ export default function ProductionOrderScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
+  container: { flex: 1, padding: 20 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.text,
-  },
+  title: { fontSize: 24, fontWeight: "bold", color: colors.text },
   addButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  addButtonText: { color: "#fff", fontWeight: "600" },
   actionButtons: {
     flexDirection: "row",
     gap: 8,
@@ -611,25 +495,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  buttonText: { color: colors.textPrimary, fontSize: 12, fontWeight: "600" },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
     alignSelf: "flex-start",
   },
-  statusText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  form: {
-    padding: 20,
-  },
+  statusText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  form: { padding: 20 },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -644,7 +518,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 14,
     justifyContent: "center",
-    minHeight: 48, // Ensure consistent height for TouchableOpacity
+    minHeight: 48,
   },
   pickerContainer: {
     borderWidth: 1,
@@ -653,9 +527,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: "hidden",
   },
-  picker: {
-    height: 50,
-  },
+  picker: { height: 50 },
   submitButton: {
     backgroundColor: colors.primary,
     padding: 14,
@@ -663,12 +535,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  disabledButton: { opacity: 0.6 },
+  submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
