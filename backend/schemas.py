@@ -1199,3 +1199,43 @@ class TransferRecordingWithDetails(TransferRecording):
     production_order: ProductionOrder
     destination_bin: Bin
     created_by_user: Optional[User] = None
+
+
+class TruckTypeEnum(str, Enum):
+    OPEN = "Open"
+    CLOSED = "Closed"
+    CONTAINER = "Container"
+    TANKER = "Tanker"
+
+
+class VehicleCategoryEnum(str, Enum):
+    LIGHT = "Light"
+    MEDIUM = "Medium"
+    HEAVY = "Heavy"
+
+
+class TruckBase(ISTModel):
+    truck_number: str
+    truck_type: TruckTypeEnum
+    vehicle_category: VehicleCategoryEnum
+    status: str = "Active"
+    is_active: bool = True
+
+
+class TruckCreate(TruckBase):
+    branch_id: Optional[int] = None
+
+
+class TruckUpdate(ISTModel):
+    truck_number: Optional[str] = None
+    truck_type: Optional[TruckTypeEnum] = None
+    vehicle_category: Optional[VehicleCategoryEnum] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
+    branch_id: Optional[int] = None
+
+
+class Truck(TruckBase):
+    truck_id: int
+    branch_id: int
+    created_at: datetime

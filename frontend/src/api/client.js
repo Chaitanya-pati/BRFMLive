@@ -118,6 +118,14 @@ export const driverApi = {
   delete: (id) => api.delete(`/drivers/${id}`),
 };
 
+export const truckApi = {
+  getAll: () => api.get("/trucks"),
+  getById: (id) => api.get(`/trucks/${id}`),
+  create: (data) => api.post("/trucks", data),
+  update: (id, data) => api.put(`/trucks/${id}`, data),
+  delete: (id) => api.delete(`/trucks/${id}`),
+};
+
 export const bagSizeApi = {
   getAll: () => api.get("/bag-sizes"),
 };

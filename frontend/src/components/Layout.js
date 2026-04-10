@@ -242,6 +242,7 @@ const menuItems = [
         { name: "Supplier Master", route: "SupplierMaster", icon: SvgUserCogIcon },
         { name: "Customer Master", route: "CustomerMaster", icon: SvgUserCogIcon },
         { name: "Driver Master", route: "DriverMaster", icon: SvgUserCogIcon },
+        { name: "Truck Master", route: "TruckMaster", icon: SvgUserCogIcon },
         { name: "Raw Product Master", route: "RawProductMaster", icon: SvgTagIcon },
         { name: "Finished Goods Master", route: "FinishedGoodsMaster", icon: SvgTagIcon },
       ]

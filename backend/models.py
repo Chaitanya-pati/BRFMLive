@@ -844,3 +844,30 @@ class Transfer12HourRecord(Base):
     created_by_user = relationship("User", foreign_keys=[created_by])
     branch = relationship("Branch")
     production_order = relationship("ProductionOrder")
+
+
+class TruckTypeEnum(enum.Enum):
+    OPEN = "Open"
+    CLOSED = "Closed"
+    CONTAINER = "Container"
+    TANKER = "Tanker"
+
+
+class VehicleCategoryEnum(enum.Enum):
+    LIGHT = "Light"
+    MEDIUM = "Medium"
+    HEAVY = "Heavy"
+
+
+class Truck(Base):
+    __tablename__ = "trucks"
+    truck_id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    truck_number = Column(String(20), nullable=False, unique=True)
+    truck_type = Column(Enum(TruckTypeEnum), nullable=False)
+    vehicle_category = Column(Enum(VehicleCategoryEnum), nullable=False)
+    status = Column(String(20), default="Active", nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=ist_now)
+
+    branch = relationship("Branch")

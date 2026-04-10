@@ -18,6 +18,7 @@ import models
 import schemas
 import drivers
 import customer_orders
+import trucks
 from utils.datetime_utils import ist_now, format_ist, parse_ist, IST
 
 def get_image_url(path):
@@ -110,6 +111,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(customer_orders.router)
 app.include_router(drivers.router)
+app.include_router(trucks.router)
 
 # --- Granulation Endpoints ---
 
