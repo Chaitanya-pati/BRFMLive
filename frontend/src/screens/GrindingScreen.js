@@ -407,10 +407,6 @@ export default function GrindingScreen({ navigation }) {
   };
   // ───────────────────────────────────────────────────────────────────────────
 
-  const [showSummary, setShowSummary] = useState(false);
-  const [summaryData, setSummaryData] = useState([]);
-  const [godowns, setGodowns] = useState([]);
-  const [godownAllocation, setGodownAllocation] = useState({});
   const [availableBins, setAvailableBins] = useState([]);
 
   const handleChangeBin = async () => {
@@ -455,8 +451,8 @@ export default function GrindingScreen({ navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      
-      // First, save any unsaved hourly data rows
+
+      // 1. Save any unsaved hourly data rows
       for (const row of productionRows) {
         if (row.productionDate && row.productionTime && !row.isSubmitted) {
           if (!selectedBin) continue;
@@ -506,7 +502,7 @@ export default function GrindingScreen({ navigation }) {
         }
       }
 
-      // Then, calculate totals and show summary
+      // 2. Calculate totals across all hourly rows
       const totals = {};
       productionRows.forEach((row) => {
         (row.productionDetails || []).forEach((detail) => {
@@ -515,156 +511,59 @@ export default function GrindingScreen({ navigation }) {
           if (!fg || !bs) return;
           const key = `${fg.product_name} - ${bs.weight_kg}kg`;
           if (!totals[key])
-            totals[key] = {
-              bags: 0,
-              fgId: detail.finished_good_id,
-              bsId: detail.bag_size_id,
-            };
+            totals[key] = { bags: 0, fgId: detail.finished_good_id, bsId: detail.bag_size_id };
           totals[key].bags += parseInt(detail.quantity_bags) || 0;
         });
       });
 
       const formattedSummary = Object.keys(totals).map((key) => ({
         label: key,
-        value: totals[key].bags,
+        bags: totals[key].bags,
         fgId: totals[key].fgId,
         bsId: totals[key].bsId,
       }));
 
-      setSummaryData(formattedSummary);
-
-      const initialAllocation = {};
-      formattedSummary.forEach((item) => {
-        initialAllocation[item.label] = [
-          {
-            id: Date.now(),
-            godownId: null,
-            bags: item.value.toString(),
-            fgId: item.fgId,
-            bsId: item.bsId,
-          },
-        ];
-      });
-      setGodownAllocation(initialAllocation);
-
-      const res = await client.get("/finished-goods-godown");
-      setGodowns(res.data || []);
-
-      setShowSummary(true);
-    } catch (e) {
-      console.error("Failed to complete process", e);
-      showAlert("Error", "Failed to save hourly data and complete process: " + (e.message || ""));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addAllocationRow = (label) => {
-    const original = summaryData.find((s) => s.label === label);
-    setGodownAllocation((prev) => ({
-      ...prev,
-      [label]: [
-        ...prev[label],
-        {
-          id: Date.now(),
-          godownId: null,
-          bags: "0",
-          fgId: original?.fgId,
-          bsId: original?.bsId,
-        },
-      ],
-    }));
-  };
-
-  const removeAllocationRow = (label, id) => {
-    setGodownAllocation((prev) => ({
-      ...prev,
-      [label]: prev[label].filter((row) => row.id !== id),
-    }));
-  };
-
-  const updateAllocation = (label, id, field, value) => {
-    setGodownAllocation((prev) => ({
-      ...prev,
-      [label]: prev[label].map((row) =>
-        row.id === id ? { ...row, [field]: value } : row,
-      ),
-    }));
-  };
-
-  const handleSaveToGodown = async () => {
-    for (const label in godownAllocation) {
-      const rows = godownAllocation[label];
-      const totalAllocated = rows.reduce(
-        (sum, r) => sum + (parseInt(r.bags) || 0),
-        0,
-      );
-      const originalTotal =
-        summaryData.find((s) => s.label === label)?.value || 0;
-      if (totalAllocated !== originalTotal) {
-        showAlert(
-          "Error",
-          `Total bags allocated for ${label} (${totalAllocated}) doesn't match total produced (${originalTotal})`,
-        );
+      // 3. Fetch the first finished goods godown automatically
+      const godownRes = await client.get("/finished-goods-godown");
+      const godownList = godownRes.data || [];
+      if (godownList.length === 0) {
+        showAlert("Error", "No finished goods godown configured. Please add a godown first.");
         return;
       }
-      if (rows.some((r) => !r.godownId)) {
-        showAlert(
-          "Error",
-          `Please select a godown for all allocations of ${label}`,
-        );
-        return;
-      }
-    }
+      const firstGodown = godownList[0];
 
-    setLoading(true);
-    try {
-      const client = getApiClient();
-      const movements = [];
-      for (const label in godownAllocation) {
-        godownAllocation[label].forEach((row) => {
-          const movement = {
-            movement_type: "IN",
-            to_godown_id: parseInt(row.godownId),
-            finished_good_id: parseInt(row.fgId),
-            bag_size_id: parseInt(row.bsId),
-            quantity_bags: parseInt(row.bags),
-            production_order_id: selectedBin?.production_order_id || null,
-            remarks: `Grinding completion: ${label}`,
-          };
-          console.log("📦 Movement payload:", movement);
-          movements.push(movement);
+      // 4. Post stock movements for each product to the first godown
+      for (const item of formattedSummary) {
+        if (item.bags <= 0) continue;
+        await client.post("/finished-goods-godown-movement", {
+          movement_type: "IN",
+          to_godown_id: firstGodown.id,
+          finished_good_id: item.fgId,
+          bag_size_id: item.bsId,
+          quantity_bags: item.bags,
+          production_order_id: selectedBin?.production_order_id || null,
+          remarks: `Grinding completion: ${item.label}`,
         });
       }
-      console.log("📤 Saving movements to backend...", movements);
-      for (const m of movements) {
-        const response = await client.post("/finished-goods-godown-movement", m);
-        console.log("✅ Movement saved:", response.data);
-      }
 
-      // Mark the production order as COMPLETED
+      // 5. Mark production order as COMPLETED
       if (selectedBin?.production_order_id) {
         await client.put(`/production-orders/${selectedBin.production_order_id}`, {
           status: "COMPLETED",
         });
-        console.log("✅ Production order marked as COMPLETED:", selectedBin.production_order_id);
       }
 
-      showToast("Success", "Process completed and stock updated in godowns");
-      setShowSummary(false);
+      showToast("Success", "Process completed and stock updated in godown");
       setIsGrindingStarted(false);
       fetchInitialData();
-    } catch (error) {
-      console.error("Save to godown failed", error);
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || "Unknown error";
-      showAlert(
-        "Error",
-        "Failed to update godown stock: " + errorMsg,
-      );
+    } catch (e) {
+      console.error("Failed to complete process", e);
+      showAlert("Error", "Failed to complete process: " + (e.message || ""));
     } finally {
       setLoading(false);
     }
   };
+
 
   const [bagSizes, setBagSizes] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
@@ -1660,139 +1559,6 @@ export default function GrindingScreen({ navigation }) {
                 </View>
               </View>
 
-              {/* Summary / Allocation Modal */}
-              <Modal visible={showSummary} transparent animationType="fade">
-                <View style={styles.modalOverlay}>
-                  <Card
-                    style={[
-                      styles.summaryModal,
-                      { width: "95%", maxWidth: 600, maxHeight: "90%" },
-                    ]}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 20,
-                      }}
-                    >
-                      <Text style={[styles.cardTitle, { marginBottom: 0 }]}>
-                        Process Summary & Allocation
-                      </Text>
-                      <TouchableOpacity onPress={() => setShowSummary(false)}>
-                        <Text style={{ fontSize: 28, color: "#666" }}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <ScrollView
-                      style={{ flex: 1, paddingRight: 5 }}
-                      showsVerticalScrollIndicator
-                    >
-                      {summaryData.map((item, idx) => (
-                        <View key={idx} style={styles.summarySection}>
-                          <View style={styles.summaryHeader}>
-                            <View>
-                              <Text style={styles.summaryProductTitle}>
-                                {item.label}
-                              </Text>
-                              <Text style={styles.summaryBagsSub}>
-                                Production Summary
-                              </Text>
-                            </View>
-                            <View style={styles.summaryBadge}>
-                              <Text style={styles.summaryBadgeText}>
-                                {item.value} Bags Produced
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={styles.allocationContainer}>
-                            {godownAllocation[item.label]?.map((alloc) => (
-                              <View key={alloc.id} style={styles.allocationRow}>
-                                <View style={{ flex: 1.5 }}>
-                                  <Text style={styles.allocationLabel}>
-                                    Target Godown
-                                  </Text>
-                                  <SelectDropdown
-                                    options={godowns.map((g) => ({
-                                      label: g.godown_name,
-                                      value: g.id.toString(),
-                                    }))}
-                                    value={alloc.godownId?.toString()}
-                                    onValueChange={(val) =>
-                                      updateAllocation(
-                                        item.label,
-                                        alloc.id,
-                                        "godownId",
-                                        val,
-                                      )
-                                    }
-                                    placeholder="Select Godown"
-                                  />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={styles.allocationLabel}>
-                                    Allocated Bags
-                                  </Text>
-                                  <InputField
-                                    value={alloc.bags}
-                                    onChangeText={(val) =>
-                                      updateAllocation(
-                                        item.label,
-                                        alloc.id,
-                                        "bags",
-                                        val,
-                                      )
-                                    }
-                                    keyboardType="numeric"
-                                    placeholder="Bags"
-                                    dense
-                                  />
-                                </View>
-                                {godownAllocation[item.label].length > 1 && (
-                                  <TouchableOpacity
-                                    onPress={() =>
-                                      removeAllocationRow(item.label, alloc.id)
-                                    }
-                                    style={styles.removeAllocationBtn}
-                                  >
-                                    <Text style={styles.removeAllocationText}>
-                                      ✕
-                                    </Text>
-                                  </TouchableOpacity>
-                                )}
-                              </View>
-                            ))}
-                          </View>
-                          <TouchableOpacity
-                            style={styles.splitButton}
-                            onPress={() => addAllocationRow(item.label)}
-                          >
-                            <Text style={styles.splitButtonText}>
-                              + Split to another Godown
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </ScrollView>
-                    <View style={styles.modalFooter}>
-                      <TouchableOpacity
-                        style={[styles.modalBtn, styles.cancelBtn]}
-                        onPress={() => setShowSummary(false)}
-                      >
-                        <Text style={styles.cancelBtnText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.modalBtn, styles.saveBtn]}
-                        onPress={handleSaveToGodown}
-                      >
-                        <Text style={styles.saveBtnText}>
-                          Confirm & Save Stock
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </Card>
-                </View>
-              </Modal>
             </Card>
           </View>
         )}
