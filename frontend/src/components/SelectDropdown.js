@@ -11,28 +11,31 @@ export default function SelectDropdown({
   placeholder = 'Select an option',
   error,
   enabled = true,
+  disabled = false,
+  compact = false,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const isEnabled = enabled && !disabled;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
       {label && <Text style={[styles.label, isMobile && styles.labelMobile]}>{label}</Text>}
       <View style={[
         styles.pickerContainer, 
-        isMobile && styles.pickerContainerMobile,
+        isMobile && !compact && styles.pickerContainerMobile,
+        compact && styles.pickerContainerCompact,
         error && styles.pickerContainerError, 
-        !enabled && styles.pickerDisabled
+        !isEnabled && styles.pickerDisabled
       ]}>
         <Picker
           selectedValue={value || ""}
           onValueChange={(val) => {
-            console.log(`SelectDropdown [${label}] changed to:`, val);
-            onValueChange(val);
+            if (isEnabled) onValueChange(val);
           }}
-          enabled={enabled}
-          style={[styles.picker, isMobile && styles.pickerMobile]}
-          dropdownIconColor={enabled ? colors.textPrimary : colors.textSecondary}
+          enabled={isEnabled}
+          style={[styles.picker, isMobile && !compact && styles.pickerMobile, compact && styles.pickerCompact]}
+          dropdownIconColor={isEnabled ? colors.textPrimary : colors.textSecondary}
           itemStyle={Platform.OS === 'ios' ? styles.pickerItem : undefined}
         >
           <Picker.Item
@@ -61,6 +64,9 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
+  containerCompact: {
+    marginBottom: 0,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -80,6 +86,10 @@ const styles = StyleSheet.create({
   },
   pickerContainerMobile: {
     minHeight: Platform.select({ web: 44, default: 48 }),
+  },
+  pickerContainerCompact: {
+    minHeight: 36,
+    borderRadius: 5,
   },
   pickerContainerError: {
     borderColor: colors.error,
@@ -106,6 +116,11 @@ const styles = StyleSheet.create({
       web: 44 
     }),
     paddingHorizontal: Platform.OS === 'web' ? 10 : 0,
+  },
+  pickerCompact: {
+    fontSize: 13,
+    height: Platform.select({ ios: 120, android: 36, web: 36 }),
+    paddingHorizontal: Platform.OS === 'web' ? 8 : 0,
   },
   pickerItem: {
     fontSize: 14,

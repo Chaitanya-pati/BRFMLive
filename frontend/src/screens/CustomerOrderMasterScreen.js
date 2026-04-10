@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import SelectDropdown from '../components/SelectDropdown';
 import InputField from '../components/InputField';
+import DynamicTable from '../components/DynamicTable';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
@@ -20,6 +21,16 @@ import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import { useFormSubmission } from '../utils/useFormSubmission';
 import { formatISTDate } from '../utils/dateUtils';
+
+const EMPTY_ITEM = {
+  finished_good_id: '',
+  quantity_type: 'bag',
+  quantity_ton: '',
+  bag_size_kg: '50',
+  number_of_bags: '',
+  price_per_bag: '',
+  price_per_ton: '',
+};
 
 export default function CustomerOrderMasterScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -37,7 +48,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     customer_id: '',
     order_status: 'PENDING',
     remarks: '',
-    items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+    items: [{ ...EMPTY_ITEM }],
   });
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
@@ -86,20 +97,16 @@ export default function CustomerOrderMasterScreen({ navigation }) {
   };
 
   const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
-    });
+    setFormData({ ...formData, items: [...formData.items, { ...EMPTY_ITEM }] });
   };
 
   const removeItem = (index) => {
-    const newItems = formData.items.filter((_, i) => i !== index);
-    setFormData({ ...formData, items: newItems });
+    setFormData({ ...formData, items: formData.items.filter((_, i) => i !== index) });
   };
 
   const updateItem = (index, field, value) => {
     const newItems = [...formData.items];
-    newItems[index][field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
   };
 
@@ -111,7 +118,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       customer_id: '',
       order_status: 'PENDING',
       remarks: '',
-      items: [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: [{ ...EMPTY_ITEM }],
     });
     setModalVisible(true);
   };
@@ -124,15 +131,17 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       customer_id: order.customer_id,
       order_status: order.order_status,
       remarks: order.remarks || '',
-      items: order.items.length > 0 ? order.items.map(item => ({
-        finished_good_id: item.finished_good_id,
-        quantity_type: item.quantity_type || 'bag',
-        quantity_ton: (item.quantity_ton || '').toString(),
-        bag_size_kg: item.bag_size ? item.bag_size.weight_kg.toString() : '50',
-        number_of_bags: (item.number_of_bags || '').toString(),
-        price_per_ton: (item.price_per_ton || '').toString(),
-        price_per_bag: (item.price_per_bag || '').toString()
-      })) : [{ finished_good_id: '', quantity_type: 'bag', quantity_ton: '', bag_size_kg: '50', number_of_bags: '', price_per_ton: '', price_per_bag: '' }]
+      items: order.items.length > 0
+        ? order.items.map(item => ({
+            finished_good_id: item.finished_good_id,
+            quantity_type: item.quantity_type || 'bag',
+            quantity_ton: (item.quantity_ton || '').toString(),
+            bag_size_kg: item.bag_size ? item.bag_size.weight_kg.toString() : '50',
+            number_of_bags: (item.number_of_bags || '').toString(),
+            price_per_bag: (item.price_per_bag || '').toString(),
+            price_per_ton: (item.price_per_ton || '').toString(),
+          }))
+        : [{ ...EMPTY_ITEM }],
     });
     setModalVisible(true);
   };
@@ -168,8 +177,8 @@ export default function CustomerOrderMasterScreen({ navigation }) {
           price_per_ton: item.quantity_type === 'ton' ? parseFloat(item.price_per_ton || 0) : 0,
           bag_size_weight: item.quantity_type === 'bag' ? parseInt(item.bag_size_kg) : null,
           number_of_bags: item.quantity_type === 'bag' ? parseInt(item.number_of_bags) : 0,
-          price_per_bag: item.quantity_type === 'bag' ? parseFloat(item.price_per_bag || 0) : 0
-        }))
+          price_per_bag: item.quantity_type === 'bag' ? parseFloat(item.price_per_bag || 0) : 0,
+        })),
       };
 
       if (editMode && currentOrder) {
@@ -190,7 +199,6 @@ export default function CustomerOrderMasterScreen({ navigation }) {
       'Confirm Delete',
       `Are you sure you want to delete order ${order.order_code}?`
     );
-
     if (confirmed) {
       try {
         await customerOrderApi.delete(order.order_id);
@@ -202,25 +210,95 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     }
   };
 
+  const tableColumns = [
+    {
+      key: 'finished_good_id',
+      label: 'Product',
+      type: 'select',
+      flex: 2,
+      minWidth: 160,
+      placeholder: 'Select Product',
+      options: finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id })),
+    },
+    {
+      key: 'quantity_type',
+      label: 'Unit',
+      type: 'select',
+      flex: 1,
+      minWidth: 90,
+      placeholder: 'Unit',
+      options: [
+        { label: 'Bag', value: 'bag' },
+        { label: 'Ton', value: 'ton' },
+      ],
+    },
+    {
+      key: 'bag_size_kg',
+      label: 'Bag Size',
+      type: 'select',
+      flex: 1,
+      minWidth: 100,
+      placeholder: 'Size',
+      options: bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: bs.weight_kg.toString() })),
+      disabled: (row) => row.quantity_type !== 'bag',
+    },
+    {
+      key: 'number_of_bags',
+      label: '# Bags',
+      type: 'number',
+      flex: 1,
+      minWidth: 80,
+      placeholder: '0',
+      disabled: (row) => row.quantity_type !== 'bag',
+    },
+    {
+      key: 'quantity_ton',
+      label: 'Qty (T)',
+      type: 'number',
+      flex: 1,
+      minWidth: 80,
+      placeholder: '0.00',
+      disabled: (row) => row.quantity_type !== 'ton',
+    },
+    {
+      key: 'price_per_bag',
+      label: 'Price/Bag',
+      type: 'number',
+      flex: 1,
+      minWidth: 85,
+      placeholder: '0.00',
+      disabled: (row) => row.quantity_type !== 'bag',
+    },
+    {
+      key: 'price_per_ton',
+      label: 'Price/Ton',
+      type: 'number',
+      flex: 1,
+      minWidth: 85,
+      placeholder: '0.00',
+      disabled: (row) => row.quantity_type !== 'ton',
+    },
+  ];
+
   const columns = [
     { label: 'Order Code', field: 'order_code', width: isMobile ? 120 : 150, key: 'order_code' },
-    { 
-      label: 'Customer', 
-      field: 'customer_id', 
+    {
+      label: 'Customer',
+      field: 'customer_id',
       width: isMobile ? 150 : 200,
       key: 'customer_id',
       render: (id, row) => {
         const customer = customers.find(c => c.customer_id === id);
         return customer ? customer.customer_name : (row.customer?.customer_name || `ID: ${id}`);
-      }
+      },
     },
     { label: 'Status', field: 'order_status', width: 100, key: 'order_status' },
-    { 
-      label: 'Date', 
-      field: 'order_date', 
+    {
+      label: 'Date',
+      field: 'order_date',
       width: 120,
       key: 'order_date',
-      render: (v, row) => formatISTDate(v || row.created_at)
+      render: (v, row) => formatISTDate(v || row.created_at),
     },
   ];
 
@@ -238,7 +316,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         title={editMode ? 'Edit Order' : 'New Customer Order'}
-        width={isMobile ? "95%" : "80%"}
+        width={isMobile ? '98%' : '90%'}
       >
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
           <View style={isMobile ? styles.mobileGrid : styles.grid}>
@@ -264,105 +342,19 @@ export default function CustomerOrderMasterScreen({ navigation }) {
 
           <View style={styles.sectionHeaderContainer}>
             <Text style={styles.sectionHeader}>Order Items</Text>
-            <TouchableOpacity onPress={addItem} style={styles.addBtn}>
-              <Text style={styles.addBtnText}>+ Add Item</Text>
-            </TouchableOpacity>
           </View>
 
-          {formData.items.map((item, index) => (
-            <View key={index} style={styles.itemCard}>
-              <View style={styles.itemCardHeader}>
-                <Text style={styles.itemIndex}>Item #{index + 1}</Text>
-                <TouchableOpacity onPress={() => removeItem(index)} style={styles.removeBtn}>
-                  <Text style={{ color: colors.error }}>Remove ✕</Text>
-                </TouchableOpacity>
-              </View>
+          <DynamicTable
+            columns={tableColumns}
+            rows={formData.items}
+            onAddRow={addItem}
+            onRemoveRow={removeItem}
+            onCellChange={updateItem}
+            addLabel="+ Add Item"
+            minRows={1}
+          />
 
-              <View style={isMobile ? styles.mobileGrid : styles.grid}>
-                <View style={[styles.gridItem, { flex: 2 }]}>
-                  <Text style={styles.subLabel}>Product</Text>
-                  <SelectDropdown
-                    placeholder="Select Product"
-                    value={item.finished_good_id}
-                    onValueChange={(val) => updateItem(index, 'finished_good_id', val)}
-                    options={finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id }))}
-                  />
-                </View>
-
-                <View style={[styles.gridItem, { flex: 1 }]}>
-                  <Text style={styles.subLabel}>Unit Type</Text>
-                  <SelectDropdown
-                    placeholder="Select Unit"
-                    value={item.quantity_type}
-                    onValueChange={(val) => updateItem(index, 'quantity_type', val)}
-                    options={[
-                      { label: 'Bag', value: 'bag' },
-                      { label: 'Ton', value: 'ton' },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              {item.quantity_type === 'ton' ? (
-                <View style={isMobile ? styles.mobileGrid : styles.grid}>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.subLabel}>Quantity (Ton)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0.00"
-                      value={item.quantity_ton}
-                      onChangeText={(val) => updateItem(index, 'quantity_ton', val)}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.subLabel}>Price / Ton</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0.00"
-                      value={item.price_per_ton}
-                      onChangeText={(val) => updateItem(index, 'price_per_ton', val)}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              ) : (
-                <View style={isMobile ? styles.mobileGrid : styles.grid}>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.subLabel}>Bag Size</Text>
-                    <SelectDropdown
-                      placeholder="Select Size"
-                      value={item.bag_size_kg}
-                      onValueChange={(val) => updateItem(index, 'bag_size_kg', val)}
-                      options={bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: bs.weight_kg.toString() }))}
-                    />
-                  </View>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.subLabel}>Number of Bags</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0"
-                      value={item.number_of_bags}
-                      onChangeText={(val) => updateItem(index, 'number_of_bags', val)}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.subLabel}>Price / Bag</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="0.00"
-                      value={item.price_per_bag}
-                      onChangeText={(val) => updateItem(index, 'price_per_bag', val)}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-
-          <Text style={styles.label}>Remarks</Text>
+          <Text style={[styles.label, { marginTop: 20 }]}>Remarks</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={formData.remarks}
@@ -375,9 +367,9 @@ export default function CustomerOrderMasterScreen({ navigation }) {
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.saveBtn, isSubmitting && styles.disabledButton]} 
-              onPress={handleSubmit} 
+            <TouchableOpacity
+              style={[styles.saveBtn, isSubmitting && styles.disabledButton]}
+              onPress={handleSubmit}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -394,7 +386,7 @@ export default function CustomerOrderMasterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  form: { 
+  form: {
     paddingBottom: 20,
     maxHeight: Platform.OS === 'web' ? '80vh' : 'auto',
   },
@@ -411,106 +403,49 @@ const styles = StyleSheet.create({
   gridItem: {
     flex: 1,
   },
-  label: { 
-    fontWeight: '600', 
-    marginTop: 15, 
+  label: {
+    fontWeight: '600',
+    marginTop: 15,
     marginBottom: 8,
     color: '#374151',
     fontSize: 14,
   },
-  subLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  input: { 
-    borderWidth: 1, 
-    borderColor: '#d1d5db', 
-    borderRadius: 6, 
-    padding: 10, 
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    padding: 10,
     backgroundColor: '#fff',
     fontSize: 14,
   },
-  pickerContainer: { 
-    borderWidth: 1, 
-    borderColor: '#d1d5db', 
-    borderRadius: 6, 
-    backgroundColor: '#fff',
-    ...Platform.select({
-      web: { outlineStyle: 'none' }
-    })
-  },
   sectionHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 25,
-    marginBottom: 15,
+    marginTop: 20,
+    marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
-  sectionHeader: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: colors.primary 
-  },
-  itemCard: { 
-    marginBottom: 20, 
-    padding: 15, 
-    backgroundColor: '#fff', 
-    borderRadius: 8, 
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    ...Platform.select({
-      web: { boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-      default: { elevation: 2 }
-    })
-  },
-  itemCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  itemIndex: {
+  sectionHeader: {
+    fontSize: 16,
     fontWeight: '700',
     color: colors.primary,
-    fontSize: 14,
   },
-  removeBtn: { 
-    padding: 5,
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
-  addBtn: { 
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: '#f3f4f6', 
-    borderRadius: 6, 
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-  },
-  addBtnText: { 
-    color: colors.primary, 
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  textArea: { 
-    height: 80, 
-    textAlignVertical: 'top' 
-  },
-  buttonContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'flex-end', 
-    marginTop: 30, 
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 24,
     gap: 12,
     marginBottom: 20,
   },
-  cancelBtn: { 
+  cancelBtn: {
     paddingVertical: 12,
-    paddingHorizontal: 20, 
-    borderRadius: 6, 
-    borderWidth: 1, 
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    borderWidth: 1,
     borderColor: '#d1d5db',
     backgroundColor: '#fff',
   },
@@ -518,10 +453,10 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
   },
-  saveBtn: { 
+  saveBtn: {
     paddingVertical: 12,
-    paddingHorizontal: 25, 
-    borderRadius: 6, 
+    paddingHorizontal: 25,
+    borderRadius: 6,
     backgroundColor: colors.primary,
     minWidth: 120,
     alignItems: 'center',
@@ -530,8 +465,8 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
-  saveBtnText: { 
-    color: '#fff', 
-    fontWeight: '700' 
-  }
+  saveBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
 });
