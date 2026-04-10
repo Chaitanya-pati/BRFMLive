@@ -122,7 +122,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       </View>
       <View style={styles.orderCardDetails}>
         <Text style={styles.orderDetail}>Product: {item.raw_product?.product_name || 'N/A'}</Text>
-        <Text style={styles.orderDetail}>Quantity: {item.quantity} kg</Text>
+        <Text style={styles.orderDetail}>Quantity: {item.quantity} T</Text>
         <Text style={styles.orderDetail}>Target: {item.target_finish_date ? formatISTDate(item.target_finish_date) : 'N/A'}</Text>
       </View>
       <TouchableOpacity style={styles.planButtonCard} onPress={() => handleSelectOrder(item.id)}>
@@ -224,7 +224,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
       return;
     }
     if (!isDistributionValid) {
-      showError(`Distribution must equal ${order?.quantity} kg`);
+      showError(`Distribution must equal ${order?.quantity} T`);
       return;
     }
 
@@ -334,7 +334,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
             </View>
             <View style={styles.orderInfoItem}>
               <Text style={styles.orderInfoLabel}>Order Quantity</Text>
-              <Text style={styles.orderInfoValueLarge}>{order?.quantity} kg</Text>
+              <Text style={styles.orderInfoValueLarge}>{order?.quantity} T</Text>
             </View>
             <View style={styles.orderInfoItem}>
               <Text style={styles.orderInfoLabel}>Target Date</Text>
@@ -367,7 +367,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                     onPress={() => addSourceBin(bin.id)}
                   >
                     <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
-                    <Text style={styles.addBinChipSubtext}>{bin.current_quantity} kg</Text>
+                    <Text style={styles.addBinChipSubtext}>{bin.current_quantity} T</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -384,7 +384,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                 <Text style={[styles.binTableHeaderCell, { flex: 2 }]}>Source Bin</Text>
                 <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Available</Text>
                 <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Blend %</Text>
-                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (kg)</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (T)</Text>
                 <Text style={[styles.binTableHeaderCell, { width: 50 }]}>Action</Text>
               </View>
               {selectedSources.map((source) => (
@@ -393,7 +393,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                     <Text style={styles.binName}>{source.bin?.bin_number}</Text>
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
-                    <Text style={styles.binAvailable}>{source.bin?.current_quantity} kg</Text>
+                    <Text style={styles.binAvailable}>{source.bin?.current_quantity} T</Text>
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
                     <TextInput
@@ -430,7 +430,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.totalLabel}>Total Quantity:</Text>
-              <Text style={styles.totalValue}>{totalSourceQty.toFixed(2)} kg</Text>
+              <Text style={styles.totalValue}>{totalSourceQty.toFixed(2)} T</Text>
             </View>
           </View>
         </View>
@@ -459,7 +459,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                     onPress={() => addDestinationBin(bin.id)}
                   >
                     <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
-                    <Text style={styles.addBinChipSubtext}>{((bin.capacity || 0) - (bin.current_quantity || 0)).toFixed(0)} kg free</Text>
+                    <Text style={styles.addBinChipSubtext}>{((bin.capacity || 0) - (bin.current_quantity || 0)).toFixed(0)} T free</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -475,7 +475,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
               <View style={styles.binTableHeader}>
                 <Text style={[styles.binTableHeaderCell, { flex: 2 }]}>Destination Bin</Text>
                 <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Capacity Free</Text>
-                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (kg)</Text>
+                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (T)</Text>
                 <Text style={[styles.binTableHeaderCell, { width: 50 }]}>Action</Text>
               </View>
               {selectedDestinations.map((dest) => (
@@ -485,7 +485,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
                     <Text style={styles.binAvailable}>
-                      {((dest.bin?.capacity || 0) - (dest.bin?.current_quantity || 0)).toFixed(0)} kg
+                      {((dest.bin?.capacity || 0) - (dest.bin?.current_quantity || 0)).toFixed(0)} T
                     </Text>
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
@@ -514,15 +514,15 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
             <View style={styles.totalItem}>
               <Text style={styles.totalLabel}>Total Distribution:</Text>
               <Text style={[styles.totalValue, !isDistributionValid && styles.errorValue]}>
-                {totalDistribution.toFixed(2)} kg
+                {totalDistribution.toFixed(2)} T
               </Text>
             </View>
             <View style={styles.totalItem}>
               <Text style={styles.totalLabel}>Required:</Text>
-              <Text style={styles.totalValue}>{order?.quantity} kg</Text>
+              <Text style={styles.totalValue}>{order?.quantity} T</Text>
               {!isDistributionValid && (
                 <Text style={styles.errorHint}>
-                  ({totalDistribution > (order?.quantity || 0) ? 'over' : 'under'} by {Math.abs(totalDistribution - (order?.quantity || 0)).toFixed(2)} kg)
+                  ({totalDistribution > (order?.quantity || 0) ? 'over' : 'under'} by {Math.abs(totalDistribution - (order?.quantity || 0)).toFixed(2)} T)
                 </Text>
               )}
             </View>
@@ -553,7 +553,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Distribution</Text>
               <View style={[styles.summaryStatus, isDistributionValid ? styles.summaryValid : styles.summaryInvalid]}>
-                <Text style={styles.summaryStatusText}>{totalDistribution.toFixed(0)} / {order?.quantity} kg</Text>
+                <Text style={styles.summaryStatusText}>{totalDistribution.toFixed(0)} / {order?.quantity} T</Text>
               </View>
             </View>
           </View>

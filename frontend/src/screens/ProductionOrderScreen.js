@@ -232,10 +232,10 @@ export default function ProductionOrderScreen({ navigation }) {
     },
     {
       key: "quantity",
-      label: "Quantity (kg)",
+      label: "Quantity (T)",
       flex: 1,
       align: "center",
-      render: (val) => `${val} kg`,
+      render: (val) => `${val} T`,
     },
     {
       key: "order_date",
@@ -389,7 +389,7 @@ export default function ProductionOrderScreen({ navigation }) {
             />
 
             {/* 4. Quantity */}
-            <Text style={styles.label}>Quantity (kg) *</Text>
+            <Text style={styles.label}>Quantity (T) *</Text>
             <TextInput
               style={styles.input}
               value={formData.quantity}

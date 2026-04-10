@@ -261,7 +261,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                         Destination: {binDisplayName(bin)}
                       </Text>
                       <Text style={styles.itemSub}>
-                        Planned Quantity: {bin.quantity} kg
+                        Planned Quantity: {bin.quantity} T
                       </Text>
                     </View>
                     <View style={[styles.statusPill, { backgroundColor: "#3b82f622", borderColor: "#3b82f6" }]}>
@@ -319,7 +319,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                     />
                     <DetailBox
                       label="Planned Qty"
-                      value={`${plannedQtyForBin(t.destination_bin_id)} kg`}
+                      value={`${plannedQtyForBin(t.destination_bin_id)} T`}
                     />
                     <DetailBox
                       label="Water Added"
@@ -371,7 +371,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                     </View>
                     <View style={styles.detailsRow}>
                       <DetailBox label="Destination Bin" value={transferBinName(t)} />
-                      <DetailBox label="Qty Transferred" value={t.quantity_transferred != null ? `${t.quantity_transferred} kg` : "—"} />
+                      <DetailBox label="Qty Transferred" value={t.quantity_transferred != null ? `${t.quantity_transferred} T` : "—"} />
                       <DetailBox label="Water Added" value={t.water_added != null ? `${t.water_added} L` : "—"} />
                       <DetailBox label="Moisture" value={t.moisture_level != null ? `${t.moisture_level}%` : "—"} />
                     </View>
@@ -420,7 +420,7 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             </Text>
 
             <InputField
-              label="Quantity Transferred (kg)"
+              label="Quantity Transferred (T)"
               value={formQty}
               onChangeText={setFormQty}
               keyboardType="decimal-pad"
@@ -514,7 +514,7 @@ function SourceBinsBreakdown({ sourceBins, destQty }) {
             <Text style={styles.srcBreakdownBin}>{binName}</Text>
             <View style={styles.srcBreakdownRight}>
               <Text style={styles.srcBreakdownPct}>{sb.blend_percentage}%</Text>
-              <Text style={styles.srcBreakdownQty}>{contributed} kg</Text>
+              <Text style={styles.srcBreakdownQty}>{contributed} T</Text>
             </View>
           </View>
         );
