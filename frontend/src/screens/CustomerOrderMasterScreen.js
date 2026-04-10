@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import SelectDropdown from '../components/SelectDropdown';
 import InputField from '../components/InputField';
-import DynamicTable from '../components/DynamicTable';
+import DynamicTable, { createSelectCell, createNumberCell } from '../components/DynamicTable';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
@@ -214,69 +214,76 @@ export default function CustomerOrderMasterScreen({ navigation }) {
     {
       key: 'finished_good_id',
       label: 'Product',
-      type: 'select',
       flex: 2,
       minWidth: 160,
-      placeholder: 'Select Product',
-      options: finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id })),
+      render: createSelectCell({
+        options: finishedGoods.map(fg => ({ label: fg.product_name, value: fg.id })),
+        placeholder: 'Select Product',
+      }),
     },
     {
       key: 'quantity_type',
       label: 'Unit',
-      type: 'select',
       flex: 1,
       minWidth: 90,
-      placeholder: 'Unit',
-      options: [
-        { label: 'Bag', value: 'bag' },
-        { label: 'Ton', value: 'ton' },
-      ],
+      render: createSelectCell({
+        options: [
+          { label: 'Bag', value: 'bag' },
+          { label: 'Ton', value: 'ton' },
+        ],
+        placeholder: 'Unit',
+      }),
     },
     {
       key: 'bag_size_kg',
       label: 'Bag Size',
-      type: 'select',
       flex: 1,
       minWidth: 100,
-      placeholder: 'Size',
-      options: bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: bs.weight_kg.toString() })),
-      disabled: (row) => row.quantity_type !== 'bag',
+      render: createSelectCell({
+        options: bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: bs.weight_kg.toString() })),
+        placeholder: 'Size',
+        disabled: (row) => row.quantity_type !== 'bag',
+      }),
     },
     {
       key: 'number_of_bags',
       label: '# Bags',
-      type: 'number',
       flex: 1,
       minWidth: 80,
-      placeholder: '0',
-      disabled: (row) => row.quantity_type !== 'bag',
+      render: createNumberCell({
+        placeholder: '0',
+        disabled: (row) => row.quantity_type !== 'bag',
+      }),
     },
     {
       key: 'quantity_ton',
       label: 'Qty (T)',
-      type: 'number',
       flex: 1,
       minWidth: 80,
-      placeholder: '0.00',
-      disabled: (row) => row.quantity_type !== 'ton',
+      render: createNumberCell({
+        placeholder: '0.00',
+        disabled: (row) => row.quantity_type !== 'ton',
+      }),
     },
     {
       key: 'price_per_bag',
       label: 'Price/Bag',
-      type: 'number',
       flex: 1,
       minWidth: 85,
-      placeholder: '0.00',
-      disabled: (row) => row.quantity_type !== 'bag',
+      render: createNumberCell({
+        placeholder: '0.00',
+        disabled: (row) => row.quantity_type !== 'bag',
+      }),
     },
     {
       key: 'price_per_ton',
       label: 'Price/Ton',
-      type: 'number',
       flex: 1,
       minWidth: 85,
-      placeholder: '0.00',
-      disabled: (row) => row.quantity_type !== 'ton',
+      render: createNumberCell({
+        placeholder: '0.00',
+        disabled: (row) => row.quantity_type !== 'ton',
+      }),
     },
   ];
 

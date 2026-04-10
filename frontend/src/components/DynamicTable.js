@@ -12,27 +12,93 @@ import SelectDropdown from './SelectDropdown';
 import colors from '../theme/colors';
 
 /**
- * DynamicTable – a reusable editable table for multi-row form data.
+ * DynamicTable
+ * ─────────────────────────────────────────────────────────────────────────────
+ * A purely structural, fully generic editable table.
+ * All cell rendering is delegated to the caller via `column.render`.
  *
- * Props:
- *   columns      Array of column definitions (see below)
- *   rows         Array of row data objects
+ * Props
+ * ─────
+ *   columns      [{ key, label, flex?, minWidth?, render }]
+ *   rows         array of row data objects
  *   onAddRow     () => void
  *   onRemoveRow  (rowIndex) => void
  *   onCellChange (rowIndex, columnKey, newValue) => void
- *   addLabel     Label for the "+ Add Row" button  (default "+ Add Row")
- *   minRows      Minimum rows; hides remove button when row count <= minRows (default 1)
+ *   addLabel     string  (default "+ Add Row")
+ *   minRows      number  (default 1) — hides remove button when rows.length <= minRows
  *
- * Column definition:
- *   key          string  – field name in the row object
- *   label        string  – column header text
- *   type         'text' | 'number' | 'select'
- *   options      [{ label, value }]   (for type='select')
- *   placeholder  string
- *   flex         number  (default 1)
- *   minWidth     number  (default 80)
- *   disabled     boolean | (row) => boolean
+ * Column definition
+ * ─────────────────
+ *   key       string  — field name in the row object
+ *   label     string  — header label
+ *   flex      number  (default 1)
+ *   minWidth  number  (default 90)
+ *   render    (value, row, rowIndex, onChange) => ReactNode
+ *             where onChange = (newValue) => onCellChange(rowIndex, key, newValue)
+ *
+ * Cell factory helpers (exported)
+ * ────────────────────────────────
+ *   createTextCell({ placeholder? })
+ *   createNumberCell({ placeholder? })
+ *   createSelectCell({ options, placeholder?, disabled? })
+ *     options  — [{ label, value }] or (row) => [{ label, value }]
+ *     disabled — boolean or (row) => boolean
  */
+
+// ─── Cell factory helpers ────────────────────────────────────────────────────
+
+export function createTextCell({ placeholder = '', disabled } = {}) {
+  return (value, row, _idx, onChange) => {
+    const isDisabled = typeof disabled === 'function' ? disabled(row) : !!disabled;
+    return (
+      <TextInput
+        style={[cellStyles.input, isDisabled && cellStyles.inputDisabled]}
+        value={isDisabled ? '' : (value != null ? String(value) : '')}
+        onChangeText={(val) => { if (!isDisabled) onChange(val); }}
+        placeholder={isDisabled ? '—' : placeholder}
+        placeholderTextColor={isDisabled ? '#d1d5db' : '#9ca3af'}
+        editable={!isDisabled}
+      />
+    );
+  };
+}
+
+export function createNumberCell({ placeholder = '', disabled } = {}) {
+  return (value, row, _idx, onChange) => {
+    const isDisabled = typeof disabled === 'function' ? disabled(row) : !!disabled;
+    return (
+      <TextInput
+        style={[cellStyles.input, isDisabled && cellStyles.inputDisabled]}
+        value={isDisabled ? '' : (value != null ? String(value) : '')}
+        onChangeText={(val) => { if (!isDisabled) onChange(val); }}
+        placeholder={isDisabled ? '—' : placeholder}
+        placeholderTextColor={isDisabled ? '#d1d5db' : '#9ca3af'}
+        keyboardType="decimal-pad"
+        editable={!isDisabled}
+      />
+    );
+  };
+}
+
+export function createSelectCell({ options = [], placeholder = 'Select', disabled } = {}) {
+  return (value, row, _idx, onChange) => {
+    const resolvedOptions = typeof options === 'function' ? options(row) : options;
+    const isDisabled = typeof disabled === 'function' ? disabled(row) : !!disabled;
+    return (
+      <SelectDropdown
+        options={resolvedOptions}
+        value={isDisabled ? '' : (value != null ? String(value) : '')}
+        onValueChange={(val) => { if (!isDisabled) onChange(val); }}
+        placeholder={placeholder}
+        compact
+        disabled={isDisabled}
+      />
+    );
+  };
+}
+
+// ─── DynamicTable component ──────────────────────────────────────────────────
+
 export default function DynamicTable({
   columns = [],
   rows = [],
@@ -42,75 +108,35 @@ export default function DynamicTable({
   addLabel = '+ Add Row',
   minRows = 1,
 }) {
-  const isDisabled = (col, row) => {
-    if (typeof col.disabled === 'function') return col.disabled(row);
-    return !!col.disabled;
-  };
-
-  const renderCell = (col, row, rowIndex) => {
-    const disabled = isDisabled(col, row);
-    const cellFlex = col.flex || 1;
-    const cellMinWidth = col.minWidth || 90;
-    const value = row[col.key] != null ? String(row[col.key]) : '';
-
-    return (
-      <View
-        key={col.key}
-        style={[
-          styles.cell,
-          { flex: cellFlex, minWidth: cellMinWidth },
-          disabled && styles.cellDisabled,
-        ]}
-      >
-        {col.type === 'select' ? (
-          <SelectDropdown
-            options={col.options || []}
-            value={disabled ? '' : value}
-            onValueChange={(val) => !disabled && onCellChange(rowIndex, col.key, val)}
-            placeholder={col.placeholder || 'Select'}
-            compact
-            disabled={disabled}
-          />
-        ) : (
-          <TextInput
-            style={[styles.input, disabled && styles.inputDisabled]}
-            value={disabled ? '' : value}
-            onChangeText={(val) => !disabled && onCellChange(rowIndex, col.key, val)}
-            placeholder={disabled ? '—' : (col.placeholder || '')}
-            placeholderTextColor={disabled ? '#c0c0c0' : '#9ca3af'}
-            keyboardType={col.type === 'number' ? 'decimal-pad' : 'default'}
-            editable={!disabled}
-          />
-        )}
-      </View>
-    );
-  };
-
   return (
     <View style={styles.wrapper}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.table}>
-          {/* Header Row */}
+
+          {/* ── Header row ── */}
           <View style={styles.headerRow}>
             <View style={styles.rowNumCell}>
               <Text style={styles.headerText}>#</Text>
             </View>
+
             {columns.map((col) => (
               <View
                 key={col.key}
-                style={[styles.headerCell, { flex: col.flex || 1, minWidth: col.minWidth || 90 }]}
+                style={[
+                  styles.headerCell,
+                  { flex: col.flex ?? 1, minWidth: col.minWidth ?? 90 },
+                ]}
               >
                 <Text style={styles.headerText} numberOfLines={1}>
                   {col.label}
                 </Text>
               </View>
             ))}
-            <View style={styles.actionCell}>
-              <Text style={styles.headerText}> </Text>
-            </View>
+
+            <View style={styles.actionCell} />
           </View>
 
-          {/* Data Rows */}
+          {/* ── Data rows ── */}
           {rows.map((row, rowIndex) => (
             <View
               key={rowIndex}
@@ -120,7 +146,21 @@ export default function DynamicTable({
                 <Text style={styles.rowNumText}>{rowIndex + 1}</Text>
               </View>
 
-              {columns.map((col) => renderCell(col, row, rowIndex))}
+              {columns.map((col) => {
+                const value = row[col.key];
+                const onChange = (newVal) => onCellChange(rowIndex, col.key, newVal);
+                return (
+                  <View
+                    key={col.key}
+                    style={[
+                      styles.cell,
+                      { flex: col.flex ?? 1, minWidth: col.minWidth ?? 90 },
+                    ]}
+                  >
+                    {col.render(value, row, rowIndex, onChange)}
+                  </View>
+                );
+              })}
 
               <View style={styles.actionCell}>
                 {rows.length > minRows ? (
@@ -139,13 +179,37 @@ export default function DynamicTable({
         </View>
       </ScrollView>
 
-      {/* Add Row Button */}
+      {/* ── Add row button ── */}
       <TouchableOpacity style={styles.addRowBtn} onPress={onAddRow}>
         <Text style={styles.addRowBtnText}>{addLabel}</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+// ─── Shared input styles (used by helpers) ───────────────────────────────────
+
+export const cellStyles = StyleSheet.create({
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: Platform.OS === 'web' ? 6 : 8,
+    fontSize: 13,
+    backgroundColor: '#fff',
+    color: '#111827',
+    height: 36,
+    ...Platform.select({ web: { outlineStyle: 'none' } }),
+  },
+  inputDisabled: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    color: '#9ca3af',
+  },
+});
+
+// ─── Table structure styles ──────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -206,26 +270,6 @@ const styles = StyleSheet.create({
   cell: {
     paddingHorizontal: 4,
     justifyContent: 'center',
-  },
-  cellDisabled: {
-    opacity: 0.35,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: Platform.OS === 'web' ? 6 : 8,
-    fontSize: 13,
-    backgroundColor: '#fff',
-    color: '#111827',
-    height: 36,
-    ...Platform.select({ web: { outlineStyle: 'none' } }),
-  },
-  inputDisabled: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-    color: '#9ca3af',
   },
   actionCell: {
     width: 36,
