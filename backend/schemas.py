@@ -749,6 +749,7 @@ class RawProduct(RawProductBase):
 class FinishedGoodBase(ISTModel):
     product_name: str
     product_initial: str
+    hsn_sac_code: Optional[str] = None
 
 class FinishedGoodCreate(FinishedGoodBase):
     branch_id: Optional[int] = None
@@ -1120,6 +1121,128 @@ class DispatchDeliveryStopRead(ISTModel):
 
     @validator('arrived_at', 'unloading_start', 'unloading_end', pre=True)
     def _parse_stop_dates(cls, v):
+        return parse_datetime(v)
+
+    class Config:
+        from_attributes = True
+
+
+class DeliveryBillItemCreate(ISTModel):
+    dispatch_item_id: Optional[int] = None
+    product_name: str
+    hsn_sac_code: Optional[str] = None
+    quantity_bags: Optional[int] = 0
+    quantity_ton: Optional[float] = 0.0
+    rate_per_bag: Optional[float] = 0.0
+    rate_per_ton: Optional[float] = 0.0
+    amount: float
+
+
+class DeliveryBillItemRead(DeliveryBillItemCreate):
+    id: int
+    bill_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DeliveryBillCreate(ISTModel):
+    dispatch_id: int
+    stop_id: Optional[int] = None
+    order_id: Optional[int] = None
+    branch_id: Optional[int] = None
+    invoice_date: Optional[datetime] = None
+    delivery_note_no: Optional[str] = None
+    delivery_note_date: Optional[datetime] = None
+    destination: Optional[str] = None
+    lr_rr_no: Optional[str] = None
+    terms_of_delivery: Optional[str] = None
+    reference_no: Optional[str] = None
+    reference_date: Optional[datetime] = None
+    other_references: Optional[str] = None
+    taxable_value: float = 0.0
+    cgst_percent: Optional[float] = 0.0
+    cgst_amount: Optional[float] = 0.0
+    sgst_percent: Optional[float] = 0.0
+    sgst_amount: Optional[float] = 0.0
+    igst_percent: Optional[float] = 0.0
+    igst_amount: Optional[float] = 0.0
+    total_tax_amount: float = 0.0
+    total_amount: float = 0.0
+    amount_in_words: Optional[str] = None
+    payment_status: Optional[str] = "PENDING"
+    remarks: Optional[str] = None
+    items: List[DeliveryBillItemCreate] = []
+
+    @validator('invoice_date', 'delivery_note_date', 'reference_date', pre=True)
+    def _parse_bill_dates(cls, v):
+        return parse_datetime(v)
+
+
+class DeliveryBillUpdate(ISTModel):
+    invoice_date: Optional[datetime] = None
+    delivery_note_no: Optional[str] = None
+    delivery_note_date: Optional[datetime] = None
+    destination: Optional[str] = None
+    lr_rr_no: Optional[str] = None
+    terms_of_delivery: Optional[str] = None
+    reference_no: Optional[str] = None
+    reference_date: Optional[datetime] = None
+    other_references: Optional[str] = None
+    taxable_value: Optional[float] = None
+    cgst_percent: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_percent: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_percent: Optional[float] = None
+    igst_amount: Optional[float] = None
+    total_tax_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+    amount_in_words: Optional[str] = None
+    payment_status: Optional[str] = None
+    remarks: Optional[str] = None
+
+    @validator('invoice_date', 'delivery_note_date', 'reference_date', pre=True)
+    def _parse_bill_update_dates(cls, v):
+        return parse_datetime(v)
+
+
+class DeliveryBillRead(ISTModel):
+    id: int
+    branch_id: int
+    dispatch_id: int
+    stop_id: Optional[int] = None
+    order_id: Optional[int] = None
+    invoice_number: str
+    invoice_date: Optional[datetime] = None
+    delivery_note_no: Optional[str] = None
+    delivery_note_date: Optional[datetime] = None
+    destination: Optional[str] = None
+    lr_rr_no: Optional[str] = None
+    terms_of_delivery: Optional[str] = None
+    reference_no: Optional[str] = None
+    reference_date: Optional[datetime] = None
+    other_references: Optional[str] = None
+    taxable_value: float = 0.0
+    cgst_percent: Optional[float] = 0.0
+    cgst_amount: Optional[float] = 0.0
+    sgst_percent: Optional[float] = 0.0
+    sgst_amount: Optional[float] = 0.0
+    igst_percent: Optional[float] = 0.0
+    igst_amount: Optional[float] = 0.0
+    total_tax_amount: float = 0.0
+    total_amount: float = 0.0
+    amount_in_words: Optional[str] = None
+    payment_status: Optional[str] = "PENDING"
+    remarks: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    items: List[DeliveryBillItemRead] = []
+
+    @validator('invoice_date', 'delivery_note_date', 'reference_date',
+               'created_at', 'updated_at', pre=True)
+    def _parse_bill_read_dates(cls, v):
         return parse_datetime(v)
 
     class Config:

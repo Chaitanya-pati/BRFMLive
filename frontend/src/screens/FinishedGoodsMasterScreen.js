@@ -28,6 +28,7 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
   const [formData, setFormData] = useState({
     product_name: '',
     product_initial: '',
+    hsn_sac_code: '',
   });
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
@@ -56,6 +57,7 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
     setFormData({
       product_name: '',
       product_initial: '',
+      hsn_sac_code: '',
     });
     setModalVisible(true);
   };
@@ -66,6 +68,7 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
     setFormData({
       product_name: product.product_name,
       product_initial: product.product_initial,
+      hsn_sac_code: product.hsn_sac_code || '',
     });
     setModalVisible(true);
   };
@@ -83,6 +86,7 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
       const payload = {
         product_name: trimmedName,
         product_initial: trimmedInitial.toUpperCase(),
+        hsn_sac_code: formData.hsn_sac_code?.trim() || null,
         branch_id: activeBranch?.id,
       };
 
@@ -119,8 +123,8 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
 
   const columns = [
     { label: 'Product Name', field: 'product_name', flex: 1.5 },
-    { label: 'Short Code', field: 'product_initial', flex: 1 },
-    { label: 'Branch ID', field: 'branch_id', flex: 0.8, render: (v) => v || 'N/A' },
+    { label: 'Short Code', field: 'product_initial', flex: 0.8 },
+    { label: 'HSN/SAC Code', field: 'hsn_sac_code', flex: 0.9, render: (v) => v || '—' },
     { label: 'Date Created', field: 'created_at', type: 'datetime', flex: 1.2, render: (v) => formatISTDate(v) },
   ];
 
@@ -165,6 +169,16 @@ export default function FinishedGoodsMasterScreen({ navigation }) {
               onChangeText={(text) => setFormData({ ...formData, product_initial: text.toUpperCase() })}
               placeholder="e.g., CA, SU, MA"
               maxLength={10}
+            />
+
+            <Text style={styles.label}>HSN/SAC Code</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.hsn_sac_code}
+              onChangeText={(text) => setFormData({ ...formData, hsn_sac_code: text })}
+              placeholder="e.g., 11010000"
+              keyboardType="numeric"
+              maxLength={20}
             />
 
             <TouchableOpacity

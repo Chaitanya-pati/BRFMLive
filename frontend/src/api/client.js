@@ -709,6 +709,17 @@ export const stateCityApi = {
   },
 };
 
+export const deliveryBillApi = {
+  getAll: (params) => api.get("/delivery-bills", { params }),
+  getByDispatch: (dispatchId) => api.get("/delivery-bills", { params: { dispatch_id: dispatchId } }),
+  getById: (id) => api.get(`/delivery-bills/${id}`),
+  create: (data) => api.post("/delivery-bills", data),
+  update: (id, data) => api.put(`/delivery-bills/${id}`, data),
+  updatePaymentStatus: (id, status) =>
+    api.patch(`/delivery-bills/${id}/payment-status`, null, { params: { status } }),
+  delete: (id) => api.delete(`/delivery-bills/${id}`),
+};
+
 export const getApiClient = () => {
   return api;
 };

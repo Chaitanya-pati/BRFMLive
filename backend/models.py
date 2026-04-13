@@ -228,6 +228,72 @@ class DispatchStopPhoto(Base):
 
     stop = relationship("DispatchDeliveryStop", back_populates="photos")
 
+
+class PaymentStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    PARTIAL = "PARTIAL"
+    PAID = "PAID"
+
+
+class DeliveryBill(Base):
+    """One tax invoice per customer per delivery stop."""
+    __tablename__ = "delivery_bills"
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    dispatch_id = Column(Integer, ForeignKey("dispatch.dispatch_id"), nullable=False)
+    stop_id = Column(Integer, ForeignKey("dispatch_delivery_stops.id"), nullable=True)
+    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=True)
+    invoice_number = Column(String(50), nullable=False, unique=True)
+    invoice_date = Column(DateTime, nullable=False, default=ist_now)
+    delivery_note_no = Column(String(100), nullable=True)
+    delivery_note_date = Column(DateTime, nullable=True)
+    destination = Column(String(200), nullable=True)
+    lr_rr_no = Column(String(100), nullable=True)
+    terms_of_delivery = Column(String(100), nullable=True)
+    reference_no = Column(String(100), nullable=True)
+    reference_date = Column(DateTime, nullable=True)
+    other_references = Column(Text, nullable=True)
+    taxable_value = Column(Float, nullable=False, default=0.0)
+    cgst_percent = Column(Float, nullable=True, default=0.0)
+    cgst_amount = Column(Float, nullable=True, default=0.0)
+    sgst_percent = Column(Float, nullable=True, default=0.0)
+    sgst_amount = Column(Float, nullable=True, default=0.0)
+    igst_percent = Column(Float, nullable=True, default=0.0)
+    igst_amount = Column(Float, nullable=True, default=0.0)
+    total_tax_amount = Column(Float, nullable=False, default=0.0)
+    total_amount = Column(Float, nullable=False, default=0.0)
+    amount_in_words = Column(Text, nullable=True)
+    payment_status = Column(Enum(PaymentStatusEnum), default=PaymentStatusEnum.PENDING)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
+
+    branch = relationship("Branch")
+    dispatch = relationship("Dispatch")
+    stop = relationship("DispatchDeliveryStop")
+    order = relationship("CustomerOrder")
+    items = relationship("DeliveryBillItem", back_populates="bill", cascade="all, delete-orphan")
+
+
+class DeliveryBillItem(Base):
+    """Line items for a delivery bill — one row per product."""
+    __tablename__ = "delivery_bill_items"
+    id = Column(Integer, primary_key=True, index=True)
+    bill_id = Column(Integer, ForeignKey("delivery_bills.id"), nullable=False)
+    dispatch_item_id = Column(Integer, ForeignKey("dispatch_items.id"), nullable=True)
+    product_name = Column(String(255), nullable=False)
+    hsn_sac_code = Column(String(20), nullable=True)
+    quantity_bags = Column(Integer, nullable=True, default=0)
+    quantity_ton = Column(Float, nullable=True, default=0.0)
+    rate_per_bag = Column(Float, nullable=True, default=0.0)
+    rate_per_ton = Column(Float, nullable=True, default=0.0)
+    amount = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, default=ist_now)
+
+    bill = relationship("DeliveryBill", back_populates="items")
+    dispatch_item = relationship("DispatchItem")
+
+
 class HourlyProduction(Base):
     __tablename__ = "hourly_productions"
     id = Column(Integer, primary_key=True, index=True)
@@ -748,6 +814,7 @@ class FinishedGood(Base):
     id = Column(Integer, primary_key=True, index=True)
     product_name = Column(String(255), nullable=False)
     product_initial = Column(String(10), nullable=False)
+    hsn_sac_code = Column(String(20), nullable=True)
     branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=ist_now)
     updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)

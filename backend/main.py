@@ -741,6 +741,227 @@ async def upload_customer_signature(
     return stop
 
 
+def _number_to_words(n: float) -> str:
+    ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+            "Seventeen", "Eighteen", "Nineteen"]
+    tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
+
+    def below_thousand(num):
+        if num == 0:
+            return ""
+        elif num < 20:
+            return ones[num]
+        elif num < 100:
+            return tens[num // 10] + ("" if num % 10 == 0 else " " + ones[num % 10])
+        else:
+            rest = below_thousand(num % 100)
+            return ones[num // 100] + " Hundred" + (" " + rest if rest else "")
+
+    amount = int(round(n))
+    if amount == 0:
+        return "Zero INR Only"
+    parts = []
+    crore = amount // 10000000
+    amount %= 10000000
+    lakh = amount // 100000
+    amount %= 100000
+    thousand = amount // 1000
+    amount %= 1000
+    remainder = amount
+    if crore:
+        parts.append(below_thousand(crore) + " Crore")
+    if lakh:
+        parts.append(below_thousand(lakh) + " Lakh")
+    if thousand:
+        parts.append(below_thousand(thousand) + " Thousand")
+    if remainder:
+        parts.append(below_thousand(remainder))
+    return " ".join(parts) + " INR Only"
+
+
+def _generate_invoice_number(branch_id: int, db) -> str:
+    from datetime import date
+    year = date.today().year
+    prefix = f"INV-{year}-"
+    last = db.query(models.DeliveryBill).filter(
+        models.DeliveryBill.branch_id == branch_id,
+        models.DeliveryBill.invoice_number.like(f"{prefix}%")
+    ).order_by(models.DeliveryBill.id.desc()).first()
+    if last:
+        try:
+            seq = int(last.invoice_number.split("-")[-1]) + 1
+        except Exception:
+            seq = 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:04d}"
+
+
+@app.post("/api/delivery-bills", response_model=schemas.DeliveryBillRead)
+def create_delivery_bill(
+    bill_data: schemas.DeliveryBillCreate,
+    db: Session = Depends(get_db),
+    branch_id: Optional[int] = Depends(get_branch_id)
+):
+    effective_branch_id = bill_data.branch_id or branch_id
+    if not effective_branch_id:
+        raise HTTPException(status_code=400, detail="branch_id is required")
+
+    invoice_number = _generate_invoice_number(effective_branch_id, db)
+
+    taxable_value = bill_data.taxable_value
+    if taxable_value == 0 and bill_data.items:
+        taxable_value = sum(i.amount for i in bill_data.items)
+
+    cgst_amount = bill_data.cgst_amount or round(taxable_value * (bill_data.cgst_percent or 0) / 100, 2)
+    sgst_amount = bill_data.sgst_amount or round(taxable_value * (bill_data.sgst_percent or 0) / 100, 2)
+    igst_amount = bill_data.igst_amount or round(taxable_value * (bill_data.igst_percent or 0) / 100, 2)
+    total_tax = round(cgst_amount + sgst_amount + igst_amount, 2)
+    total_amount = bill_data.total_amount or round(taxable_value + total_tax, 2)
+    amount_in_words = bill_data.amount_in_words or _number_to_words(total_amount)
+
+    db_bill = models.DeliveryBill(
+        branch_id=effective_branch_id,
+        dispatch_id=bill_data.dispatch_id,
+        stop_id=bill_data.stop_id,
+        order_id=bill_data.order_id,
+        invoice_number=invoice_number,
+        invoice_date=bill_data.invoice_date or datetime.now(),
+        delivery_note_no=bill_data.delivery_note_no,
+        delivery_note_date=bill_data.delivery_note_date,
+        destination=bill_data.destination,
+        lr_rr_no=bill_data.lr_rr_no,
+        terms_of_delivery=bill_data.terms_of_delivery,
+        reference_no=bill_data.reference_no,
+        reference_date=bill_data.reference_date,
+        other_references=bill_data.other_references,
+        taxable_value=taxable_value,
+        cgst_percent=bill_data.cgst_percent or 0,
+        cgst_amount=cgst_amount,
+        sgst_percent=bill_data.sgst_percent or 0,
+        sgst_amount=sgst_amount,
+        igst_percent=bill_data.igst_percent or 0,
+        igst_amount=igst_amount,
+        total_tax_amount=total_tax,
+        total_amount=total_amount,
+        amount_in_words=amount_in_words,
+        payment_status=models.PaymentStatusEnum(bill_data.payment_status or "PENDING"),
+        remarks=bill_data.remarks,
+    )
+    db.add(db_bill)
+    db.flush()
+
+    for item in (bill_data.items or []):
+        db_item = models.DeliveryBillItem(
+            bill_id=db_bill.id,
+            dispatch_item_id=item.dispatch_item_id,
+            product_name=item.product_name,
+            hsn_sac_code=item.hsn_sac_code,
+            quantity_bags=item.quantity_bags or 0,
+            quantity_ton=item.quantity_ton or 0.0,
+            rate_per_bag=item.rate_per_bag or 0.0,
+            rate_per_ton=item.rate_per_ton or 0.0,
+            amount=item.amount,
+        )
+        db.add(db_item)
+
+    db.commit()
+    db.refresh(db_bill)
+    return db_bill
+
+
+@app.get("/api/delivery-bills", response_model=List[schemas.DeliveryBillRead])
+def get_delivery_bills(
+    dispatch_id: Optional[int] = None,
+    order_id: Optional[int] = None,
+    payment_status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    branch_id: Optional[int] = Depends(get_branch_id)
+):
+    query = db.query(models.DeliveryBill).options(
+        joinedload(models.DeliveryBill.items)
+    )
+    if branch_id:
+        query = query.filter(models.DeliveryBill.branch_id == branch_id)
+    if dispatch_id:
+        query = query.filter(models.DeliveryBill.dispatch_id == dispatch_id)
+    if order_id:
+        query = query.filter(models.DeliveryBill.order_id == order_id)
+    if payment_status:
+        query = query.filter(models.DeliveryBill.payment_status == payment_status)
+    return query.order_by(models.DeliveryBill.id.desc()).all()
+
+
+@app.get("/api/delivery-bills/{bill_id}", response_model=schemas.DeliveryBillRead)
+def get_delivery_bill(bill_id: int, db: Session = Depends(get_db)):
+    bill = db.query(models.DeliveryBill).options(
+        joinedload(models.DeliveryBill.items)
+    ).filter(models.DeliveryBill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    return bill
+
+
+@app.put("/api/delivery-bills/{bill_id}", response_model=schemas.DeliveryBillRead)
+def update_delivery_bill(
+    bill_id: int,
+    bill_data: schemas.DeliveryBillUpdate,
+    db: Session = Depends(get_db)
+):
+    bill = db.query(models.DeliveryBill).filter(models.DeliveryBill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+
+    update_fields = bill_data.dict(exclude_unset=True)
+    for field, value in update_fields.items():
+        if field == "payment_status" and value:
+            setattr(bill, field, models.PaymentStatusEnum(value))
+        else:
+            setattr(bill, field, value)
+
+    if "cgst_percent" in update_fields or "sgst_percent" in update_fields or "igst_percent" in update_fields:
+        taxable = bill.taxable_value or 0
+        bill.cgst_amount = round(taxable * (bill.cgst_percent or 0) / 100, 2)
+        bill.sgst_amount = round(taxable * (bill.sgst_percent or 0) / 100, 2)
+        bill.igst_amount = round(taxable * (bill.igst_percent or 0) / 100, 2)
+        bill.total_tax_amount = round(bill.cgst_amount + bill.sgst_amount + bill.igst_amount, 2)
+        bill.total_amount = round(taxable + bill.total_tax_amount, 2)
+        bill.amount_in_words = _number_to_words(bill.total_amount)
+
+    db.commit()
+    db.refresh(bill)
+    return bill
+
+
+@app.patch("/api/delivery-bills/{bill_id}/payment-status", response_model=schemas.DeliveryBillRead)
+def update_bill_payment_status(
+    bill_id: int,
+    status: str,
+    db: Session = Depends(get_db)
+):
+    bill = db.query(models.DeliveryBill).filter(models.DeliveryBill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    try:
+        bill.payment_status = models.PaymentStatusEnum(status.upper())
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+    db.commit()
+    db.refresh(bill)
+    return bill
+
+
+@app.delete("/api/delivery-bills/{bill_id}")
+def delete_delivery_bill(bill_id: int, db: Session = Depends(get_db)):
+    bill = db.query(models.DeliveryBill).filter(models.DeliveryBill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    db.delete(bill)
+    db.commit()
+    return {"message": "Bill deleted successfully"}
+
+
 @app.get("/api/bag-sizes", response_model=List[schemas.BagSize])
 def get_bag_sizes(db: Session = Depends(get_db),
                   branch_id: Optional[int] = Depends(get_branch_id)):
