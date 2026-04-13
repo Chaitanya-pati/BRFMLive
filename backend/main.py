@@ -312,8 +312,9 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
     if not dispatch_data.get('branch_id'):
         raise HTTPException(status_code=400, detail="branch_id is required")
         
-    # Auto-set status to DISPATCHED on creation
+    # Auto-set status and dispatch date
     dispatch_data['status'] = "DISPATCHED"
+    dispatch_data['actual_dispatch_date'] = ist_now()
 
     # Validation and calculation if items are provided
     if dispatch_items_data:

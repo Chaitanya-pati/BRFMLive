@@ -252,9 +252,9 @@ export default function DriverDeliveryScreen({ navigation, route }) {
                   )}
 
                   <View style={styles.infoRow}>
-                    {dispatch.city ? (
+                    {dispatch.truck?.truck_number ? (
                       <Text style={styles.infoText}>
-                        📍 {dispatch.city}{dispatch.state ? `, ${dispatch.state}` : ""}
+                        🚛 Truck: {dispatch.truck.truck_number}
                       </Text>
                     ) : null}
                     <Text style={styles.infoText}>
@@ -402,9 +402,9 @@ export default function DriverDeliveryScreen({ navigation, route }) {
                       </Text>
                     </View>
                     <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Destination</Text>
+                      <Text style={styles.detailLabel}>Truck</Text>
                       <Text style={styles.detailValue}>
-                        {[selectedDispatch.city, selectedDispatch.state].filter(Boolean).join(", ") || "—"}
+                        {selectedDispatch.truck?.truck_number || "—"}
                       </Text>
                     </View>
                     {selectedDispatch.warehouse_loader ? (

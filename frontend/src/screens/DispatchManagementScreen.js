@@ -12,53 +12,40 @@ import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
-import DatePicker from "../components/DatePicker";
 import Button from "../components/Button";
 import colors from "../theme/colors";
-import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, stateCityApi } from "../api/client";
+import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, truckApi } from "../api/client";
 import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
-import { FaPlus, FaTrash, FaTruck, FaTimes } from "react-icons/fa";
+import { FaPlus, FaTrash, FaTruck, FaTimes, FaCheckSquare, FaSquare } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
   const [dispatches, setDispatches] = useState([]);
   const [orders, setOrders] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [trucks, setTrucks] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
-  const [states, setStates] = useState([]);
-  const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
 
   const [formData, setFormData] = useState({
+    truck_id: "",
     driver_id: "",
-    state: "",
-    city: "",
     warehouse_loader: "",
-    actual_dispatch_date: new Date(),
-    delivery_date: new Date(),
     remarks: "",
   });
 
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [dispatchItems, setDispatchItems] = useState([]);
-  const [orderPickerValue, setOrderPickerValue] = useState("");
 
   const selectedOrders = selectedOrderIds
     .map(id => orders.find(o => o.order_id.toString() === id))
     .filter(Boolean);
 
-  const availableOrderOptions = orders
-    .filter(o => !selectedOrderIds.includes(o.order_id.toString()))
-    .map(o => {
-      const customerName = o.customer?.customer_name || o.customer_name || "Unknown";
-      const city = o.customer?.city || o.city || "";
-      const location = city ? `, ${city}` : "";
-      return {
-        label: `${o.order_code || "N/A"} - ${customerName}${location}`,
-        value: o.order_id.toString(),
-      };
-    });
+  // Progressive disclosure flags
+  const truckSelected = !!formData.truck_id;
+  const driverSelected = !!formData.driver_id;
+  const ordersSelected = selectedOrderIds.length > 0;
 
   const buildItemsForOrder = (order) => {
     return (order.items || []).map(item => {
@@ -106,62 +93,43 @@ export default function DispatchManagementScreen({ navigation }) {
     });
   };
 
-  const handleAddOrder = (orderId) => {
-    if (!orderId || selectedOrderIds.includes(orderId)) return;
-    const order = orders.find(o => o.order_id.toString() === orderId);
-    if (!order) return;
-
-    setSelectedOrderIds(prev => [...prev, orderId]);
-    const newItems = buildItemsForOrder(order);
-    setDispatchItems(prev => [...prev, ...newItems]);
-
-    // Auto-fill state/city from the first order added
-    if (selectedOrderIds.length === 0) {
-      const customerStateName = order.customer?.state;
-      const matchedState = states.find(s => s.state_name === customerStateName);
-      setFormData(prev => ({
-        ...prev,
-        state: matchedState ? matchedState.state_id.toString() : prev.state,
-        city: order.customer?.city || prev.city,
-      }));
+  const handleToggleOrder = (orderId) => {
+    const idStr = orderId.toString();
+    if (selectedOrderIds.includes(idStr)) {
+      const order = orders.find(o => o.order_id.toString() === idStr);
+      if (order) {
+        const orderItemIds = (order.items || []).map(i => i.order_item_id);
+        setSelectedOrderIds(prev => prev.filter(id => id !== idStr));
+        setDispatchItems(prev => prev.filter(item => !orderItemIds.includes(item.order_item_id)));
+      }
+    } else {
+      const order = orders.find(o => o.order_id.toString() === idStr);
+      if (!order) return;
+      setSelectedOrderIds(prev => [...prev, idStr]);
+      const newItems = buildItemsForOrder(order);
+      setDispatchItems(prev => [...prev, ...newItems]);
     }
-    setOrderPickerValue("");
-  };
-
-  const handleRemoveOrder = (orderId) => {
-    const order = orders.find(o => o.order_id.toString() === orderId);
-    if (!order) return;
-    const orderItemIds = (order.items || []).map(item => item.order_item_id);
-    setSelectedOrderIds(prev => prev.filter(id => id !== orderId));
-    setDispatchItems(prev => prev.filter(item => !orderItemIds.includes(item.order_item_id)));
   };
 
   useEffect(() => {
     fetchData();
-    fetchStates();
   }, []);
-
-  useEffect(() => {
-    if (formData.state) {
-      fetchCities(formData.state);
-    } else {
-      setCities([]);
-    }
-  }, [formData.state]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [disRes, orderRes, driverRes, bagSizeRes] = await Promise.all([
+      const [disRes, orderRes, driverRes, bagSizeRes, truckRes] = await Promise.all([
         dispatchApi.getAll(),
         customerOrderApi.getAll(),
         driverApi.getAll(),
         bagSizeApi.getAll(),
+        truckApi.getAll(),
       ]);
       setDispatches(disRes.data || []);
       setOrders(orderRes.data || []);
       setDrivers(driverRes.data || []);
       setBagSizes(bagSizeRes.data || []);
+      setTrucks((truckRes.data || []).filter(t => t.is_active));
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
       showError("Failed to fetch data");
@@ -170,31 +138,17 @@ export default function DispatchManagementScreen({ navigation }) {
     }
   };
 
-  const fetchStates = async () => {
-    try {
-      const stateList = await stateCityApi.getStates();
-      setStates(stateList || []);
-    } catch (error) {
-      console.error("Error fetching states:", error);
-    }
-  };
-
-  const fetchCities = async (stateId) => {
-    try {
-      const cityList = await stateCityApi.getCities(stateId);
-      setCities(cityList || []);
-    } catch (error) {
-      console.error("Error fetching cities:", error);
-    }
-  };
-
   const handleSave = async () => {
-    if (selectedOrderIds.length === 0) {
-      showError("Please add at least one order");
+    if (!formData.truck_id) {
+      showError("Please select a truck");
       return;
     }
     if (!formData.driver_id) {
       showError("Please select a driver");
+      return;
+    }
+    if (selectedOrderIds.length === 0) {
+      showError("Please select at least one customer order");
       return;
     }
 
@@ -210,30 +164,24 @@ export default function DispatchManagementScreen({ navigation }) {
     for (const item of itemsToDispatch) {
       const qty = parseFloat(item.dispatched_qty_ton || 0);
       const bags = parseInt(item.dispatched_bags || 0);
-
       if (qty > item.remaining_qty + 0.0001) {
-        showError(
-          `Quantity for ${item.product_name} exceeds remaining amount (${item.remaining_qty.toFixed(2)}t)`
-        );
+        showError(`Quantity for ${item.product_name} exceeds remaining (${item.remaining_qty.toFixed(2)}t)`);
         return;
       }
-
       const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
       if (isBagType && bags > item.remaining_bags) {
-        showError(
-          `Bag count for ${item.product_name} exceeds remaining bags (${item.remaining_bags})`
-        );
+        showError(`Bag count for ${item.product_name} exceeds remaining bags (${item.remaining_bags})`);
         return;
       }
     }
 
     try {
       const payload = {
-        ...formData,
         order_id: null,
+        truck_id: parseInt(formData.truck_id),
         driver_id: parseInt(formData.driver_id),
-        actual_dispatch_date: formData.actual_dispatch_date.toISOString(),
-        delivery_date: formData.delivery_date ? formData.delivery_date.toISOString() : null,
+        warehouse_loader: formData.warehouse_loader || "",
+        remarks: formData.remarks || "",
         dispatch_items: itemsToDispatch.map(item => ({
           order_item_id: item.order_item_id,
           finished_good_id: item.finished_good_id,
@@ -265,7 +213,6 @@ export default function DispatchManagementScreen({ navigation }) {
       showSuccess("Dispatch deleted successfully");
       fetchData();
     } catch (error) {
-      console.error("Error deleting dispatch:", error);
       showError("Failed to delete dispatch");
     }
   };
@@ -274,22 +221,12 @@ export default function DispatchManagementScreen({ navigation }) {
     setEditingDispatch(null);
     setSelectedOrderIds([]);
     setDispatchItems([]);
-    setOrderPickerValue("");
-    setFormData({
-      driver_id: "",
-      state: "",
-      city: "",
-      warehouse_loader: "",
-      actual_dispatch_date: new Date(),
-      delivery_date: new Date(),
-      remarks: "",
-    });
+    setFormData({ truck_id: "", driver_id: "", warehouse_loader: "", remarks: "" });
   };
 
   const handleEditDispatch = (row) => {
     setEditingDispatch(row);
 
-    // Derive selected order IDs from items
     const derivedOrderIds = [
       ...new Set(
         (row.items || [])
@@ -298,19 +235,15 @@ export default function DispatchManagementScreen({ navigation }) {
           .map(String)
       ),
     ];
-    // Include direct order_id if set (legacy)
     if (row.order_id && !derivedOrderIds.includes(row.order_id.toString())) {
       derivedOrderIds.push(row.order_id.toString());
     }
     setSelectedOrderIds(derivedOrderIds);
 
     setFormData({
+      truck_id: row.truck_id ? row.truck_id.toString() : "",
       driver_id: row.driver_id.toString(),
-      state: row.state || "",
-      city: row.city || "",
       warehouse_loader: row.warehouse_loader || "",
-      actual_dispatch_date: new Date(row.actual_dispatch_date),
-      delivery_date: row.delivery_date ? new Date(row.delivery_date) : new Date(),
       remarks: row.remarks || "",
     });
 
@@ -329,21 +262,13 @@ export default function DispatchManagementScreen({ navigation }) {
           const dispatchedByOthers = Math.max(0, totalDispatched - currentQty);
           const dispatchedBagsByOthers = Math.max(0, totalDispatchedBags - currentBags);
           const remainingQty = Math.max(0, orderedQty - dispatchedByOthers);
-          const remainingBags = Math.max(
-            0,
-            (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers
-          );
+          const remainingBags = Math.max(0, (di.order_item?.number_of_bags || 0) - dispatchedBagsByOthers);
           return {
             order_id: di.order_item?.order_id || row.order_id,
             order_item_id: di.order_item_id,
             finished_good_id: di.finished_good_id,
-            product_name:
-              di.product_name ||
-              di.finished_good?.product_name ||
-              di.order_item?.finished_good?.product_name ||
-              "Unknown Product",
-            unit_type:
-              di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? "Bag" : "Ton"),
+            product_name: di.product_name || di.finished_good?.product_name || "Unknown Product",
+            unit_type: di.order_item?.unit_type || (di.order_item?.number_of_bags > 0 ? "Bag" : "Ton"),
             ordered_qty: orderedQty,
             dispatched_so_far: dispatchedByOthers,
             dispatched_bags_so_far: dispatchedBagsByOthers,
@@ -358,26 +283,22 @@ export default function DispatchManagementScreen({ navigation }) {
         })
       );
     }
-    setOrderPickerValue("");
     setModalVisible(true);
   };
 
   const columns = [
     { key: "dispatch_id", label: "ID" },
     {
+      key: "truck",
+      label: "Truck",
+      render: (val, row) => row.truck?.truck_number || "—",
+    },
+    {
       key: "orders",
       label: "Orders",
       render: (val, row) => {
-        if (row.order_codes && row.order_codes.length > 0) {
-          return row.order_codes.join(", ");
-        }
-        const codes = [
-          ...new Set(
-            (row.items || [])
-              .map(di => di.order_item?.order?.order_code)
-              .filter(Boolean)
-          ),
-        ];
+        if (row.order_codes && row.order_codes.length > 0) return row.order_codes.join(", ");
+        const codes = [...new Set((row.items || []).map(di => di.order_item?.order?.order_code).filter(Boolean))];
         if (codes.length > 0) return codes.join(", ");
         return row.order?.order_code || (row.order_id ? `Order #${row.order_id}` : "—");
       },
@@ -393,27 +314,16 @@ export default function DispatchManagementScreen({ navigation }) {
       render: (val, row) => {
         if (row.items && row.items.length > 0) {
           const totalTons = row.items.reduce((acc, i) => acc + (i.dispatched_qty_ton || 0), 0);
-          return `${row.items.length} items | ${totalTons.toFixed(2)} Tons`;
+          return `${row.items.length} items | ${totalTons.toFixed(2)} T`;
         }
-        if (row.dispatched_bags > 0) {
-          const bagSizeStr = row.bag_size ? ` (${row.bag_size.weight_kg}kg)` : "";
-          return `${row.dispatched_bags} Bags${bagSizeStr}`;
-        }
-        return `${row.dispatched_quantity_ton || 0} Tons`;
+        return `${row.dispatched_quantity_ton || 0} T`;
       },
     },
     { key: "status", label: "Status" },
   ];
 
-  // Compute summary totals across all entered items
-  const summaryTotalTons = dispatchItems.reduce(
-    (acc, item) => acc + (parseFloat(item.dispatched_qty_ton) || 0),
-    0
-  );
-  const summaryTotalBags = dispatchItems.reduce(
-    (acc, item) => acc + (parseInt(item.dispatched_bags) || 0),
-    0
-  );
+  const summaryTotalTons = dispatchItems.reduce((acc, item) => acc + (parseFloat(item.dispatched_qty_ton) || 0), 0);
+  const summaryTotalBags = dispatchItems.reduce((acc, item) => acc + (parseInt(item.dispatched_bags) || 0), 0);
 
   return (
     <Layout title="Dispatch Management" navigation={navigation}>
@@ -422,10 +332,7 @@ export default function DispatchManagementScreen({ navigation }) {
           <Text style={styles.title}>Dispatch Records</Text>
           <Button
             title="Add Dispatch"
-            onPress={() => {
-              resetForm();
-              setModalVisible(true);
-            }}
+            onPress={() => { resetForm(); setModalVisible(true); }}
             icon={<FaPlus color="#fff" />}
           />
         </View>
@@ -438,27 +345,17 @@ export default function DispatchManagementScreen({ navigation }) {
             columns={columns}
             renderActions={(row) => (
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() => handleEditDispatch(row)}
-                >
+                <TouchableOpacity style={styles.editBtn} onPress={() => handleEditDispatch(row)}>
                   <Text style={styles.editBtnText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deliveryBtn}
-                  onPress={() =>
-                    navigation.navigate("DriverDelivery", {
-                      driverId: row.driver_id?.toString(),
-                    })
-                  }
+                  onPress={() => navigation.navigate("DriverDelivery", { driverId: row.driver_id?.toString() })}
                 >
                   <FaTruck color="#fff" size={15} />
                   <Text style={styles.deliveryBtnText}>Delivery</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDelete(row.dispatch_id)}
-                >
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(row.dispatch_id)}>
                   <FaTrash color={colors.error} size={16} />
                 </TouchableOpacity>
               </View>
@@ -472,232 +369,283 @@ export default function DispatchManagementScreen({ navigation }) {
           title={editingDispatch ? "Edit Dispatch" : "New Dispatch"}
         >
           <ScrollView>
-            {/* ── Stage 1: Add Orders ── */}
-            <Text style={styles.sectionTitle}>Step 1 — Customer Orders</Text>
 
-            <View style={styles.addOrderRow}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <SelectDropdown
-                  label="Add Order"
-                  options={[{ label: "Select order to add…", value: "" }, ...availableOrderOptions]}
-                  value={orderPickerValue}
-                  onValueChange={(val) => {
-                    setOrderPickerValue(val);
-                    if (val) handleAddOrder(val);
-                  }}
-                />
+            {/* ── STEP 1: Truck ── */}
+            <View style={styles.stepCard}>
+              <View style={styles.stepHeader}>
+                <View style={[styles.stepBadge, truckSelected && styles.stepBadgeDone]}>
+                  <Text style={styles.stepBadgeText}>1</Text>
+                </View>
+                <Text style={styles.stepTitle}>Select Truck</Text>
+                {truckSelected && (
+                  <Text style={styles.stepDoneTag}>
+                    {trucks.find(t => t.truck_id.toString() === formData.truck_id)?.truck_number}
+                  </Text>
+                )}
               </View>
+              <SelectDropdown
+                label="Truck *"
+                options={[
+                  { label: "Select truck…", value: "" },
+                  ...trucks.map(t => ({
+                    label: `${t.truck_number} — ${t.truck_type} / ${t.vehicle_category}`,
+                    value: t.truck_id.toString(),
+                  })),
+                ]}
+                value={formData.truck_id}
+                onValueChange={(val) => setFormData({ ...formData, truck_id: val })}
+              />
             </View>
 
-            {selectedOrders.length === 0 && (
-              <View style={styles.emptyOrdersHint}>
-                <Text style={styles.emptyOrdersText}>No orders added yet. Select an order above.</Text>
+            {/* ── STEP 2: Driver (visible after truck selected) ── */}
+            {truckSelected && (
+              <View style={styles.stepCard}>
+                <View style={styles.stepHeader}>
+                  <View style={[styles.stepBadge, driverSelected && styles.stepBadgeDone]}>
+                    <Text style={styles.stepBadgeText}>2</Text>
+                  </View>
+                  <Text style={styles.stepTitle}>Select Driver</Text>
+                  {driverSelected && (
+                    <Text style={styles.stepDoneTag}>
+                      {drivers.find(d => d.driver_id.toString() === formData.driver_id)?.driver_name}
+                    </Text>
+                  )}
+                </View>
+                <SelectDropdown
+                  label="Driver *"
+                  options={[
+                    { label: "Select driver…", value: "" },
+                    ...drivers.map(d => ({
+                      label: d.driver_name,
+                      value: d.driver_id.toString(),
+                    })),
+                  ]}
+                  value={formData.driver_id}
+                  onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
+                />
               </View>
             )}
 
-            {/* ── Stage 2: Per-order item entry ── */}
-            {selectedOrders.map((order) => {
-              const orderCode = order.order_code || `Order #${order.order_id}`;
-              const customerName = order.customer?.customer_name || order.customer_name || "Unknown";
-              const orderItemIds = (order.items || []).map(i => i.order_item_id);
-              const orderDispatchItems = dispatchItems.filter(di =>
-                orderItemIds.includes(di.order_item_id)
-              );
-
-              return (
-                <View key={order.order_id} style={styles.orderCard}>
-                  <View style={styles.orderCardHeader}>
-                    <View>
-                      <Text style={styles.orderCardCode}>{orderCode}</Text>
-                      <Text style={styles.orderCardCustomer}>{customerName}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.removeOrderBtn}
-                      onPress={() => handleRemoveOrder(order.order_id.toString())}
-                    >
-                      <FaTimes color={colors.error} size={14} />
-                      <Text style={styles.removeOrderText}>Remove</Text>
-                    </TouchableOpacity>
+            {/* ── STEP 3: Customer Orders with Checkboxes (visible after driver selected) ── */}
+            {driverSelected && (
+              <View style={styles.stepCard}>
+                <View style={styles.stepHeader}>
+                  <View style={[styles.stepBadge, ordersSelected && styles.stepBadgeDone]}>
+                    <Text style={styles.stepBadgeText}>3</Text>
                   </View>
+                  <Text style={styles.stepTitle}>Select Customer Orders</Text>
+                  {ordersSelected && (
+                    <Text style={styles.stepDoneTag}>{selectedOrderIds.length} selected</Text>
+                  )}
+                </View>
 
-                  {orderDispatchItems.length === 0 ? (
-                    <Text style={styles.noItemsText}>No items found for this order.</Text>
+                <View style={styles.orderCheckList}>
+                  {orders.length === 0 ? (
+                    <Text style={styles.emptyText}>No orders available</Text>
                   ) : (
-                    orderDispatchItems.map((item, index) => {
-                      const globalIndex = dispatchItems.findIndex(
-                        di => di.order_item_id === item.order_item_id
-                      );
-                      const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
-                      const deliveredQty = item.dispatched_so_far || 0;
-                      const deliveredBags = item.dispatched_bags_so_far || 0;
-                      const pendingQty = Math.max(0, item.ordered_qty - deliveredQty);
-                      const pendingBags = Math.max(0, item.ordered_bags - deliveredBags);
-
+                    orders.map(order => {
+                      const isChecked = selectedOrderIds.includes(order.order_id.toString());
+                      const customerName = order.customer?.customer_name || order.customer_name || "Unknown";
+                      const totalItems = (order.items || []).length;
                       return (
-                        <View key={index} style={styles.itemRow}>
-                          <Text style={styles.itemName}>{item.product_name}</Text>
-                          <View style={styles.infoGrid}>
-                            <View style={styles.infoCol}>
-                              <Text style={styles.infoLabel}>Ordered</Text>
-                              <Text style={styles.infoValue}>
-                                {item.ordered_qty.toFixed(2)}t{" "}
-                                {isBagType ? `(${item.ordered_bags} Bags)` : ""}
-                              </Text>
-                            </View>
-                            <View style={styles.infoCol}>
-                              <Text style={styles.infoLabel}>Delivered</Text>
-                              <Text style={styles.infoValue}>
-                                {deliveredQty.toFixed(2)}t{" "}
-                                {isBagType ? `(${deliveredBags} Bags)` : ""}
-                              </Text>
-                            </View>
-                            <View style={styles.infoCol}>
-                              <Text style={[styles.infoLabel, { color: colors.error }]}>Pending</Text>
-                              <Text style={[styles.infoValue, { color: colors.error }]}>
-                                {pendingQty.toFixed(2)}t{" "}
-                                {isBagType ? `(${pendingBags} Bags)` : ""}
-                              </Text>
-                            </View>
+                        <TouchableOpacity
+                          key={order.order_id}
+                          style={[styles.orderCheckRow, isChecked && styles.orderCheckRowSelected]}
+                          onPress={() => handleToggleOrder(order.order_id)}
+                        >
+                          <View style={styles.checkboxIcon}>
+                            {isChecked
+                              ? <FaCheckSquare color={colors.primary} size={18} />
+                              : <FaSquare color="#cbd5e1" size={18} />
+                            }
                           </View>
-                          <View style={styles.itemInputs}>
-                            {isBagType ? (
-                              <>
-                                <View style={{ flex: 1, marginRight: 10 }}>
-                                  <SelectDropdown
-                                    label="Bag Size"
-                                    options={bagSizes.map(bs => ({
-                                      label: `${bs.weight_kg} kg`,
-                                      value: String(bs.id),
-                                    }))}
-                                    value={item.bag_size_id}
-                                    onValueChange={(val) => {
-                                      const newItems = [...dispatchItems];
-                                      newItems[globalIndex].bag_size_id = val;
-                                      const selectedBag = bagSizes.find(bs => String(bs.id) === val);
-                                      if (selectedBag) {
-                                        newItems[globalIndex].weight_kg = selectedBag.weight_kg;
-                                        newItems[globalIndex].dispatched_qty_ton = (
-                                          (parseInt(newItems[globalIndex].dispatched_bags || 0) *
-                                            selectedBag.weight_kg) /
-                                          1000
-                                        ).toString();
-                                      }
-                                      setDispatchItems(newItems);
-                                    }}
-                                  />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <InputField
-                                    label="Bags To Dispatch"
-                                    value={item.dispatched_bags}
-                                    onChangeText={(val) => {
-                                      const newItems = [...dispatchItems];
-                                      newItems[globalIndex].dispatched_bags = val;
-                                      if (item.weight_kg) {
-                                        newItems[globalIndex].dispatched_qty_ton = (
-                                          (parseInt(val || 0) * item.weight_kg) /
-                                          1000
-                                        ).toString();
-                                      }
-                                      setDispatchItems(newItems);
-                                    }}
-                                    keyboardType="numeric"
-                                  />
-                                </View>
-                              </>
-                            ) : (
-                              <View style={{ flex: 1 }}>
-                                <InputField
-                                  label="Qty (Tons) To Dispatch"
-                                  value={item.dispatched_qty_ton}
-                                  onChangeText={(val) => {
-                                    const newItems = [...dispatchItems];
-                                    newItems[globalIndex].dispatched_qty_ton = val;
-                                    setDispatchItems(newItems);
-                                  }}
-                                  keyboardType="numeric"
-                                />
-                              </View>
-                            )}
+                          <View style={styles.orderCheckInfo}>
+                            <Text style={[styles.orderCheckCode, isChecked && { color: colors.primary }]}>
+                              {order.order_code || `Order #${order.order_id}`}
+                            </Text>
+                            <Text style={styles.orderCheckCustomer}>
+                              {customerName} · {totalItems} item{totalItems !== 1 ? "s" : ""}
+                            </Text>
                           </View>
-                        </View>
+                          <Text style={[styles.orderStatusBadge,
+                            order.order_status === 'DELIVERED' && { backgroundColor: '#dcfce7', color: '#16a34a' },
+                            order.order_status === 'DISPATCHED' && { backgroundColor: '#fef9c3', color: '#ca8a04' },
+                          ]}>
+                            {order.order_status || 'PENDING'}
+                          </Text>
+                        </TouchableOpacity>
                       );
                     })
                   )}
                 </View>
-              );
-            })}
 
-            {/* ── Summary Bar ── */}
-            {dispatchItems.some(
-              item => parseFloat(item.dispatched_qty_ton) > 0 || parseInt(item.dispatched_bags) > 0
-            ) && (
-              <View style={styles.summaryBar}>
-                <Text style={styles.summaryBarTitle}>Summary</Text>
-                <View style={styles.summaryBarRow}>
-                  <Text style={styles.summaryBarItem}>
-                    Orders: <Text style={styles.summaryBarValue}>{selectedOrders.length}</Text>
-                  </Text>
-                  <Text style={styles.summaryBarItem}>
-                    Total Tons:{" "}
-                    <Text style={styles.summaryBarValue}>{summaryTotalTons.toFixed(2)}</Text>
-                  </Text>
-                  {summaryTotalBags > 0 && (
-                    <Text style={styles.summaryBarItem}>
-                      Total Bags:{" "}
-                      <Text style={styles.summaryBarValue}>{summaryTotalBags}</Text>
-                    </Text>
-                  )}
-                </View>
+                {/* Per-order item entry */}
+                {selectedOrders.map((order) => {
+                  const orderCode = order.order_code || `Order #${order.order_id}`;
+                  const customerName = order.customer?.customer_name || order.customer_name || "Unknown";
+                  const orderItemIds = (order.items || []).map(i => i.order_item_id);
+                  const orderDispatchItems = dispatchItems.filter(di => orderItemIds.includes(di.order_item_id));
+
+                  return (
+                    <View key={order.order_id} style={styles.orderCard}>
+                      <View style={styles.orderCardHeader}>
+                        <View>
+                          <Text style={styles.orderCardCode}>{orderCode}</Text>
+                          <Text style={styles.orderCardCustomer}>{customerName}</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.removeOrderBtn}
+                          onPress={() => handleToggleOrder(order.order_id)}
+                        >
+                          <FaTimes color={colors.error} size={14} />
+                          <Text style={styles.removeOrderText}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {orderDispatchItems.length === 0 ? (
+                        <Text style={styles.noItemsText}>No items found for this order.</Text>
+                      ) : (
+                        orderDispatchItems.map((item, index) => {
+                          const globalIndex = dispatchItems.findIndex(di => di.order_item_id === item.order_item_id);
+                          const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
+                          const deliveredQty = item.dispatched_so_far || 0;
+                          const deliveredBags = item.dispatched_bags_so_far || 0;
+                          const pendingQty = Math.max(0, item.ordered_qty - deliveredQty);
+                          const pendingBags = Math.max(0, item.ordered_bags - deliveredBags);
+
+                          return (
+                            <View key={index} style={styles.itemRow}>
+                              <Text style={styles.itemName}>{item.product_name}</Text>
+                              <View style={styles.infoGrid}>
+                                <View style={styles.infoCol}>
+                                  <Text style={styles.infoLabel}>Ordered</Text>
+                                  <Text style={styles.infoValue}>
+                                    {item.ordered_qty.toFixed(2)}t {isBagType ? `(${item.ordered_bags} Bags)` : ""}
+                                  </Text>
+                                </View>
+                                <View style={styles.infoCol}>
+                                  <Text style={styles.infoLabel}>Delivered</Text>
+                                  <Text style={styles.infoValue}>
+                                    {deliveredQty.toFixed(2)}t {isBagType ? `(${deliveredBags} Bags)` : ""}
+                                  </Text>
+                                </View>
+                                <View style={styles.infoCol}>
+                                  <Text style={[styles.infoLabel, { color: colors.error }]}>Pending</Text>
+                                  <Text style={[styles.infoValue, { color: colors.error }]}>
+                                    {pendingQty.toFixed(2)}t {isBagType ? `(${pendingBags} Bags)` : ""}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={styles.itemInputs}>
+                                {isBagType ? (
+                                  <>
+                                    <View style={{ flex: 1, marginRight: 10 }}>
+                                      <SelectDropdown
+                                        label="Bag Size"
+                                        options={bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: String(bs.id) }))}
+                                        value={item.bag_size_id}
+                                        onValueChange={(val) => {
+                                          const newItems = [...dispatchItems];
+                                          newItems[globalIndex].bag_size_id = val;
+                                          const selectedBag = bagSizes.find(bs => String(bs.id) === val);
+                                          if (selectedBag) {
+                                            newItems[globalIndex].weight_kg = selectedBag.weight_kg;
+                                            newItems[globalIndex].dispatched_qty_ton = (
+                                              (parseInt(newItems[globalIndex].dispatched_bags || 0) * selectedBag.weight_kg) / 1000
+                                            ).toString();
+                                          }
+                                          setDispatchItems(newItems);
+                                        }}
+                                      />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                      <InputField
+                                        label="Bags To Dispatch"
+                                        value={item.dispatched_bags}
+                                        onChangeText={(val) => {
+                                          const newItems = [...dispatchItems];
+                                          newItems[globalIndex].dispatched_bags = val;
+                                          if (item.weight_kg) {
+                                            newItems[globalIndex].dispatched_qty_ton = (
+                                              (parseInt(val || 0) * item.weight_kg) / 1000
+                                            ).toString();
+                                          }
+                                          setDispatchItems(newItems);
+                                        }}
+                                        keyboardType="numeric"
+                                      />
+                                    </View>
+                                  </>
+                                ) : (
+                                  <View style={{ flex: 1 }}>
+                                    <InputField
+                                      label="Qty (Tons) To Dispatch"
+                                      value={item.dispatched_qty_ton}
+                                      onChangeText={(val) => {
+                                        const newItems = [...dispatchItems];
+                                        newItems[globalIndex].dispatched_qty_ton = val;
+                                        setDispatchItems(newItems);
+                                      }}
+                                      keyboardType="numeric"
+                                    />
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          );
+                        })
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             )}
 
-            {/* ── Dispatch Details ── */}
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Step 2 — Dispatch Details</Text>
+            {/* ── STEP 4: Other Details (visible after orders selected) ── */}
+            {ordersSelected && (
+              <View style={styles.stepCard}>
+                <View style={styles.stepHeader}>
+                  <View style={[styles.stepBadge, styles.stepBadgeDone]}>
+                    <Text style={styles.stepBadgeText}>4</Text>
+                  </View>
+                  <Text style={styles.stepTitle}>Additional Details</Text>
+                </View>
 
-            <SelectDropdown
-              label="Select Driver *"
-              options={drivers.map(d => ({
-                label: String(d.driver_name || "Unknown Driver"),
-                value: String(d.driver_id || ""),
-              }))}
-              value={formData.driver_id}
-              onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
-            />
+                {/* Summary bar */}
+                {(summaryTotalTons > 0 || summaryTotalBags > 0) && (
+                  <View style={styles.summaryBar}>
+                    <Text style={styles.summaryBarTitle}>Dispatch Summary</Text>
+                    <View style={styles.summaryBarRow}>
+                      <Text style={styles.summaryBarItem}>
+                        Orders: <Text style={styles.summaryBarValue}>{selectedOrders.length}</Text>
+                      </Text>
+                      <Text style={styles.summaryBarItem}>
+                        Total Tons: <Text style={styles.summaryBarValue}>{summaryTotalTons.toFixed(2)}</Text>
+                      </Text>
+                      {summaryTotalBags > 0 && (
+                        <Text style={styles.summaryBarItem}>
+                          Total Bags: <Text style={styles.summaryBarValue}>{summaryTotalBags}</Text>
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
 
-            <InputField
-              label="Warehouse Loader"
-              value={formData.warehouse_loader}
-              onChangeText={(val) => setFormData({ ...formData, warehouse_loader: val })}
-            />
-            <SelectDropdown
-              label="State"
-              options={states.map(s => ({ label: s.state_name, value: s.state_id.toString() }))}
-              value={formData.state}
-              onValueChange={(val) => setFormData({ ...formData, state: val })}
-            />
-            <InputField
-              label="City"
-              value={formData.city}
-              onChangeText={(val) => setFormData({ ...formData, city: val })}
-            />
-            <DatePicker
-              label="Dispatch Date"
-              value={formData.actual_dispatch_date}
-              onChange={(date) => setFormData({ ...formData, actual_dispatch_date: date })}
-            />
-            <DatePicker
-              label="Delivery Date"
-              value={formData.delivery_date}
-              onChange={(date) => setFormData({ ...formData, delivery_date: date })}
-            />
-            <InputField
-              label="Remarks"
-              value={formData.remarks}
-              onChangeText={(val) => setFormData({ ...formData, remarks: val })}
-              multiline
-            />
-            <Button title="Save Dispatch" onPress={handleSave} style={{ marginTop: 20 }} />
+                <InputField
+                  label="Warehouse Loader"
+                  value={formData.warehouse_loader}
+                  onChangeText={(val) => setFormData({ ...formData, warehouse_loader: val })}
+                />
+                <InputField
+                  label="Remarks"
+                  value={formData.remarks}
+                  onChangeText={(val) => setFormData({ ...formData, remarks: val })}
+                  multiline
+                />
+                <Button title="Save Dispatch" onPress={handleSave} style={{ marginTop: 20 }} />
+              </View>
+            )}
+
           </ScrollView>
         </Modal>
       </View>
@@ -707,122 +655,58 @@ export default function DispatchManagementScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   title: { fontSize: 20, fontWeight: "bold" },
   actionButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
-  editBtn: {
-    backgroundColor: "#e0f2fe",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-  },
+  editBtn: { backgroundColor: "#e0f2fe", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: "#bae6fd" },
   editBtnText: { color: "#0369a1", fontSize: 12, fontWeight: "600" },
-  deliveryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
+  deliveryBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   deliveryBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  deleteBtn: {
-    backgroundColor: "#fef2f2",
-    padding: 7,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#fecaca",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: 10,
-    marginTop: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingBottom: 6,
-  },
-  addOrderRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginBottom: 8,
-  },
-  emptyOrdersHint: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    alignItems: "center",
-  },
-  emptyOrdersText: { fontSize: 13, color: "#94a3b8" },
-  orderCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  orderCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#e0f2fe",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#bae6fd",
-  },
+  deleteBtn: { backgroundColor: "#fef2f2", padding: 7, borderRadius: 6, borderWidth: 1, borderColor: "#fecaca", alignItems: "center", justifyContent: "center" },
+
+  // Step cards
+  stepCard: { backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#e2e8f0", padding: 16, marginBottom: 12 },
+  stepHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 },
+  stepBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#94a3b8", alignItems: "center", justifyContent: "center" },
+  stepBadgeDone: { backgroundColor: colors.primary },
+  stepBadgeText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  stepTitle: { fontSize: 14, fontWeight: "700", color: "#0f172a", flex: 1 },
+  stepDoneTag: { fontSize: 12, fontWeight: "600", color: colors.primary, backgroundColor: "#eff6ff", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+
+  // Order checklist
+  orderCheckList: { gap: 6, marginBottom: 12 },
+  orderCheckRow: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0", backgroundColor: "#f8fafc", gap: 10 },
+  orderCheckRowSelected: { borderColor: colors.primary, backgroundColor: "#eff6ff" },
+  checkboxIcon: { width: 22, alignItems: "center" },
+  orderCheckInfo: { flex: 1 },
+  orderCheckCode: { fontSize: 13, fontWeight: "700", color: "#0f172a" },
+  orderCheckCustomer: { fontSize: 12, color: "#64748b", marginTop: 1 },
+  orderStatusBadge: { fontSize: 11, fontWeight: "600", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, backgroundColor: "#f1f5f9", color: "#64748b" },
+  emptyText: { color: "#94a3b8", fontSize: 13, textAlign: "center", padding: 12 },
+
+  // Order cards (item entry)
+  orderCard: { backgroundColor: "#f8fafc", borderRadius: 10, borderWidth: 1, borderColor: "#cbd5e1", marginBottom: 12, overflow: "hidden" },
+  orderCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#e0f2fe", paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#bae6fd" },
   orderCardCode: { fontSize: 14, fontWeight: "700", color: "#0369a1" },
   orderCardCustomer: { fontSize: 12, color: "#475569", marginTop: 1 },
-  removeOrderBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#fef2f2",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  removeOrderText: { fontSize: 12, color: colors.error, fontWeight: "600" },
-  noItemsText: { fontSize: 13, color: "#94a3b8", padding: 12 },
-  itemRow: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  itemName: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: 8 },
-  infoGrid: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  infoCol: { flex: 1 },
+  removeOrderBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef2f2", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "#fecaca" },
+  removeOrderText: { color: colors.error, fontSize: 12, fontWeight: "600" },
+  noItemsText: { color: "#94a3b8", fontSize: 13, padding: 12, textAlign: "center" },
+
+  // Item rows
+  itemRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e2e8f0" },
+  itemName: { fontSize: 13, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
+  infoGrid: { flexDirection: "row", gap: 12, marginBottom: 10, flexWrap: "wrap" },
+  infoCol: { minWidth: 100 },
   infoLabel: { fontSize: 11, color: "#64748b", fontWeight: "600", marginBottom: 2 },
-  infoValue: { fontSize: 12, color: "#0f172a", fontWeight: "500" },
-  itemInputs: { flexDirection: "row", gap: 8 },
-  summaryBar: {
-    backgroundColor: "#f0fdf4",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-    padding: 14,
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  summaryBarTitle: { fontSize: 13, fontWeight: "700", color: "#064e3b", marginBottom: 8 },
-  summaryBarRow: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
+  infoValue: { fontSize: 13, color: "#1e293b", fontWeight: "500" },
+  itemInputs: { flexDirection: "row", gap: 10 },
+
+  // Summary
+  summaryBar: { backgroundColor: "#f0fdf4", borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#bbf7d0" },
+  summaryBarTitle: { fontSize: 13, fontWeight: "700", color: "#15803d", marginBottom: 6 },
+  summaryBarRow: { flexDirection: "row", gap: 20, flexWrap: "wrap" },
   summaryBarItem: { fontSize: 13, color: "#374151" },
-  summaryBarValue: { fontWeight: "700", color: "#059669" },
+  summaryBarValue: { fontWeight: "700", color: "#15803d" },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#0f172a", marginBottom: 10, marginTop: 4, borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 6 },
 });
