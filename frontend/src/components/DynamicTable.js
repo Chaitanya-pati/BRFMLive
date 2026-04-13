@@ -107,6 +107,7 @@ export default function DynamicTable({
   onCellChange,
   addLabel = '+ Add Row',
   minRows = 1,
+  showAddButton = true,
 }) {
   return (
     <View style={styles.wrapper}>
@@ -180,9 +181,11 @@ export default function DynamicTable({
       </ScrollView>
 
       {/* ── Add row button ── */}
-      <TouchableOpacity style={styles.addRowBtn} onPress={onAddRow}>
-        <Text style={styles.addRowBtnText}>{addLabel}</Text>
-      </TouchableOpacity>
+      {showAddButton && (
+        <TouchableOpacity style={styles.addRowBtn} onPress={onAddRow}>
+          <Text style={styles.addRowBtnText}>{addLabel}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

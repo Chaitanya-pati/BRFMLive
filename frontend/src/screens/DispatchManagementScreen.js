@@ -13,6 +13,7 @@ import Modal from "../components/Modal";
 import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
 import Button from "../components/Button";
+import DynamicTable, { createSelectCell, createNumberCell } from "../components/DynamicTable";
 import colors from "../theme/colors";
 import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, truckApi } from "../api/client";
 import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
@@ -109,6 +110,31 @@ export default function DispatchManagementScreen({ navigation }) {
       const newItems = buildItemsForOrder(order);
       setDispatchItems(prev => [...prev, ...newItems]);
     }
+  };
+
+  const handleItemCellChange = (orderItemId, key, value) => {
+    setDispatchItems(prev =>
+      prev.map(item => {
+        if (item.order_item_id !== orderItemId) return item;
+        const updated = { ...item, [key]: value };
+        if (key === "bag_size_id") {
+          const selectedBag = bagSizes.find(bs => String(bs.id) === value);
+          if (selectedBag) {
+            updated.weight_kg = selectedBag.weight_kg;
+            updated.dispatched_qty_ton = (
+              (parseInt(updated.dispatched_bags || 0) * selectedBag.weight_kg) / 1000
+            ).toString();
+          }
+        } else if (key === "dispatched_bags") {
+          if (item.weight_kg) {
+            updated.dispatched_qty_ton = (
+              (parseInt(value || 0) * item.weight_kg) / 1000
+            ).toString();
+          }
+        }
+        return updated;
+      })
+    );
   };
 
   useEffect(() => {
@@ -325,6 +351,86 @@ export default function DispatchManagementScreen({ navigation }) {
   const summaryTotalTons = dispatchItems.reduce((acc, item) => acc + (parseFloat(item.dispatched_qty_ton) || 0), 0);
   const summaryTotalBags = dispatchItems.reduce((acc, item) => acc + (parseInt(item.dispatched_bags) || 0), 0);
 
+  const isBagRow = (row) => row.unit_type === "Bag" || row.ordered_bags > 0;
+
+  const dispatchTableColumns = [
+    {
+      key: "product_name",
+      label: "Product",
+      flex: 2,
+      minWidth: 150,
+      render: (value) => (
+        <Text style={{ fontSize: 12, fontWeight: "600", color: "#1e293b", paddingHorizontal: 4 }}>
+          {value || "—"}
+        </Text>
+      ),
+    },
+    {
+      key: "_ordered",
+      label: "Ordered",
+      flex: 1.2,
+      minWidth: 95,
+      render: (_, row) => (
+        <Text style={{ fontSize: 11, color: "#374151", paddingHorizontal: 4, lineHeight: 17 }}>
+          {row.ordered_qty.toFixed(2)}t{isBagRow(row) ? `\n(${row.ordered_bags} bags)` : ""}
+        </Text>
+      ),
+    },
+    {
+      key: "_delivered",
+      label: "Delivered",
+      flex: 1.2,
+      minWidth: 95,
+      render: (_, row) => (
+        <Text style={{ fontSize: 11, color: "#374151", paddingHorizontal: 4, lineHeight: 17 }}>
+          {(row.dispatched_so_far || 0).toFixed(2)}t{isBagRow(row) && row.dispatched_bags_so_far > 0 ? `\n(${row.dispatched_bags_so_far} bags)` : ""}
+        </Text>
+      ),
+    },
+    {
+      key: "_pending",
+      label: "Pending",
+      flex: 1.2,
+      minWidth: 95,
+      render: (_, row) => (
+        <Text style={{ fontSize: 11, color: colors.error, fontWeight: "600", paddingHorizontal: 4, lineHeight: 17 }}>
+          {(row.remaining_qty || 0).toFixed(2)}t{isBagRow(row) && row.remaining_bags > 0 ? `\n(${row.remaining_bags} bags)` : ""}
+        </Text>
+      ),
+    },
+    {
+      key: "bag_size_id",
+      label: "Bag Size",
+      flex: 1.2,
+      minWidth: 105,
+      render: createSelectCell({
+        options: () => bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: String(bs.id) })),
+        placeholder: "Size",
+        disabled: (row) => !isBagRow(row),
+      }),
+    },
+    {
+      key: "dispatched_bags",
+      label: "# Bags",
+      flex: 1,
+      minWidth: 80,
+      render: createNumberCell({
+        placeholder: "0",
+        disabled: (row) => !isBagRow(row),
+      }),
+    },
+    {
+      key: "dispatched_qty_ton",
+      label: "Qty (T)",
+      flex: 1,
+      minWidth: 80,
+      render: createNumberCell({
+        placeholder: "0.00",
+        disabled: (row) => isBagRow(row),
+      }),
+    },
+  ];
+
   return (
     <Layout title="Dispatch Management" navigation={navigation}>
       <View style={styles.container}>
@@ -479,7 +585,7 @@ export default function DispatchManagementScreen({ navigation }) {
                   )}
                 </View>
 
-                {/* Per-order item entry */}
+                {/* Per-order item entry — DynamicTable */}
                 {selectedOrders.map((order) => {
                   const orderCode = order.order_code || `Order #${order.order_id}`;
                   const customerName = order.customer?.customer_name || order.customer_name || "Unknown";
@@ -502,99 +608,22 @@ export default function DispatchManagementScreen({ navigation }) {
                         </TouchableOpacity>
                       </View>
 
-                      {orderDispatchItems.length === 0 ? (
-                        <Text style={styles.noItemsText}>No items found for this order.</Text>
-                      ) : (
-                        orderDispatchItems.map((item, index) => {
-                          const globalIndex = dispatchItems.findIndex(di => di.order_item_id === item.order_item_id);
-                          const isBagType = item.unit_type === "Bag" || item.ordered_bags > 0;
-                          const deliveredQty = item.dispatched_so_far || 0;
-                          const deliveredBags = item.dispatched_bags_so_far || 0;
-                          const pendingQty = Math.max(0, item.ordered_qty - deliveredQty);
-                          const pendingBags = Math.max(0, item.ordered_bags - deliveredBags);
-
-                          return (
-                            <View key={index} style={styles.itemRow}>
-                              <Text style={styles.itemName}>{item.product_name}</Text>
-                              <View style={styles.infoGrid}>
-                                <View style={styles.infoCol}>
-                                  <Text style={styles.infoLabel}>Ordered</Text>
-                                  <Text style={styles.infoValue}>
-                                    {item.ordered_qty.toFixed(2)}t {isBagType ? `(${item.ordered_bags} Bags)` : ""}
-                                  </Text>
-                                </View>
-                                <View style={styles.infoCol}>
-                                  <Text style={styles.infoLabel}>Delivered</Text>
-                                  <Text style={styles.infoValue}>
-                                    {deliveredQty.toFixed(2)}t {isBagType ? `(${deliveredBags} Bags)` : ""}
-                                  </Text>
-                                </View>
-                                <View style={styles.infoCol}>
-                                  <Text style={[styles.infoLabel, { color: colors.error }]}>Pending</Text>
-                                  <Text style={[styles.infoValue, { color: colors.error }]}>
-                                    {pendingQty.toFixed(2)}t {isBagType ? `(${pendingBags} Bags)` : ""}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View style={styles.itemInputs}>
-                                {isBagType ? (
-                                  <>
-                                    <View style={{ flex: 1, marginRight: 10 }}>
-                                      <SelectDropdown
-                                        label="Bag Size"
-                                        options={bagSizes.map(bs => ({ label: `${bs.weight_kg} kg`, value: String(bs.id) }))}
-                                        value={item.bag_size_id}
-                                        onValueChange={(val) => {
-                                          const newItems = [...dispatchItems];
-                                          newItems[globalIndex].bag_size_id = val;
-                                          const selectedBag = bagSizes.find(bs => String(bs.id) === val);
-                                          if (selectedBag) {
-                                            newItems[globalIndex].weight_kg = selectedBag.weight_kg;
-                                            newItems[globalIndex].dispatched_qty_ton = (
-                                              (parseInt(newItems[globalIndex].dispatched_bags || 0) * selectedBag.weight_kg) / 1000
-                                            ).toString();
-                                          }
-                                          setDispatchItems(newItems);
-                                        }}
-                                      />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                      <InputField
-                                        label="Bags To Dispatch"
-                                        value={item.dispatched_bags}
-                                        onChangeText={(val) => {
-                                          const newItems = [...dispatchItems];
-                                          newItems[globalIndex].dispatched_bags = val;
-                                          if (item.weight_kg) {
-                                            newItems[globalIndex].dispatched_qty_ton = (
-                                              (parseInt(val || 0) * item.weight_kg) / 1000
-                                            ).toString();
-                                          }
-                                          setDispatchItems(newItems);
-                                        }}
-                                        keyboardType="numeric"
-                                      />
-                                    </View>
-                                  </>
-                                ) : (
-                                  <View style={{ flex: 1 }}>
-                                    <InputField
-                                      label="Qty (Tons) To Dispatch"
-                                      value={item.dispatched_qty_ton}
-                                      onChangeText={(val) => {
-                                        const newItems = [...dispatchItems];
-                                        newItems[globalIndex].dispatched_qty_ton = val;
-                                        setDispatchItems(newItems);
-                                      }}
-                                      keyboardType="numeric"
-                                    />
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-                          );
-                        })
-                      )}
+                      <View style={{ padding: 10 }}>
+                        {orderDispatchItems.length === 0 ? (
+                          <Text style={styles.noItemsText}>No items found for this order.</Text>
+                        ) : (
+                          <DynamicTable
+                            columns={dispatchTableColumns}
+                            rows={orderDispatchItems}
+                            onCellChange={(rowIndex, key, value) =>
+                              handleItemCellChange(orderDispatchItems[rowIndex].order_item_id, key, value)
+                            }
+                            onRemoveRow={() => {}}
+                            showAddButton={false}
+                            minRows={orderDispatchItems.length}
+                          />
+                        )}
+                      </View>
                     </View>
                   );
                 })}
@@ -693,14 +722,6 @@ const styles = StyleSheet.create({
   removeOrderText: { color: colors.error, fontSize: 12, fontWeight: "600" },
   noItemsText: { color: "#94a3b8", fontSize: 13, padding: 12, textAlign: "center" },
 
-  // Item rows
-  itemRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e2e8f0" },
-  itemName: { fontSize: 13, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
-  infoGrid: { flexDirection: "row", gap: 12, marginBottom: 10, flexWrap: "wrap" },
-  infoCol: { minWidth: 100 },
-  infoLabel: { fontSize: 11, color: "#64748b", fontWeight: "600", marginBottom: 2 },
-  infoValue: { fontSize: 13, color: "#1e293b", fontWeight: "500" },
-  itemInputs: { flexDirection: "row", gap: 10 },
 
   // Summary
   summaryBar: { backgroundColor: "#f0fdf4", borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#bbf7d0" },
