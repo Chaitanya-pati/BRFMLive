@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
-import DatePicker from "../components/DatePicker";
 import colors from "../theme/colors";
 import { dispatchApi } from "../api/client";
 import { showError, showSuccess } from "../utils/customAlerts";
@@ -35,15 +35,267 @@ const STATUS_BG = {
   CANCELLED: "#fef2f2",
 };
 
-export default function DriverDeliveryScreen({ navigation, route }) {
+function formatDateTime(date) {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "N/A";
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function buildFormData(obj) {
+  const fd = new FormData();
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) fd.append(k, String(v));
+  });
+  return fd;
+}
+
+async function buildFileFormData(fieldName, asset) {
+  const fd = new FormData();
+  if (asset.uri.startsWith("data:") || asset.uri.startsWith("blob:")) {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    fd.append(fieldName, blob, "image.jpg");
+  } else {
+    fd.append(fieldName, {
+      uri: asset.uri,
+      type: asset.mimeType || "image/jpeg",
+      name: "image.jpg",
+    });
+  }
+  return fd;
+}
+
+function StopCard({ stop, dispatch, onRefresh }) {
+  const [busy, setBusy] = useState(null);
+
+  const recordTime = async (field) => {
+    setBusy(field);
+    try {
+      const fd = buildFormData({ [field]: new Date().toISOString() });
+      await dispatchApi.updateStopTimes(dispatch.dispatch_id, stop.id, fd);
+      await onRefresh();
+      showSuccess("Time recorded");
+    } catch (e) {
+      showError(e?.message || "Failed to record time");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const pickAndUpload = async (endpoint) => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      setBusy(endpoint);
+      const fd = await buildFileFormData(
+        endpoint === "photo" ? "photo" : "signature",
+        result.assets[0]
+      );
+      if (endpoint === "photo") {
+        await dispatchApi.addStopPhoto(dispatch.dispatch_id, stop.id, fd);
+      } else if (endpoint === "driver") {
+        await dispatchApi.uploadDriverSignature(dispatch.dispatch_id, stop.id, fd);
+      } else if (endpoint === "customer") {
+        await dispatchApi.uploadCustomerSignature(dispatch.dispatch_id, stop.id, fd);
+      }
+      await onRefresh();
+      showSuccess("Uploaded successfully");
+    } catch (e) {
+      showError(e?.message || "Upload failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      setBusy("photo");
+      const fd = await buildFileFormData("photo", result.assets[0]);
+      await dispatchApi.addStopPhoto(dispatch.dispatch_id, stop.id, fd);
+      await onRefresh();
+      showSuccess("Photo added");
+    } catch (e) {
+      showError(e?.message || "Upload failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const isLoading = (key) => busy === key;
+
+  return (
+    <View style={ss.stopCard}>
+      <View style={ss.stopHeader}>
+        <Text style={ss.stopCustomer}>{stop.customer_name || "Customer"}</Text>
+        {stop.order_id ? (
+          <Text style={ss.stopOrderId}>Order #{stop.order_id}</Text>
+        ) : null}
+      </View>
+
+      {/* Timings */}
+      <View style={ss.timingGrid}>
+        <TimingRow
+          label="Arrived at Customer"
+          value={stop.arrived_at}
+          busy={isLoading("arrived_at")}
+          onRecord={() => recordTime("arrived_at")}
+        />
+        <TimingRow
+          label="Unloading Start"
+          value={stop.unloading_start}
+          busy={isLoading("unloading_start")}
+          onRecord={() => recordTime("unloading_start")}
+        />
+        <TimingRow
+          label="Unloading End"
+          value={stop.unloading_end}
+          busy={isLoading("unloading_end")}
+          onRecord={() => recordTime("unloading_end")}
+        />
+      </View>
+
+      {/* Photos */}
+      <View style={ss.sectionRow}>
+        <Text style={ss.sectionTitle}>
+          Delivery Photos ({stop.photos?.length || 0})
+        </Text>
+        <View style={ss.photoActions}>
+          <TouchableOpacity
+            style={ss.smallBtn}
+            onPress={() => pickAndUpload("photo")}
+            disabled={isLoading("photo")}
+          >
+            {isLoading("photo") ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={ss.smallBtnText}>Camera</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[ss.smallBtn, { backgroundColor: "#64748b" }]}
+            onPress={pickFromGallery}
+            disabled={isLoading("photo")}
+          >
+            <Text style={ss.smallBtnText}>Gallery</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {stop.photos?.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ss.photoScroll}>
+          {stop.photos.map((p) => (
+            <Image
+              key={p.id}
+              source={{ uri: `${API_BASE_URL}/${p.photo_path}` }}
+              style={ss.thumbImg}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Signatures */}
+      <View style={ss.sigRow}>
+        <SignatureBlock
+          label="Driver Signature"
+          value={stop.driver_signature}
+          busy={isLoading("driver")}
+          onCapture={() => pickAndUpload("driver")}
+        />
+        <SignatureBlock
+          label="Customer Signature"
+          value={stop.customer_signature}
+          busy={isLoading("customer")}
+          onCapture={() => pickAndUpload("customer")}
+        />
+      </View>
+    </View>
+  );
+}
+
+function TimingRow({ label, value, busy, onRecord }) {
+  return (
+    <View style={ss.timingRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={ss.timingLabel}>{label}</Text>
+        {value ? (
+          <Text style={ss.timingValue}>{formatDateTime(value)}</Text>
+        ) : (
+          <Text style={ss.timingMissing}>Not recorded</Text>
+        )}
+      </View>
+      <TouchableOpacity
+        style={[ss.timeBtn, value && ss.timeBtnDone]}
+        onPress={onRecord}
+        disabled={busy}
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={ss.timeBtnText}>{value ? "Update" : "Record Now"}</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function SignatureBlock({ label, value, busy, onCapture }) {
+  return (
+    <View style={ss.sigBlock}>
+      <Text style={ss.sigLabel}>{label}</Text>
+      {value ? (
+        <Image
+          source={{ uri: `${API_BASE_URL}/${value}` }}
+          style={ss.sigImg}
+          resizeMode="contain"
+        />
+      ) : (
+        <View style={ss.sigPlaceholder}>
+          <Text style={ss.sigPlaceholderText}>Not captured</Text>
+        </View>
+      )}
+      <TouchableOpacity style={ss.sigBtn} onPress={onCapture} disabled={busy}>
+        {busy ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={ss.sigBtnText}>{value ? "Re-capture" : "Capture"}</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+export default function DriverDeliveryScreen({ navigation }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [dispatches, setDispatches] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDispatch, setSelectedDispatch] = useState(null);
-  const [proofPhoto, setProofPhoto] = useState(null);
-  const [deliveryDate, setDeliveryDate] = useState(new Date());
+  const [stops, setStops] = useState([]);
+  const [stopsLoading, setStopsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -77,13 +329,8 @@ export default function DriverDeliveryScreen({ navigation, route }) {
       if (admin) {
         setDispatches(dispatched);
       } else {
-        const userDriverId = userData.driver_id
-          ? userData.driver_id.toString()
-          : null;
-        const driverName = (userData.full_name || userData.username || "")
-          .toLowerCase()
-          .trim();
-
+        const userDriverId = userData.driver_id ? userData.driver_id.toString() : null;
+        const driverName = (userData.full_name || userData.username || "").toLowerCase().trim();
         const filtered = dispatched.filter((d) => {
           if (userDriverId && d.driver_id?.toString() === userDriverId) return true;
           const dispatchDriverName = (d.driver?.driver_name || "").toLowerCase().trim();
@@ -98,81 +345,91 @@ export default function DriverDeliveryScreen({ navigation, route }) {
     }
   };
 
-  const openModal = (dispatch) => {
+  const openModal = async (dispatch) => {
     setSelectedDispatch(dispatch);
-    setProofPhoto(null);
-    setDeliveryDate(new Date());
     setModalVisible(true);
+    await loadStops(dispatch);
   };
 
-  const pickPhoto = async () => {
+  const loadStops = async (dispatch) => {
+    setStopsLoading(true);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+      const res = await dispatchApi.getDeliveryStops(dispatch.dispatch_id);
+      const existingStops = res.data || [];
+
+      const orderIds = getOrderIds(dispatch);
+      const merged = orderIds.map((orderId, idx) => {
+        const existing = existingStops.find((s) => s.order_id === orderId);
+        if (existing) return existing;
+        return { _pending: true, order_id: orderId, customer_name: getCustomerName(dispatch, orderId, idx) };
       });
-      if (!result.canceled && result.assets?.[0]) setProofPhoto(result.assets[0]);
-    } catch {
-      showError("Failed to pick image");
+
+      if (orderIds.length === 0 && existingStops.length === 0) {
+        const existing = existingStops.find((s) => !s.order_id);
+        if (existing) {
+          setStops([existing]);
+        } else {
+          setStops([{ _pending: true, order_id: null, customer_name: dispatch.order?.customer?.customer_name || "Customer" }]);
+        }
+      } else {
+        setStops(merged);
+      }
+    } catch (e) {
+      showError("Failed to load delivery stops");
+      setStops([]);
+    } finally {
+      setStopsLoading(false);
     }
   };
 
-  const capturePhoto = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets?.[0]) setProofPhoto(result.assets[0]);
-    } catch {
-      showError("Failed to capture photo");
+  const getOrderIds = (dispatch) => {
+    if (!dispatch?.items || dispatch.items.length === 0) {
+      return dispatch?.order_id ? [dispatch.order_id] : [];
     }
+    const ids = [];
+    dispatch.items.forEach((item) => {
+      const oid = item.order_item?.order_id || item.order_item?.customer_order_id || dispatch.order_id;
+      if (oid && !ids.includes(oid)) ids.push(oid);
+    });
+    return ids.length > 0 ? ids : (dispatch.order_id ? [dispatch.order_id] : []);
   };
 
-  const handleSubmit = async () => {
-    if (!proofPhoto) {
-      showError("Please select or capture a delivery photo first");
-      return;
-    }
+  const getCustomerName = (dispatch, orderId, idx) => {
+    if (dispatch.order?.customer?.customer_name) return dispatch.order.customer.customer_name;
+    return `Customer ${idx + 1}`;
+  };
+
+  const ensureStop = async (dispatch, pendingStop) => {
+    const fd = buildFormData({
+      order_id: pendingStop.order_id,
+      customer_name: pendingStop.customer_name,
+    });
+    const res = await dispatchApi.createOrUpdateStop(dispatch.dispatch_id, fd);
+    return res.data;
+  };
+
+  const refreshStops = useCallback(async () => {
+    if (!selectedDispatch) return;
+    await loadStops(selectedDispatch);
+  }, [selectedDispatch]);
+
+  const handleMarkDelivered = async () => {
+    if (!selectedDispatch) return;
     setSubmitting(true);
     try {
       const form = new FormData();
-
-      if (proofPhoto.uri.startsWith("data:") || proofPhoto.uri.startsWith("blob:")) {
-        const fetchResponse = await fetch(proofPhoto.uri);
-        const blob = await fetchResponse.blob();
-        form.append("driver_photo", blob, "delivery_proof.jpg");
-      } else {
-        form.append("driver_photo", {
-          uri: proofPhoto.uri,
-          type: proofPhoto.mimeType || "image/jpeg",
-          name: "delivery_proof.jpg",
-        });
-      }
-
-      form.append("delivery_date", deliveryDate.toISOString());
+      form.append("delivery_date", new Date().toISOString());
+      const placeholderBlob = new Blob([""], { type: "image/jpeg" });
+      form.append("driver_photo", placeholderBlob, "placeholder.jpg");
       await dispatchApi.uploadDeliveryProof(selectedDispatch.dispatch_id, form);
-      showSuccess("Delivery proof uploaded. Status updated automatically.");
+      showSuccess("Dispatch marked as Delivered");
       setModalVisible(false);
       loadUserAndDispatches();
     } catch (e) {
-      console.error("Upload error:", e);
-      showError(e?.message || "Failed to upload delivery proof");
+      showError(e?.message || "Failed to mark as delivered");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
   };
 
   const driverName = currentUser?.full_name || currentUser?.username || "";
@@ -187,8 +444,8 @@ export default function DriverDeliveryScreen({ navigation, route }) {
               {isAdmin
                 ? "Showing all pending deliveries across all drivers"
                 : driverName
-                ? `Showing deliveries assigned to: ${driverName}`
-                : "Showing your assigned deliveries"}
+                ? `Assigned to: ${driverName}`
+                : "Your assigned deliveries"}
             </Text>
           </View>
           {isAdmin && (
@@ -206,8 +463,8 @@ export default function DriverDeliveryScreen({ navigation, route }) {
             <Text style={styles.emptyTitle}>No Pending Deliveries</Text>
             <Text style={styles.emptyText}>
               {isAdmin
-                ? "There are no dispatches awaiting proof upload."
-                : "You have no dispatches awaiting proof upload."}
+                ? "There are no dispatches awaiting delivery confirmation."
+                : "You have no dispatches awaiting delivery confirmation."}
             </Text>
           </View>
         ) : (
@@ -246,22 +503,20 @@ export default function DriverDeliveryScreen({ navigation, route }) {
 
                   {isAdmin && (
                     <View style={styles.driverRow}>
-                      <Text style={styles.driverLabel}>🚚 Driver: </Text>
+                      <Text style={styles.driverLabel}>Driver: </Text>
                       <Text style={styles.driverValue}>{dispatchDriverName}</Text>
                     </View>
                   )}
 
                   <View style={styles.infoRow}>
                     {dispatch.truck?.truck_number ? (
-                      <Text style={styles.infoText}>
-                        🚛 Truck: {dispatch.truck.truck_number}
-                      </Text>
+                      <Text style={styles.infoText}>Truck: {dispatch.truck.truck_number}</Text>
                     ) : null}
                     <Text style={styles.infoText}>
-                      📅 Dispatched: {formatDate(dispatch.actual_dispatch_date)}
+                      Dispatched: {formatDate(dispatch.actual_dispatch_date)}
                     </Text>
                     <Text style={styles.infoText}>
-                      ⚖️ Total: {totalQty.toFixed(2)} Tons
+                      Total: {totalQty.toFixed(2)} Tons
                     </Text>
                   </View>
 
@@ -270,7 +525,7 @@ export default function DriverDeliveryScreen({ navigation, route }) {
                       <Text style={styles.itemsLabel}>Items:</Text>
                       {dispatch.items.map((item, idx) => (
                         <Text key={idx} style={styles.itemText}>
-                          • {item.product_name || item.finished_good?.product_name || `Item ${idx + 1}`}
+                          {item.product_name || item.finished_good?.product_name || `Item ${idx + 1}`}
                           : {(item.dispatched_qty_ton || 0).toFixed(2)} t
                           {item.dispatched_bags ? ` (${item.dispatched_bags} bags)` : ""}
                         </Text>
@@ -279,7 +534,7 @@ export default function DriverDeliveryScreen({ navigation, route }) {
                   )}
 
                   <Button
-                    title="Upload Delivery Proof"
+                    title="Manage Delivery"
                     onPress={() => openModal(dispatch)}
                     style={styles.uploadBtn}
                   />
@@ -293,237 +548,110 @@ export default function DriverDeliveryScreen({ navigation, route }) {
       <Modal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        title="Upload Delivery Proof"
+        title="Delivery Management"
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           {selectedDispatch && (
             <>
-              {/* ── Customer Order Details ── */}
-              <View style={styles.detailSection}>
-                <View style={styles.detailSectionHeader}>
-                  <Text style={styles.detailSectionIcon}>🧾</Text>
-                  <Text style={styles.detailSectionTitle}>Customer Orders</Text>
-                </View>
-
-                {(() => {
-                  const modalOrderCodes =
-                    selectedDispatch.order_codes && selectedDispatch.order_codes.length > 0
-                      ? selectedDispatch.order_codes
-                      : selectedDispatch.order?.order_code
-                      ? [selectedDispatch.order.order_code]
-                      : [];
-
-                  if (modalOrderCodes.length > 1) {
-                    // Multi-order dispatch
-                    return (
-                      <View style={styles.detailCard}>
-                        <View style={{ padding: 12 }}>
-                          <Text style={styles.detailLabel}>Orders in this dispatch</Text>
-                          {modalOrderCodes.map((code, idx) => (
-                            <Text key={idx} style={[styles.detailValue, { marginTop: 4 }]}>
-                              • {code}
-                            </Text>
-                          ))}
-                        </View>
-                      </View>
-                    );
-                  }
-
-                  // Single order (legacy or first-order)
-                  return (
-                    <View style={styles.detailCard}>
-                      <View style={styles.detailRow}>
-                        <View style={styles.detailFlex}>
-                          <Text style={styles.detailLabel}>Order Code</Text>
-                          <Text style={styles.detailValue}>
-                            {modalOrderCodes[0] || `#${selectedDispatch.order_id}` || "—"}
-                          </Text>
-                        </View>
-                        <View style={[
-                          styles.statusPill,
-                          {
-                            backgroundColor: STATUS_BG[selectedDispatch.order?.order_status] || "#f1f5f9",
-                            borderColor: STATUS_COLOR[selectedDispatch.order?.order_status] || "#94a3b8",
-                          }
-                        ]}>
-                          <Text style={[
-                            styles.statusPillText,
-                            { color: STATUS_COLOR[selectedDispatch.order?.order_status] || "#64748b" }
-                          ]}>
-                            {selectedDispatch.order?.order_status || "—"}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.divider} />
-
-                      <View style={styles.detailGrid}>
-                        <View style={styles.detailCell}>
-                          <Text style={styles.detailLabel}>Customer</Text>
-                          <Text style={styles.detailValue}>
-                            {selectedDispatch.order?.customer?.customer_name || "—"}
-                          </Text>
-                        </View>
-                        <View style={styles.detailCell}>
-                          <Text style={styles.detailLabel}>Order Date</Text>
-                          <Text style={styles.detailValue}>
-                            {formatDate(selectedDispatch.order?.order_date)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })()}
+              <View style={styles.dispatchSummary}>
+                <Text style={styles.dispatchSummaryTitle}>
+                  Dispatch #{selectedDispatch.dispatch_id}
+                </Text>
+                <Text style={styles.dispatchSummaryDetail}>
+                  {selectedDispatch.truck?.truck_number
+                    ? `Truck: ${selectedDispatch.truck.truck_number}  `
+                    : ""}
+                  Driver: {selectedDispatch.driver?.driver_name || "—"}
+                </Text>
+                <Text style={styles.dispatchSummaryDetail}>
+                  {(selectedDispatch.dispatched_quantity_ton || 0).toFixed(2)} Tons
+                  {selectedDispatch.dispatched_bags
+                    ? ` · ${selectedDispatch.dispatched_bags} Bags`
+                    : ""}
+                </Text>
               </View>
 
-              {/* ── Dispatch Details ── */}
-              <View style={styles.detailSection}>
-                <View style={styles.detailSectionHeader}>
-                  <Text style={styles.detailSectionIcon}>🚛</Text>
-                  <Text style={styles.detailSectionTitle}>Dispatch Details</Text>
-                </View>
-
-                <View style={styles.detailCard}>
-                  <View style={styles.detailGrid}>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Dispatch ID</Text>
-                      <Text style={styles.detailValue}>#{selectedDispatch.dispatch_id}</Text>
-                    </View>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Dispatch Date</Text>
-                      <Text style={styles.detailValue}>
-                        {formatDate(selectedDispatch.actual_dispatch_date)}
-                      </Text>
-                    </View>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Driver</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedDispatch.driver?.driver_name || `#${selectedDispatch.driver_id}`}
-                      </Text>
-                    </View>
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Truck</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedDispatch.truck?.truck_number || "—"}
-                      </Text>
-                    </View>
-                    {selectedDispatch.warehouse_loader ? (
-                      <View style={styles.detailCell}>
-                        <Text style={styles.detailLabel}>Warehouse Loader</Text>
-                        <Text style={styles.detailValue}>{selectedDispatch.warehouse_loader}</Text>
-                      </View>
-                    ) : null}
-                    <View style={styles.detailCell}>
-                      <Text style={styles.detailLabel}>Total Quantity</Text>
-                      <Text style={[styles.detailValue, styles.detailValueBold]}>
-                        {(selectedDispatch.dispatched_quantity_ton || 0).toFixed(2)} Tons
-                      </Text>
-                    </View>
-                    {selectedDispatch.dispatched_bags ? (
-                      <View style={styles.detailCell}>
-                        <Text style={styles.detailLabel}>Total Bags</Text>
-                        <Text style={[styles.detailValue, styles.detailValueBold]}>
-                          {selectedDispatch.dispatched_bags}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
+              <View style={styles.dividerSection}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Customer Stops</Text>
+                <View style={styles.dividerLine} />
               </View>
 
-              {/* ── Items Dispatched ── */}
-              {selectedDispatch.items && selectedDispatch.items.length > 0 && (
-                <View style={styles.detailSection}>
-                  <View style={styles.detailSectionHeader}>
-                    <Text style={styles.detailSectionIcon}>📦</Text>
-                    <Text style={styles.detailSectionTitle}>Items Dispatched</Text>
-                  </View>
-
-                  <View style={styles.detailCard}>
-                    <View style={styles.tableHeader}>
-                      <Text style={[styles.tableCell, { flex: 2 }]}>Product</Text>
-                      <Text style={[styles.tableCell, styles.tableCellRight]}>Qty (Ton)</Text>
-                      <Text style={[styles.tableCell, styles.tableCellRight]}>Bags</Text>
-                    </View>
-                    {selectedDispatch.items.map((item, idx) => (
-                      <View key={idx} style={[styles.tableRow, idx % 2 === 0 ? styles.tableRowEven : null]}>
-                        <Text style={[styles.tableBodyCell, { flex: 2 }]} numberOfLines={2}>
-                          {item.product_name || item.finished_good?.product_name || `Item ${idx + 1}`}
-                        </Text>
-                        <Text style={[styles.tableBodyCell, styles.tableCellRight]}>
-                          {(item.dispatched_qty_ton || 0).toFixed(2)}
-                        </Text>
-                        <Text style={[styles.tableBodyCell, styles.tableCellRight]}>
-                          {item.dispatched_bags || "—"}
-                        </Text>
-                      </View>
-                    ))}
-                    <View style={styles.tableTotalRow}>
-                      <Text style={[styles.tableTotalCell, { flex: 2 }]}>Total</Text>
-                      <Text style={[styles.tableTotalCell, styles.tableCellRight]}>
-                        {(selectedDispatch.dispatched_quantity_ton || 0).toFixed(2)}
-                      </Text>
-                      <Text style={[styles.tableTotalCell, styles.tableCellRight]}>
-                        {selectedDispatch.dispatched_bags || "—"}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+              {stopsLoading ? (
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
+              ) : (
+                stops.map((stop, idx) =>
+                  stop._pending ? (
+                    <PendingStopCard
+                      key={`pending-${idx}`}
+                      stop={stop}
+                      dispatch={selectedDispatch}
+                      onCreated={refreshStops}
+                    />
+                  ) : (
+                    <StopCard
+                      key={stop.id}
+                      stop={stop}
+                      dispatch={selectedDispatch}
+                      onRefresh={refreshStops}
+                    />
+                  )
+                )
               )}
 
-              {/* ── Remarks ── */}
-              {selectedDispatch.remarks ? (
-                <View style={styles.remarksBox}>
-                  <Text style={styles.remarksLabel}>Remarks</Text>
-                  <Text style={styles.remarksText}>{selectedDispatch.remarks}</Text>
-                </View>
-              ) : null}
-
-              {/* ── Divider before upload ── */}
-              <View style={styles.uploadDivider}>
-                <View style={styles.uploadDividerLine} />
-                <Text style={styles.uploadDividerText}>Delivery Confirmation</Text>
-                <View style={styles.uploadDividerLine} />
+              <View style={styles.dividerSection}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Finalise</Text>
+                <View style={styles.dividerLine} />
               </View>
+
+              <Text style={styles.finaliseNote}>
+                Once all stops are completed, mark the dispatch as Delivered.
+              </Text>
+
+              <Button
+                title={submitting ? "Processing..." : "Mark Dispatch as Delivered"}
+                onPress={handleMarkDelivered}
+                style={{ marginTop: 12, marginBottom: 8 }}
+                disabled={submitting}
+              />
             </>
           )}
-
-          {/* ── Photo Upload ── */}
-          <Text style={styles.photoLabel}>Delivery Photo *</Text>
-          <View style={styles.photoButtons}>
-            <TouchableOpacity style={styles.photoBtn} onPress={capturePhoto}>
-              <Text style={styles.photoBtnIcon}>📷</Text>
-              <Text style={styles.photoBtnText}>Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.photoBtn} onPress={pickPhoto}>
-              <Text style={styles.photoBtnIcon}>🖼️</Text>
-              <Text style={styles.photoBtnText}>Choose Photo</Text>
-            </TouchableOpacity>
-          </View>
-
-          {proofPhoto ? (
-            <Image source={{ uri: proofPhoto.uri }} style={styles.preview} resizeMode="cover" />
-          ) : (
-            <View style={styles.photoPlaceholder}>
-              <Text style={styles.placeholderText}>No photo selected</Text>
-            </View>
-          )}
-
-          <DatePicker label="Delivery Date" value={deliveryDate} onChange={setDeliveryDate} />
-
-          <Text style={styles.autoStatusNote}>
-            ℹ️ Order status will be updated automatically based on delivered vs ordered quantities
-          </Text>
-
-          <Button
-            title={submitting ? "Submitting..." : "Submit Delivery Proof"}
-            onPress={handleSubmit}
-            style={{ marginTop: 16, marginBottom: 8 }}
-            disabled={submitting}
-          />
         </ScrollView>
       </Modal>
     </Layout>
+  );
+}
+
+function PendingStopCard({ stop, dispatch, onCreated }) {
+  const [busy, setBusy] = useState(false);
+
+  const initStop = async () => {
+    setBusy(true);
+    try {
+      const fd = buildFormData({
+        order_id: stop.order_id,
+        customer_name: stop.customer_name,
+      });
+      await dispatchApi.createOrUpdateStop(dispatch.dispatch_id, fd);
+      await onCreated();
+    } catch (e) {
+      showError(e?.message || "Failed to initialise stop");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    initStop();
+  }, []);
+
+  return (
+    <View style={ss.stopCard}>
+      <Text style={ss.stopCustomer}>{stop.customer_name || "Customer"}</Text>
+      <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+      <Text style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Initialising stop...</Text>
+    </View>
   );
 }
 
@@ -585,175 +713,146 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
-  orderCode: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
+  orderCode: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
   customerName: { fontSize: 13, color: "#475569", marginTop: 2 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
-  driverRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  driverLabel: { fontSize: 13, color: "#475569", fontWeight: "600" },
-  driverValue: { fontSize: 13, color: "#0f172a", fontWeight: "700" },
-  infoRow: { marginBottom: 10, gap: 3 },
-  infoText: { fontSize: 13, color: "#64748b" },
-  itemsBox: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  itemsLabel: { fontSize: 12, fontWeight: "600", color: "#94a3b8", marginBottom: 4 },
-  itemText: { fontSize: 13, color: "#475569", marginBottom: 2 },
-  uploadBtn: { marginTop: 4 },
-
-  // ── Modal detail sections ──
-  detailSection: { marginBottom: 14 },
-  detailSectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  detailSectionIcon: { fontSize: 15, marginRight: 6 },
-  detailSectionTitle: { fontSize: 14, fontWeight: "700", color: "#0f172a", letterSpacing: 0.2 },
-  detailCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    overflow: "hidden",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-  },
-  detailFlex: { flex: 1 },
-  detailGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 8,
-  },
-  detailCell: {
-    width: "50%",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  detailLabel: { fontSize: 11, color: "#94a3b8", fontWeight: "600", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.4 },
-  detailValue: { fontSize: 13, color: "#1e293b", fontWeight: "500" },
-  detailValueBold: { fontWeight: "700", color: colors.primary },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 12 },
-  statusPill: {
+  badge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginLeft: 8,
+    borderRadius: 12,
   },
-  statusPillText: { fontSize: 11, fontWeight: "700" },
-
-  // ── Items table ──
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  tableCell: { fontSize: 11, fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: 0.3 },
-  tableCellRight: { flex: 1, textAlign: "right" },
-  tableRow: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  tableRowEven: { backgroundColor: "#fafafa" },
-  tableBodyCell: { fontSize: 13, color: "#334155" },
-  tableTotalRow: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: "#f0f9ff",
-    borderTopWidth: 1,
-    borderTopColor: "#bae6fd",
-  },
-  tableTotalCell: { fontSize: 13, fontWeight: "700", color: "#0369a1" },
-
-  // ── Remarks ──
-  remarksBox: {
-    backgroundColor: "#fffbeb",
-    borderRadius: 8,
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  driverRow: { flexDirection: "row", marginBottom: 4 },
+  driverLabel: { fontSize: 13, color: "#64748b" },
+  driverValue: { fontSize: 13, fontWeight: "600", color: "#1e293b" },
+  infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
+  infoText: { fontSize: 12, color: "#64748b" },
+  itemsBox: { backgroundColor: "#f8fafc", borderRadius: 8, padding: 10, marginBottom: 10 },
+  itemsLabel: { fontSize: 12, fontWeight: "600", color: "#475569", marginBottom: 4 },
+  itemText: { fontSize: 12, color: "#64748b", marginBottom: 2 },
+  uploadBtn: { marginTop: 4 },
+  dispatchSummary: {
+    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#fde68a",
+    marginBottom: 16,
   },
-  remarksLabel: { fontSize: 11, fontWeight: "700", color: "#92400e", textTransform: "uppercase", marginBottom: 4 },
-  remarksText: { fontSize: 13, color: "#78350f" },
-
-  // ── Upload divider ──
-  uploadDivider: {
+  dispatchSummaryTitle: { fontSize: 16, fontWeight: "700", color: "#1e293b", marginBottom: 4 },
+  dispatchSummaryDetail: { fontSize: 13, color: "#475569", marginTop: 2 },
+  dividerSection: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 16,
   },
-  uploadDividerLine: { flex: 1, height: 1, backgroundColor: "#e2e8f0" },
-  uploadDividerText: {
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#e2e8f0" },
+  dividerText: {
+    marginHorizontal: 10,
     fontSize: 12,
     fontWeight: "600",
     color: "#94a3b8",
-    marginHorizontal: 10,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-
-  // ── Photo upload ──
-  photoLabel: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 10 },
-  photoButtons: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  photoBtn: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    borderStyle: "dashed",
+  finaliseNote: {
+    fontSize: 13,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 4,
   },
-  photoBtnIcon: { fontSize: 24, marginBottom: 4 },
-  photoBtnText: { fontSize: 13, color: "#475569", fontWeight: "600" },
-  preview: { width: "100%", height: 200, borderRadius: 10, marginBottom: 16 },
-  photoPlaceholder: {
-    width: "100%",
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: "#f1f5f9",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
+});
+
+const ss = StyleSheet.create({
+  stopCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    padding: 14,
+    marginBottom: 12,
   },
-  placeholderText: { fontSize: 14, color: "#94a3b8" },
-  autoStatusNote: {
-    fontSize: 12,
-    color: "#64748b",
-    backgroundColor: "#eff6ff",
-    padding: 10,
+  stopHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  stopCustomer: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
+  stopOrderId: { fontSize: 12, color: "#64748b" },
+  timingGrid: { gap: 8, marginBottom: 12 },
+  timingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderRadius: 8,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
+    padding: 10,
   },
+  timingLabel: { fontSize: 12, fontWeight: "600", color: "#475569" },
+  timingValue: { fontSize: 12, color: "#10b981", marginTop: 2 },
+  timingMissing: { fontSize: 12, color: "#94a3b8", marginTop: 2 },
+  timeBtn: {
+    backgroundColor: "#3b82f6",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
+  },
+  timeBtnDone: { backgroundColor: "#10b981" },
+  timeBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  sectionTitle: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  photoActions: { flexDirection: "row", gap: 6 },
+  smallBtn: {
+    backgroundColor: "#3b82f6",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    minWidth: 64,
+    alignItems: "center",
+  },
+  smallBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  photoScroll: { marginBottom: 12 },
+  thumbImg: { width: 80, height: 80, borderRadius: 8, marginRight: 8 },
+  sigRow: { flexDirection: "row", gap: 10 },
+  sigBlock: { flex: 1, alignItems: "center" },
+  sigLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  sigImg: {
+    width: "100%",
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 6,
+  },
+  sigPlaceholder: {
+    width: "100%",
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  sigPlaceholderText: { fontSize: 11, color: "#94a3b8" },
+  sigBtn: {
+    backgroundColor: "#7c3aed",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
+    alignItems: "center",
+    width: "100%",
+  },
+  sigBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
 });

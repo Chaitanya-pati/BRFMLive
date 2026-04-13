@@ -564,6 +564,183 @@ async def upload_delivery_proof(
         return db_dispatch
 
 
+@app.get("/api/dispatches/{dispatch_id}/delivery-stops", response_model=List[schemas.DispatchDeliveryStopRead])
+def get_delivery_stops(dispatch_id: int, db: Session = Depends(get_db)):
+    if not db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first():
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+    stops = db.query(models.DispatchDeliveryStop)\
+        .filter(models.DispatchDeliveryStop.dispatch_id == dispatch_id)\
+        .options(joinedload(models.DispatchDeliveryStop.photos))\
+        .all()
+    return stops
+
+
+@app.post("/api/dispatches/{dispatch_id}/delivery-stops", response_model=schemas.DispatchDeliveryStopRead)
+def create_or_update_delivery_stop(
+    dispatch_id: int,
+    order_id: Optional[int] = Form(None),
+    customer_name: Optional[str] = Form(None),
+    arrived_at: Optional[str] = Form(None),
+    unloading_start: Optional[str] = Form(None),
+    unloading_end: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    if not db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first():
+        raise HTTPException(status_code=404, detail="Dispatch not found")
+
+    existing = None
+    if order_id:
+        existing = db.query(models.DispatchDeliveryStop).filter(
+            models.DispatchDeliveryStop.dispatch_id == dispatch_id,
+            models.DispatchDeliveryStop.order_id == order_id
+        ).first()
+
+    def _parse(dt_str):
+        if not dt_str:
+            return None
+        try:
+            return datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+        except Exception:
+            return datetime.now()
+
+    if existing:
+        if arrived_at is not None:
+            existing.arrived_at = _parse(arrived_at)
+        if unloading_start is not None:
+            existing.unloading_start = _parse(unloading_start)
+        if unloading_end is not None:
+            existing.unloading_end = _parse(unloading_end)
+        if customer_name is not None:
+            existing.customer_name = customer_name
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    stop = models.DispatchDeliveryStop(
+        dispatch_id=dispatch_id,
+        order_id=order_id,
+        customer_name=customer_name,
+        arrived_at=_parse(arrived_at),
+        unloading_start=_parse(unloading_start),
+        unloading_end=_parse(unloading_end),
+    )
+    db.add(stop)
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
+@app.patch("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}", response_model=schemas.DispatchDeliveryStopRead)
+def update_delivery_stop_times(
+    dispatch_id: int,
+    stop_id: int,
+    arrived_at: Optional[str] = Form(None),
+    unloading_start: Optional[str] = Form(None),
+    unloading_end: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.id == stop_id,
+        models.DispatchDeliveryStop.dispatch_id == dispatch_id
+    ).first()
+    if not stop:
+        raise HTTPException(status_code=404, detail="Delivery stop not found")
+
+    def _parse(dt_str):
+        if not dt_str:
+            return None
+        try:
+            return datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+        except Exception:
+            return datetime.now()
+
+    if arrived_at is not None:
+        stop.arrived_at = _parse(arrived_at)
+    if unloading_start is not None:
+        stop.unloading_start = _parse(unloading_start)
+    if unloading_end is not None:
+        stop.unloading_end = _parse(unloading_end)
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
+@app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/photos", response_model=schemas.DispatchDeliveryStopRead)
+async def add_stop_photo(
+    dispatch_id: int,
+    stop_id: int,
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.id == stop_id,
+        models.DispatchDeliveryStop.dispatch_id == dispatch_id
+    ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
+    if not stop:
+        raise HTTPException(status_code=404, detail="Delivery stop not found")
+
+    try:
+        photo_path = await save_upload_file(photo)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save photo: {str(e)}")
+
+    db_photo = models.DispatchStopPhoto(stop_id=stop_id, photo_path=photo_path)
+    db.add(db_photo)
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
+@app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/driver-signature", response_model=schemas.DispatchDeliveryStopRead)
+async def upload_driver_signature(
+    dispatch_id: int,
+    stop_id: int,
+    signature: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.id == stop_id,
+        models.DispatchDeliveryStop.dispatch_id == dispatch_id
+    ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
+    if not stop:
+        raise HTTPException(status_code=404, detail="Delivery stop not found")
+
+    try:
+        sig_path = await save_upload_file(signature)
+        stop.driver_signature = sig_path
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save signature: {str(e)}")
+
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
+@app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/customer-signature", response_model=schemas.DispatchDeliveryStopRead)
+async def upload_customer_signature(
+    dispatch_id: int,
+    stop_id: int,
+    signature: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.id == stop_id,
+        models.DispatchDeliveryStop.dispatch_id == dispatch_id
+    ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
+    if not stop:
+        raise HTTPException(status_code=404, detail="Delivery stop not found")
+
+    try:
+        sig_path = await save_upload_file(signature)
+        stop.customer_signature = sig_path
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save signature: {str(e)}")
+
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
 @app.get("/api/bag-sizes", response_model=List[schemas.BagSize])
 def get_bag_sizes(db: Session = Depends(get_db),
                   branch_id: Optional[int] = Depends(get_branch_id)):

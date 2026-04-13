@@ -179,6 +179,7 @@ class Dispatch(Base):
     driver = relationship("Driver", back_populates="dispatches")
     bag_size = relationship("BagSize")
     items = relationship("DispatchItem", back_populates="dispatch", cascade="all, delete-orphan")
+    delivery_stops = relationship("DispatchDeliveryStop", back_populates="dispatch", cascade="all, delete-orphan")
 
 class DispatchItem(Base):
     __tablename__ = "dispatch_items"
@@ -196,6 +197,36 @@ class DispatchItem(Base):
     order_item = relationship("OrderItem", back_populates="dispatch_items")
     finished_good = relationship("FinishedGood")
     bag_size = relationship("BagSize")
+
+
+class DispatchDeliveryStop(Base):
+    """One record per customer-order stop within a dispatch trip."""
+    __tablename__ = "dispatch_delivery_stops"
+    id = Column(Integer, primary_key=True, index=True)
+    dispatch_id = Column(Integer, ForeignKey("dispatch.dispatch_id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=True)
+    customer_name = Column(String(200), nullable=True)
+    arrived_at = Column(DateTime, nullable=True)
+    unloading_start = Column(DateTime, nullable=True)
+    unloading_end = Column(DateTime, nullable=True)
+    driver_signature = Column(Text, nullable=True)
+    customer_signature = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+
+    dispatch = relationship("Dispatch", back_populates="delivery_stops")
+    order = relationship("CustomerOrder")
+    photos = relationship("DispatchStopPhoto", back_populates="stop", cascade="all, delete-orphan")
+
+
+class DispatchStopPhoto(Base):
+    """Multiple delivery photos per stop (dynamic)."""
+    __tablename__ = "dispatch_stop_photos"
+    id = Column(Integer, primary_key=True, index=True)
+    stop_id = Column(Integer, ForeignKey("dispatch_delivery_stops.id"), nullable=False)
+    photo_path = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=ist_now)
+
+    stop = relationship("DispatchDeliveryStop", back_populates="photos")
 
 class HourlyProduction(Base):
     __tablename__ = "hourly_productions"

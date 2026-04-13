@@ -531,6 +531,133 @@ export const dispatchApi = {
     }
     return { data: await response.json() };
   },
+
+  getDeliveryStops: (id) => api.get(`/dispatches/${id}/delivery-stops`),
+
+  createOrUpdateStop: async (dispatchId, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed" }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return { data: await response.json() };
+  },
+
+  updateStopTimes: async (dispatchId, stopId, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}`, {
+      method: "PATCH",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed" }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return { data: await response.json() };
+  },
+
+  addStopPhoto: async (dispatchId, stopId, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/photos`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed" }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return { data: await response.json() };
+  },
+
+  uploadDriverSignature: async (dispatchId, stopId, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/driver-signature`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed" }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return { data: await response.json() };
+  },
+
+  uploadCustomerSignature: async (dispatchId, stopId, formData) => {
+    const headers = {};
+    try {
+      const activeBranchJson = await AsyncStorage.getItem("@active_branch");
+      if (activeBranchJson) {
+        const activeBranch = JSON.parse(activeBranchJson);
+        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+      }
+    } catch {}
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
+    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/customer-signature`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Failed" }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return { data: await response.json() };
+  },
 };
 
 export const finishedGoodsGodownApi = {

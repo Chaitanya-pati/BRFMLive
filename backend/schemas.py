@@ -1094,6 +1094,38 @@ class DispatchWithDetails(Dispatch):
     driver_photo: Optional[str] = None
     order_codes: List[str] = []
 
+
+class DispatchStopPhotoRead(ISTModel):
+    id: int
+    stop_id: int
+    photo_path: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DispatchDeliveryStopRead(ISTModel):
+    id: int
+    dispatch_id: int
+    order_id: Optional[int] = None
+    customer_name: Optional[str] = None
+    arrived_at: Optional[datetime] = None
+    unloading_start: Optional[datetime] = None
+    unloading_end: Optional[datetime] = None
+    driver_signature: Optional[str] = None
+    customer_signature: Optional[str] = None
+    created_at: datetime
+    photos: List[DispatchStopPhotoRead] = []
+
+    @validator('arrived_at', 'unloading_start', 'unloading_end', pre=True)
+    def _parse_stop_dates(cls, v):
+        return parse_datetime(v)
+
+    class Config:
+        from_attributes = True
+
+
 class ProductionOrderBase(ISTModel):
     order_number: str
     raw_product_id: int
