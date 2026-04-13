@@ -854,9 +854,23 @@ export default function GrindingScreen({ navigation }) {
   };
 
   const handleRowUpdate = (rowId, field, value) => {
-    setProductionRows((prev) =>
-      prev.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
-    );
+    setProductionRows((prev) => {
+      return prev.map((row, idx) => {
+        if (row.id !== rowId) return row;
+        const updated = { ...row, [field]: value };
+        // Auto-calculate load per hour for rows after the first
+        if (field === "b1Reading" && idx > 0) {
+          const prevB1 = parseFloat(prev[idx - 1].b1Reading);
+          const currB1 = parseFloat(value);
+          if (!isNaN(prevB1) && !isNaN(currB1) && currB1 >= prevB1) {
+            updated.loadPerHour = (currB1 - prevB1).toFixed(3);
+          } else {
+            updated.loadPerHour = "";
+          }
+        }
+        return updated;
+      });
+    });
   };
 
   const handleGridUpdate = (
@@ -1193,13 +1207,29 @@ export default function GrindingScreen({ navigation }) {
               />
             </View>
             <View style={{ width: 120, padding: 2 }}>
-              <InputField
-                value={row.loadPerHour}
-                onChangeText={(v) => handleRowUpdate(row.id, "loadPerHour", v)}
-                keyboardType="decimal-pad"
-                disabled={row.isSubmitted}
-                dense
-              />
+              {rowIdx > 0 ? (
+                <View style={{
+                  height: 34,
+                  borderWidth: 1,
+                  borderColor: "#e2e8f0",
+                  borderRadius: 6,
+                  backgroundColor: "#f0f9ff",
+                  justifyContent: "center",
+                  paddingHorizontal: 8,
+                }}>
+                  <Text style={{ fontSize: 12, color: "#0369a1", fontWeight: "600" }}>
+                    {row.loadPerHour || "—"}
+                  </Text>
+                </View>
+              ) : (
+                <InputField
+                  value={row.loadPerHour}
+                  onChangeText={(v) => handleRowUpdate(row.id, "loadPerHour", v)}
+                  keyboardType="decimal-pad"
+                  disabled={row.isSubmitted}
+                  dense
+                />
+              )}
             </View>
 
             {activeFgs.map((fg, fgIdx) => {
