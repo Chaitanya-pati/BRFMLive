@@ -371,21 +371,29 @@ const pickerStyles = StyleSheet.create({
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
+const getCurrentTime12h = () => {
+  const now = new Date();
+  let hours = now.getHours();
+  const minutes = now.getMinutes();
+  const period = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+};
+
 export default function GrindingScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  // ── Picker state ────────────────────────────────────────────────────────────
+  // ── Picker state (date only — time is captured automatically) ─────────────
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [pickerMode, setPickerMode] = useState("date"); // 'date' | 'time'
+  const [pickerMode, setPickerMode] = useState("date");
   const [activeRowId, setActiveRowId] = useState(null);
   const [activePickerCurrentValue, setActivePickerCurrentValue] = useState("");
 
   const openPicker = (rowId, mode) => {
     const row = productionRowsRef.current.find((r) => r.id === rowId);
-    const currentVal =
-      mode === "date" ? row?.productionDate : row?.productionTime;
+    const currentVal = row?.productionDate;
     setActiveRowId(rowId);
     setPickerMode(mode);
     setActivePickerCurrentValue(currentVal || "");
@@ -581,7 +589,7 @@ export default function GrindingScreen({ navigation }) {
     {
       id: Date.now(),
       productionDate: new Date().toISOString().split("T")[0],
-      productionTime: "",
+      productionTime: getCurrentTime12h(),
       b1Reading: "",
       loadPerHour: "",
       productionDetails: [],
@@ -664,7 +672,7 @@ export default function GrindingScreen({ navigation }) {
         formattedRows.push({
           id: Date.now(),
           productionDate: new Date().toISOString().split("T")[0],
-          productionTime: "",
+          productionTime: getCurrentTime12h(),
           b1Reading: "",
           loadPerHour: "",
           productionDetails: [],
@@ -676,7 +684,7 @@ export default function GrindingScreen({ navigation }) {
           {
             id: Date.now(),
             productionDate: new Date().toISOString().split("T")[0],
-            productionTime: "",
+            productionTime: getCurrentTime12h(),
             b1Reading: "",
             loadPerHour: "",
             productionDetails: [],
@@ -830,7 +838,7 @@ export default function GrindingScreen({ navigation }) {
       {
         id: Date.now(),
         productionDate: new Date().toISOString().split("T")[0],
-        productionTime: "",
+        productionTime: getCurrentTime12h(),
         b1Reading: "",
         loadPerHour: "",
         productionDetails: [],
@@ -1163,27 +1171,17 @@ export default function GrindingScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            {/* Time picker button */}
-            <TouchableOpacity
+            {/* Time — auto-captured, read-only */}
+            <View
               style={[
                 styles.pickerBtn,
-                { width: 120 },
-                row.isSubmitted && styles.pickerBtnDisabled,
+                { width: 120, backgroundColor: "#f8fafc", borderColor: "#e2e8f0" },
               ]}
-              onPress={() => {
-                if (!row.isSubmitted) openPicker(row.id, "time");
-              }}
-              activeOpacity={row.isSubmitted ? 1 : 0.6}
             >
-              <Text
-                style={[
-                  styles.pickerBtnText,
-                  !row.productionTime && styles.pickerBtnPlaceholder,
-                ]}
-              >
-                {row.productionTime || "Select Time"}
+              <Text style={[styles.pickerBtnText, { color: "#475569" }]}>
+                {row.productionTime || "—"}
               </Text>
-            </TouchableOpacity>
+            </View>
 
             <View style={{ width: 120, padding: 2 }}>
               <InputField
