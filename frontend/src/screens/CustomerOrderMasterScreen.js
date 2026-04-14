@@ -53,6 +53,13 @@ export default function CustomerOrderMasterScreen({ navigation }) {
 
   const { isSubmitting, handleFormSubmission } = useFormSubmission();
 
+  const hasValidItem = formData.items.some(item => {
+    if (!item.finished_good_id) return false;
+    if (item.quantity_type === 'bag') return parseInt(item.number_of_bags) > 0 && item.bag_size_kg;
+    if (item.quantity_type === 'ton') return parseFloat(item.quantity_ton) > 0;
+    return false;
+  });
+
   useEffect(() => {
     loadOrders();
     loadCustomers();
@@ -326,17 +333,9 @@ export default function CustomerOrderMasterScreen({ navigation }) {
         width={isMobile ? '98%' : '90%'}
       >
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-          <View style={isMobile ? styles.mobileGrid : styles.grid}>
-            <View style={styles.gridItem}>
-              <Text style={styles.label}>Order Code *</Text>
-              <InputField
-                value={formData.order_code}
-                onChangeText={(text) => setFormData({ ...formData, order_code: text })}
-                placeholder="e.g. ORD-001"
-              />
-            </View>
 
-            <View style={styles.gridItem}>
+          <View style={styles.customerRow}>
+            <View style={styles.customerField}>
               <Text style={styles.label}>Customer *</Text>
               <SelectDropdown
                 placeholder="Select Customer"
@@ -347,37 +346,52 @@ export default function CustomerOrderMasterScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.sectionHeaderContainer}>
-            <Text style={styles.sectionHeader}>Order Items</Text>
-          </View>
+          {(formData.customer_id || editMode) ? (
+            <>
+              <View style={styles.orderCodeRow}>
+                <Text style={styles.label}>Order No.</Text>
+                <View style={styles.orderCodeBox}>
+                  <Text style={styles.orderCodeText}>{formData.order_code}</Text>
+                </View>
+              </View>
 
-          <DynamicTable
-            columns={tableColumns}
-            rows={formData.items}
-            onAddRow={addItem}
-            onRemoveRow={removeItem}
-            onCellChange={updateItem}
-            addLabel="+ Add Item"
-            minRows={1}
-          />
+              <View style={styles.sectionHeaderContainer}>
+                <Text style={styles.sectionHeader}>Order Items</Text>
+              </View>
 
-          <Text style={[styles.label, { marginTop: 20 }]}>Remarks</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={formData.remarks}
-            onChangeText={(text) => setFormData({ ...formData, remarks: text })}
-            multiline
-            placeholder="Additional notes..."
-          />
+              <DynamicTable
+                columns={tableColumns}
+                rows={formData.items}
+                onAddRow={addItem}
+                onRemoveRow={removeItem}
+                onCellChange={updateItem}
+                addLabel="+ Add Item"
+                minRows={1}
+              />
+
+              <Text style={[styles.label, { marginTop: 20 }]}>Remarks</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.remarks}
+                onChangeText={(text) => setFormData({ ...formData, remarks: text })}
+                multiline
+                placeholder="Additional notes..."
+              />
+            </>
+          ) : null}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveBtn, isSubmitting && styles.disabledButton]}
+              style={[
+                styles.saveBtn,
+                (!hasValidItem || isSubmitting) && !editMode ? styles.disabledButton : null,
+                (isSubmitting) ? styles.disabledButton : null,
+              ]}
               onPress={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (!editMode && !hasValidItem)}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="#fff" />
@@ -459,6 +473,32 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     color: '#374151',
     fontWeight: '600',
+  },
+  customerRow: {
+    marginBottom: 4,
+  },
+  customerField: {
+    maxWidth: 480,
+  },
+  orderCodeRow: {
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  orderCodeBox: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#f9fafb',
+    alignSelf: 'flex-start',
+    minWidth: 240,
+  },
+  orderCodeText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   saveBtn: {
     paddingVertical: 12,
