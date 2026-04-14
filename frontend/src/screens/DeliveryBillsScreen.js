@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Modal, useWindowDimensions, Platform,
@@ -54,6 +54,15 @@ function colWidth(col, isMobile) {
   };
   return map[col] || { width: 100 };
 }
+
+// ─── PlatformDiv: a real <div> on web (gives a true HTMLDivElement ref),
+//     falls back to View on native. This guarantees .innerHTML works. ─────────
+const PlatformDiv = Platform.OS === 'web'
+  ? React.forwardRef(({ style, id, ...rest }, ref) => (
+      // eslint-disable-next-line react/no-unknown-property
+      <div ref={ref} id={id} style={style} {...rest} />
+    ))
+  : View;
 
 // ─── Company info ─────────────────────────────────────────────────────────────
 const CO = {
@@ -519,6 +528,16 @@ export default function DeliveryBillsScreen({ navigation, route }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }) {
   const sc = STATUS_COLORS[bill.payment_status] || STATUS_COLORS.PENDING;
+  const invoiceRef = useRef(null);
+
+  // Inject HTML after mount. Because PlatformDiv renders a real <div> on web,
+  // invoiceRef.current is a true HTMLDivElement and .innerHTML is guaranteed.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (invoiceRef.current) {
+      invoiceRef.current.innerHTML = buildInvoiceHTML(bill);
+    }
+  }, [bill]);
 
   return (
     <View>
@@ -540,24 +559,13 @@ function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }
       </View>
 
       {/* ── Invoice body ──
-          On web: real HTML table via dangerouslySetInnerHTML → pixel-perfect borders
-          On native: fallback text (native printing not yet supported)
-      */}
-      {Platform.OS === 'web' ? (
-        <View
-          nativeID="inv-print-root"
-          // @ts-ignore — dangerouslySetInnerHTML is valid on React Native Web
-          dangerouslySetInnerHTML={{ __html: buildInvoiceHTML(bill) }}
-          style={{ marginBottom: 4 }}
-        />
-      ) : (
-        <View style={{ padding: 16, backgroundColor: '#f9f9f9', borderRadius: 8 }}>
-          <Text style={{ fontWeight: '700', fontSize: 16, textAlign: 'center', marginBottom: 8 }}>Tax Invoice</Text>
-          <Text style={{ fontSize: 13, textAlign: 'center', color: '#555' }}>
-            Invoice printing is available on the web version.
-          </Text>
-        </View>
-      )}
+          PlatformDiv renders a real <div> on web → ref.current is HTMLDivElement
+          → innerHTML works perfectly. On native it falls back to a View.        ── */}
+      <PlatformDiv
+        ref={invoiceRef}
+        id="inv-print-root"
+        style={{ marginBottom: 4 }}
+      />
 
       {/* ── Action Buttons ── */}
       <View style={inv.actions}>
