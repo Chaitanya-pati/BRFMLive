@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Modal as RNModal,
 } from "react-native";
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
@@ -48,10 +49,21 @@ export default function DispatchManagementScreen({ navigation }) {
 
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [dispatchItems, setDispatchItems] = useState([]);
+  const [billPickerModal, setBillPickerModal] = useState(null); // { dispatchId, customers: [{name, orderId}] }
 
   const selectedOrders = selectedOrderIds
     .map(id => orders.find(o => o.order_id.toString() === id))
     .filter(Boolean);
+
+  // Auto-fill destination from first selected customer's city/address
+  useEffect(() => {
+    if (selectedOrders.length === 0) return;
+    const firstCustomer = selectedOrders[0]?.customer;
+    if (!firstCustomer) return;
+    const dest = [firstCustomer.city, firstCustomer.state].filter(Boolean).join(', ')
+      || firstCustomer.customer_name || '';
+    setBillSettings(prev => ({ ...prev, destination: prev.destination || dest }));
+  }, [selectedOrderIds]);
 
   // Progressive disclosure flags
   const truckSelected = !!formData.truck_id;
@@ -330,11 +342,17 @@ export default function DispatchManagementScreen({ navigation }) {
       }
 
       setModalVisible(false);
-      showSuccess(
-        editingDispatch
-          ? "Dispatch updated successfully"
-          : `Dispatch created & ${selectedOrders.length} bill${selectedOrders.length !== 1 ? "s" : ""} generated`
-      );
+
+      if (!editingDispatch && savedDispatch?.dispatch_id) {
+        const billCustomers = selectedOrders.map(order => ({
+          name: order.customer?.customer_name || order.customer_name || `Order #${order.order_id}`,
+          orderId: order.order_id,
+        }));
+        setBillPickerModal({ dispatchId: savedDispatch.dispatch_id, customers: billCustomers });
+      } else {
+        showSuccess(editingDispatch ? "Dispatch updated successfully" : "Dispatch saved");
+      }
+
       fetchData();
     } catch (error) {
       console.error("Error saving dispatch:", error);
@@ -360,6 +378,7 @@ export default function DispatchManagementScreen({ navigation }) {
     setDispatchItems([]);
     setFormData({ truck_id: "", driver_id: "", warehouse_loader: "", remarks: "" });
     setBillSettings({ cgst_percent: "", sgst_percent: "", igst_percent: "", terms_of_delivery: "", destination: "" });
+    setBillPickerModal(null);
   };
 
   const handleEditDispatch = (row) => {
@@ -815,6 +834,54 @@ export default function DispatchManagementScreen({ navigation }) {
 
           </ScrollView>
         </Modal>
+
+        {/* ── Bill Preview Picker (shown after save) ── */}
+        <RNModal
+          visible={!!billPickerModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setBillPickerModal(null)}
+        >
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerPanel}>
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>Bills Generated ✓</Text>
+                <Text style={styles.pickerSubtitle}>
+                  {billPickerModal?.customers?.length} invoice{billPickerModal?.customers?.length !== 1 ? 's' : ''} created.
+                  Which customer's bill would you like to preview?
+                </Text>
+              </View>
+
+              {(billPickerModal?.customers || []).map((c, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    setBillPickerModal(null);
+                    navigation.navigate("DeliveryBills", { dispatch_id: billPickerModal.dispatchId });
+                  }}
+                >
+                  <View style={styles.pickerOptionIcon}>
+                    <Text style={styles.pickerOptionIconText}>🧾</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pickerOptionName}>{c.name}</Text>
+                    <Text style={styles.pickerOptionSub}>Dispatch #{billPickerModal?.dispatchId}</Text>
+                  </View>
+                  <Text style={styles.pickerOptionArrow}>›</Text>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={styles.pickerSkipBtn}
+                onPress={() => setBillPickerModal(null)}
+              >
+                <Text style={styles.pickerSkipText}>Skip — I'll view later</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </RNModal>
+
       </View>
     </Layout>
   );
@@ -866,4 +933,19 @@ const styles = StyleSheet.create({
   billCardNote: { fontSize: 12, color: "#a16207", marginBottom: 12 },
   billRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
   billField: { flex: 1 },
+
+  // Bill picker popup
+  pickerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center", padding: 20 },
+  pickerPanel: { backgroundColor: "#fff", borderRadius: 14, width: "100%", maxWidth: 420, overflow: "hidden", elevation: 12 },
+  pickerHeader: { backgroundColor: "#f0fdf4", borderBottomWidth: 1, borderBottomColor: "#bbf7d0", padding: 18 },
+  pickerTitle: { fontSize: 17, fontWeight: "800", color: "#15803d", marginBottom: 4 },
+  pickerSubtitle: { fontSize: 13, color: "#374151", lineHeight: 18 },
+  pickerOption: { flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f1f5f9", gap: 12 },
+  pickerOptionIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center" },
+  pickerOptionIconText: { fontSize: 18 },
+  pickerOptionName: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 2 },
+  pickerOptionSub: { fontSize: 12, color: "#6b7280" },
+  pickerOptionArrow: { fontSize: 22, color: colors.primary, fontWeight: "300" },
+  pickerSkipBtn: { padding: 16, alignItems: "center" },
+  pickerSkipText: { fontSize: 13, color: "#6b7280", textDecorationLine: "underline" },
 });
