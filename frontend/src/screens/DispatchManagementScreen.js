@@ -16,7 +16,7 @@ import Button from "../components/Button";
 import DynamicTable, { createSelectCell, createNumberCell } from "../components/DynamicTable";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import colors from "../theme/colors";
-import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, truckApi } from "../api/client";
+import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, truckApi, finishedGoodApi, deliveryBillApi } from "../api/client";
 import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
 import { FaPlus, FaTrash, FaTruck, FaTimes } from "react-icons/fa";
 
@@ -26,9 +26,18 @@ export default function DispatchManagementScreen({ navigation }) {
   const [drivers, setDrivers] = useState([]);
   const [trucks, setTrucks] = useState([]);
   const [bagSizes, setBagSizes] = useState([]);
+  const [finishedGoods, setFinishedGoods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
+
+  const [billSettings, setBillSettings] = useState({
+    cgst_percent: "",
+    sgst_percent: "",
+    igst_percent: "",
+    terms_of_delivery: "",
+    destination: "",
+  });
 
   const [formData, setFormData] = useState({
     truck_id: "",
@@ -91,6 +100,9 @@ export default function DispatchManagementScreen({ navigation }) {
         bag_size_id: item.bag_size_id ? item.bag_size_id.toString() : "",
         dispatched_bags: "0",
         weight_kg: weightKg,
+        price_per_bag: item.price_per_bag || 0,
+        price_per_ton: item.price_per_ton || 0,
+        hsn_sac_code: item.finished_good?.hsn_sac_code || null,
       };
     });
   };
@@ -170,18 +182,20 @@ export default function DispatchManagementScreen({ navigation }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [disRes, orderRes, driverRes, bagSizeRes, truckRes] = await Promise.all([
+      const [disRes, orderRes, driverRes, bagSizeRes, truckRes, fgRes] = await Promise.all([
         dispatchApi.getAll(),
         customerOrderApi.getAll(),
         driverApi.getAll(),
         bagSizeApi.getAll(),
         truckApi.getAll(),
+        finishedGoodApi.getAll(),
       ]);
       setDispatches(disRes.data || []);
       setOrders(orderRes.data || []);
       setDrivers(driverRes.data || []);
       setBagSizes(bagSizeRes.data || []);
       setTrucks((truckRes.data || []).filter(t => t.is_active));
+      setFinishedGoods(fgRes.data || []);
     } catch (error) {
       console.error("Error fetching dispatch data:", error);
       showError("Failed to fetch data");
@@ -243,13 +257,84 @@ export default function DispatchManagementScreen({ navigation }) {
         })),
       };
 
+      let dispatchResult;
       if (editingDispatch) {
-        await dispatchApi.update(editingDispatch.dispatch_id, payload);
+        dispatchResult = await dispatchApi.update(editingDispatch.dispatch_id, payload);
       } else {
-        await dispatchApi.create(payload);
+        dispatchResult = await dispatchApi.create(payload);
       }
+
+      const savedDispatch = dispatchResult?.data;
+
+      // Auto-generate one delivery bill per customer order (new dispatch only)
+      if (!editingDispatch && savedDispatch?.dispatch_id) {
+        const branchId = typeof localStorage !== "undefined"
+          ? parseInt(localStorage.getItem("selectedBranchId") || "0")
+          : 0;
+
+        const cgst = parseFloat(billSettings.cgst_percent || 0);
+        const sgst = parseFloat(billSettings.sgst_percent || 0);
+        const igst = parseFloat(billSettings.igst_percent || 0);
+
+        const billPromises = selectedOrders.map(order => {
+          const orderItemIds = (order.items || []).map(i => i.order_item_id);
+          const orderItems = itemsToDispatch.filter(di => orderItemIds.includes(di.order_item_id));
+
+          const billItems = orderItems.map(di => {
+            const isBag = di.unit_type === "Bag" || di.ordered_bags > 0;
+            const bags = parseInt(di.dispatched_bags || 0);
+            const tons = parseFloat(di.dispatched_qty_ton || 0);
+            const priceBag = parseFloat(di.price_per_bag || 0);
+            const priceTon = parseFloat(di.price_per_ton || 0);
+            const amount = isBag ? bags * priceBag : tons * priceTon;
+            const fg = finishedGoods.find(f => f.id === di.finished_good_id);
+            return {
+              product_name: di.product_name,
+              hsn_sac_code: di.hsn_sac_code || fg?.hsn_sac_code || null,
+              quantity_bags: isBag ? bags : 0,
+              quantity_ton: tons,
+              rate_per_bag: priceBag,
+              rate_per_ton: priceTon,
+              amount,
+            };
+          });
+
+          const taxableValue = billItems.reduce((sum, i) => sum + i.amount, 0);
+          const cgstAmt = (taxableValue * cgst) / 100;
+          const sgstAmt = (taxableValue * sgst) / 100;
+          const igstAmt = (taxableValue * igst) / 100;
+          const totalTax = cgstAmt + sgstAmt + igstAmt;
+          const totalAmount = taxableValue + totalTax;
+
+          return deliveryBillApi.create({
+            dispatch_id: savedDispatch.dispatch_id,
+            order_id: order.order_id,
+            branch_id: branchId || order.branch_id || 1,
+            destination: billSettings.destination || order.customer?.customer_name || "",
+            terms_of_delivery: billSettings.terms_of_delivery || "",
+            taxable_value: taxableValue,
+            cgst_percent: cgst,
+            cgst_amount: cgstAmt,
+            sgst_percent: sgst,
+            sgst_amount: sgstAmt,
+            igst_percent: igst,
+            igst_amount: igstAmt,
+            total_tax_amount: totalTax,
+            total_amount: totalAmount,
+            payment_status: "PENDING",
+            items: billItems,
+          });
+        });
+
+        await Promise.allSettled(billPromises);
+      }
+
       setModalVisible(false);
-      showSuccess(editingDispatch ? "Dispatch updated successfully" : "Dispatch created successfully");
+      showSuccess(
+        editingDispatch
+          ? "Dispatch updated successfully"
+          : `Dispatch created & ${selectedOrders.length} bill${selectedOrders.length !== 1 ? "s" : ""} generated`
+      );
       fetchData();
     } catch (error) {
       console.error("Error saving dispatch:", error);
@@ -274,6 +359,7 @@ export default function DispatchManagementScreen({ navigation }) {
     setSelectedOrderIds([]);
     setDispatchItems([]);
     setFormData({ truck_id: "", driver_id: "", warehouse_loader: "", remarks: "" });
+    setBillSettings({ cgst_percent: "", sgst_percent: "", igst_percent: "", terms_of_delivery: "", destination: "" });
   };
 
   const handleEditDispatch = (row) => {
@@ -659,6 +745,59 @@ export default function DispatchManagementScreen({ navigation }) {
                   </View>
                 )}
 
+                {/* ── Bill Details (auto-generated per customer on save) ── */}
+                {!editingDispatch && (
+                  <View style={styles.billCard}>
+                    <Text style={styles.billCardTitle}>Bill Details</Text>
+                    <Text style={styles.billCardNote}>
+                      One invoice will be auto-generated per customer order on dispatch.
+                    </Text>
+
+                    <View style={styles.billRow}>
+                      <View style={styles.billField}>
+                        <InputField
+                          label="CGST %"
+                          value={billSettings.cgst_percent}
+                          onChangeText={(v) => setBillSettings({ ...billSettings, cgst_percent: v })}
+                          placeholder="0"
+                          keyboardType="numeric"
+                        />
+                      </View>
+                      <View style={styles.billField}>
+                        <InputField
+                          label="SGST %"
+                          value={billSettings.sgst_percent}
+                          onChangeText={(v) => setBillSettings({ ...billSettings, sgst_percent: v })}
+                          placeholder="0"
+                          keyboardType="numeric"
+                        />
+                      </View>
+                      <View style={styles.billField}>
+                        <InputField
+                          label="IGST %"
+                          value={billSettings.igst_percent}
+                          onChangeText={(v) => setBillSettings({ ...billSettings, igst_percent: v })}
+                          placeholder="0"
+                          keyboardType="numeric"
+                        />
+                      </View>
+                    </View>
+
+                    <InputField
+                      label="Destination"
+                      value={billSettings.destination}
+                      onChangeText={(v) => setBillSettings({ ...billSettings, destination: v })}
+                      placeholder="e.g. Mumbai Warehouse"
+                    />
+                    <InputField
+                      label="Terms of Delivery"
+                      value={billSettings.terms_of_delivery}
+                      onChangeText={(v) => setBillSettings({ ...billSettings, terms_of_delivery: v })}
+                      placeholder="e.g. FOB, CIF…"
+                    />
+                  </View>
+                )}
+
                 <InputField
                   label="Warehouse Loader"
                   value={formData.warehouse_loader}
@@ -720,4 +859,11 @@ const styles = StyleSheet.create({
   summaryBarItem: { fontSize: 13, color: "#374151" },
   summaryBarValue: { fontWeight: "700", color: "#15803d" },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: "#0f172a", marginBottom: 10, marginTop: 4, borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 6 },
+
+  // Bill Details card
+  billCard: { backgroundColor: "#fffbeb", borderRadius: 8, borderWidth: 1, borderColor: "#fde68a", padding: 14, marginBottom: 14 },
+  billCardTitle: { fontSize: 13, fontWeight: "700", color: "#92400e", marginBottom: 3 },
+  billCardNote: { fontSize: 12, color: "#a16207", marginBottom: 12 },
+  billRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
+  billField: { flex: 1 },
 });
