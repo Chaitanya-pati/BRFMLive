@@ -880,7 +880,10 @@ def get_delivery_bills(
     branch_id: Optional[int] = Depends(get_branch_id)
 ):
     query = db.query(models.DeliveryBill).options(
-        joinedload(models.DeliveryBill.items)
+        joinedload(models.DeliveryBill.items),
+        joinedload(models.DeliveryBill.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.truck),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.driver),
     )
     if branch_id:
         query = query.filter(models.DeliveryBill.branch_id == branch_id)
@@ -896,7 +899,10 @@ def get_delivery_bills(
 @app.get("/api/delivery-bills/{bill_id}", response_model=schemas.DeliveryBillRead)
 def get_delivery_bill(bill_id: int, db: Session = Depends(get_db)):
     bill = db.query(models.DeliveryBill).options(
-        joinedload(models.DeliveryBill.items)
+        joinedload(models.DeliveryBill.items),
+        joinedload(models.DeliveryBill.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.truck),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.driver),
     ).filter(models.DeliveryBill.id == bill_id).first()
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
@@ -948,7 +954,12 @@ def update_bill_payment_status(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
     db.commit()
-    db.refresh(bill)
+    bill = db.query(models.DeliveryBill).options(
+        joinedload(models.DeliveryBill.items),
+        joinedload(models.DeliveryBill.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.truck),
+        joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.driver),
+    ).filter(models.DeliveryBill.id == bill_id).first()
     return bill
 
 

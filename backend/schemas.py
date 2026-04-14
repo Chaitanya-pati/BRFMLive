@@ -1208,6 +1208,53 @@ class DeliveryBillUpdate(ISTModel):
         return parse_datetime(v)
 
 
+class BillCustomerInfo(ISTModel):
+    customer_id: int
+    customer_name: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pin_code: Optional[str] = None
+    gst_number: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BillOrderInfo(ISTModel):
+    order_id: int
+    order_code: str
+    customer: Optional[BillCustomerInfo] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BillTruckInfo(ISTModel):
+    truck_id: int
+    truck_number: str
+
+    class Config:
+        from_attributes = True
+
+
+class BillDriverInfo(ISTModel):
+    driver_id: int
+    driver_name: str
+
+    class Config:
+        from_attributes = True
+
+
+class BillDispatchInfo(ISTModel):
+    dispatch_id: int
+    truck: Optional[BillTruckInfo] = None
+    driver: Optional[BillDriverInfo] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DeliveryBillRead(ISTModel):
     id: int
     branch_id: int
@@ -1239,6 +1286,8 @@ class DeliveryBillRead(ISTModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     items: List[DeliveryBillItemRead] = []
+    order: Optional[BillOrderInfo] = None
+    dispatch: Optional[BillDispatchInfo] = None
 
     @validator('invoice_date', 'delivery_note_date', 'reference_date',
                'created_at', 'updated_at', pre=True)

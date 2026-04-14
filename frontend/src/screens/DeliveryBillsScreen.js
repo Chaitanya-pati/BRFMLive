@@ -202,164 +202,363 @@ export default function DeliveryBillsScreen({ navigation, route }) {
   );
 }
 
+// Company info — edit these to match your mill's details
+const COMPANY_INFO = {
+  name: 'Your Mill Name (P) Ltd',
+  address: 'Industrial Area, Plot No. XX',
+  city: 'Your City',
+  state: 'Your State',
+  stateCode: '00',
+  cin: 'U00000XX0000PTC000000',
+  gstin: 'XXXXXXXXXXXXXXXXX',
+  pan: 'XXXXXXXXXX',
+  jurisdiction: 'YOUR CITY',
+};
+
 function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const sc = STATUS_COLORS[bill.payment_status] || STATUS_COLORS.PENDING;
-  const customerName = bill.order?.customer?.customer_name || bill.destination || '—';
-  const customerGST = bill.order?.customer?.gst_number || '—';
-  const customerAddr = [
-    bill.order?.customer?.address,
-    bill.order?.customer?.city,
-    bill.order?.customer?.state,
-    bill.order?.customer?.pin_code,
-  ].filter(Boolean).join(', ') || '—';
+
+  const cust = bill.order?.customer || {};
+  const customerName = cust.customer_name || bill.destination || '—';
+  const customerGSTIN = cust.gst_number || '—';
+  const customerState = cust.state || '—';
+  const customerAddr = [cust.address, cust.city, cust.state, cust.pin_code]
+    .filter(Boolean).join(', ') || '—';
+
+  const vehicleNo = bill.dispatch?.truck?.truck_number || '—';
+  const driverName = bill.dispatch?.driver?.driver_name || '—';
+  const buyerOrderNo = bill.order?.order_code || '—';
+
+  const totalBags = (bill.items || []).reduce((s, it) => s + (it.quantity_bags || 0), 0);
+
+  // Build HSN summary: group by HSN code
+  const hsnMap = {};
+  (bill.items || []).forEach(it => {
+    const key = it.hsn_sac_code || 'N/A';
+    hsnMap[key] = (hsnMap[key] || 0) + (it.amount || 0);
+  });
+
+  const hasTax = (bill.total_tax_amount || 0) > 0;
+  const taxWords = hasTax ? AmountWords(bill.total_tax_amount) : 'NIL';
 
   return (
-    <View style={previewStyles.container}>
-      {/* Header bar */}
-      <View style={previewStyles.header}>
-        <Text style={previewStyles.headerTitle}>Tax Invoice</Text>
-        <TouchableOpacity onPress={onClose} style={previewStyles.closeBtn}>
-          <Text style={previewStyles.closeBtnText}>✕ Close</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Invoice title block */}
-      <View style={previewStyles.invoiceTitle}>
-        <Text style={previewStyles.invoiceNo}>{bill.invoice_number}</Text>
-        <View style={[previewStyles.statusBadge, { backgroundColor: sc.bg }]}>
-          <Text style={[previewStyles.statusBadgeText, { color: sc.text }]}>{bill.payment_status}</Text>
+    <View style={inv.outer}>
+      {/* ── Toolbar (outside invoice border) ── */}
+      <View style={inv.toolbar}>
+        <View style={[inv.statusPill, { backgroundColor: sc.bg }]}>
+          <Text style={[inv.statusPillText, { color: sc.text }]}>{bill.payment_status}</Text>
+        </View>
+        <View style={inv.toolbarRight}>
+          <Text style={inv.toolbarInvoiceNo}>{bill.invoice_number}</Text>
+          <TouchableOpacity onPress={onClose} style={inv.closeBtn}>
+            <Text style={inv.closeBtnText}>✕ Close</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Two-col: Bill To + Bill Info */}
-      <View style={[previewStyles.twoCol, isMobile && previewStyles.twoColMobile]}>
-        <View style={previewStyles.colBox}>
-          <Text style={previewStyles.colLabel}>Bill To</Text>
-          <Text style={previewStyles.colValue}>{customerName}</Text>
-          <Text style={previewStyles.colSub}>{customerAddr}</Text>
-          <Text style={previewStyles.colSub}>GSTIN: {customerGST}</Text>
-        </View>
-        <View style={previewStyles.colBox}>
-          <Text style={previewStyles.colLabel}>Invoice Details</Text>
-          <InfoRow label="Date" value={formatISTDate(bill.invoice_date)} />
-          <InfoRow label="Dispatch #" value={bill.dispatch_id} />
-          {bill.destination && <InfoRow label="Destination" value={bill.destination} />}
-          {bill.terms_of_delivery && <InfoRow label="Terms" value={bill.terms_of_delivery} />}
-          {bill.lr_rr_no && <InfoRow label="LR/RR No." value={bill.lr_rr_no} />}
-        </View>
-      </View>
+      {/* ══ INVOICE BODY (bordered) ══ */}
+      <View style={inv.body}>
 
-      {/* Items table */}
-      <View style={previewStyles.section}>
-        <Text style={previewStyles.sectionTitle}>Items</Text>
-        <View style={previewStyles.itemsTable}>
-          <View style={[previewStyles.itemRow, previewStyles.itemHeader]}>
-            <Text style={[previewStyles.itemCell, { flex: 2 }]}>Product</Text>
-            <Text style={previewStyles.itemCell}>HSN</Text>
-            <Text style={previewStyles.itemCell}>Bags</Text>
-            <Text style={previewStyles.itemCell}>Tons</Text>
-            <Text style={previewStyles.itemCell}>Rate</Text>
-            <Text style={[previewStyles.itemCell, previewStyles.rightAlign]}>Amount</Text>
+        {/* ── Row 1: Company | Heading | Invoice No./Date ── */}
+        <View style={[inv.row, { minHeight: 110 }]}>
+          {/* Left: Seller info */}
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000' }]}>
+            <Text style={inv.companyName}>{COMPANY_INFO.name}</Text>
+            <Text style={inv.companyLine}>{COMPANY_INFO.address}</Text>
+            <Text style={inv.companyLine}>{COMPANY_INFO.city}</Text>
+            <Text style={inv.companyLine}>{COMPANY_INFO.state}</Text>
+            <Text style={inv.companyLine}>CIN: {COMPANY_INFO.cin}</Text>
+            <Text style={inv.companyLine}>GSTIN/UIN: {COMPANY_INFO.gstin}</Text>
+            <Text style={inv.companyLine}>State Name : {COMPANY_INFO.state},  Code : {COMPANY_INFO.stateCode}</Text>
           </View>
-          {(bill.items || []).map((item, i) => (
-            <View key={i} style={previewStyles.itemRow}>
-              <Text style={[previewStyles.itemCell, { flex: 2 }]}>{item.product_name}</Text>
-              <Text style={previewStyles.itemCell}>{item.hsn_sac_code || '—'}</Text>
-              <Text style={previewStyles.itemCell}>{item.quantity_bags || 0}</Text>
-              <Text style={previewStyles.itemCell}>{(item.quantity_ton || 0).toFixed(3)}</Text>
-              <Text style={previewStyles.itemCell}>
-                {item.quantity_bags > 0
-                  ? `₹${(item.rate_per_bag || 0).toFixed(2)}/bag`
-                  : `₹${(item.rate_per_ton || 0).toFixed(2)}/t`}
+
+          {/* Center: Tax Invoice heading */}
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000', alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={inv.invoiceHeading}>Tax Invoice</Text>
+            <Text style={inv.originalTag}>(ORIGINAL FOR RECIPIENT)</Text>
+          </View>
+
+          {/* Right: Invoice No. + Date */}
+          <View style={[inv.col, { flex: 2 }]}>
+            <View style={inv.metaRow}>
+              <Text style={inv.metaLabel}>Invoice No.</Text>
+              <Text style={[inv.metaLabel, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>Dated</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaValue}>{bill.invoice_number}</Text>
+              <Text style={[inv.metaValue, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>{formatISTDate(bill.invoice_date)}</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaLabel}>Delivery Note</Text>
+              <Text style={[inv.metaLabel, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>Mode/Terms of Payment</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaValue}>{bill.delivery_note_no || ''}</Text>
+              <Text style={[inv.metaValue, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>{bill.terms_of_delivery || ''}</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaLabel}>Reference No. &amp; Date.</Text>
+              <Text style={[inv.metaLabel, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>Other References</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaValue}>{bill.reference_no || ''}</Text>
+              <Text style={[inv.metaValue, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>{bill.other_references || ''}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Row 2: Buyer's Order No. / Dispatch Doc No. / Dispatched through / LR-RR ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', minHeight: 60 }]}>
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000' }]}>
+            <Text style={inv.fieldLabel}>Consignee (Ship to)</Text>
+          </View>
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000' }]}>
+            <View style={inv.metaRow}>
+              <Text style={inv.metaLabel}>Buyer's Order No.</Text>
+              <Text style={[inv.metaLabel, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>Dated</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaValue}>{buyerOrderNo}</Text>
+              <Text style={[inv.metaValue, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>{formatISTDate(bill.invoice_date)}</Text>
+            </View>
+          </View>
+          <View style={[inv.col, { flex: 2 }]}>
+            <View style={inv.metaRow}>
+              <Text style={inv.metaLabel}>Dispatch Doc No.</Text>
+              <Text style={[inv.metaLabel, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>Delivery Note Date</Text>
+            </View>
+            <View style={[inv.metaRow, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <Text style={inv.metaValue}>{bill.dispatch_id}</Text>
+              <Text style={[inv.metaValue, { borderLeftWidth: 1, borderLeftColor: '#000', paddingLeft: 6 }]}>{bill.delivery_note_date ? formatISTDate(bill.delivery_note_date) : ''}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Row 3: Consignee address | Dispatched through + Destination ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', minHeight: 80 }]}>
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000' }]}>
+            <Text style={inv.custName}>{customerName}</Text>
+            <Text style={inv.custLine}>{customerAddr}</Text>
+            <Text style={inv.custLine}>GSTIN/UIN     : {customerGSTIN}</Text>
+            <Text style={inv.custLine}>State Name     : {customerState}</Text>
+          </View>
+          <View style={[inv.col, { flex: 4 }]}>
+            <View style={[inv.metaRow, { flex: 1 }]}>
+              <View style={[inv.col, { flex: 1, borderRightWidth: 1, borderRightColor: '#000' }]}>
+                <Text style={inv.metaLabel}>Dispatched through</Text>
+                <Text style={inv.metaValue}>{driverName}</Text>
+              </View>
+              <View style={[inv.col, { flex: 1 }]}>
+                <Text style={inv.metaLabel}>Destination</Text>
+                <Text style={inv.metaValue}>{bill.destination || '—'}</Text>
+              </View>
+            </View>
+            <View style={[inv.metaRow, { flex: 1, borderTopWidth: 1, borderTopColor: '#000' }]}>
+              <View style={[inv.col, { flex: 1, borderRightWidth: 1, borderRightColor: '#000' }]}>
+                <Text style={inv.metaLabel}>Bill of Lading/LR-RR No.</Text>
+                <Text style={inv.metaValue}>{bill.lr_rr_no || ''}</Text>
+              </View>
+              <View style={[inv.col, { flex: 1 }]}>
+                <Text style={inv.metaLabel}>Motor Vehicle No.</Text>
+                <Text style={[inv.metaValue, { fontWeight: '700' }]}>{vehicleNo}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Row 4: Buyer (Bill to) | Terms of Delivery ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', minHeight: 80 }]}>
+          <View style={[inv.col, { flex: 2, borderRightWidth: 1, borderRightColor: '#000' }]}>
+            <Text style={inv.fieldLabel}>Buyer (Bill to)</Text>
+            <Text style={inv.custName}>{customerName}</Text>
+            <Text style={inv.custLine}>{customerAddr}</Text>
+            <Text style={inv.custLine}>GSTIN/UIN     : {customerGSTIN}</Text>
+            <Text style={inv.custLine}>State Name     : {customerState}</Text>
+          </View>
+          <View style={[inv.col, { flex: 4 }]}>
+            <Text style={inv.metaLabel}>Terms of Delivery</Text>
+            <Text style={inv.metaValue}>{bill.terms_of_delivery || ''}</Text>
+          </View>
+        </View>
+
+        {/* ── Items Table Header ── */}
+        <View style={[inv.row, inv.tableHeader, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+          <Text style={[inv.thCell, { flex: 3 }]}>Description of Goods</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1.2 }]}>HSN/SAC</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1.5 }]}>Quantity</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>Rate</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 0.8 }]}>per</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8 }]}>Amount</Text>
+        </View>
+
+        {/* ── Item Rows ── */}
+        {(bill.items || []).map((item, i) => {
+          const isBag = (item.quantity_bags || 0) > 0;
+          return (
+            <View key={i} style={[inv.row, inv.itemRow]}>
+              <View style={[inv.col, { flex: 3 }]}>
+                <Text style={inv.itemName}>{item.product_name}</Text>
+              </View>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1.2 }]}>{item.hsn_sac_code || ''}</Text>
+              <View style={[inv.col, inv.thBorder, { flex: 1.5 }]}>
+                {isBag
+                  ? <Text style={[inv.tdCell, { fontWeight: '700' }]}>{item.quantity_bags} Bags</Text>
+                  : null}
+                <Text style={[inv.tdCell, { color: '#555' }]}>({(item.quantity_ton || 0).toFixed(3)} kgs)</Text>
+              </View>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>
+                {isBag
+                  ? (item.rate_per_bag || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                  : (item.rate_per_ton || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </Text>
-              <Text style={[previewStyles.itemCell, previewStyles.rightAlign]}>
-                ₹{(item.amount || 0).toFixed(2)}
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 0.8 }]}>{isBag ? 'Bags' : 'Tons'}</Text>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8, fontWeight: '600' }]}>
+                {(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </Text>
             </View>
-          ))}
+          );
+        })}
+
+        {/* ── Empty rows to fill space ── */}
+        {[...Array(Math.max(0, 4 - (bill.items || []).length))].map((_, i) => (
+          <View key={`empty-${i}`} style={[inv.row, inv.itemRow, { minHeight: 22 }]}>
+            <View style={[inv.col, { flex: 3 }]} /><View style={[inv.col, inv.thBorder, { flex: 1.2 }]} />
+            <View style={[inv.col, inv.thBorder, { flex: 1.5 }]} /><View style={[inv.col, inv.thBorder, { flex: 1 }]} />
+            <View style={[inv.col, inv.thBorder, { flex: 0.8 }]} /><View style={[inv.col, inv.thBorder, { flex: 1.5 }]} />
+          </View>
+        ))}
+
+        {/* ── Total row ── */}
+        <View style={[inv.row, inv.totalRow]}>
+          <Text style={[inv.totalLabel, { flex: 3 }]}>Total</Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1.2 }]}></Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1.5 }]}>
+            {totalBags > 0 ? `${totalBags} Bags` : ''}
+          </Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]}></Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 0.8 }]}></Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8 }]}>
+            {(bill.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ₹
+          </Text>
+        </View>
+
+        {/* ── Amount in words ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', padding: 6 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={inv.wordsLabel}>Amount Chargeable (in words)</Text>
+            <Text style={inv.wordsValue}>{AmountWords(bill.total_amount)}</Text>
+          </View>
+          <Text style={inv.eoe}>E. &amp; O.E</Text>
+        </View>
+
+        {/* ── HSN/SAC Summary Table ── */}
+        <View style={[inv.row, inv.tableHeader, { borderTopWidth: 1, borderTopColor: '#000' }]}>
+          <Text style={[inv.thCell, { flex: 2 }]}>HSN/SAC</Text>
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>Taxable Value</Text>
+          {bill.cgst_percent > 0 && <>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>CGST %</Text>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>CGST Amt</Text>
+          </>}
+          {bill.sgst_percent > 0 && <>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>SGST %</Text>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>SGST Amt</Text>
+          </>}
+          {bill.igst_percent > 0 && <>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>IGST %</Text>
+            <Text style={[inv.thCell, inv.thBorder, { flex: 1 }]}>IGST Amt</Text>
+          </>}
+          <Text style={[inv.thCell, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8 }]}>Taxable Value</Text>
+        </View>
+        {Object.entries(hsnMap).map(([hsn, amt], i) => (
+          <View key={i} style={[inv.row, inv.itemRow]}>
+            <Text style={[inv.tdCell, { flex: 2 }]}>{hsn}</Text>
+            <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+            {bill.cgst_percent > 0 && <>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{bill.cgst_percent}%</Text>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{(bill.cgst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+            </>}
+            {bill.sgst_percent > 0 && <>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{bill.sgst_percent}%</Text>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{(bill.sgst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+            </>}
+            {bill.igst_percent > 0 && <>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{bill.igst_percent}%</Text>
+              <Text style={[inv.tdCell, inv.thBorder, { flex: 1 }]}>{(bill.igst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+            </>}
+            <Text style={[inv.tdCell, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8, fontWeight: '700' }]}>{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+          </View>
+        ))}
+        <View style={[inv.row, inv.totalRow]}>
+          <Text style={[inv.totalLabel, { flex: 2 }]}>Total</Text>
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]}>{(bill.taxable_value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+          {bill.cgst_percent > 0 && <><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]} /><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]}>{(bill.cgst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text></>}
+          {bill.sgst_percent > 0 && <><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]} /><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]}>{(bill.sgst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text></>}
+          {bill.igst_percent > 0 && <><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]} /><Text style={[inv.totalLabel, inv.thBorder, { flex: 1 }]}>{(bill.igst_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text></>}
+          <Text style={[inv.totalLabel, inv.thBorder, { flex: 1.5, textAlign: 'right', paddingRight: 8 }]}>{(bill.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+        </View>
+
+        {/* ── Tax Amount in Words + PAN ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', padding: 6, gap: 4 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={inv.companyLine}>Tax Amount (in words)  :  <Text style={{ fontWeight: '700' }}>{taxWords}</Text></Text>
+            <Text style={inv.companyLine}>Company's PAN  :  <Text style={{ fontWeight: '700' }}>{COMPANY_INFO.pan}</Text></Text>
+          </View>
+        </View>
+
+        {/* ── Declaration + Signatory ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', minHeight: 60 }]}>
+          <View style={[inv.col, { flex: 3, borderRightWidth: 1, borderRightColor: '#000', padding: 6 }]}>
+            <Text style={inv.fieldLabel}>Declaration</Text>
+            <Text style={[inv.companyLine, { marginTop: 4 }]}>
+              We declare that this invoice shows the actual price of the goods
+              described and that all particulars are true and correct.
+            </Text>
+          </View>
+          <View style={[inv.col, { flex: 2, padding: 6, alignItems: 'flex-end' }]}>
+            <Text style={inv.companyLine}>for {COMPANY_INFO.name}</Text>
+            <View style={{ flex: 1 }} />
+            <Text style={[inv.companyLine, { fontStyle: 'italic' }]}>Authorised Signatory</Text>
+          </View>
+        </View>
+
+        {/* ── Jurisdiction + Computer Invoice ── */}
+        <View style={[inv.row, { borderTopWidth: 1, borderTopColor: '#000', padding: 6, alignItems: 'center', justifyContent: 'center' }]}>
+          <Text style={inv.footer}>SUBJECT TO {COMPANY_INFO.jurisdiction.toUpperCase()} JURISDICTION</Text>
+        </View>
+        <View style={[inv.row, { padding: 4, alignItems: 'center', justifyContent: 'center' }]}>
+          <Text style={[inv.footer, { fontSize: 9, color: '#666' }]}>This is a Computer Generated Invoice</Text>
         </View>
       </View>
 
-      {/* Tax breakdown */}
-      <View style={previewStyles.taxBlock}>
-        <TaxRow label="Taxable Value" value={bill.taxable_value} />
-        {bill.cgst_percent > 0 && (
-          <TaxRow label={`CGST @ ${bill.cgst_percent}%`} value={bill.cgst_amount} />
-        )}
-        {bill.sgst_percent > 0 && (
-          <TaxRow label={`SGST @ ${bill.sgst_percent}%`} value={bill.sgst_amount} />
-        )}
-        {bill.igst_percent > 0 && (
-          <TaxRow label={`IGST @ ${bill.igst_percent}%`} value={bill.igst_amount} />
-        )}
-        <View style={previewStyles.totalRow}>
-          <Text style={previewStyles.totalLabel}>Total Amount</Text>
-          <Text style={previewStyles.totalValue}>₹{(bill.total_amount || 0).toFixed(2)}</Text>
-        </View>
-      </View>
-
-      {/* Amount in words */}
-      <View style={previewStyles.wordsBox}>
-        <Text style={previewStyles.wordsLabel}>Amount in Words:</Text>
-        <Text style={previewStyles.wordsValue}>{AmountWords(bill.total_amount)}</Text>
-      </View>
-
-      {/* Update payment status */}
-      <View style={previewStyles.statusSection}>
-        <Text style={previewStyles.statusSectionLabel}>Update Payment Status</Text>
-        <View style={previewStyles.statusBtns}>
+      {/* ── Action Buttons (outside invoice) ── */}
+      <View style={inv.actions}>
+        <View style={inv.statusBtns}>
+          <Text style={{ fontSize: 12, color: '#374151', fontWeight: '600', marginRight: 8 }}>Mark as:</Text>
           {['PENDING', 'PARTIAL', 'PAID'].map(s => (
             <TouchableOpacity
               key={s}
-              style={[
-                previewStyles.statusBtn,
-                bill.payment_status === s && previewStyles.statusBtnActive,
-              ]}
+              style={[inv.statusBtn, bill.payment_status === s && inv.statusBtnActive]}
               onPress={() => onUpdateStatus(bill.id, s)}
               disabled={updatingStatus || bill.payment_status === s}
             >
-              {updatingStatus && bill.payment_status !== s ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Text style={[
-                  previewStyles.statusBtnText,
-                  bill.payment_status === s && previewStyles.statusBtnTextActive,
-                ]}>{s}</Text>
-              )}
+              {updatingStatus && bill.payment_status !== s
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Text style={[inv.statusBtnText, bill.payment_status === s && inv.statusBtnTextActive]}>{s}</Text>
+              }
             </TouchableOpacity>
           ))}
         </View>
+        <View style={inv.actionBtns}>
+          <TouchableOpacity style={inv.deleteBtn} onPress={() => onDelete(bill)}>
+            <Text style={inv.deleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={inv.doneBtn} onPress={onClose}>
+            <Text style={inv.doneBtnText}>Close</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      {/* Footer actions */}
-      <View style={previewStyles.footerActions}>
-        <TouchableOpacity style={previewStyles.deleteBtn} onPress={() => onDelete(bill)}>
-          <Text style={previewStyles.deleteBtnText}>Delete Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={previewStyles.doneBtn} onPress={onClose}>
-          <Text style={previewStyles.doneBtnText}>Close</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 6, marginBottom: 3 }}>
-      <Text style={{ fontSize: 12, color: '#6b7280', width: 80 }}>{label}:</Text>
-      <Text style={{ fontSize: 12, color: '#111827', flex: 1, fontWeight: '500' }}>{value}</Text>
-    </View>
-  );
-}
-
-function TaxRow({ label, value }) {
-  return (
-    <View style={previewStyles.taxRow}>
-      <Text style={previewStyles.taxLabel}>{label}</Text>
-      <Text style={previewStyles.taxValue}>₹{(value || 0).toFixed(2)}</Text>
     </View>
   );
 }
@@ -422,47 +621,65 @@ const styles = StyleSheet.create({
   previewPanelMobile: { maxWidth: '100%' },
 });
 
-const previewStyles = StyleSheet.create({
-  container: { padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+const inv = StyleSheet.create({
+  outer: { flex: 1 },
+  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingBottom: 10 },
+  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toolbarInvoiceNo: { fontSize: 13, fontWeight: '700', color: colors.primary },
   closeBtn: { backgroundColor: '#f1f5f9', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 },
-  closeBtnText: { fontSize: 13, color: '#374151', fontWeight: '600' },
-  invoiceTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  invoiceNo: { fontSize: 15, fontWeight: '700', color: colors.primary },
-  statusBadge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
-  statusBadgeText: { fontSize: 11, fontWeight: '700' },
-  twoCol: { flexDirection: 'row', gap: 16, marginBottom: 16 },
-  twoColMobile: { flexDirection: 'column' },
-  colBox: { flex: 1, backgroundColor: '#f9fafb', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  colLabel: { fontSize: 11, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  colValue: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  colSub: { fontSize: 12, color: '#6b7280', marginBottom: 2 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
-  itemsTable: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, overflow: 'hidden' },
-  itemRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  itemHeader: { backgroundColor: '#f8fafc' },
-  itemCell: { flex: 1, paddingHorizontal: 8, paddingVertical: 8, fontSize: 12 },
-  rightAlign: { textAlign: 'right' },
-  taxBlock: { backgroundColor: '#f9fafb', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  taxRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  taxLabel: { fontSize: 13, color: '#374151' },
-  taxValue: { fontSize: 13, color: '#374151', fontWeight: '500' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 2, borderTopColor: '#374151', marginTop: 8, paddingTop: 8 },
-  totalLabel: { fontSize: 14, fontWeight: '800', color: '#111827' },
-  totalValue: { fontSize: 14, fontWeight: '800', color: colors.primary },
-  wordsBox: { backgroundColor: '#fffbeb', borderRadius: 8, padding: 10, marginBottom: 14, borderWidth: 1, borderColor: '#fde68a' },
-  wordsLabel: { fontSize: 11, color: '#92400e', fontWeight: '700', marginBottom: 3 },
-  wordsValue: { fontSize: 12, color: '#78350f', fontStyle: 'italic' },
-  statusSection: { marginBottom: 16 },
-  statusSectionLabel: { fontSize: 12, fontWeight: '700', color: '#374151', marginBottom: 8 },
-  statusBtns: { flexDirection: 'row', gap: 8 },
-  statusBtn: { flex: 1, paddingVertical: 9, borderRadius: 6, borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center' },
+  closeBtnText: { fontSize: 12, color: '#374151', fontWeight: '600' },
+  statusPill: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+
+  // Invoice bordered body
+  body: { borderWidth: 1, borderColor: '#000' },
+  row: { flexDirection: 'row' },
+  col: { padding: 6 },
+
+  // Typography
+  companyName: { fontSize: 12, fontWeight: '800', color: '#000', marginBottom: 2 },
+  companyLine: { fontSize: 10, color: '#222', lineHeight: 15 },
+  invoiceHeading: { fontSize: 16, fontWeight: '900', color: '#000', textAlign: 'center' },
+  originalTag: { fontSize: 9, color: '#444', textAlign: 'center', fontStyle: 'italic', marginTop: 4 },
+  fieldLabel: { fontSize: 9, fontWeight: '700', color: '#444', marginBottom: 2 },
+  custName: { fontSize: 11, fontWeight: '800', color: '#000', marginBottom: 2 },
+  custLine: { fontSize: 10, color: '#222', lineHeight: 15 },
+
+  // Metadata grid (right side of header)
+  metaRow: { flexDirection: 'row', flex: 1 },
+  metaLabel: { flex: 1, fontSize: 9, color: '#555', padding: 3 },
+  metaValue: { flex: 1, fontSize: 10, fontWeight: '600', color: '#000', padding: 3 },
+
+  // Table header
+  tableHeader: { backgroundColor: '#f0f0f0' },
+  thBorder: { borderLeftWidth: 1, borderLeftColor: '#000' },
+  thCell: { fontSize: 10, fontWeight: '700', color: '#000', paddingHorizontal: 6, paddingVertical: 5, textAlign: 'center' },
+
+  // Table data rows
+  itemRow: { borderTopWidth: 1, borderTopColor: '#ddd', minHeight: 30 },
+  itemName: { fontSize: 11, fontWeight: '700', color: '#000', paddingHorizontal: 6, paddingVertical: 4 },
+  tdCell: { fontSize: 10, color: '#111', paddingHorizontal: 6, paddingVertical: 5, textAlignVertical: 'center' },
+
+  // Total row
+  totalRow: { borderTopWidth: 2, borderTopColor: '#000', backgroundColor: '#f9f9f9' },
+  totalLabel: { fontSize: 11, fontWeight: '800', color: '#000', paddingHorizontal: 6, paddingVertical: 5 },
+
+  // Amount in words
+  wordsLabel: { fontSize: 9, color: '#555', marginBottom: 2 },
+  wordsValue: { fontSize: 11, fontWeight: '800', color: '#000' },
+  eoe: { fontSize: 9, color: '#555', fontStyle: 'italic', alignSelf: 'flex-end' },
+
+  // Footer text
+  footer: { fontSize: 10, fontWeight: '700', color: '#000', textAlign: 'center' },
+
+  // Action area below invoice
+  actions: { paddingTop: 14, gap: 10 },
+  statusBtns: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  statusBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 6, borderWidth: 1, borderColor: '#d1d5db' },
   statusBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   statusBtnText: { fontSize: 12, fontWeight: '600', color: '#374151' },
   statusBtnTextActive: { color: '#fff' },
-  footerActions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  actionBtns: { flexDirection: 'row', gap: 10 },
   deleteBtn: { flex: 1, paddingVertical: 11, borderRadius: 6, borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fef2f2', alignItems: 'center' },
   deleteBtnText: { color: '#dc2626', fontSize: 13, fontWeight: '600' },
   doneBtn: { flex: 2, paddingVertical: 11, borderRadius: 6, backgroundColor: colors.primary, alignItems: 'center' },
