@@ -14,10 +14,11 @@ import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
 import Button from "../components/Button";
 import DynamicTable, { createSelectCell, createNumberCell } from "../components/DynamicTable";
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import colors from "../theme/colors";
 import { dispatchApi, customerOrderApi, driverApi, bagSizeApi, truckApi } from "../api/client";
 import { showError, showSuccess, showConfirm } from "../utils/customAlerts";
-import { FaPlus, FaTrash, FaTruck, FaTimes, FaCheckSquare, FaSquare } from "react-icons/fa";
+import { FaPlus, FaTrash, FaTruck, FaTimes } from "react-icons/fa";
 
 export default function DispatchManagementScreen({ navigation }) {
   const [dispatches, setDispatches] = useState([]);
@@ -110,6 +111,31 @@ export default function DispatchManagementScreen({ navigation }) {
       const newItems = buildItemsForOrder(order);
       setDispatchItems(prev => [...prev, ...newItems]);
     }
+  };
+
+  const handleOrderSelectionChange = (newIds) => {
+    const added = newIds.filter(id => !selectedOrderIds.includes(id));
+    const removed = selectedOrderIds.filter(id => !newIds.includes(id));
+
+    let updatedItems = [...dispatchItems];
+
+    removed.forEach(idStr => {
+      const order = orders.find(o => o.order_id.toString() === idStr);
+      if (order) {
+        const orderItemIds = (order.items || []).map(i => i.order_item_id);
+        updatedItems = updatedItems.filter(item => !orderItemIds.includes(item.order_item_id));
+      }
+    });
+
+    added.forEach(idStr => {
+      const order = orders.find(o => o.order_id.toString() === idStr);
+      if (order) {
+        updatedItems = [...updatedItems, ...buildItemsForOrder(order)];
+      }
+    });
+
+    setSelectedOrderIds(newIds);
+    setDispatchItems(updatedItems);
   };
 
   const handleItemCellChange = (orderItemId, key, value) => {
@@ -545,45 +571,18 @@ export default function DispatchManagementScreen({ navigation }) {
                   )}
                 </View>
 
-                <View style={styles.orderCheckList}>
-                  {orders.length === 0 ? (
-                    <Text style={styles.emptyText}>No orders available</Text>
-                  ) : (
-                    orders.map(order => {
-                      const isChecked = selectedOrderIds.includes(order.order_id.toString());
-                      const customerName = order.customer?.customer_name || order.customer_name || "Unknown";
-                      const totalItems = (order.items || []).length;
-                      return (
-                        <TouchableOpacity
-                          key={order.order_id}
-                          style={[styles.orderCheckRow, isChecked && styles.orderCheckRowSelected]}
-                          onPress={() => handleToggleOrder(order.order_id)}
-                        >
-                          <View style={styles.checkboxIcon}>
-                            {isChecked
-                              ? <FaCheckSquare color={colors.primary} size={18} />
-                              : <FaSquare color="#cbd5e1" size={18} />
-                            }
-                          </View>
-                          <View style={styles.orderCheckInfo}>
-                            <Text style={[styles.orderCheckCode, isChecked && { color: colors.primary }]}>
-                              {order.order_code || `Order #${order.order_id}`}
-                            </Text>
-                            <Text style={styles.orderCheckCustomer}>
-                              {customerName} · {totalItems} item{totalItems !== 1 ? "s" : ""}
-                            </Text>
-                          </View>
-                          <Text style={[styles.orderStatusBadge,
-                            order.order_status === 'DELIVERED' && { backgroundColor: '#dcfce7', color: '#16a34a' },
-                            order.order_status === 'DISPATCHED' && { backgroundColor: '#fef9c3', color: '#ca8a04' },
-                          ]}>
-                            {order.order_status || 'PENDING'}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
-                </View>
+                <MultiSelectDropdown
+                  placeholder="Select customer orders…"
+                  value={selectedOrderIds}
+                  onValueChange={handleOrderSelectionChange}
+                  searchable
+                  options={orders.map(order => ({
+                    value: order.order_id.toString(),
+                    label: order.order_code || `Order #${order.order_id}`,
+                    sublabel: `${order.customer?.customer_name || order.customer_name || 'Unknown'} · ${(order.items || []).length} item${(order.items || []).length !== 1 ? 's' : ''}`,
+                    badge: order.order_status || 'PENDING',
+                  }))}
+                />
 
                 {/* Per-order item entry — DynamicTable */}
                 {selectedOrders.map((order) => {
@@ -702,15 +701,6 @@ const styles = StyleSheet.create({
   stepTitle: { fontSize: 14, fontWeight: "700", color: "#0f172a", flex: 1 },
   stepDoneTag: { fontSize: 12, fontWeight: "600", color: colors.primary, backgroundColor: "#eff6ff", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
 
-  // Order checklist
-  orderCheckList: { gap: 6, marginBottom: 12 },
-  orderCheckRow: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0", backgroundColor: "#f8fafc", gap: 10 },
-  orderCheckRowSelected: { borderColor: colors.primary, backgroundColor: "#eff6ff" },
-  checkboxIcon: { width: 22, alignItems: "center" },
-  orderCheckInfo: { flex: 1 },
-  orderCheckCode: { fontSize: 13, fontWeight: "700", color: "#0f172a" },
-  orderCheckCustomer: { fontSize: 12, color: "#64748b", marginTop: 1 },
-  orderStatusBadge: { fontSize: 11, fontWeight: "600", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, backgroundColor: "#f1f5f9", color: "#64748b" },
   emptyText: { color: "#94a3b8", fontSize: 13, textAlign: "center", padding: 12 },
 
   // Order cards (item entry)
