@@ -980,6 +980,8 @@ class Transfer12HourRecord(Base):
     status = Column(String(50), default="PLANNED", nullable=False, index=True)
     water_added = Column(Float)
     moisture_level = Column(Float)
+    incoming_moisture = Column(Float)
+    target_moisture = Column(Float)
     transfer_start_time = Column(DateTime)
     transfer_end_time = Column(DateTime)
     created_by = Column(Integer, ForeignKey("users.id"))

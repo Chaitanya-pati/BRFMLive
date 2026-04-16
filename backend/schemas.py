@@ -100,6 +100,8 @@ class Transfer12HourRecordBase(ISTModel):
 class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
+    incoming_moisture: Optional[float] = None
+    target_moisture: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
     status: Optional[str] = "PLANNED"
     branch_id: Optional[int] = None
@@ -109,6 +111,8 @@ class Transfer12HourRecordUpdate(BaseModel):
     status: Optional[str] = None
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
+    incoming_moisture: Optional[float] = None
+    target_moisture: Optional[float] = None
     transfer_end_time: Optional[datetime] = None
 
 class CaptureParametersRequest(BaseModel):
@@ -126,6 +130,8 @@ class Transfer12HourRecord(Transfer12HourRecordBase):
     status: str
     water_added: Optional[float] = None
     moisture_level: Optional[float] = None
+    incoming_moisture: Optional[float] = None
+    target_moisture: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
     transfer_end_time: Optional[datetime] = None
     created_by: Optional[int] = None

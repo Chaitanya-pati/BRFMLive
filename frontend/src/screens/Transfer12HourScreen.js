@@ -50,6 +50,14 @@ export default function Transfer12HourScreen({ navigation }) {
   const [waterAdded, setWaterAdded] = useState("");
   const [moistureLevel, setMoistureLevel] = useState("");
 
+  // Before-start modal fields (captured BEFORE starting transfer)
+  const [incomingMoisture, setIncomingMoisture] = useState("");
+  const [targetMoisture, setTargetMoisture] = useState("");
+  const [showBeforeStartModal, setShowBeforeStartModal] = useState(false);
+  // Store pending source/dest while waiting for before-start modal confirmation
+  const [pendingSource, setPendingSource] = useState(null);
+  const [pendingDest, setPendingDest] = useState(null);
+
   const [activeTab, setActiveTab] = useState("TRANSFER");
   
   const [currentRecordId, setCurrentRecordId] = useState(null);
@@ -59,11 +67,6 @@ export default function Transfer12HourScreen({ navigation }) {
   // Modal state
   const [showDataModal, setShowDataModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
-  
-  // To track if we need to show parameters modal at start
-  const [showStartParamsModal, setShowStartParamsModal] = useState(false);
-  const [missingParamsBinNumber, setMissingParamsBinNumber] = useState("");
-  const [missingParamsList, setMissingParamsList] = useState([]);
   
   // For transfer details display
   const [transfer12hRecords, setTransfer12hRecords] = useState([]);
@@ -313,17 +316,10 @@ export default function Transfer12HourScreen({ navigation }) {
     }
   };
 
-  const handleStartTransfer = async () => {
+  const handleStartTransfer = () => {
     const isManualSpecial = transferType === "SPECIAL";
     const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
     const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-
-    console.log("handleStartTransfer triggered:", { 
-      transferType, 
-      source,
-      dest,
-      selectedOrderId: selectedOrder?.id
-    });
 
     if (!selectedOrder) {
       showAlert("Validation Error", "Please select a production order first");
@@ -335,71 +331,22 @@ export default function Transfer12HourScreen({ navigation }) {
       return;
     }
 
-    // Check if parameters are already captured in the 24h transfer record
-    const autoDetails = binDetailsMap[source];
-    const hasWater = autoDetails?.water_added !== null && autoDetails?.water_added !== 0 && autoDetails?.water_added !== undefined;
-    const hasMoisture = autoDetails?.moisture_level !== null && autoDetails?.moisture_level !== 0 && autoDetails?.moisture_level !== undefined;
-
-    if (hasWater && hasMoisture) {
-      // Both parameters are already captured - directly start transfer
-      console.log("Parameters already captured, starting transfer directly:", autoDetails);
-      setWaterAdded(autoDetails.water_added?.toString() || "");
-      setMoistureLevel(autoDetails.moisture_level?.toString() || "");
-      proceedWithStartTransfer(source, dest);
-    } else {
-      // Parameters missing - show modal to capture them
-      console.log("Parameters missing, showing capture modal. Has water:", hasWater, "Has moisture:", hasMoisture);
-      setWaterAdded(autoDetails?.water_added?.toString() || "");
-      setMoistureLevel(autoDetails?.moisture_level?.toString() || "");
-
-      // Build missing parameters info for the modal message
-      const srcBin = sourceBins.find(b => b.id.toString() === source.toString());
-      setMissingParamsBinNumber(srcBin?.bin_number || `Bin #${source}`);
-      const missing = [];
-      if (!hasWater) missing.push("Water Added");
-      if (!hasMoisture) missing.push("Moisture Level");
-      setMissingParamsList(missing);
-
-      setShowStartParamsModal(true);
-    }
+    // Always show before-start modal to capture incoming + target moisture
+    setPendingSource(source);
+    setPendingDest(dest);
+    setIncomingMoisture("");
+    setTargetMoisture("");
+    setShowBeforeStartModal(true);
   };
 
   const proceedWithStartTransfer = async (source, dest) => {
-    console.log("API Call - Start Transfer:", { source, dest, type: transferType });
+    if (!incomingMoisture || !targetMoisture) {
+      showAlert("Validation Error", "Please enter both Incoming Moisture and Target Moisture");
+      return;
+    }
     setLoading(true);
     try {
       const client = getApiClient();
-      
-      // First, save the captured parameters to the 24-hour bin
-      const sourceBinFromDetails = sourceBins.find(b => b.id.toString() === source.toString());
-      const order24hRecords = binDetailsMap;
-      let sourceBinRecordId = null;
-      
-      // Find the 24-hour transfer record for this source bin
-      try {
-        const records24h = await client.get("/24hour-transfer/records");
-        const matchingRecord = records24h.data.find(r => 
-          r.destination_bin_id === parseInt(source) && 
-          r.production_order_id === parseInt(selectedOrder.id) && 
-          r.status === "COMPLETED"
-        );
-        if (matchingRecord) {
-          sourceBinRecordId = matchingRecord.id;
-          // Update 24-hour bin with captured parameters
-          if (waterAdded || moistureLevel) {
-            console.log("Saving parameters to 24-hour bin record:", sourceBinRecordId);
-            await client.patch(`/24hour-transfer/records/${sourceBinRecordId}`, {
-              water_added: waterAdded ? parseFloat(waterAdded) : null,
-              moisture_level: moistureLevel ? parseFloat(moistureLevel) : null
-            });
-            console.log("✅ Parameters saved to 24-hour bin");
-          }
-        }
-      } catch (e) {
-        console.log("Could not update 24-hour bin:", e.message);
-      }
-      
-      // Now create the 12-hour transfer record
       const response = await client.post("/12hour-transfer/records", {
         production_order_id: parseInt(selectedOrder.id),
         source_bin_id: parseInt(source),
@@ -407,15 +354,16 @@ export default function Transfer12HourScreen({ navigation }) {
         transfer_type: transferType,
         status: "IN_PROGRESS",
         transfer_start_time: new Date().toISOString(),
-        water_added: waterAdded ? parseFloat(waterAdded) : null,
-        moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
+        incoming_moisture: parseFloat(incomingMoisture),
+        target_moisture: parseFloat(targetMoisture),
       });
 
       setCurrentRecordId(response.data.id);
-      // Start fresh transfer with timer at 0
       setTimer(0);
       setStage(STAGES.TRANSFER_ACTIVE);
-      setShowStartParamsModal(false);
+      setShowBeforeStartModal(false);
+      setPendingSource(null);
+      setPendingDest(null);
       showToast("Success", "Transfer started");
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to start transfer");
@@ -525,6 +473,10 @@ export default function Transfer12HourScreen({ navigation }) {
     setTransferQuantity("");
     setWaterAdded("");
     setMoistureLevel("");
+    setIncomingMoisture("");
+    setTargetMoisture("");
+    setPendingSource(null);
+    setPendingDest(null);
     setCurrentRecordId(null);
     setStage(STAGES.SELECT_ORDER);
   };
@@ -671,35 +623,52 @@ export default function Transfer12HourScreen({ navigation }) {
                     </Text>
                   </View>
                 </View>
-                {transfer.quantity_transferred !== null && (
-                  <View style={styles.transferDetailsGridRow}>
+                <View style={styles.transferDetailsGridRow}>
+                  <View style={styles.transferDetailCol}>
+                    <Text style={styles.transferDetailLabel}>Incoming M%</Text>
+                    <Text style={styles.transferDetailValue}>
+                      {transfer.incoming_moisture !== null && transfer.incoming_moisture !== undefined ? `${transfer.incoming_moisture}%` : "—"}
+                    </Text>
+                  </View>
+                  <View style={styles.transferDetailCol}>
+                    <Text style={styles.transferDetailLabel}>Target M%</Text>
+                    <Text style={styles.transferDetailValue}>
+                      {transfer.target_moisture !== null && transfer.target_moisture !== undefined ? `${transfer.target_moisture}%` : "—"}
+                    </Text>
+                  </View>
+                  {transfer.quantity_transferred > 0 && (
                     <View style={styles.transferDetailCol}>
                       <Text style={styles.transferDetailLabel}>Qty</Text>
                       <Text style={styles.transferDetailValue}>{transfer.quantity_transferred} T</Text>
                     </View>
+                  )}
+                </View>
+                {transfer.status === "COMPLETED" && (transfer.moisture_level !== null || transfer.water_added !== null) && (
+                  <View style={[styles.transferDetailsGridRow, { borderTopWidth: 0, paddingTop: 6 }]}>
                     <View style={styles.transferDetailCol}>
-                      <Text style={styles.transferDetailLabel}>Water</Text>
+                      <Text style={styles.transferDetailLabel}>Actual M%</Text>
                       <Text style={styles.transferDetailValue}>
-                        {transfer.water_added !== null ? `${transfer.water_added}L` : "—"}
+                        {transfer.moisture_level !== null && transfer.moisture_level !== undefined ? `${transfer.moisture_level}%` : "—"}
                       </Text>
                     </View>
                     <View style={styles.transferDetailCol}>
-                      <Text style={styles.transferDetailLabel}>Moisture</Text>
+                      <Text style={styles.transferDetailLabel}>Water Added</Text>
                       <Text style={styles.transferDetailValue}>
-                        {transfer.moisture_level !== null ? `${transfer.moisture_level}%` : "—"}
+                        {transfer.water_added !== null && transfer.water_added !== undefined ? `${transfer.water_added}L` : "—"}
                       </Text>
                     </View>
+                    <View style={styles.transferDetailCol} />
                   </View>
                 )}
-                
+
                 {/* Action Buttons */}
                 <View style={styles.transferActionButtons}>
-                  {transfer.status === "COMPLETED" && (transfer.water_added === null || transfer.water_added === 0 || transfer.moisture_level === null || transfer.moisture_level === 0) && (
+                  {transfer.status === "COMPLETED" && (transfer.moisture_level === null || transfer.moisture_level === undefined) && (
                     <TouchableOpacity
                       style={styles.transferActionButton}
                       onPress={() => handleOpenParametersModal(transfer)}
                     >
-                      <Text style={styles.transferActionButtonText}>➕ Add Water & Moisture</Text>
+                      <Text style={styles.transferActionButtonText}>➕ Add Actual Moisture & Water</Text>
                     </TouchableOpacity>
                   )}
                   {transfer.status === "IN_PROGRESS" && (
@@ -781,23 +750,23 @@ export default function Transfer12HourScreen({ navigation }) {
               <Text style={styles.modalSubtitle}>Please enter details before {pendingStatus?.toLowerCase()} the transfer.</Text>
               
               <InputField
-                label="Quantity transferred"
+                label="Quantity Transferred (Tonnes)"
                 value={transferQuantity}
                 onChangeText={setTransferQuantity}
                 keyboardType="decimal-pad"
                 placeholder="Enter quantity"
               />
               <InputField
-                label="Water Added"
-                value={waterAdded}
-                onChangeText={setWaterAdded}
+                label="Actual Moisture % (after transfer)"
+                value={moistureLevel}
+                onChangeText={setMoistureLevel}
                 keyboardType="decimal-pad"
                 placeholder="Optional"
               />
               <InputField
-                label="Moisture Level"
-                value={moistureLevel}
-                onChangeText={setMoistureLevel}
+                label="Water Added (Litres)"
+                value={waterAdded}
+                onChangeText={setWaterAdded}
                 keyboardType="decimal-pad"
                 placeholder="Optional"
               />
@@ -909,18 +878,20 @@ export default function Transfer12HourScreen({ navigation }) {
             <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || `Bin ${item.source_bin_id}`}</Text>
             <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || `Bin ${item.destination_bin_id}`}</Text>
             <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} T</Text>
-            <Text style={styles.sessionDetail}>Water: {item.water_added !== null ? `${item.water_added}L` : "—"}</Text>
-            <Text style={styles.sessionDetail}>Moisture: {item.moisture_level !== null ? `${item.moisture_level}%` : "—"}</Text>
+            <Text style={styles.sessionDetail}>Incoming Moisture: {item.incoming_moisture !== null && item.incoming_moisture !== undefined ? `${item.incoming_moisture}%` : "—"}</Text>
+            <Text style={styles.sessionDetail}>Target Moisture: {item.target_moisture !== null && item.target_moisture !== undefined ? `${item.target_moisture}%` : "—"}</Text>
+            <Text style={styles.sessionDetail}>Actual Moisture: {item.moisture_level !== null && item.moisture_level !== undefined ? `${item.moisture_level}%` : "—"}</Text>
+            <Text style={styles.sessionDetail}>Water Added: {item.water_added !== null && item.water_added !== undefined ? `${item.water_added}L` : "—"}</Text>
             <Text style={styles.sessionDetail}>Date: {formatISTDateTime(item.created_at)}</Text>
             
             {/* Action Buttons */}
             <View style={styles.transferActionButtons}>
-              {item.status === "COMPLETED" && (item.water_added === null || item.water_added === 0 || item.moisture_level === null || item.moisture_level === 0) && (
+              {item.status === "COMPLETED" && (item.moisture_level === null || item.moisture_level === undefined) && (
                 <TouchableOpacity
                   style={styles.transferActionButton}
                   onPress={() => handleOpenParametersModal(item)}
                 >
-                  <Text style={styles.transferActionButtonText}>➕ Add Water & Moisture</Text>
+                  <Text style={styles.transferActionButtonText}>➕ Add Actual Moisture & Water</Text>
                 </TouchableOpacity>
               )}
               {item.status === "IN_PROGRESS" && (
@@ -953,51 +924,47 @@ export default function Transfer12HourScreen({ navigation }) {
         renderHistory()
       )}
 
-      {/* Start Transfer Modal - Top Level */}
-      <Modal visible={showStartParamsModal} transparent animationType="fade">
+      {/* Before Start Modal - capture incoming + target moisture */}
+      <Modal visible={showBeforeStartModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Parameters Not Captured</Text>
+            <Text style={styles.modalTitle}>Before Starting Transfer</Text>
             <Text style={styles.modalSubtitle}>
-              {`For source bin ${missingParamsBinNumber}, the ${missingParamsList.join(" and ")} ${missingParamsList.length === 1 ? "is" : "are"} not captured. Please enter the ${missingParamsList.length === 1 ? "value" : "values"} below.`}
+              Enter moisture readings before starting the transfer.
             </Text>
             
             <InputField
-              label="Water Added (Litres)"
-              value={waterAdded}
-              onChangeText={setWaterAdded}
+              label="Incoming Moisture (%)"
+              value={incomingMoisture}
+              onChangeText={setIncomingMoisture}
               keyboardType="decimal-pad"
-              placeholder="0"
+              placeholder="e.g. 12.5"
             />
             <InputField
-              label="Moisture Level (%)"
-              value={moistureLevel}
-              onChangeText={setMoistureLevel}
+              label="Target Moisture (%)"
+              value={targetMoisture}
+              onChangeText={setTargetMoisture}
               keyboardType="decimal-pad"
-              placeholder="0"
+              placeholder="e.g. 14.0"
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowStartParamsModal(false)}
+                onPress={() => {
+                  setShowBeforeStartModal(false);
+                  setPendingSource(null);
+                  setPendingDest(null);
+                }}
               >
                 <Text style={styles.modalButtonCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={() => {
-                  const isManualSpecial = transferType === "SPECIAL";
-                  const source = isManualSpecial ? specialSourceBin : selectedSourceBin;
-                  const dest = isManualSpecial ? specialDestinationBin : selectedDestinationBin;
-                  if (!source || !dest) {
-                    showAlert("Validation Error", "Please select both source and destination bins");
-                    return;
-                  }
-                  proceedWithStartTransfer(source, dest);
-                }}
+                style={[styles.modalButton, styles.modalButtonSave, loading && { opacity: 0.7 }]}
+                onPress={() => proceedWithStartTransfer(pendingSource, pendingDest)}
+                disabled={loading}
               >
-                <Text style={styles.modalButtonSaveText}>Save</Text>
+                <Text style={styles.modalButtonSaveText}>{loading ? "Starting..." : "Start Transfer"}</Text>
               </TouchableOpacity>
             </View>
           </Card>
@@ -1008,20 +975,20 @@ export default function Transfer12HourScreen({ navigation }) {
       <Modal visible={showParametersModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Transfer Parameters</Text>
-            <Text style={styles.modalSubtitle}>Enter water and moisture details</Text>
+            <Text style={styles.modalTitle}>Add After-Transfer Data</Text>
+            <Text style={styles.modalSubtitle}>Enter actual moisture and water added after completion</Text>
             
             <InputField
-              label="Water Added (Litres)"
-              value={paramsWaterAdded}
-              onChangeText={setParamsWaterAdded}
+              label="Actual Moisture % (after transfer)"
+              value={paramsMoistureLevel}
+              onChangeText={setParamsMoistureLevel}
               keyboardType="decimal-pad"
               placeholder="0"
             />
             <InputField
-              label="Moisture Level (%)"
-              value={paramsMoistureLevel}
-              onChangeText={setParamsMoistureLevel}
+              label="Water Added (Litres)"
+              value={paramsWaterAdded}
+              onChangeText={setParamsWaterAdded}
               keyboardType="decimal-pad"
               placeholder="0"
             />
@@ -1044,31 +1011,6 @@ export default function Transfer12HourScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Stop Transfer Modal - Top Level */}
-      <Modal visible={showStopModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Stop Transfer?</Text>
-            <Text style={styles.modalSubtitle}>This will mark the transfer as completed</Text>
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowStopModal(false)}
-              >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={handleStopTransfer}
-                disabled={stoppingTransfer}
-              >
-                <Text style={styles.modalButtonSaveText}>{stoppingTransfer ? "Stopping..." : "Stop & Complete"}</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        </View>
-      </Modal>
     </Layout>
   );
 }
