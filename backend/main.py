@@ -4149,12 +4149,12 @@ def start_transfer(
     if not prod_order:
         raise HTTPException(status_code=404, detail="Production order not found")
     
-    dest_bin_config = db.query(models.ProductionOrderDestinationBin).filter(
-        models.ProductionOrderDestinationBin.production_order_id == data.production_order_id,
-        models.ProductionOrderDestinationBin.bin_id == data.destination_bin_id
+    # Verify the destination bin actually exists (any valid bin is allowed)
+    dest_bin = db.query(models.Bin).filter(
+        models.Bin.id == data.destination_bin_id
     ).first()
-    if not dest_bin_config:
-        raise HTTPException(status_code=404, detail="Destination bin not configured for this order")
+    if not dest_bin:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
 
     active_transfer = db.query(models.TransferRecording).filter(
         models.TransferRecording.production_order_id == data.production_order_id,
