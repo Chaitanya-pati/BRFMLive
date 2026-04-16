@@ -1472,3 +1472,24 @@ class TransferRecordingWithDetails(TransferRecording):
     created_by_user: Optional[User] = None
 
 
+# ── Production Lab Test ─────────────────────────────────────────────────────
+
+class ProductionLabTestCreate(ISTModel):
+    production_order_id: int
+    moisture: float
+    gluten: float
+    sedimentation_value: float
+    tested_by: Optional[str] = None
+    branch_id: Optional[int] = None
+
+class ProductionLabTestRead(ProductionLabTestCreate):
+    id: int
+    test_date: datetime
+    created_at: datetime
+    updated_at: datetime
+
+    @validator('test_date', 'created_at', 'updated_at', pre=True)
+    def _parse_ts(cls, v):
+        return parse_datetime(v)
+
+

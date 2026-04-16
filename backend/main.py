@@ -4111,6 +4111,54 @@ def validate_production_order_planning(
     }
 
 
+# ===================== PRODUCTION LAB TEST ENDPOINTS =====================
+
+@app.get("/api/production-lab-tests/by-order/{production_order_id}",
+         response_model=schemas.ProductionLabTestRead)
+def get_production_lab_test(production_order_id: int, db: Session = Depends(get_db)):
+    """Get the lab test for a specific production order (returns 404 if not yet submitted)."""
+    test = db.query(models.ProductionLabTest).filter(
+        models.ProductionLabTest.production_order_id == production_order_id
+    ).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Lab test not found for this production order")
+    return test
+
+
+@app.post("/api/production-lab-tests",
+          response_model=schemas.ProductionLabTestRead,
+          status_code=201)
+def create_production_lab_test(
+    data: schemas.ProductionLabTestCreate,
+    db: Session = Depends(get_db)
+):
+    """Create the lab test record for a production order. Only one per order (enforced by DB unique constraint)."""
+    order = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.id == data.production_order_id
+    ).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+
+    existing = db.query(models.ProductionLabTest).filter(
+        models.ProductionLabTest.production_order_id == data.production_order_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Lab test already exists for this production order")
+
+    test = models.ProductionLabTest(
+        production_order_id=data.production_order_id,
+        moisture=data.moisture,
+        gluten=data.gluten,
+        sedimentation_value=data.sedimentation_value,
+        tested_by=data.tested_by,
+        branch_id=data.branch_id,
+    )
+    db.add(test)
+    db.commit()
+    db.refresh(test)
+    return test
+
+
 # ===================== TRANSFER RECORDING ENDPOINTS =====================
 
 @app.get("/api/transfer/planned-orders", response_model=List[schemas.ProductionOrderWithPlanning])

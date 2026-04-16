@@ -162,6 +162,12 @@ export const labTestApi = {
   delete: (id) => api.delete(`/lab-tests/${id}`),
 };
 
+export const productionLabTestApi = {
+  getByOrder: (productionOrderId) =>
+    api.get(`/production-lab-tests/by-order/${productionOrderId}`),
+  create: (data) => api.post("/production-lab-tests", data),
+};
+
 export const claimApi = {
   getAll: () => api.get("/claims"),
   create: (data) => api.post("/claims/create", data),

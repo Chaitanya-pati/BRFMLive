@@ -908,6 +908,24 @@ class ProductionOrderDestinationBin(Base):
     production_order = relationship("ProductionOrder", back_populates="destination_bins")
     bin = relationship("Bin", back_populates="destination_bins")
 
+class ProductionLabTest(Base):
+    __tablename__ = "production_lab_tests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False, unique=True)
+    moisture = Column(Float, nullable=False)
+    gluten = Column(Float, nullable=False)
+    sedimentation_value = Column(Float, nullable=False)
+    test_date = Column(DateTime, default=ist_now, nullable=False)
+    tested_by = Column(String(255), nullable=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
+
+    production_order = relationship("ProductionOrder")
+    branch = relationship("Branch")
+
+
 class TransferRecordingStatus(str, enum.Enum):
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"

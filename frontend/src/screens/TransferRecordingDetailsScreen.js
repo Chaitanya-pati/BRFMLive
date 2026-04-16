@@ -12,7 +12,7 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import colors from "../theme/colors";
-import { getApiClient } from "../api/client";
+import { getApiClient, productionLabTestApi } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
 import { formatISTDateTime } from "../utils/dateUtils";
 import { redirectAfterAllTransfersComplete } from "../utils/processRedirects";
@@ -72,6 +72,12 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   const [formMoisture, setFormMoisture] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Lab test state
+  const [labTest, setLabTest] = useState(null);
+  const [labTestModal, setLabTestModal] = useState(false);
+  const [labTestForm, setLabTestForm] = useState({ moisture: "", gluten: "", sedimentation_value: "", tested_by: "" });
+  const [savingLabTest, setSavingLabTest] = useState(false);
+
   // Params modal (edit moisture/water on completed)
   const [paramsModal, setParamsModal] = useState(null);
   const [paramWater, setParamWater] = useState("");
@@ -82,14 +88,16 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     setLoading(true);
     try {
       const client = getApiClient();
-      const [historyRes, planningRes, binsRes] = await Promise.all([
+      const [historyRes, planningRes, binsRes, labTestRes] = await Promise.all([
         client.get(`/transfer/order/${order.id}/history`),
         client.get(`/production-orders/${order.id}/planning`).catch(() => ({ data: null })),
         client.get("/bins/destination"),
+        productionLabTestApi.getByOrder(order.id).catch(() => ({ data: null })),
       ]);
       setTransfers(historyRes.data || []);
       setSourceBins(planningRes.data?.source_bins || []);
       setAvailableBins(binsRes.data || []);
+      setLabTest(labTestRes.data || null);
     } catch (err) {
       console.error("Error loading transfer details:", err);
       showError("Error", "Failed to load transfer data");
@@ -204,6 +212,40 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     }
   };
 
+  // ---------- LAB TEST SUBMIT ----------
+  const handleSubmitLabTest = async () => {
+    const { moisture, gluten, sedimentation_value, tested_by } = labTestForm;
+    if (!moisture || !gluten || !sedimentation_value) {
+      showError("Validation", "Moisture %, Gluten %, and Sedimentation Value are required");
+      return;
+    }
+    const m = parseFloat(moisture);
+    const g = parseFloat(gluten);
+    const sv = parseFloat(sedimentation_value);
+    if (isNaN(m) || isNaN(g) || isNaN(sv)) {
+      showError("Validation", "Please enter valid numeric values");
+      return;
+    }
+    setSavingLabTest(true);
+    try {
+      const res = await productionLabTestApi.create({
+        production_order_id: order.id,
+        moisture: m,
+        gluten: g,
+        sedimentation_value: sv,
+        tested_by: tested_by.trim() || null,
+      });
+      setLabTest(res.data);
+      setLabTestModal(false);
+      setLabTestForm({ moisture: "", gluten: "", sedimentation_value: "", tested_by: "" });
+      await showSuccess("Lab test recorded successfully");
+    } catch (err) {
+      showError("Error", err?.response?.data?.detail || "Failed to save lab test");
+    } finally {
+      setSavingLabTest(false);
+    }
+  };
+
   // ---------- name helpers ----------
   const transferBinName = (t) =>
     t.destination_bin?.bin_number || `Bin #${t.destination_bin_id}`;
@@ -242,6 +284,51 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
 
           {/* ---- START NEW TRANSFER ---- */}
           <Section title="24-HOUR TRANSFER" color="#3b82f6">
+            {/* LAB TEST GATE */}
+            {labTest ? (
+              <View style={styles.labTestCard}>
+                <View style={styles.labTestHeader}>
+                  <Text style={styles.labTestTitle}>✅ Lab Test Recorded</Text>
+                  {labTest.tested_by ? (
+                    <Text style={styles.labTestMeta}>By: {labTest.tested_by}</Text>
+                  ) : null}
+                </View>
+                <View style={styles.labTestValues}>
+                  <View style={styles.labTestItem}>
+                    <Text style={styles.labTestLabel}>Moisture</Text>
+                    <Text style={styles.labTestValue}>{labTest.moisture}%</Text>
+                  </View>
+                  <View style={styles.labTestItem}>
+                    <Text style={styles.labTestLabel}>Gluten</Text>
+                    <Text style={styles.labTestValue}>{labTest.gluten}%</Text>
+                  </View>
+                  <View style={styles.labTestItem}>
+                    <Text style={styles.labTestLabel}>SV</Text>
+                    <Text style={styles.labTestValue}>{labTest.sedimentation_value}</Text>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.labTestRequired}>
+                <Text style={styles.labTestRequiredIcon}>🧪</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.labTestRequiredTitle}>Lab Test Required</Text>
+                  <Text style={styles.labTestRequiredSub}>
+                    Submit Moisture %, Gluten %, and Sedimentation Value before starting a transfer.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.labTestSubmitBtn}
+                  onPress={() => {
+                    setLabTestForm({ moisture: "", gluten: "", sedimentation_value: "", tested_by: "" });
+                    setLabTestModal(true);
+                  }}
+                >
+                  <Text style={styles.labTestSubmitBtnText}>Submit</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <Card style={styles.itemCard}>
               {sourceBins.length > 0 && (
                 <View style={styles.sourceSummary}>
@@ -260,13 +347,17 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               <TouchableOpacity
                 style={[
                   styles.actionBtn,
-                  { backgroundColor: canStartNew ? "#3b82f6" : "#9ca3af" },
+                  { backgroundColor: canStartNew && labTest ? "#3b82f6" : "#9ca3af" },
                 ]}
                 onPress={openStartModal}
-                disabled={!canStartNew}
+                disabled={!canStartNew || !labTest}
               >
                 <Text style={styles.actionBtnText}>
-                  {canStartNew ? "▶ Start New Transfer" : "⏳ Transfer In Progress"}
+                  {!labTest
+                    ? "⚠️ Submit Lab Test First"
+                    : canStartNew
+                    ? "▶ Start New Transfer"
+                    : "⏳ Transfer In Progress"}
                 </Text>
               </TouchableOpacity>
             </Card>
@@ -380,6 +471,61 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      {/* ---- LAB TEST MODAL ---- */}
+      <Modal visible={labTestModal} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <Card style={styles.modalCard}>
+            <Text style={styles.modalTitle}>🧪 Lab Test — Raw Wheat</Text>
+            <Text style={styles.modalSub}>
+              Order: {order.order_number}
+            </Text>
+
+            <InputField
+              label="Moisture (%)*"
+              value={labTestForm.moisture}
+              onChangeText={(v) => setLabTestForm((f) => ({ ...f, moisture: v }))}
+              keyboardType="decimal-pad"
+              placeholder="e.g. 12.5"
+            />
+            <InputField
+              label="Gluten (%)*"
+              value={labTestForm.gluten}
+              onChangeText={(v) => setLabTestForm((f) => ({ ...f, gluten: v }))}
+              keyboardType="decimal-pad"
+              placeholder="e.g. 28.0"
+            />
+            <InputField
+              label="Sedimentation Value (SV)*"
+              value={labTestForm.sedimentation_value}
+              onChangeText={(v) => setLabTestForm((f) => ({ ...f, sedimentation_value: v }))}
+              keyboardType="decimal-pad"
+              placeholder="e.g. 35"
+            />
+            <InputField
+              label="Tested By (optional)"
+              value={labTestForm.tested_by}
+              onChangeText={(v) => setLabTestForm((f) => ({ ...f, tested_by: v }))}
+              placeholder="Name of lab technician"
+            />
+
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                onPress={() => setLabTestModal(false)}
+                variant="secondary"
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                title="Submit Lab Test"
+                onPress={handleSubmitLabTest}
+                loading={savingLabTest}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
 
       {/* ---- START TRANSFER MODAL ---- */}
       <Modal visible={startModal} transparent animationType="fade">
@@ -768,5 +914,92 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     color: "#111827",
     outlineStyle: "none",
+  },
+
+  // ---- Lab Test styles ----
+  labTestCard: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#86efac",
+    padding: 12,
+    marginBottom: 10,
+  },
+  labTestHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  labTestTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#15803d",
+  },
+  labTestMeta: {
+    fontSize: 11,
+    color: "#6b7280",
+  },
+  labTestValues: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  labTestItem: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d1fae5",
+  },
+  labTestLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#6b7280",
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  labTestValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#15803d",
+  },
+  labTestRequired: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff7ed",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#fdba74",
+    padding: 12,
+    marginBottom: 10,
+    gap: 10,
+  },
+  labTestRequiredIcon: {
+    fontSize: 24,
+  },
+  labTestRequiredTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#c2410c",
+    marginBottom: 2,
+  },
+  labTestRequiredSub: {
+    fontSize: 11,
+    color: "#92400e",
+    lineHeight: 16,
+  },
+  labTestSubmitBtn: {
+    backgroundColor: "#f59e0b",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  labTestSubmitBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });
