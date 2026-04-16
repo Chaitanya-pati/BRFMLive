@@ -22,12 +22,10 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
   const [orders, setOrders] = useState([]);
   const [order, setOrder] = useState(null);
   const [sourceBins, setSourceBins] = useState([]);
-  const [destinationBins, setDestinationBins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [selectedSources, setSelectedSources] = useState([]);
-  const [selectedDestinations, setSelectedDestinations] = useState([]);
 
   useEffect(() => {
     if (selectedOrderId) {
@@ -57,15 +55,13 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [orderRes, sourceRes, destRes] = await Promise.all([
+      const [orderRes, sourceRes] = await Promise.all([
         productionOrderApi.getPlanning(selectedOrderId),
         planningBinsApi.getSourceBins(),
-        planningBinsApi.getDestinationBins(),
       ]);
       
       setOrder(orderRes.data);
       setSourceBins(sourceRes.data);
-      setDestinationBins(destRes.data);
 
       if (orderRes.data.source_bins && orderRes.data.source_bins.length > 0) {
         setSelectedSources(orderRes.data.source_bins.map(sb => ({
@@ -73,14 +69,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
           blend_percentage: sb.blend_percentage,
           quantity: sb.quantity,
           bin: sb.bin,
-        })));
-      }
-      
-      if (orderRes.data.destination_bins && orderRes.data.destination_bins.length > 0) {
-        setSelectedDestinations(orderRes.data.destination_bins.map(db => ({
-          bin_id: db.bin_id,
-          quantity: db.quantity,
-          bin: db.bin,
         })));
       }
     } catch (error) {
@@ -95,7 +83,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     setSelectedOrderId(null);
     setOrder(null);
     setSelectedSources([]);
-    setSelectedDestinations([]);
   };
 
   const getStatusColor = (status) => {
@@ -166,65 +153,25 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     }));
   };
 
-  const addDestinationBin = (binId) => {
-    const bin = destinationBins.find(b => b.id === binId);
-    if (!bin) return;
-    
-    if (selectedDestinations.find(d => d.bin_id === binId)) {
-      showError('This bin is already selected');
-      return;
-    }
-
-    setSelectedDestinations([...selectedDestinations, {
-      bin_id: binId,
-      quantity: 0,
-      bin: bin,
-    }]);
-  };
-
-  const removeDestinationBin = (binId) => {
-    setSelectedDestinations(selectedDestinations.filter(d => d.bin_id !== binId));
-  };
-
-  const updateDestinationBin = (binId, value) => {
-    setSelectedDestinations(selectedDestinations.map(d => {
-      if (d.bin_id === binId) {
-        return { ...d, quantity: parseFloat(value) || 0 };
-      }
-      return d;
-    }));
-  };
-
   const calculateTotals = () => {
     const totalPercentage = selectedSources.reduce((sum, s) => sum + (s.blend_percentage || 0), 0);
     const totalSourceQty = selectedSources.reduce((sum, s) => sum + (s.quantity || 0), 0);
-    const totalDistribution = selectedDestinations.reduce((sum, d) => sum + (d.quantity || 0), 0);
-    return { totalPercentage, totalSourceQty, totalDistribution };
+    return { totalPercentage, totalSourceQty };
   };
 
-  const { totalPercentage, totalSourceQty, totalDistribution } = calculateTotals();
+  const { totalPercentage, totalSourceQty } = calculateTotals();
   
   const isBlendValid = Math.abs(totalPercentage - 100) < 0.01;
-  const isDistributionValid = Math.abs(totalDistribution - (order?.quantity || 0)) < 0.01;
   const hasSourceBins = selectedSources.length > 0;
-  const hasDestinationBins = selectedDestinations.length > 0;
-  const isConfigValid = isBlendValid && isDistributionValid && hasSourceBins && hasDestinationBins;
+  const isConfigValid = isBlendValid && hasSourceBins;
 
   const handleSave = async () => {
     if (!hasSourceBins) {
       showError('Please add at least one source bin');
       return;
     }
-    if (!hasDestinationBins) {
-      showError('Please add at least one destination bin');
-      return;
-    }
     if (!isBlendValid) {
       showError('Blend percentages must total 100%');
-      return;
-    }
-    if (!isDistributionValid) {
-      showError(`Distribution must equal ${order?.quantity} T`);
       return;
     }
 
@@ -243,10 +190,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
           blend_percentage: s.blend_percentage,
           quantity: s.quantity,
         })),
-        destination_bins: selectedDestinations.map(d => ({
-          bin_id: d.bin_id,
-          quantity: d.quantity,
-        })),
+        destination_bins: [],
       };
 
       await productionOrderApi.savePlanning(selectedOrderId, payload);
@@ -268,10 +212,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
     return sourceBins.filter(b => !selectedSources.find(s => s.bin_id === b.id));
   };
 
-  const getAvailableDestinationBins = () => {
-    return destinationBins.filter(b => !selectedDestinations.find(d => d.bin_id === b.id));
-  };
-
   if (loading) {
     return (
       <Layout title="Production Order Planning" navigation={navigation}>
@@ -288,7 +228,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.pageTitle}>Select an Order to Plan</Text>
-            <Text style={styles.pageSubtitle}>Choose a production order to configure source bins and distribution</Text>
+            <Text style={styles.pageSubtitle}>Choose a production order to configure source bins and blend percentages</Text>
           </View>
           {orders.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -435,100 +375,6 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
           </View>
         </View>
 
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Distribution Destinations (24 Hours Bins)</Text>
-              <Text style={styles.sectionSubtitle}>Distribute the order quantity to destination bins</Text>
-            </View>
-            <View style={[styles.validationBadge, isDistributionValid ? styles.validBadge : styles.invalidBadge]}>
-              <Text style={[styles.validationBadgeText, isDistributionValid ? styles.validText : styles.invalidText]}>
-                {isDistributionValid ? '✓ Valid' : '✗ Invalid'}
-              </Text>
-            </View>
-          </View>
-
-          {getAvailableDestinationBins().length > 0 && (
-            <View style={styles.addBinSection}>
-              <Text style={styles.addBinLabel}>Add Destination Bin:</Text>
-              <View style={styles.binChips}>
-                {getAvailableDestinationBins().map(bin => (
-                  <TouchableOpacity
-                    key={bin.id}
-                    style={[styles.addBinChip, styles.addBinChipDest]}
-                    onPress={() => addDestinationBin(bin.id)}
-                  >
-                    <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
-                    <Text style={styles.addBinChipSubtext}>{((bin.capacity || 0) - (bin.current_quantity || 0)).toFixed(0)} T free</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {selectedDestinations.length === 0 ? (
-            <View style={styles.emptyBinMessage}>
-              <Text style={styles.emptyBinText}>No destination bins selected. Click on a bin above to add it.</Text>
-            </View>
-          ) : (
-            <View style={styles.binTable}>
-              <View style={styles.binTableHeader}>
-                <Text style={[styles.binTableHeaderCell, { flex: 2 }]}>Destination Bin</Text>
-                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Capacity Free</Text>
-                <Text style={[styles.binTableHeaderCell, { flex: 1 }]}>Quantity (T)</Text>
-                <Text style={[styles.binTableHeaderCell, { width: 50 }]}>Action</Text>
-              </View>
-              {selectedDestinations.map((dest) => (
-                <View key={dest.bin_id} style={styles.binTableRow}>
-                  <View style={[styles.binTableCell, { flex: 2 }]}>
-                    <Text style={styles.binName}>{dest.bin?.bin_number}</Text>
-                  </View>
-                  <View style={[styles.binTableCell, { flex: 1 }]}>
-                    <Text style={styles.binAvailable}>
-                      {((dest.bin?.capacity || 0) - (dest.bin?.current_quantity || 0)).toFixed(0)} T
-                    </Text>
-                  </View>
-                  <View style={[styles.binTableCell, { flex: 1 }]}>
-                    <TextInput
-                      style={styles.tableInput}
-                      value={dest.quantity.toString()}
-                      onChangeText={(v) => updateDestinationBin(dest.bin_id, v)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                    />
-                  </View>
-                  <View style={[styles.binTableCell, { width: 50, alignItems: 'center' }]}>
-                    <TouchableOpacity
-                      style={styles.removeBtn}
-                      onPress={() => removeDestinationBin(dest.bin_id)}
-                    >
-                      <Text style={styles.removeBtnText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.totalRow}>
-            <View style={styles.totalItem}>
-              <Text style={styles.totalLabel}>Total Distribution:</Text>
-              <Text style={[styles.totalValue, !isDistributionValid && styles.errorValue]}>
-                {totalDistribution.toFixed(2)} T
-              </Text>
-            </View>
-            <View style={styles.totalItem}>
-              <Text style={styles.totalLabel}>Required:</Text>
-              <Text style={styles.totalValue}>{order?.quantity} T</Text>
-              {!isDistributionValid && (
-                <Text style={styles.errorHint}>
-                  ({totalDistribution > (order?.quantity || 0) ? 'over' : 'under'} by {Math.abs(totalDistribution - (order?.quantity || 0)).toFixed(2)} T)
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Configuration Summary</Text>
           <View style={styles.summaryRow}>
@@ -545,15 +391,9 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
               </View>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Destination Bins</Text>
-              <View style={[styles.summaryStatus, hasDestinationBins ? styles.summaryValid : styles.summaryInvalid]}>
-                <Text style={styles.summaryStatusText}>{selectedDestinations.length} selected</Text>
-              </View>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Distribution</Text>
-              <View style={[styles.summaryStatus, isDistributionValid ? styles.summaryValid : styles.summaryInvalid]}>
-                <Text style={styles.summaryStatusText}>{totalDistribution.toFixed(0)} / {order?.quantity} T</Text>
+              <Text style={styles.summaryLabel}>Total Quantity</Text>
+              <View style={[styles.summaryStatus, styles.summaryValid]}>
+                <Text style={styles.summaryStatusText}>{totalSourceQty.toFixed(2)} T</Text>
               </View>
             </View>
           </View>

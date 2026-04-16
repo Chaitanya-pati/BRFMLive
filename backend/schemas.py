@@ -1433,7 +1433,7 @@ class ProductionOrder(ProductionOrderBase):
 # Planning Configuration Schema
 class ProductionOrderPlanningCreate(BaseModel):
     source_bins: List[ProductionOrderSourceBinCreate]
-    destination_bins: List[ProductionOrderDestinationBinCreate]
+    destination_bins: List[ProductionOrderDestinationBinCreate] = []
 
 class TransferRecordingStartTransfer(BaseModel):
     production_order_id: int

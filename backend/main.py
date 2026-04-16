@@ -4023,26 +4023,6 @@ def save_production_order_planning(
                 detail=f"Insufficient quantity in bin {bin_obj.bin_number}. Available: {bin_obj.current_quantity}, Requested: {source.quantity}"
             )
     
-    # Validation 3: Check destination bins capacity
-    for dest in planning.destination_bins:
-        bin_obj = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
-        if not bin_obj:
-            raise HTTPException(status_code=400, detail=f"Destination bin {dest.bin_id} not found")
-        available_capacity = bin_obj.capacity - bin_obj.current_quantity
-        if available_capacity < dest.quantity:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient capacity in bin {bin_obj.bin_number}. Available: {available_capacity}, Requested: {dest.quantity}"
-            )
-    
-    # Validation 4: Total distribution must equal order quantity
-    total_distribution = sum(d.quantity for d in planning.destination_bins)
-    if abs(total_distribution - db_order.quantity) > 0.01:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Total distribution ({total_distribution}) must equal order quantity ({db_order.quantity})"
-        )
-    
     # Clear existing planning data
     db.query(models.ProductionOrderSourceBin).filter(
         models.ProductionOrderSourceBin.production_order_id == order_id
@@ -4107,21 +4087,8 @@ def validate_production_order_planning(
         elif bin_obj.current_quantity < source.quantity * 1.1:
             warnings.append(f"Low quantity warning for bin {bin_obj.bin_number}")
     
-    # Validation 3: Check destination bins capacity
-    for dest in planning.destination_bins:
-        bin_obj = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
-        if not bin_obj:
-            errors.append(f"Destination bin {dest.bin_id} not found")
-        else:
-            available_capacity = bin_obj.capacity - bin_obj.current_quantity
-            if available_capacity < dest.quantity:
-                errors.append(f"Insufficient capacity in bin {bin_obj.bin_number}. Available: {available_capacity}, Requested: {dest.quantity}")
-    
-    # Validation 4: Total distribution must equal order quantity
-    total_distribution = sum(d.quantity for d in planning.destination_bins)
-    if abs(total_distribution - db_order.quantity) > 0.01:
-        errors.append(f"Total distribution ({total_distribution}) must equal order quantity ({db_order.quantity})")
-    
+    total_distribution = 0
+
     grouped_summary = [
         {
             "finished_good_id": key[0],
