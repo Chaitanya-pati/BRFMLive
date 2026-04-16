@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import SignatureCanvas from "react-signature-canvas";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
@@ -80,6 +82,7 @@ async function buildFileFormData(fieldName, asset) {
 
 function StopCard({ stop, dispatch, onRefresh }) {
   const [busy, setBusy] = useState(null);
+  const [sigPadFor, setSigPadFor] = useState(null); // null | 'driver' | 'customer'
 
   const recordTime = async (field) => {
     setBusy(field);
@@ -90,6 +93,26 @@ function StopCard({ stop, dispatch, onRefresh }) {
       showSuccess("Time recorded");
     } catch (e) {
       showError(e?.message || "Failed to record time");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const uploadSignatureBlob = async (type, blob) => {
+    setSigPadFor(null);
+    setBusy(type);
+    try {
+      const fd = new FormData();
+      fd.append("signature", blob, "signature.png");
+      if (type === "driver") {
+        await dispatchApi.uploadDriverSignature(dispatch.dispatch_id, stop.id, fd);
+      } else {
+        await dispatchApi.uploadCustomerSignature(dispatch.dispatch_id, stop.id, fd);
+      }
+      await onRefresh();
+      showSuccess("Signature saved");
+    } catch (e) {
+      showError(e?.message || "Upload failed");
     } finally {
       setBusy(null);
     }
@@ -221,15 +244,32 @@ function StopCard({ stop, dispatch, onRefresh }) {
           label="Driver Signature"
           value={stop.driver_signature}
           busy={isLoading("driver")}
-          onCapture={() => pickAndUpload("driver")}
+          onCapture={() =>
+            Platform.OS === "web"
+              ? setSigPadFor("driver")
+              : pickAndUpload("driver")
+          }
         />
         <SignatureBlock
           label="Customer Signature"
           value={stop.customer_signature}
           busy={isLoading("customer")}
-          onCapture={() => pickAndUpload("customer")}
+          onCapture={() =>
+            Platform.OS === "web"
+              ? setSigPadFor("customer")
+              : pickAndUpload("customer")
+          }
         />
       </View>
+
+      {Platform.OS === "web" && (
+        <SignaturePadModal
+          visible={sigPadFor !== null}
+          label={sigPadFor === "driver" ? "Driver Signature" : "Customer Signature"}
+          onClose={() => setSigPadFor(null)}
+          onSave={(blob) => uploadSignatureBlob(sigPadFor, blob)}
+        />
+      )}
     </View>
   );
 }
@@ -279,10 +319,133 @@ function SignatureBlock({ label, value, busy, onCapture }) {
         {busy ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={ss.sigBtnText}>{value ? "Re-capture" : "Capture"}</Text>
+          <Text style={ss.sigBtnText}>{value ? "Re-sign" : "Sign"}</Text>
         )}
       </TouchableOpacity>
     </View>
+  );
+}
+
+function SignaturePadModal({ visible, label, onClose, onSave }) {
+  const sigRef = useRef(null);
+
+  if (!visible) return null;
+
+  const handleClear = () => {
+    sigRef.current?.clear();
+  };
+
+  const handleSave = () => {
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      showError("Please draw a signature first");
+      return;
+    }
+    sigRef.current.getCanvas().toBlob((blob) => {
+      if (blob) onSave(blob);
+    }, "image/png");
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(0,0,0,0.55)",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 16,
+          padding: 24,
+          width: "100%",
+          maxWidth: 480,
+          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>{label}</span>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: 20,
+              cursor: "pointer",
+              color: "#64748b",
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <p style={{ fontSize: 12, color: "#64748b", marginBottom: 10, marginTop: 0 }}>
+          Draw your signature in the box below
+        </p>
+
+        <div
+          style={{
+            border: "2px solid #6366f1",
+            borderRadius: 10,
+            overflow: "hidden",
+            backgroundColor: "#f8fafc",
+            cursor: "crosshair",
+          }}
+        >
+          <SignatureCanvas
+            ref={sigRef}
+            penColor="#1e293b"
+            canvasProps={{
+              width: 432,
+              height: 200,
+              style: { display: "block", width: "100%", height: 200, touchAction: "none" },
+            }}
+            backgroundColor="rgba(248,250,252,1)"
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button
+            onClick={handleClear}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 8,
+              border: "1px solid #e2e8f0",
+              backgroundColor: "#f1f5f9",
+              color: "#374151",
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              flex: 2,
+              padding: "10px 0",
+              borderRadius: 8,
+              border: "none",
+              backgroundColor: "#6366f1",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Save Signature
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
