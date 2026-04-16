@@ -9,13 +9,6 @@ import { showConfirm, showSuccess, showError } from '../utils/customAlerts';
 import colors from '../theme/colors';
 import { formatISTDate } from '../utils/dateUtils';
 
-// ─── Status colour map ────────────────────────────────────────────────────────
-const STATUS_COLORS = {
-  PENDING: { bg: '#fef3c7', text: '#92400e' },
-  PARTIAL: { bg: '#dbeafe', text: '#1e40af' },
-  PAID:    { bg: '#dcfce7', text: '#15803d' },
-};
-
 // ─── Indian-style amount-in-words ─────────────────────────────────────────────
 function amountInWords(amount) {
   if (!amount || isNaN(amount)) return '';
@@ -402,10 +395,9 @@ export default function DeliveryBillsScreen({ navigation, route }) {
   const isMobile = width < 768;
   const filterDispatchId = route?.params?.dispatch_id || null;
 
-  const [bills, setBills]                   = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [previewBill, setPreviewBill]       = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [bills, setBills]             = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [previewBill, setPreviewBill] = useState(null);
 
   const loadBills = useCallback(async () => {
     setLoading(true);
@@ -420,17 +412,6 @@ export default function DeliveryBillsScreen({ navigation, route }) {
 
   useEffect(() => { loadBills(); }, [loadBills]);
 
-  const handleUpdateStatus = async (billId, newStatus) => {
-    setUpdatingStatus(true);
-    try {
-      const res = await deliveryBillApi.updatePaymentStatus(billId, newStatus);
-      setPreviewBill(res.data);
-      await loadBills();
-      showSuccess('Payment status updated');
-    } catch { showError('Failed to update status'); }
-    finally   { setUpdatingStatus(false); }
-  };
-
   const handleDelete = async (bill) => {
     const ok = await showConfirm('Delete Bill', `Delete invoice ${bill.invoice_number}?`);
     if (!ok) return;
@@ -443,8 +424,8 @@ export default function DeliveryBillsScreen({ navigation, route }) {
   };
 
   const cols = isMobile
-    ? ['Invoice No.', 'Customer', 'Amount', 'Status']
-    : ['Invoice No.', 'Dispatch', 'Customer', 'Date', 'Taxable', 'Tax', 'Total', 'Status'];
+    ? ['Invoice No.', 'Customer', 'Amount']
+    : ['Invoice No.', 'Dispatch', 'Customer', 'Date', 'Taxable', 'Tax', 'Total'];
 
   return (
     <Layout title="Delivery Bills" navigation={navigation} currentRoute="DeliveryBills">
@@ -475,7 +456,6 @@ export default function DeliveryBillsScreen({ navigation, route }) {
               <Text style={[ls.cell, ls.headerCell, { width: 100 }]}>Actions</Text>
             </View>
             {bills.map(bill => {
-              const sc = STATUS_COLORS[bill.payment_status] || STATUS_COLORS.PENDING;
               const customerName = bill.order?.customer?.customer_name || bill.destination || '—';
               return (
                 <View key={bill.id} style={[ls.row, ls.dataRow]}>
@@ -488,11 +468,6 @@ export default function DeliveryBillsScreen({ navigation, route }) {
                   {!isMobile && <Text style={[ls.cell, colWidth('Taxable', isMobile)]}>₹{(bill.taxable_value||0).toLocaleString('en-IN',{minimumFractionDigits:2})}</Text>}
                   {!isMobile && <Text style={[ls.cell, colWidth('Tax', isMobile)]}>₹{(bill.total_tax_amount||0).toLocaleString('en-IN',{minimumFractionDigits:2})}</Text>}
                   <Text style={[ls.cell, colWidth('Amount', isMobile), ls.amountCell]}>₹{(bill.total_amount||0).toLocaleString('en-IN',{minimumFractionDigits:2})}</Text>
-                  <View style={[ls.cell, colWidth('Status', isMobile)]}>
-                    <View style={[ls.statusPill, { backgroundColor: sc.bg }]}>
-                      <Text style={[ls.statusText, { color: sc.text }]}>{bill.payment_status}</Text>
-                    </View>
-                  </View>
                   <View style={[ls.cell, { width: 100 }]}>
                     <TouchableOpacity style={ls.viewBtn} onPress={() => setPreviewBill(bill)}>
                       <Text style={ls.viewBtnText}>View</Text>
@@ -518,9 +493,7 @@ export default function DeliveryBillsScreen({ navigation, route }) {
                 <BillPreview
                   bill={previewBill}
                   onClose={() => setPreviewBill(null)}
-                  onUpdateStatus={handleUpdateStatus}
                   onDelete={handleDelete}
-                  updatingStatus={updatingStatus}
                 />
               )}
             </ScrollView>
@@ -534,12 +507,9 @@ export default function DeliveryBillsScreen({ navigation, route }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BILL PREVIEW — uses real HTML <table> on web for pixel-perfect alignment
 // ═══════════════════════════════════════════════════════════════════════════════
-function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }) {
-  const sc = STATUS_COLORS[bill.payment_status] || STATUS_COLORS.PENDING;
+function BillPreview({ bill, onClose, onDelete }) {
   const invoiceRef = useRef(null);
 
-  // Inject HTML after mount. Because PlatformDiv renders a real <div> on web,
-  // invoiceRef.current is a true HTMLDivElement and .innerHTML is guaranteed.
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (invoiceRef.current) {
@@ -551,11 +521,8 @@ function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }
     <View>
       {/* ── Toolbar ── */}
       <View style={inv.toolbar}>
-        <View style={[inv.pill, { backgroundColor: sc.bg }]}>
-          <Text style={[inv.pillText, { color: sc.text }]}>{bill.payment_status}</Text>
-        </View>
-        <View style={{ flex: 1 }} />
         <Text style={inv.invNoLabel}>{bill.invoice_number}</Text>
+        <View style={{ flex: 1 }} />
         {Platform.OS === 'web' && (
           <TouchableOpacity style={inv.printBtn} onPress={doPrint}>
             <Text style={inv.printBtnText}>🖨 Print</Text>
@@ -566,9 +533,7 @@ function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }
         </TouchableOpacity>
       </View>
 
-      {/* ── Invoice body ──
-          PlatformDiv renders a real <div> on web → ref.current is HTMLDivElement
-          → innerHTML works perfectly. On native it falls back to a View.        ── */}
+      {/* ── Invoice body ── */}
       <PlatformDiv
         ref={invoiceRef}
         id="inv-print-root"
@@ -577,22 +542,6 @@ function BillPreview({ bill, onClose, onUpdateStatus, onDelete, updatingStatus }
 
       {/* ── Action Buttons ── */}
       <View style={inv.actions}>
-        <View style={inv.statusRow}>
-          <Text style={inv.markLabel}>Mark as:</Text>
-          {['PENDING', 'PARTIAL', 'PAID'].map(s => (
-            <TouchableOpacity
-              key={s}
-              style={[inv.sBtn, bill.payment_status === s && inv.sBtnActive]}
-              onPress={() => onUpdateStatus(bill.id, s)}
-              disabled={updatingStatus || bill.payment_status === s}
-            >
-              {updatingStatus && bill.payment_status !== s
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Text style={[inv.sBtnTxt, bill.payment_status === s && inv.sBtnTxtActive]}>{s}</Text>
-              }
-            </TouchableOpacity>
-          ))}
-        </View>
         <View style={inv.btnRow}>
           <TouchableOpacity style={inv.delBtn} onPress={() => onDelete(bill)}>
             <Text style={inv.delBtnTxt}>Delete</Text>
