@@ -68,14 +68,18 @@ function injectPrintCSS() {
   let el = document.getElementById(PRINT_STYLE_ID);
   if (!el) { el = document.createElement('style'); el.id = PRINT_STYLE_ID; document.head.appendChild(el); }
   el.textContent = `
-    @page { size: A4 portrait; margin: 10mm; }
+    @page { size: A4 portrait; margin: 8mm; }
     @media print {
       body > * { visibility: hidden !important; }
       #inv-print-root, #inv-print-root * { visibility: visible !important; }
       #inv-print-root {
-        position: fixed !important; top: 0 !important; left: 0 !important;
-        width: 190mm !important; background: #fff !important;
+        position: absolute !important;
+        top: 0 !important; left: 0 !important;
+        width: 100% !important;
+        background: #fff !important;
       }
+      #inv-print-root table { page-break-inside: auto; }
+      #inv-print-root tr    { page-break-inside: avoid; page-break-after: auto; }
     }
   `;
 }
@@ -144,7 +148,7 @@ function buildInvoiceHTML(bill) {
   const BT   = 'border-top:1px solid #000;';
   const BT2  = 'border-top:2px solid #000;';
   const LBL  = 'font-size:8.5pt;color:#555;padding:3px 6px;vertical-align:top;';
-  const VAL  = 'font-size:10pt;font-weight:600;padding:3px 6px;vertical-align:top;';
+  const VAL  = 'font-size:10pt;font-weight:600;padding:3px 6px;vertical-align:top;white-space:nowrap;overflow:hidden;';
   const P6   = 'padding:6px;';
   const BGTH = 'background:#f0f0f0;';
   const BGTL = 'background:#f7f7f7;';
@@ -208,7 +212,7 @@ function buildInvoiceHTML(bill) {
 
   <!-- ─── Section 1: Company | Heading | Meta ─── -->
   <tr>
-    <td width="35%" style="${BR}${BB}${P6}vertical-align:top;">
+    <td width="34%" style="${BR}${BB}${P6}vertical-align:top;">
       <div style="font-size:12pt;font-weight:900;margin-bottom:3px;">${CO.name}</div>
       <div style="font-size:9pt;line-height:1.5;">${CO.address}</div>
       ${CO.address2 ? `<div style="font-size:9pt;line-height:1.5;">${CO.address2}</div>` : ''}
@@ -218,11 +222,11 @@ function buildInvoiceHTML(bill) {
       <div style="font-size:9pt;line-height:1.5;">State Name : ${CO.state}, Code : ${CO.stateCode}</div>
       ${CO.phone ? `<div style="font-size:9pt;line-height:1.5;">Ph : ${CO.phone}</div>` : ''}
     </td>
-    <td width="30%" style="${BR}${BB}text-align:center;vertical-align:middle;padding:14px 8px;">
+    <td width="24%" style="${BR}${BB}text-align:center;vertical-align:middle;padding:14px 8px;">
       <div style="font-size:17pt;font-weight:900;letter-spacing:0.5px;">Tax Invoice</div>
       <div style="font-size:8pt;font-style:italic;margin-top:5px;color:#444;">(ORIGINAL FOR RECIPIENT)</div>
     </td>
-    <td width="35%" style="${BB}padding:0;vertical-align:top;">
+    <td width="42%" style="${BB}padding:0;vertical-align:top;">
       <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
         <tr><td width="50%" style="${BR}${BB}${LBL}">Invoice No.</td><td style="${BB}${LBL}">Dated</td></tr>
         <tr><td style="${BR}${BB}${VAL}">${B(bill.invoice_number)}</td><td style="${BB}${VAL}">${D(bill.invoice_date)}</td></tr>
