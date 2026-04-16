@@ -61,42 +61,53 @@ const PlatformDiv = Platform.OS === 'web'
 // CO is now populated at runtime from bill.branch_profile — see buildInvoiceHTML()
 
 // ─── Print helpers (web only) ─────────────────────────────────────────────────
-const PRINT_STYLE_ID = 'inv-print-style';
-
-function injectPrintCSS() {
+function doPrint(bill) {
   if (Platform.OS !== 'web') return;
-  let el = document.getElementById(PRINT_STYLE_ID);
-  if (!el) { el = document.createElement('style'); el.id = PRINT_STYLE_ID; document.head.appendChild(el); }
-  el.textContent = `
+  const html = buildInvoiceHTML(bill);
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Invoice ${bill.invoice_number || ''}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #fff; color: #000; }
     @page { size: A4 portrait; margin: 8mm; }
     @media print {
-      body > * { visibility: hidden !important; }
-      #inv-print-root, #inv-print-root * { visibility: visible !important; }
-      #inv-print-root {
-        position: absolute !important;
-        top: 0 !important; left: 0 !important;
-        width: 100% !important;
-        background: #fff !important;
-      }
-      #inv-print-root table { page-break-inside: auto; }
-      #inv-print-root tr    { page-break-inside: avoid; page-break-after: auto; }
+      body { margin: 0; padding: 0; }
+      .no-print { display: none !important; }
     }
-  `;
-}
-
-function removePrintCSS() {
-  if (Platform.OS !== 'web') return;
-  const el = document.getElementById(PRINT_STYLE_ID);
-  if (el) el.remove();
-}
-
-function doPrint() {
-  if (Platform.OS !== 'web') return;
-  injectPrintCSS();
-  setTimeout(() => {
-    window.print();
-    window.addEventListener('afterprint', removePrintCSS, { once: true });
-  }, 80);
+    .print-btn-bar {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 10px 14px; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .print-btn-bar button {
+      padding: 7px 18px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .btn-print { background: #15803d; color: #fff; }
+    .btn-close { background: #e2e8f0; color: #374151; }
+    .invoice-wrap { padding: 8mm; }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar no-print">
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ Close</button>
+  </div>
+  <div class="invoice-wrap">
+    ${html}
+  </div>
+  <script>
+    window.onafterprint = function() { window.close(); };
+  </script>
+</body>
+</html>`);
+  win.document.close();
+  win.focus();
 }
 
 // ─── Build HTML invoice string ────────────────────────────────────────────────
@@ -528,7 +539,7 @@ function BillPreview({ bill, onClose, onDelete }) {
         <Text style={inv.invNoLabel}>{bill.invoice_number}</Text>
         <View style={{ flex: 1 }} />
         {Platform.OS === 'web' && (
-          <TouchableOpacity style={inv.printBtn} onPress={doPrint}>
+          <TouchableOpacity style={inv.printBtn} onPress={() => doPrint(bill)}>
             <Text style={inv.printBtnText}>🖨 Print</Text>
           </TouchableOpacity>
         )}
