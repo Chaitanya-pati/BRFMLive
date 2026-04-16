@@ -717,6 +717,10 @@ export const branchBillProfileApi = {
   delete: (branchId) => api.delete(`/branch-bill-profiles/${branchId}`),
 };
 
+export const branchesApi = {
+  getAll: () => api.get("/branches"),
+};
+
 export const deliveryBillApi = {
   getAll: (params) => api.get("/delivery-bills", { params }),
   getByDispatch: (dispatchId) => api.get("/delivery-bills", { params: { dispatch_id: dispatchId } }),
