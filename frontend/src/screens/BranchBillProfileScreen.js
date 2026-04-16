@@ -9,7 +9,6 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { branchBillProfileApi, branchesApi } from '../api/client';
 import { showConfirm, showSuccess, showError } from '../utils/customAlerts';
-import { formatISTDate } from '../utils/dateUtils';
 import colors from '../theme/colors';
 
 const EMPTY_FORM = {
@@ -34,28 +33,11 @@ const EMPTY_FORM = {
 };
 
 const COLUMNS = [
-  { label: 'ID',            field: 'id',              width: 60,  key: 'id' },
-  { label: 'Branch ID',     field: 'branch_id',       width: 90,  key: 'branch_id' },
-  { label: 'Company Name',  field: 'company_name',    width: 200, key: 'company_name' },
-  { label: 'GSTIN',         field: 'gstin',           width: 160, key: 'gstin' },
-  { label: 'PAN',           field: 'pan',             width: 120, key: 'pan' },
-  { label: 'CIN',           field: 'cin',             width: 160, key: 'cin' },
-  { label: 'Phone',         field: 'phone',           width: 130, key: 'phone' },
-  { label: 'Email',         field: 'email',           width: 200, key: 'email' },
-  { label: 'City',          field: 'city',            width: 120, key: 'city' },
-  { label: 'State',         field: 'state',           width: 120, key: 'state' },
-  { label: 'State Code',    field: 'state_code',      width: 100, key: 'state_code' },
-  { label: 'PIN Code',      field: 'pin_code',        width: 90,  key: 'pin_code' },
-  { label: 'Bank Name',     field: 'bank_name',       width: 160, key: 'bank_name' },
-  { label: 'Account No.',   field: 'bank_account_no', width: 160, key: 'bank_account_no' },
-  { label: 'IFSC',          field: 'bank_ifsc',       width: 120, key: 'bank_ifsc' },
-  { label: 'Bank Branch',   field: 'bank_branch_name',width: 160, key: 'bank_branch_name' },
-  {
-    label: 'Updated',
-    field: 'updated_at',
-    width: 150,
-    key: 'updated_at',
-    render: (v) => formatISTDate(v),
+  { label: 'Company Name', key: 'company_name', flex: 2.5 },
+  { label: 'GSTIN',        key: 'gstin',        flex: 1.8 },
+  { label: 'Phone',        key: 'phone',        flex: 1.2 },
+  { label: 'City / State', key: 'city',         flex: 1.5,
+    render: (_, row) => [row.city, row.state].filter(Boolean).join(', ') || '—',
   },
 ];
 
