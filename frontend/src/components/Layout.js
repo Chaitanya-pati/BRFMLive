@@ -290,6 +290,7 @@ const menuItems = [
         { name: "Dispatch Management", route: "DispatchManagement", icon: SvgTruckIcon },
         { name: "Driver Delivery", route: "DriverDelivery", icon: SvgTruckIcon },
         { name: "Bills", route: "DeliveryBills", icon: SvgFileTextIcon },
+        { name: "Bill Profile", route: "BranchBillProfile", icon: SvgFileTextIcon },
       ]
     },
 

@@ -65,17 +65,7 @@ const PlatformDiv = Platform.OS === 'web'
   : View;
 
 // ─── Company info ─────────────────────────────────────────────────────────────
-const CO = {
-  name:         'Your Mill Name (P) Ltd',
-  address:      'Industrial Area, Plot No. XX',
-  city:         'Your City',
-  state:        'Your State',
-  stateCode:    '00',
-  cin:          'U00000XX0000PTC000000',
-  gstin:        'XXXXXXXXXXXXXXXXX',
-  pan:          'XXXXXXXXXX',
-  jurisdiction: 'YOUR CITY',
-};
+// CO is now populated at runtime from bill.branch_profile — see buildInvoiceHTML()
 
 // ─── Print helpers (web only) ─────────────────────────────────────────────────
 const PRINT_STYLE_ID = 'inv-print-style';
@@ -114,6 +104,22 @@ function doPrint() {
 
 // ─── Build HTML invoice string ────────────────────────────────────────────────
 function buildInvoiceHTML(bill) {
+  // Resolve branch profile (populated by the bill API via joinedload)
+  const bp = bill.branch_profile || {};
+  const CO = {
+    name:         bp.company_name    || 'Your Mill Name (P) Ltd',
+    address:      bp.address_line1   || 'Industrial Area, Plot No. XX',
+    address2:     bp.address_line2   || '',
+    city:         [bp.city, bp.pin_code].filter(Boolean).join(' - ') || 'Your City',
+    state:        bp.state           || 'Your State',
+    stateCode:    bp.state_code      || '00',
+    cin:          bp.cin             || 'U00000XX0000PTC000000',
+    gstin:        bp.gstin           || 'XXXXXXXXXXXXXXXXX',
+    pan:          bp.pan             || 'XXXXXXXXXX',
+    jurisdiction: bp.jurisdiction    || 'YOUR CITY',
+    phone:        bp.phone           || '',
+    email:        bp.email           || '',
+  };
   const cust     = bill.order?.customer || {};
   const custName = cust.customer_name   || bill.destination || '—';
   const custGSTIN= cust.gst_number      || '—';
@@ -212,10 +218,12 @@ function buildInvoiceHTML(bill) {
     <td width="35%" style="${BR}${BB}${P6}vertical-align:top;">
       <div style="font-size:12pt;font-weight:900;margin-bottom:3px;">${CO.name}</div>
       <div style="font-size:9pt;line-height:1.5;">${CO.address}</div>
+      ${CO.address2 ? `<div style="font-size:9pt;line-height:1.5;">${CO.address2}</div>` : ''}
       <div style="font-size:9pt;line-height:1.5;">${CO.city}</div>
       <div style="font-size:9pt;line-height:1.5;">CIN : ${CO.cin}</div>
       <div style="font-size:9pt;line-height:1.5;">GSTIN/UIN : ${CO.gstin}</div>
       <div style="font-size:9pt;line-height:1.5;">State Name : ${CO.state}, Code : ${CO.stateCode}</div>
+      ${CO.phone ? `<div style="font-size:9pt;line-height:1.5;">Ph : ${CO.phone}</div>` : ''}
     </td>
     <td width="30%" style="${BR}${BB}text-align:center;vertical-align:middle;padding:14px 8px;">
       <div style="font-size:17pt;font-weight:900;letter-spacing:0.5px;">Tax Invoice</div>

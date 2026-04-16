@@ -709,6 +709,14 @@ export const stateCityApi = {
   },
 };
 
+export const branchBillProfileApi = {
+  getAll: () => api.get("/branch-bill-profiles"),
+  getByBranch: (branchId) => api.get(`/branch-bill-profiles/${branchId}`),
+  upsert: (data) => api.post("/branch-bill-profiles", data),
+  update: (branchId, data) => api.put(`/branch-bill-profiles/${branchId}`, data),
+  delete: (branchId) => api.delete(`/branch-bill-profiles/${branchId}`),
+};
+
 export const deliveryBillApi = {
   getAll: (params) => api.get("/delivery-bills", { params }),
   getByDispatch: (dispatchId) => api.get("/delivery-bills", { params: { dispatch_id: dispatchId } }),

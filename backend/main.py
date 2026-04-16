@@ -884,6 +884,7 @@ def get_delivery_bills(
         joinedload(models.DeliveryBill.order).joinedload(models.CustomerOrder.customer),
         joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.truck),
         joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.driver),
+        joinedload(models.DeliveryBill.branch_profile),
     )
     if branch_id:
         query = query.filter(models.DeliveryBill.branch_id == branch_id)
@@ -903,6 +904,7 @@ def get_delivery_bill(bill_id: int, db: Session = Depends(get_db)):
         joinedload(models.DeliveryBill.order).joinedload(models.CustomerOrder.customer),
         joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.truck),
         joinedload(models.DeliveryBill.dispatch).joinedload(models.Dispatch.driver),
+        joinedload(models.DeliveryBill.branch_profile),
     ).filter(models.DeliveryBill.id == bill_id).first()
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
@@ -971,6 +973,74 @@ def delete_delivery_bill(bill_id: int, db: Session = Depends(get_db)):
     db.delete(bill)
     db.commit()
     return {"message": "Bill deleted successfully"}
+
+
+# ─── Branch Bill Profile CRUD ─────────────────────────────────────────────────
+
+@app.post("/api/branch-bill-profiles", response_model=schemas.BranchBillProfileRead)
+def upsert_branch_bill_profile(
+    data: schemas.BranchBillProfileCreate,
+    db: Session = Depends(get_db)
+):
+    existing = db.query(models.BranchBillProfile).filter(
+        models.BranchBillProfile.branch_id == data.branch_id
+    ).first()
+    if existing:
+        for key, val in data.dict(exclude_unset=True, exclude={"branch_id"}).items():
+            setattr(existing, key, val)
+        db.commit()
+        db.refresh(existing)
+        return existing
+    profile = models.BranchBillProfile(**data.dict())
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+@app.get("/api/branch-bill-profiles", response_model=List[schemas.BranchBillProfileRead])
+def get_branch_bill_profiles(db: Session = Depends(get_db)):
+    return db.query(models.BranchBillProfile).all()
+
+
+@app.get("/api/branch-bill-profiles/{branch_id}", response_model=schemas.BranchBillProfileRead)
+def get_branch_bill_profile(branch_id: int, db: Session = Depends(get_db)):
+    profile = db.query(models.BranchBillProfile).filter(
+        models.BranchBillProfile.branch_id == branch_id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Branch bill profile not found")
+    return profile
+
+
+@app.put("/api/branch-bill-profiles/{branch_id}", response_model=schemas.BranchBillProfileRead)
+def update_branch_bill_profile(
+    branch_id: int,
+    data: schemas.BranchBillProfileUpdate,
+    db: Session = Depends(get_db)
+):
+    profile = db.query(models.BranchBillProfile).filter(
+        models.BranchBillProfile.branch_id == branch_id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Branch bill profile not found")
+    for key, val in data.dict(exclude_unset=True).items():
+        setattr(profile, key, val)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+@app.delete("/api/branch-bill-profiles/{branch_id}")
+def delete_branch_bill_profile(branch_id: int, db: Session = Depends(get_db)):
+    profile = db.query(models.BranchBillProfile).filter(
+        models.BranchBillProfile.branch_id == branch_id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Branch bill profile not found")
+    db.delete(profile)
+    db.commit()
+    return {"message": "Profile deleted"}
 
 
 @app.get("/api/bag-sizes", response_model=List[schemas.BagSize])

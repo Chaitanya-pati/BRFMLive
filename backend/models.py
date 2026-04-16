@@ -235,6 +235,34 @@ class PaymentStatusEnum(str, enum.Enum):
     PAID = "PAID"
 
 
+class BranchBillProfile(Base):
+    """Billing/company details stored per branch — used to populate Tax Invoice headers."""
+    __tablename__ = "branch_bill_profiles"
+    id              = Column(Integer, primary_key=True, index=True)
+    branch_id       = Column(Integer, ForeignKey("branches.id"), nullable=False, unique=True)
+    company_name    = Column(String(255), nullable=False)
+    address_line1   = Column(String(255), nullable=True)
+    address_line2   = Column(String(255), nullable=True)
+    city            = Column(String(100), nullable=True)
+    state           = Column(String(100), nullable=True)
+    state_code      = Column(String(10),  nullable=True)
+    pin_code        = Column(String(10),  nullable=True)
+    cin             = Column(String(50),  nullable=True)
+    gstin           = Column(String(20),  nullable=True)
+    pan             = Column(String(15),  nullable=True)
+    jurisdiction    = Column(String(100), nullable=True)
+    phone           = Column(String(20),  nullable=True)
+    email           = Column(String(100), nullable=True)
+    bank_name       = Column(String(100), nullable=True)
+    bank_account_no = Column(String(50),  nullable=True)
+    bank_ifsc       = Column(String(20),  nullable=True)
+    bank_branch_name= Column(String(100), nullable=True)
+    created_at      = Column(DateTime, default=ist_now)
+    updated_at      = Column(DateTime, default=ist_now, onupdate=ist_now)
+
+    branch = relationship("Branch", backref="bill_profile")
+
+
 class DeliveryBill(Base):
     """One tax invoice per customer per delivery stop."""
     __tablename__ = "delivery_bills"
@@ -273,6 +301,12 @@ class DeliveryBill(Base):
     stop = relationship("DispatchDeliveryStop")
     order = relationship("CustomerOrder")
     items = relationship("DeliveryBillItem", back_populates="bill", cascade="all, delete-orphan")
+    branch_profile = relationship(
+        "BranchBillProfile",
+        primaryjoin="DeliveryBill.branch_id == foreign(BranchBillProfile.branch_id)",
+        foreign_keys="BranchBillProfile.branch_id",
+        viewonly=True, uselist=False
+    )
 
 
 class DeliveryBillItem(Base):

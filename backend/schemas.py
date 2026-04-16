@@ -1147,6 +1147,44 @@ class DeliveryBillItemRead(DeliveryBillItemCreate):
         from_attributes = True
 
 
+class BranchBillProfileBase(ISTModel):
+    company_name:     str
+    address_line1:    Optional[str] = None
+    address_line2:    Optional[str] = None
+    city:             Optional[str] = None
+    state:            Optional[str] = None
+    state_code:       Optional[str] = None
+    pin_code:         Optional[str] = None
+    cin:              Optional[str] = None
+    gstin:            Optional[str] = None
+    pan:              Optional[str] = None
+    jurisdiction:     Optional[str] = None
+    phone:            Optional[str] = None
+    email:            Optional[str] = None
+    bank_name:        Optional[str] = None
+    bank_account_no:  Optional[str] = None
+    bank_ifsc:        Optional[str] = None
+    bank_branch_name: Optional[str] = None
+
+
+class BranchBillProfileCreate(BranchBillProfileBase):
+    branch_id: int
+
+
+class BranchBillProfileUpdate(BranchBillProfileBase):
+    company_name: Optional[str] = None
+
+
+class BranchBillProfileRead(BranchBillProfileBase):
+    id:         int
+    branch_id:  int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DeliveryBillCreate(ISTModel):
     dispatch_id: int
     stop_id: Optional[int] = None
@@ -1288,6 +1326,7 @@ class DeliveryBillRead(ISTModel):
     items: List[DeliveryBillItemRead] = []
     order: Optional[BillOrderInfo] = None
     dispatch: Optional[BillDispatchInfo] = None
+    branch_profile: Optional[BranchBillProfileRead] = None
 
     @validator('invoice_date', 'delivery_note_date', 'reference_date',
                'created_at', 'updated_at', pre=True)
