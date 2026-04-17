@@ -13,6 +13,7 @@ import Layout from "../components/Layout";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
+import BinVisual from "../components/BinVisual";
 import Card from "../components/Card";
 import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
@@ -526,18 +527,54 @@ export default function Transfer12HourScreen({ navigation }) {
 
         <Card style={styles.mappingCard}>
           <Text style={styles.cardSectionTitle}>{transferType === "NORMAL" ? "Normal Mapping" : "Special Manual Transfer"}</Text>
-          <SelectDropdown
-            label="Source Bin"
-            value={transferType === "NORMAL" ? selectedSourceBin : specialSourceBin}
-            onValueChange={transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin}
-            options={sourceBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
-          />
-          <SelectDropdown
-            label="Destination Bin"
-            value={transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin}
-            onValueChange={transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin}
-            options={destinationBins.map((bin) => ({ label: bin.bin_number, value: bin.id.toString() }))}
-          />
+
+          <Text style={styles.binPickerLabel}>Source Bin</Text>
+          {sourceBins.length === 0 ? (
+            <Text style={styles.noBinsText}>No source bins available</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.binPickerRow}>
+              {sourceBins.map((bin) => {
+                const currentVal = transferType === "NORMAL" ? selectedSourceBin : specialSourceBin;
+                const setter = transferType === "NORMAL" ? setSelectedSourceBin : setSpecialSourceBin;
+                return (
+                  <View key={bin.id} style={{ marginRight: 10 }}>
+                    <BinVisual
+                      binNumber={bin.bin_number}
+                      capacity={bin.capacity}
+                      currentQuantity={bin.current_quantity}
+                      size="sm"
+                      isSelected={currentVal === bin.id.toString()}
+                      onPress={() => setter(bin.id.toString())}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          <Text style={[styles.binPickerLabel, { marginTop: 12 }]}>Destination Bin</Text>
+          {destinationBins.length === 0 ? (
+            <Text style={styles.noBinsText}>No destination bins available</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.binPickerRow}>
+              {destinationBins.map((bin) => {
+                const currentVal = transferType === "NORMAL" ? selectedDestinationBin : specialDestinationBin;
+                const setter = transferType === "NORMAL" ? setSelectedDestinationBin : setSpecialDestinationBin;
+                return (
+                  <View key={bin.id} style={{ marginRight: 10 }}>
+                    <BinVisual
+                      binNumber={bin.bin_number}
+                      capacity={bin.capacity}
+                      currentQuantity={bin.current_quantity}
+                      size="sm"
+                      isSelected={currentVal === bin.id.toString()}
+                      onPress={() => setter(bin.id.toString())}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
         </Card>
 
         <Button 
@@ -930,6 +967,9 @@ const styles = StyleSheet.create({
   orderCard: { padding: 16, marginBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mappingCard: { padding: 16, marginBottom: 16 },
   cardSectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 12, color: colors.primary },
+  binPickerLabel: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 4 },
+  binPickerRow: { marginVertical: 6, paddingBottom: 4 },
+  noBinsText: { fontSize: 13, color: "#6b7280", fontStyle: "italic", marginVertical: 6 },
   orderNumber: { fontSize: 16, fontWeight: "bold", color: colors.text.primary },
   orderDetail: { fontSize: 14, color: colors.text.secondary, marginTop: 4 },
   selectText: { color: colors.primary, fontWeight: "600" },

@@ -11,6 +11,7 @@ import {
 import Card from "../components/Card";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
+import BinVisual from "../components/BinVisual";
 import colors from "../theme/colors";
 import { getApiClient, productionLabTestApi } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
@@ -535,22 +536,24 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
             <Text style={styles.modalSub}>Select destination bin and enter water added</Text>
 
             <Text style={styles.fieldLabel}>Destination Bin (24-Hour Bin)</Text>
-            <View style={styles.pickerWrapper}>
-              <select
-                value={startBinId}
-                onChange={(e) => setStartBinId(e.target.value)}
-                style={styles.nativeSelect}
-              >
-                {availableBins.length === 0 && (
-                  <option value="">No 24-hour bins available</option>
-                )}
+            {availableBins.length === 0 ? (
+              <Text style={styles.noBinsText}>No 24-hour bins available</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.binPickerRow}>
                 {availableBins.map((bin) => (
-                  <option key={bin.id} value={String(bin.id)}>
-                    {bin.bin_number}
-                  </option>
+                  <View key={bin.id} style={{ marginRight: 10 }}>
+                    <BinVisual
+                      binNumber={bin.bin_number}
+                      capacity={bin.capacity}
+                      currentQuantity={bin.current_quantity}
+                      size="sm"
+                      isSelected={startBinId === String(bin.id)}
+                      onPress={() => setStartBinId(String(bin.id))}
+                    />
+                  </View>
                 ))}
-              </select>
-            </View>
+              </ScrollView>
+            )}
 
             <InputField
               label="Water Added (Litres) — optional"
@@ -891,6 +894,16 @@ const styles = StyleSheet.create({
   modalSub: { fontSize: 12, color: "#6b7280", marginBottom: 16 },
   modalActions: { flexDirection: "row", marginTop: 16 },
 
+  binPickerRow: {
+    marginVertical: 8,
+    paddingBottom: 4,
+  },
+  noBinsText: {
+    fontSize: 13,
+    color: "#6b7280",
+    fontStyle: "italic",
+    marginVertical: 8,
+  },
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",

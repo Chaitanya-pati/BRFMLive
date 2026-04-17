@@ -40,6 +40,7 @@ import DriverDeliveryScreen from './src/screens/DriverDeliveryScreen';
 import DeliveryBillsScreen from './src/screens/DeliveryBillsScreen';
 import BranchBillProfileScreen from './src/screens/BranchBillProfileScreen';
 import GrindingScreen from './src/screens/GrindingScreen';
+import ProductionPipelineScreen from './src/screens/ProductionPipelineScreen';
 import GrindingExcelViewScreen from './src/screens/GrindingExcelViewScreen';
 import GranulationTemplateScreen from './src/screens/GranulationTemplateScreen';
 import FinishedGoodsManagementScreen from './src/screens/FinishedGoodsManagementScreen';
@@ -175,6 +176,7 @@ export default function App() {
           <Stack.Screen name="CustomerOrderTraceability" component={CustomerOrderTraceabilityScreen} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
           <Stack.Screen name="LiveAdd" component={LiveAddScreen} />
+          <Stack.Screen name="ProductionPipeline" component={ProductionPipelineScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

@@ -158,6 +158,16 @@ export default function LiveAddScreen({ navigation }) {
                 <Text style={styles.shortcutIcon}>🚛</Text>
                 <Text style={styles.shortcutBtnText}>Dispatch</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.shortcutBtn, { backgroundColor: '#0f172a' }]}
+                onPress={() => navigation.navigate('ProductionPipeline', {
+                  orderId: selectedOrder.production_order_id,
+                })}
+              >
+                <Text style={styles.shortcutIcon}>📊</Text>
+                <Text style={styles.shortcutBtnText}>Pipeline View</Text>
+              </TouchableOpacity>
             </View>
           </View>
 

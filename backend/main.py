@@ -3993,6 +3993,155 @@ def get_production_order_planning(order_id: int, db: Session = Depends(get_db)):
     return db_order
 
 
+@app.get("/api/production-orders/{order_id}/pipeline")
+def get_production_order_pipeline(order_id: int, db: Session = Depends(get_db)):
+    """Return a full pipeline view for a production order: raw wheat, 24h transfer, 12h transfer, grinding."""
+    db_order = db.query(models.ProductionOrder).filter(models.ProductionOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+
+    def bin_to_dict(b):
+        if b is None:
+            return None
+        return {
+            "id": b.id,
+            "bin_number": b.bin_number,
+            "capacity": b.capacity,
+            "current_quantity": b.current_quantity,
+            "bin_type": b.bin_type,
+            "status": b.status,
+            "material_type": b.material_type,
+        }
+
+    def compute_stage_status(records, status_key="status", done_val="COMPLETED", active_val="IN_PROGRESS"):
+        if not records:
+            return "PENDING"
+        statuses = [r.get(status_key) if isinstance(r, dict) else getattr(r, status_key, None) for r in records]
+        if any(s == active_val for s in statuses):
+            return "IN_PROGRESS"
+        if all(s == done_val for s in statuses):
+            return "COMPLETED"
+        if any(s == done_val for s in statuses):
+            return "PARTIAL"
+        return "PENDING"
+
+    order_status = getattr(db_order.status, "value", str(db_order.status))
+
+    # ── Stage 1: Raw Wheat (source bins from planning) ─────────────────────────
+    source_bin_records = db.query(models.ProductionOrderSourceBin).filter(
+        models.ProductionOrderSourceBin.production_order_id == order_id
+    ).all()
+    raw_wheat_bins = []
+    for sb in source_bin_records:
+        b = db.query(models.Bin).filter(models.Bin.id == sb.bin_id).first()
+        raw_wheat_bins.append({
+            **bin_to_dict(b),
+            "blend_percentage": sb.blend_percentage,
+            "planned_quantity": sb.quantity,
+        })
+    raw_wheat_status = "COMPLETED" if raw_wheat_bins else "PENDING"
+
+    # ── Stage 2: 24-Hour Transfer ──────────────────────────────────────────────
+    t24_records_raw = db.query(models.TransferRecording).filter(
+        models.TransferRecording.production_order_id == order_id
+    ).all()
+    t24_records = []
+    for r in t24_records_raw:
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == r.destination_bin_id).first()
+        t24_records.append({
+            "id": r.id,
+            "status": getattr(r.status, "value", str(r.status)) if r.status else "PLANNED",
+            "destination_bin": bin_to_dict(dest_bin),
+            "quantity_transferred": r.quantity_transferred,
+            "quantity_planned": r.quantity_planned,
+            "water_added": r.water_added,
+            "moisture_level": r.moisture_level,
+            "transfer_start_time": r.transfer_start_time.isoformat() if r.transfer_start_time else None,
+            "transfer_end_time": r.transfer_end_time.isoformat() if r.transfer_end_time else None,
+        })
+    t24_status = compute_stage_status(t24_records) if t24_records else "PENDING"
+
+    # ── Stage 3: 12-Hour Transfer ──────────────────────────────────────────────
+    t12_records_raw = db.query(models.Transfer12HourRecord).filter(
+        models.Transfer12HourRecord.production_order_id == order_id
+    ).all()
+    t12_records = []
+    for r in t12_records_raw:
+        src_bin = db.query(models.Bin).filter(models.Bin.id == r.source_bin_id).first()
+        dst_bin = db.query(models.Bin).filter(models.Bin.id == r.destination_bin_id).first()
+        t12_records.append({
+            "id": r.id,
+            "status": r.status or "PLANNED",
+            "source_bin": bin_to_dict(src_bin),
+            "destination_bin": bin_to_dict(dst_bin),
+            "quantity_transferred": r.quantity_transferred,
+            "incoming_moisture": r.incoming_moisture,
+            "target_moisture": r.target_moisture,
+            "moisture_level": r.moisture_level,
+            "water_added": r.water_added,
+            "transfer_start_time": r.transfer_start_time.isoformat() if r.transfer_start_time else None,
+            "transfer_end_time": r.transfer_end_time.isoformat() if r.transfer_end_time else None,
+        })
+    t12_status = compute_stage_status(t12_records) if t12_records else "PENDING"
+
+    # ── Stage 4: Grinding (12h destination bins + HourlyProduction) ────────────
+    dest_bin_ids = list({r["destination_bin"]["id"] for r in t12_records if r.get("destination_bin")})
+    grinding_bins = []
+    for bid in dest_bin_ids:
+        b = db.query(models.Bin).filter(models.Bin.id == bid).first()
+        if b:
+            grinding_bins.append(bin_to_dict(b))
+
+    hourly_records = db.query(models.HourlyProduction).filter(
+        models.HourlyProduction.production_order_id == order_id
+    ).order_by(models.HourlyProduction.id.desc()).all()
+    grinding_records = []
+    for h in hourly_records:
+        grinding_records.append({
+            "id": h.id,
+            "production_date": h.production_date.isoformat() if getattr(h, "production_date", None) else None,
+            "hour_slot": getattr(h, "hour_slot", None),
+            "created_at": h.created_at.isoformat() if getattr(h, "created_at", None) else None,
+        })
+    grinding_status = "COMPLETED" if grinding_records else ("IN_PROGRESS" if t12_status == "COMPLETED" else "PENDING")
+
+    order_dict = {
+        "id": db_order.id,
+        "order_number": db_order.order_number,
+        "status": order_status,
+        "quantity": db_order.quantity,
+        "order_date": db_order.order_date.isoformat() if db_order.order_date else None,
+        "target_finish_date": db_order.target_finish_date.isoformat() if db_order.target_finish_date else None,
+        "raw_product": {
+            "id": db_order.raw_product.id,
+            "product_name": db_order.raw_product.product_name,
+        } if db_order.raw_product else None,
+    }
+
+    return {
+        "order": order_dict,
+        "stages": {
+            "raw_wheat": {
+                "status": raw_wheat_status,
+                "source_bins": raw_wheat_bins,
+            },
+            "transfer_24h": {
+                "status": t24_status,
+                "records": t24_records,
+            },
+            "transfer_12h": {
+                "status": t12_status,
+                "records": t12_records,
+            },
+            "grinding": {
+                "status": grinding_status,
+                "bins": grinding_bins,
+                "hourly_records_count": len(grinding_records),
+            },
+        },
+    }
+
+
 @app.post("/api/production-orders/{order_id}/planning", response_model=schemas.ProductionOrderWithPlanning)
 def save_production_order_planning(
     order_id: int,

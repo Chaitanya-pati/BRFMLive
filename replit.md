@@ -1,7 +1,7 @@
-# Gate Entry & Lab Testing Application
+# Manufacturing & Logistics Management System
 
 ## Overview
-This full-stack, cross-platform application manages supplier information, vehicle entries, and laboratory quality testing for raw wheat. It provides a unified codebase for Android, iOS, and Web platforms, backed by a REST API. The system focuses on managing supplier master data, vehicle entry registration with photo capture, and comprehensive lab test recording for wheat quality, including an integrated system for Godown (warehouse) management, unloading entries, and quality claim tracking. The project aims to streamline operations, enhance data accuracy, and provide robust reporting for agricultural supply chain management.
+This full-stack, cross-platform application manages a food/grain processing facility. It covers the full production lifecycle: supplier/vehicle/lab entry, production orders, 24-hour and 12-hour transfers, grinding, dispatch, and live monitoring. It provides a unified codebase for Android, iOS, and Web platforms, backed by a REST API. The system focuses on managing supplier master data, vehicle entry registration with photo capture, and comprehensive lab test recording for wheat quality, including an integrated system for Godown (warehouse) management, unloading entries, and quality claim tracking. The project aims to streamline operations, enhance data accuracy, and provide robust reporting for agricultural supply chain management.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -85,6 +85,15 @@ The application is seeded with the following test users for different roles:
 - **Username**: `user2` / Password: `password123` (North Branch)
 
 ## Recent Changes
+
+### April 17, 2026
+- Added **`BinVisual` component** (`frontend/src/components/BinVisual.js`): reusable fill-level bin graphic with color coding (blue→amber→orange→red at 0/40/75/90% capacity), tap-to-select support, sizes xs/sm/md/lg.
+- Added **`ProductionPipelineScreen`** (`frontend/src/screens/ProductionPipelineScreen.js`): unified 4-stage view (Raw Wheat → 24h Transfer → 12h Transfer → Grinding) per production order, with stage status badges and BinVisual cards. Registered as route `ProductionPipeline`, accessible from sidebar under Production → Pipeline View.
+- Added backend endpoint `GET /api/production-orders/{order_id}/pipeline` returning all stage data in one call.
+- **Production Planning screen**: bin chips replaced with `BinVisual` tap-to-add tiles; selected bins show mini BinVisual in the table row.
+- **24h Transfer (start modal)**: native `<select>` replaced with horizontal `BinVisual` picker grid.
+- **12h Transfer (configure bins)**: source and destination `SelectDropdown` replaced with horizontal `BinVisual` picker grids.
+- **Live View**: added "Pipeline View" shortcut button navigating to `ProductionPipeline` with order pre-selected.
 
 ### January 28, 2026
 - Implemented Dispatch Management system.

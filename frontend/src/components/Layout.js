@@ -257,6 +257,7 @@ const menuItems = [
       subItems: [
         { name: "Production Orders", route: "ProductionOrder", icon: SvgCogIcon },
         { name: "Production Planning", route: "ProductionOrderPlanning", icon: SvgFileTextIcon },
+        { name: "Pipeline View", route: "ProductionPipeline", icon: SvgRouteIcon },
         { name: "24 hour transfer", route: "TransferRecording", icon: SvgPackageIcon },
         { name: "12 Hour Transfer", route: "Transfer12Hour", icon: SvgBinIcon },
         { name: "Grinding", route: "Grinding", icon: SvgCogIcon },

@@ -10,6 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import Layout from '../components/Layout';
+import BinVisual from '../components/BinVisual';
 import { productionOrderApi, planningBinsApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
@@ -298,19 +299,20 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
 
           {getAvailableSourceBins().length > 0 && (
             <View style={styles.addBinSection}>
-              <Text style={styles.addBinLabel}>Add Source Bin:</Text>
-              <View style={styles.binChips}>
+              <Text style={styles.addBinLabel}>Tap a bin to add it as a source:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.binVisualRow}>
                 {getAvailableSourceBins().map(bin => (
-                  <TouchableOpacity
-                    key={bin.id}
-                    style={styles.addBinChip}
-                    onPress={() => addSourceBin(bin.id)}
-                  >
-                    <Text style={styles.addBinChipText}>+ {bin.bin_number}</Text>
-                    <Text style={styles.addBinChipSubtext}>{bin.current_quantity} T</Text>
-                  </TouchableOpacity>
+                  <View key={bin.id} style={{ marginRight: 12 }}>
+                    <BinVisual
+                      binNumber={bin.bin_number}
+                      capacity={bin.capacity}
+                      currentQuantity={bin.current_quantity}
+                      size="sm"
+                      onPress={() => addSourceBin(bin.id)}
+                    />
+                  </View>
                 ))}
-              </View>
+              </ScrollView>
             </View>
           )}
 
@@ -329,7 +331,14 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
               </View>
               {selectedSources.map((source) => (
                 <View key={source.bin_id} style={styles.binTableRow}>
-                  <View style={[styles.binTableCell, { flex: 2 }]}>
+                  <View style={[styles.binTableCell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                    <BinVisual
+                      binNumber={source.bin?.bin_number}
+                      capacity={source.bin?.capacity}
+                      currentQuantity={source.bin?.current_quantity}
+                      size="xs"
+                      showQty={false}
+                    />
                     <Text style={styles.binName}>{source.bin?.bin_number}</Text>
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
@@ -629,6 +638,10 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
+  },
+  binVisualRow: {
+    marginTop: 8,
+    paddingBottom: 8,
   },
   addBinLabel: {
     fontSize: 14,
