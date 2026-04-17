@@ -22,6 +22,7 @@ import Card from "../components/Card";
 import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
+import GrindingMachineCard from "../components/GrindingMachineCard";
 
 // ─── Cross-platform Date/Time Picker Modal ────────────────────────────────────
 // On web  → renders a native HTML <input type="date|time"> inside a modal
@@ -1472,32 +1473,18 @@ export default function GrindingScreen({ navigation }) {
               <ActivityIndicator size="large" color={colors.primary} />
             ) : availableBins.length > 0 ? (
               availableBins.map((bin) => (
-                <TouchableOpacity
+                <GrindingMachineCard
                   key={bin.id}
-                  style={styles.binCard}
+                  bin={bin}
                   onPress={() => handleBinSelect(bin)}
-                >
-                  <View style={styles.binIconContainer}>
-                    <Text style={styles.binIcon}>📦</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.binName}>Bin {bin.bin_number}</Text>
-                    <Text style={styles.binOrder}>
-                      Order: {bin.order_number || "None Found"}
-                    </Text>
-                    <Text style={styles.binStatus}>
-                      Status: {bin.status || "Ready"}
-                    </Text>
-                  </View>
-                  <View style={styles.startBadge}>
-                    <Text style={styles.startBadgeText}>START</Text>
-                  </View>
-                </TouchableOpacity>
+                />
               ))
             ) : (
-              <Text style={styles.noBinsText}>
-                No filled 12-hour bins available
-              </Text>
+              <View style={styles.emptyBins}>
+                <Text style={styles.emptyBinsIcon}>⚙️</Text>
+                <Text style={styles.noBinsText}>No filled 12-hour bins available</Text>
+                <Text style={styles.noBinsSubtext}>Complete a 12-hour transfer to see bins here</Text>
+              </View>
             )}
           </View>
         ) : (
@@ -1718,10 +1705,26 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   startBadgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+  emptyBins: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
+  emptyBinsIcon: {
+    fontSize: 44,
+    marginBottom: 12,
+  },
   noBinsText: {
     textAlign: "center",
-    padding: 20,
-    color: "#999",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+  },
+  noBinsSubtext: {
+    textAlign: "center",
+    fontSize: 13,
+    color: "#9ca3af",
     fontStyle: "italic",
   },
   activeInfoCard: {
