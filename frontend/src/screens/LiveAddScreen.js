@@ -294,7 +294,7 @@ function SourceBinsBreakdown({ sourceBins, destQty }) {
             <Text style={styles.srcBreakdownBin}>{binName}</Text>
             <View style={styles.srcBreakdownRight}>
               <Text style={styles.srcBreakdownPct}>{sb.blend_percentage}%</Text>
-              <Text style={styles.srcBreakdownQty}>{contributed} kg</Text>
+              <Text style={styles.srcBreakdownQty}>{contributed} T</Text>
             </View>
           </View>
         );
@@ -305,6 +305,7 @@ function SourceBinsBreakdown({ sourceBins, destQty }) {
 
 function TransferCard({ record, isWide, sourceBins }) {
   const statusColor = STATUS_COLOR[record.status] || '#6b7280';
+  const is12h = record.target_moisture !== undefined;
   return (
     <View style={styles.recordCard}>
       <View style={styles.recordCardHeader}>
@@ -318,9 +319,20 @@ function TransferCard({ record, isWide, sourceBins }) {
       <View style={[styles.recordGrid, isWide && styles.recordGridWide]}>
         <RecordField label="Start Time" value={record.start_time ? formatISTDateTime(record.start_time) : 'N/A'} />
         <RecordField label="End Time" value={record.end_time ? formatISTDateTime(record.end_time) : 'N/A'} />
-        <RecordField label="Quantity" value={record.quantity_transferred != null ? `${record.quantity_transferred} kg` : 'N/A'} />
-        <RecordField label="Water Added" value={record.water_added != null ? `${record.water_added} L` : 'N/A'} />
-        <RecordField label="Moisture" value={record.moisture != null ? `${record.moisture}%` : 'N/A'} />
+        <RecordField label="Quantity" value={record.quantity_transferred != null ? `${record.quantity_transferred} T` : 'N/A'} />
+        {is12h ? (
+          <>
+            <RecordField label="Incoming M%" value={record.incoming_moisture != null ? `${record.incoming_moisture}%` : 'N/A'} />
+            <RecordField label="Target M%" value={record.target_moisture != null ? `${record.target_moisture}%` : 'N/A'} />
+            <RecordField label="Actual M%" value={record.moisture != null ? `${record.moisture}%` : 'N/A'} />
+            <RecordField label="Water Added" value={record.water_added != null ? `${record.water_added} L` : 'N/A'} />
+          </>
+        ) : (
+          <>
+            <RecordField label="Water Added" value={record.water_added != null ? `${record.water_added} L` : 'N/A'} />
+            <RecordField label="Moisture" value={record.moisture != null ? `${record.moisture}%` : 'N/A'} />
+          </>
+        )}
       </View>
       {sourceBins && sourceBins.length > 0 && (
         <SourceBinsBreakdown sourceBins={sourceBins} destQty={record.quantity_transferred} />

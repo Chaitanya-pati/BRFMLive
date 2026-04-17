@@ -4884,6 +4884,8 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
                 "end_time": r.transfer_end_time.isoformat() if r.transfer_end_time else None,
                 "quantity_transferred": r.quantity_transferred,
                 "water_added": r.water_added,
+                "incoming_moisture": r.incoming_moisture,
+                "target_moisture": r.target_moisture,
                 "moisture": r.moisture_level,
                 "status": r.status,
                 "branch_id": r.branch_id,
