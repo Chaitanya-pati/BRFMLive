@@ -73,6 +73,27 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gate Entry & Lab Testing API")
 
+
+@app.on_event("startup")
+def run_column_migrations():
+    """Add new columns to existing tables if they don't already exist."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        migrations = [
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_at TIMESTAMP",
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_km FLOAT",
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_signed VARCHAR(150)",
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS return_journey_at TIMESTAMP",
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_return_at TIMESTAMP",
+            "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_return_km FLOAT",
+        ]
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+            except Exception:
+                pass
+        conn.commit()
+
 # CORS configuration - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
@@ -157,6 +178,204 @@ def save_order_granulation(order_id: int, data: dict, branch_id: Optional[int] =
     
     db.commit()
     return {"message": "Success"}
+
+# --- Trip Sheet Endpoints ---
+
+def _generate_trip_number(db) -> str:
+    from datetime import date
+    year = date.today().year
+    count = db.query(models.TripSheet).count()
+    return f"TRIP-{year}-{str(count + 1).zfill(4)}"
+
+
+@app.post("/api/trip-sheets", response_model=schemas.TripSheetRead)
+def create_trip_sheet(data: schemas.TripSheetCreate,
+                      branch_id: Optional[int] = Depends(get_branch_id),
+                      db: Session = Depends(get_db)):
+    existing = db.query(models.TripSheet).filter(
+        models.TripSheet.dispatch_id == data.dispatch_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Trip sheet already exists for this dispatch")
+    bid = data.branch_id or branch_id or 1
+    ts = models.TripSheet(
+        dispatch_id=data.dispatch_id,
+        branch_id=bid,
+        trip_number=_generate_trip_number(db),
+        d_note_number=data.d_note_number,
+        freight_amount=data.freight_amount,
+    )
+    db.add(ts)
+    db.commit()
+    db.refresh(ts)
+    return ts
+
+
+@app.get("/api/trip-sheets", response_model=List[schemas.TripSheetRead])
+def list_trip_sheets(branch_id: Optional[int] = Depends(get_branch_id),
+                     db: Session = Depends(get_db)):
+    q = db.query(models.TripSheet)
+    if branch_id:
+        q = q.filter(models.TripSheet.branch_id == branch_id)
+    return q.order_by(models.TripSheet.id.desc()).all()
+
+
+@app.get("/api/trip-sheets/by-dispatch/{dispatch_id}", response_model=Optional[schemas.TripSheetRead])
+def get_trip_sheet_by_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
+    return db.query(models.TripSheet).filter(
+        models.TripSheet.dispatch_id == dispatch_id
+    ).first()
+
+
+@app.get("/api/trip-sheets/{trip_id}", response_model=schemas.TripSheetRead)
+def get_trip_sheet(trip_id: int, db: Session = Depends(get_db)):
+    ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
+    if not ts:
+        raise HTTPException(status_code=404, detail="Trip sheet not found")
+    return ts
+
+
+@app.put("/api/trip-sheets/{trip_id}", response_model=schemas.TripSheetRead)
+def update_trip_sheet(trip_id: int, data: schemas.TripSheetUpdate,
+                      db: Session = Depends(get_db)):
+    ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
+    if not ts:
+        raise HTTPException(status_code=404, detail="Trip sheet not found")
+    for k, v in data.dict(exclude_unset=True).items():
+        setattr(ts, k, v)
+    db.commit()
+    db.refresh(ts)
+    return ts
+
+
+@app.put("/api/trip-sheets/{trip_id}/signoff", response_model=schemas.TripSheetSignoffRead)
+def upsert_trip_signoff(trip_id: int, data: schemas.TripSheetSignoffCreate,
+                        db: Session = Depends(get_db)):
+    ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
+    if not ts:
+        raise HTTPException(status_code=404, detail="Trip sheet not found")
+    signoff = db.query(models.TripSheetSignoff).filter(
+        models.TripSheetSignoff.trip_sheet_id == trip_id
+    ).first()
+    if signoff:
+        for k, v in data.dict(exclude_unset=True).items():
+            setattr(signoff, k, v)
+    else:
+        signoff = models.TripSheetSignoff(trip_sheet_id=trip_id, **data.dict(exclude_unset=True))
+        db.add(signoff)
+    db.commit()
+    db.refresh(signoff)
+    return signoff
+
+
+@app.put("/api/trip-sheets/{trip_id}/stop", response_model=schemas.DispatchDeliveryStopRead)
+def upsert_trip_stop(trip_id: int, data: schemas.DispatchDeliveryStopUpdate,
+                     db: Session = Depends(get_db)):
+    ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
+    if not ts:
+        raise HTTPException(status_code=404, detail="Trip sheet not found")
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id
+    ).first()
+    if not stop:
+        stop = models.DispatchDeliveryStop(dispatch_id=ts.dispatch_id)
+        db.add(stop)
+        db.flush()
+    for k, v in data.dict(exclude_unset=True).items():
+        setattr(stop, k, v)
+    db.commit()
+    db.refresh(stop)
+    return stop
+
+
+@app.get("/api/trip-sheets/{trip_id}/full")
+def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
+    ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
+    if not ts:
+        raise HTTPException(status_code=404, detail="Trip sheet not found")
+    dispatch = db.query(models.Dispatch).options(
+        joinedload(models.Dispatch.driver),
+        joinedload(models.Dispatch.truck),
+        joinedload(models.Dispatch.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.Dispatch.items).joinedload(models.DispatchItem.finished_good),
+    ).filter(models.Dispatch.dispatch_id == ts.dispatch_id).first()
+
+    stop = db.query(models.DispatchDeliveryStop).filter(
+        models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id
+    ).first()
+
+    bill = db.query(models.DeliveryBill).filter(
+        models.DeliveryBill.dispatch_id == ts.dispatch_id
+    ).first()
+
+    def fmt_dt(dt):
+        return format_ist(dt) if dt else None
+
+    customer = dispatch.order.customer if dispatch and dispatch.order else None
+
+    return {
+        "trip_sheet": {
+            "id": ts.id,
+            "trip_number": ts.trip_number,
+            "d_note_number": ts.d_note_number,
+            "freight_amount": ts.freight_amount,
+            "created_at": fmt_dt(ts.created_at),
+        },
+        "signoff": {
+            "freight_received": ts.signoff.freight_received if ts.signoff else None,
+            "excel_updated": ts.signoff.excel_updated if ts.signoff else None,
+            "supervisor_sign_date": fmt_dt(ts.signoff.supervisor_sign_date) if ts.signoff else None,
+            "driver_sign_date": fmt_dt(ts.signoff.driver_sign_date) if ts.signoff else None,
+            "remarks": ts.signoff.remarks if ts.signoff else None,
+        } if ts.signoff else None,
+        "dispatch": {
+            "dispatch_id": dispatch.dispatch_id if dispatch else None,
+            "actual_dispatch_date": fmt_dt(dispatch.actual_dispatch_date) if dispatch else None,
+            "dispatched_quantity_ton": dispatch.dispatched_quantity_ton if dispatch else None,
+            "dispatched_bags": dispatch.dispatched_bags if dispatch else None,
+            "status": dispatch.status if dispatch else None,
+            "remarks": dispatch.remarks if dispatch else None,
+        },
+        "driver": {
+            "driver_name": dispatch.driver.driver_name if dispatch and dispatch.driver else None,
+            "phone": dispatch.driver.phone if dispatch and dispatch.driver else None,
+        },
+        "truck": {
+            "truck_number": dispatch.truck.truck_number if dispatch and dispatch.truck else None,
+        },
+        "customer": {
+            "customer_name": customer.customer_name if customer else None,
+            "address": customer.address if customer else None,
+            "city": customer.city if customer else None,
+            "state": customer.state if customer else None,
+        },
+        "bill": {
+            "invoice_number": bill.invoice_number if bill else None,
+            "invoice_date": fmt_dt(bill.invoice_date) if bill else None,
+        },
+        "stop": {
+            "arrived_at": fmt_dt(stop.arrived_at) if stop else None,
+            "unloading_start": fmt_dt(stop.unloading_start) if stop else None,
+            "unloading_end": fmt_dt(stop.unloading_end) if stop else None,
+            "factory_exit_at": fmt_dt(stop.factory_exit_at) if stop else None,
+            "factory_exit_km": stop.factory_exit_km if stop else None,
+            "factory_exit_signed": stop.factory_exit_signed if stop else None,
+            "return_journey_at": fmt_dt(stop.return_journey_at) if stop else None,
+            "factory_return_at": fmt_dt(stop.factory_return_at) if stop else None,
+            "factory_return_km": stop.factory_return_km if stop else None,
+            "customer_signature": stop.customer_signature if stop else None,
+            "driver_signature": stop.driver_signature if stop else None,
+        } if stop else {},
+        "items": [
+            {
+                "product_name": i.finished_good.product_name if i.finished_good else "N/A",
+                "dispatched_qty_ton": i.dispatched_qty_ton,
+                "dispatched_bags": i.dispatched_bags,
+            }
+            for i in (dispatch.items if dispatch else [])
+        ],
+    }
+
 
 @app.post("/api/silos", response_model=schemas.SiloMaster)
 def create_silo(silo: schemas.SiloMasterCreate,

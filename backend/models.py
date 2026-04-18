@@ -211,11 +211,51 @@ class DispatchDeliveryStop(Base):
     unloading_end = Column(DateTime, nullable=True)
     driver_signature = Column(Text, nullable=True)
     customer_signature = Column(Text, nullable=True)
+    # Trip sheet journey fields
+    factory_exit_at = Column(DateTime, nullable=True)
+    factory_exit_km = Column(Float, nullable=True)
+    factory_exit_signed = Column(String(150), nullable=True)
+    return_journey_at = Column(DateTime, nullable=True)
+    factory_return_at = Column(DateTime, nullable=True)
+    factory_return_km = Column(Float, nullable=True)
     created_at = Column(DateTime, default=ist_now)
 
     dispatch = relationship("Dispatch", back_populates="delivery_stops")
     order = relationship("CustomerOrder")
     photos = relationship("DispatchStopPhoto", back_populates="stop", cascade="all, delete-orphan")
+
+
+class TripSheet(Base):
+    """One trip sheet per dispatch — captures trip ID, D-Note, freight."""
+    __tablename__ = "trip_sheets"
+    id = Column(Integer, primary_key=True, index=True)
+    dispatch_id = Column(Integer, ForeignKey("dispatch.dispatch_id"), nullable=False, unique=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    trip_number = Column(String(50), nullable=False, unique=True)
+    d_note_number = Column(String(100), nullable=True)
+    freight_amount = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
+
+    dispatch = relationship("Dispatch")
+    branch = relationship("Branch")
+    signoff = relationship("TripSheetSignoff", back_populates="trip_sheet", uselist=False, cascade="all, delete-orphan")
+
+
+class TripSheetSignoff(Base):
+    """Supervisor sign-off section of the trip sheet."""
+    __tablename__ = "trip_sheet_signoffs"
+    id = Column(Integer, primary_key=True, index=True)
+    trip_sheet_id = Column(Integer, ForeignKey("trip_sheets.id"), nullable=False, unique=True)
+    freight_received = Column(Float, nullable=True)
+    excel_updated = Column(Boolean, nullable=True)
+    supervisor_sign_date = Column(DateTime, nullable=True)
+    driver_sign_date = Column(DateTime, nullable=True)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+    updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
+
+    trip_sheet = relationship("TripSheet", back_populates="signoff")
 
 
 class DispatchStopPhoto(Base):

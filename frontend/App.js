@@ -50,6 +50,8 @@ import ProductionOrderTraceabilityScreen from './src/screens/ProductionOrderTrac
 import CustomerOrderTraceabilityScreen from './src/screens/CustomerOrderTraceabilityScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import LiveAddScreen from './src/screens/LiveAddScreen';
+import TripSheetScreen from './src/screens/TripSheetScreen';
+import TripSheetPrintScreen from './src/screens/TripSheetPrintScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -177,6 +179,8 @@ export default function App() {
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
           <Stack.Screen name="LiveAdd" component={LiveAddScreen} />
           <Stack.Screen name="ProductionPipeline" component={ProductionPipelineScreen} />
+          <Stack.Screen name="TripSheet" component={TripSheetScreen} />
+          <Stack.Screen name="TripSheetPrint" component={TripSheetPrintScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

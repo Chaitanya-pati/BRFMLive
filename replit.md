@@ -86,6 +86,17 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### April 18, 2026
+- Implemented **Trip Sheet** system end-to-end:
+  - **Backend models**: Added `TripSheet` and `TripSheetSignoff` tables; added 6 journey-tracking columns to `dispatch_delivery_stops` (`factory_exit_at`, `factory_exit_km`, `factory_exit_signed`, `return_journey_at`, `factory_return_at`, `factory_return_km`).
+  - **Startup migration handler**: `ALTER TABLE IF NOT EXISTS` columns added safely at app startup, no alembic chain conflict.
+  - **Full CRUD API** at `/api/trip-sheets/*` including `/full` endpoint for print view aggregation (dispatch, driver, truck, customer, bill, stop, items in one call).
+  - Auto-generated trip numbers in format `TRIP-YYYY-NNNN`.
+  - **`TripSheetScreen.js`**: 3-tab form (Header / Journey Log / Sign-Off) with dispatch selector, save, and print navigation.
+  - **`TripSheetPrintScreen.js`**: A4-formatted print view matching BRFM India layout — title row, info grid, color-coded journey milestone table, remarks/driver/supervisor sign-off section.
+  - Registered `TripSheet` and `TripSheetPrint` routes in `App.js`.
+  - Added "Trip Sheet" to sidebar under Dispatch & Orders section in `Layout.js`.
+
 ### April 17, 2026
 - Added **`BinVisual` component** (`frontend/src/components/BinVisual.js`): reusable fill-level bin graphic with color coding (blue→amber→orange→red at 0/40/75/90% capacity), tap-to-select support, sizes xs/sm/md/lg.
 - Added **`ProductionPipelineScreen`** (`frontend/src/screens/ProductionPipelineScreen.js`): unified 4-stage view (Raw Wheat → 24h Transfer → 12h Transfer → Grinding) per production order, with stage status badges and BinVisual cards. Registered as route `ProductionPipeline`, accessible from sidebar under Production → Pipeline View.

@@ -1122,12 +1122,103 @@ class DispatchDeliveryStopRead(ISTModel):
     unloading_end: Optional[datetime] = None
     driver_signature: Optional[str] = None
     customer_signature: Optional[str] = None
+    factory_exit_at: Optional[datetime] = None
+    factory_exit_km: Optional[float] = None
+    factory_exit_signed: Optional[str] = None
+    return_journey_at: Optional[datetime] = None
+    factory_return_at: Optional[datetime] = None
+    factory_return_km: Optional[float] = None
     created_at: datetime
     photos: List[DispatchStopPhotoRead] = []
 
-    @validator('arrived_at', 'unloading_start', 'unloading_end', pre=True)
+    @validator('arrived_at', 'unloading_start', 'unloading_end',
+               'factory_exit_at', 'return_journey_at', 'factory_return_at', pre=True)
     def _parse_stop_dates(cls, v):
         return parse_datetime(v)
+
+    class Config:
+        from_attributes = True
+
+
+class DispatchDeliveryStopUpdate(ISTModel):
+    arrived_at: Optional[datetime] = None
+    unloading_start: Optional[datetime] = None
+    unloading_end: Optional[datetime] = None
+    driver_signature: Optional[str] = None
+    customer_signature: Optional[str] = None
+    factory_exit_at: Optional[datetime] = None
+    factory_exit_km: Optional[float] = None
+    factory_exit_signed: Optional[str] = None
+    return_journey_at: Optional[datetime] = None
+    factory_return_at: Optional[datetime] = None
+    factory_return_km: Optional[float] = None
+
+    @validator('arrived_at', 'unloading_start', 'unloading_end',
+               'factory_exit_at', 'return_journey_at', 'factory_return_at', pre=True)
+    def _parse_stop_dates(cls, v):
+        return parse_datetime(v)
+
+    class Config:
+        from_attributes = True
+
+
+class TripSheetSignoffBase(ISTModel):
+    freight_received: Optional[float] = None
+    excel_updated: Optional[bool] = None
+    supervisor_sign_date: Optional[datetime] = None
+    driver_sign_date: Optional[datetime] = None
+    remarks: Optional[str] = None
+
+    @validator('supervisor_sign_date', 'driver_sign_date', pre=True)
+    def _parse_dates(cls, v):
+        return parse_datetime(v)
+
+
+class TripSheetSignoffCreate(TripSheetSignoffBase):
+    pass
+
+
+class TripSheetSignoffRead(TripSheetSignoffBase):
+    id: int
+    trip_sheet_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TripSheetBase(ISTModel):
+    d_note_number: Optional[str] = None
+    freight_amount: Optional[float] = None
+
+
+class TripSheetCreate(TripSheetBase):
+    dispatch_id: int
+    branch_id: Optional[int] = None
+
+
+class TripSheetUpdate(TripSheetBase):
+    d_note_number: Optional[str] = None
+    freight_amount: Optional[float] = None
+
+
+class TripSheetRead(TripSheetBase):
+    id: int
+    dispatch_id: int
+    branch_id: int
+    trip_number: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    signoff: Optional[TripSheetSignoffRead] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TripSheetWithDetails(TripSheetRead):
+    dispatch: Optional['DispatchWithDetails'] = None
+    stop: Optional[DispatchDeliveryStopRead] = None
 
     class Config:
         from_attributes = True
