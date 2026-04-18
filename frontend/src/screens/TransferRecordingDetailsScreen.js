@@ -54,7 +54,15 @@ function TimerBadge({ startTime }) {
 }
 
 export default function TransferRecordingDetailsScreen({ route, navigation }) {
-  const { order } = route.params;
+  const { order, returnToPipeline } = route.params;
+
+  const goBackOrPipeline = () => {
+    if (returnToPipeline) {
+      navigation.navigate('ProductionPipeline', { orderId: order.id });
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const [sourceBins, setSourceBins] = useState([]);
   const [transfers, setTransfers] = useState([]);
@@ -136,6 +144,10 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
       });
       await showSuccess("Transfer started");
       setStartModal(false);
+      if (returnToPipeline) {
+        navigation.navigate('ProductionPipeline', { orderId: order.id });
+        return;
+      }
       loadData();
     } catch (err) {
       console.error("Start error:", err);
@@ -176,7 +188,9 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
 
       // Redirect if all started transfers are now completed and at least one done
       if (freshCompleted.length > 0 && freshCompleted.length === freshTransfers.length) {
-        redirectAfterAllTransfersComplete(navigation);
+        redirectAfterAllTransfersComplete(navigation, returnToPipeline, order.id);
+      } else if (returnToPipeline) {
+        navigation.navigate('ProductionPipeline', { orderId: order.id });
       }
     } catch (err) {
       console.error("Complete error:", err);
@@ -256,8 +270,8 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
+        <TouchableOpacity onPress={goBackOrPipeline}>
+          <Text style={styles.backButton}>{returnToPipeline ? '← Pipeline' : '← Back'}</Text>
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{order.order_number}</Text>

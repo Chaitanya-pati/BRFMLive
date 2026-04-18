@@ -19,6 +19,7 @@ import { redirectAfterPlanningSetup } from '../utils/processRedirects';
 
 export default function ProductionOrderPlanningScreen({ route, navigation }) {
   const initialOrderId = route.params?.orderId;
+  const returnToPipeline = route.params?.returnToPipeline;
   const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId);
   const [orders, setOrders] = useState([]);
   const [order, setOrder] = useState(null);
@@ -200,7 +201,7 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
         id: selectedOrderId,
         order_number: order?.order_number,
         branch_name: order?.branch_name,
-      });
+      }, returnToPipeline);
     } catch (error) {
       console.error('Save error:', error);
       showError(error.response?.data?.detail || 'Failed to save planning');
@@ -257,9 +258,18 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
   return (
     <Layout title="Production Order Planning" navigation={navigation}>
       <ScrollView style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBackToOrderList}>
-          <Text style={styles.backButtonText}>← Back to Order List</Text>
-        </TouchableOpacity>
+        {returnToPipeline && selectedOrderId ? (
+          <TouchableOpacity
+            style={styles.pipelineBackBanner}
+            onPress={() => navigation.navigate('ProductionPipeline', { orderId: selectedOrderId })}
+          >
+            <Text style={styles.pipelineBackBannerText}>← Back to Production Pipeline</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToOrderList}>
+            <Text style={styles.backButtonText}>← Back to Order List</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.orderInfoCard}>
           <View style={styles.orderInfoHeader}>
@@ -436,6 +446,18 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#f8fafc',
+  },
+  pipelineBackBanner: {
+    backgroundColor: '#1e293b',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  pipelineBackBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

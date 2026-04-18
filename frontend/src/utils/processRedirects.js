@@ -1,6 +1,10 @@
 import { showAlert } from './customAlerts';
 
-export function redirectAfterPlanningSetup(navigation, order) {
+export function redirectAfterPlanningSetup(navigation, order, returnToPipeline) {
+  if (returnToPipeline) {
+    navigation.navigate('ProductionPipeline', { orderId: order.id });
+    return;
+  }
   navigation.navigate('TransferRecordingDetails', {
     order: {
       id: order.id,
@@ -10,7 +14,11 @@ export function redirectAfterPlanningSetup(navigation, order) {
   });
 }
 
-export function redirectAfterAllTransfersComplete(navigation) {
+export function redirectAfterAllTransfersComplete(navigation, returnToPipeline, orderId) {
+  if (returnToPipeline && orderId) {
+    navigation.navigate('ProductionPipeline', { orderId });
+    return;
+  }
   showAlert(
     'All 24h Transfers Completed',
     'All planned 24-hour transfers for this production order have been completed. Would you like to proceed to the 12-Hour Transfer process?',

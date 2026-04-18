@@ -26,9 +26,19 @@ const STAGES = {
   TRANSFER_ACTIVE: "TRANSFER_ACTIVE",
 };
 
-export default function Transfer12HourScreen({ navigation }) {
+export default function Transfer12HourScreen({ route, navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const returnToPipeline = route?.params?.returnToPipeline;
+  const preselectedOrderId = route?.params?.orderId;
+
+  const goBackOrPipeline = (orderId) => {
+    if (returnToPipeline && (orderId || preselectedOrderId)) {
+      navigation.navigate('ProductionPipeline', { orderId: orderId || preselectedOrderId });
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const [productionOrders, setProductionOrders] = useState([]);
   const [sourceBins, setSourceBins] = useState([]);
@@ -94,6 +104,16 @@ export default function Transfer12HourScreen({ navigation }) {
     fetchAllBins(); // Ensure we have all bins for name lookup
     return () => clearInterval(timerRef.current);
   }, []);
+
+  // If orderId was passed from pipeline, auto-select that order after orders are loaded
+  useEffect(() => {
+    if (preselectedOrderId && productionOrders.length > 0 && !selectedOrder) {
+      const match = productionOrders.find(o => Number(o.id) === Number(preselectedOrderId));
+      if (match) {
+        handleSelectOrder(match);
+      }
+    }
+  }, [preselectedOrderId, productionOrders]);
   
   const fetch12HourRecords = async () => {
     try {
@@ -210,6 +230,12 @@ export default function Transfer12HourScreen({ navigation }) {
       setShowStopModal(false);
       setActiveTransferRecord(null);
       setTimer(0);
+
+      if (returnToPipeline && (selectedOrder?.id || preselectedOrderId)) {
+        navigation.navigate('ProductionPipeline', { orderId: selectedOrder?.id || preselectedOrderId });
+        return;
+      }
+
       setStage(STAGES.SELECT_ORDER);
       setActiveTab("HISTORY");
       fetch12HourRecords();
@@ -354,13 +380,18 @@ export default function Transfer12HourScreen({ navigation }) {
         target_moisture: parseFloat(targetMoisture),
       });
 
-      setCurrentRecordId(response.data.id);
+      const newRecordId = response.data.id;
+      setCurrentRecordId(newRecordId);
       setTimer(0);
-      setStage(STAGES.TRANSFER_ACTIVE);
       setShowBeforeStartModal(false);
       setPendingSource(null);
       setPendingDest(null);
       showToast("Success", "Transfer started");
+      if (returnToPipeline && (selectedOrder?.id || preselectedOrderId)) {
+        navigation.navigate('ProductionPipeline', { orderId: selectedOrder?.id || preselectedOrderId });
+        return;
+      }
+      setStage(STAGES.TRANSFER_ACTIVE);
     } catch (error) {
       showAlert("Error", error.response?.data?.detail || "Failed to start transfer");
     } finally {
@@ -401,6 +432,11 @@ export default function Transfer12HourScreen({ navigation }) {
       setCurrentRecordId(null);
       setActiveTransferRecord(null);
       setShowDataModal(false);
+
+      if (returnToPipeline && (selectedOrder?.id || preselectedOrderId)) {
+        navigation.navigate('ProductionPipeline', { orderId: selectedOrder?.id || preselectedOrderId });
+        return;
+      }
 
       // Refresh records so the completed card appears immediately in the list
       await Promise.all([fetch12HourRecords(), fetchSessions()]);
@@ -497,6 +533,14 @@ export default function Transfer12HourScreen({ navigation }) {
     return (
       <>
         <ScrollView style={styles.container}>
+        {returnToPipeline && preselectedOrderId && (
+          <TouchableOpacity
+            style={styles.pipelineBackBanner}
+            onPress={() => goBackOrPipeline(selectedOrder?.id)}
+          >
+            <Text style={styles.pipelineBackBannerText}>← Back to Production Pipeline</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.headerSection}>
           <Text style={styles.mainHeading}>Configure Transfer</Text>
           <Text style={styles.subHeading}>Order: {selectedOrder?.order_number}</Text>
@@ -962,6 +1006,18 @@ export default function Transfer12HourScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
+  pipelineBackBanner: {
+    backgroundColor: '#1e293b',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  pipelineBackBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   headerSection: { marginBottom: 20 },
   mainHeading: { fontSize: 24, fontWeight: "bold" },
   orderCard: { padding: 16, marginBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

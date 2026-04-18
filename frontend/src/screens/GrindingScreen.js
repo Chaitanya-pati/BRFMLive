@@ -381,10 +381,12 @@ const getCurrentTime12h = () => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
 };
 
-export default function GrindingScreen({ navigation }) {
+export default function GrindingScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const returnToPipeline = route?.params?.returnToPipeline;
+  const pipelineOrderId = route?.params?.orderId;
 
   // ── Picker state (date only — time is captured automatically) ─────────────
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -1454,6 +1456,14 @@ export default function GrindingScreen({ navigation }) {
   return (
     <Layout navigation={navigation}>
       <ScrollView style={styles.container}>
+        {returnToPipeline && pipelineOrderId && (
+          <TouchableOpacity
+            style={styles.pipelineBackBanner}
+            onPress={() => navigation.navigate('ProductionPipeline', { orderId: pipelineOrderId })}
+          >
+            <Text style={styles.pipelineBackBannerText}>← Back to Production Pipeline</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.header}>
           <Text style={styles.title}>Grinding Process</Text>
           <TouchableOpacity
@@ -1636,6 +1646,18 @@ export default function GrindingScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#F8F9FA" },
+  pipelineBackBanner: {
+    backgroundColor: '#1e293b',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  pipelineBackBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
