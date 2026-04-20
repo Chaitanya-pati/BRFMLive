@@ -61,23 +61,23 @@ function buildPrintHtml(data) {
   const sigImg = (path, label) => {
     if (!path) return "";
     const url = assetUrl(path);
-    return `<div style="font-size:9px;color:#555;margin-bottom:2px">${label || ""}</div>
-            <img src="${url}" style="width:80px;height:36px;object-fit:contain;display:block" crossorigin="anonymous" />`;
+    return `<div class="sig-label">${label || ""}</div>
+            <img src="${url}" class="sig-img" crossorigin="anonymous" />`;
   };
 
   const row = (num, label, bg, date, time, km, signed, sigPath) => `
     <tr>
-      <td style="background:${bg};color:#fff;font-weight:bold;text-align:center;width:30px;padding:8px 4px">${num}</td>
-      <td style="background:${bg};color:#fff;font-weight:bold;padding:8px 10px">${label}</td>
-      <td style="padding:8px">${date || ""}</td>
-      <td style="padding:8px">${time || ""}</td>
-      <td style="padding:8px">${km || ""}</td>
-      <td style="padding:8px">${sigPath ? sigImg(sigPath, signed) : (signed || "")}</td>
+      <td class="j-num" style="background:${bg};color:#fff">${num}</td>
+      <td class="j-lbl" style="background:${bg};color:#fff">${label}</td>
+      <td class="j-dat">${date || ""}</td>
+      <td class="j-tim">${time || ""}</td>
+      <td class="j-km">${km || ""}</td>
+      <td class="j-sig">${sigPath ? sigImg(sigPath, signed) : (signed || "")}</td>
     </tr>`;
 
   const custHeader = (label) => `
-    <tr>
-      <td colspan="6" style="background:#ecf0f1;font-weight:bold;font-size:13px;color:#2c3e50;padding:6px 12px">${label}</td>
+    <tr class="cust-hdr">
+      <td colspan="6">${label}</td>
     </tr>`;
 
   let journeyRows = row("1","Factory Exit","#2c3e50",fmt(stop.factory_exit_at),fmtTime(stop.factory_exit_at),stop.factory_exit_km?`${stop.factory_exit_km} km`:"","","");
@@ -110,129 +110,195 @@ function buildPrintHtml(data) {
   <meta charset="UTF-8"/>
   <title>Trip Sheet ${ts.trip_number || ""}</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
-    body { background:#e8e8e8; display:flex; justify-content:center; padding:20px; }
-    .sheet { background:#fff; width:210mm; min-height:297mm; box-shadow:0 4px 16px rgba(0,0,0,0.15); }
+    @page { size: A4 portrait; margin: 10mm 10mm 10mm 10mm; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+
+    /* ── Screen styles ── */
+    body { background:#d0d0d0; padding:24px; }
+    .controls { display:flex; gap:12px; margin-bottom:18px; justify-content:center; }
+    .controls button {
+      padding:11px 24px; border:none; border-radius:8px; cursor:pointer;
+      font-size:14px; font-weight:600; letter-spacing:.3px;
+    }
+    .btn-back   { background:#34495e; color:#fff; }
+    .btn-print  { background:#27ae60; color:#fff; }
+    .sheet {
+      background:#fff; width:210mm; margin:0 auto;
+      box-shadow:0 6px 24px rgba(0,0,0,0.22);
+      border:1px solid #bbb;
+    }
+
+    /* ── Tables ── */
     table { border-collapse:collapse; width:100%; }
-    td, th { border:1px solid #bbb; vertical-align:middle; font-size:12px; }
-    .title-row td { border:none; }
-    img { display:block; }
+    td, th { border:1px solid #c8c8c8; vertical-align:middle; font-size:12.5px; }
+
+    /* ── Title bar ── */
+    .t-company { background:#1a3a5c; color:#fff; font-size:24px; font-weight:700;
+                 text-align:center; padding:14px 10px; letter-spacing:.5px; width:34%; }
+    .t-label   { background:#5d7a8a; color:#fff; font-size:21px; font-weight:700;
+                 text-align:center; padding:14px 10px; letter-spacing:3px; width:33%; }
+    .t-meta    { width:33%; padding:0; border:none; }
+    .t-meta table { height:100%; }
+    .t-meta td { text-align:center; padding:10px 8px; border:1px solid #c8c8c8; }
+    .t-meta .lbl { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+    .t-meta .val { font-size:14px; font-weight:700; color:#1a3a5c; }
+
+    /* ── Info grid ── */
+    .lh { background:#1a5276; color:#fff; font-weight:700; font-size:12px;
+          padding:9px 10px; white-space:nowrap; }
+    .lv { padding:9px 12px; font-size:13px; color:#1a1a1a; }
+
+    /* ── Journey table header ── */
+    thead tr { background:#1a3a5c; }
+    thead th  { color:#fff; font-weight:700; font-size:12px; padding:10px 10px; text-align:left; border-color:#2c5282; }
+    thead th:first-child { text-align:center; width:42px; }
+
+    /* ── Journey rows ── */
+    .j-num  { text-align:center; font-weight:800; font-size:14px; width:42px; padding:10px 4px; border:1px solid #c8c8c8; }
+    .j-lbl  { font-weight:700; font-size:13px; padding:10px 12px; border:1px solid #c8c8c8; width:22%; }
+    .j-dat  { padding:10px 10px; font-size:12.5px; width:14%; }
+    .j-tim  { padding:10px 10px; font-size:12.5px; width:10%; }
+    .j-km   { padding:10px 10px; font-size:12.5px; width:16%; }
+    .j-sig  { padding:10px 10px; width:18%; }
+    .sig-label { font-size:9px; color:#666; margin-bottom:3px; }
+    .sig-img   { object-fit:contain; display:block; max-width:110px; max-height:48px; }
+    .cust-hdr td { background:#eaf0f6; color:#1a3a5c; font-weight:700; font-size:13px;
+                   padding:7px 14px; border:1px solid #c0cfe0; }
+
+    /* ── Bottom section ── */
+    .b-hdr { font-weight:700; font-size:12px; padding:7px 12px; }
+    .b-body { padding:12px; font-size:12.5px; }
+    .b-body p { margin-bottom:7px; line-height:1.4; }
+    .sig-block { border:1px solid #e0e0e0; border-radius:4px; padding:4px; margin:6px 0;
+                 display:inline-block; }
+
+    /* ── Footer ── */
+    .footer { text-align:center; font-size:10.5px; color:#999; font-style:italic; padding:9px; border-top:1px solid #ddd; }
+
+    /* ── Print overrides ── */
     @media print {
-      body { background:#fff; padding:0; justify-content:flex-start; }
-      .no-print { display:none !important; }
-      .sheet { box-shadow:none; width:100%; min-height:auto; }
-      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+      body { background:#fff !important; padding:0 !important; }
+      .controls { display:none !important; }
+      .sheet { width:100% !important; box-shadow:none !important; border:none !important; margin:0 !important; }
     }
   </style>
 </head>
 <body>
-  <div>
-    <!-- Controls (hidden on print) -->
-    <div class="no-print" style="display:flex;gap:12px;margin-bottom:16px">
-      <button onclick="window.close()" style="padding:10px 18px;background:#2c3e50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">← Back</button>
-      <button onclick="window.print()" style="padding:10px 18px;background:#27ae60;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">🖨 Print (A4)</button>
-    </div>
-
-    <div class="sheet">
-      <!-- Title row -->
-      <table class="title-row" style="margin-bottom:0">
-        <tr>
-          <td style="background:#2c3e50;color:#fff;font-size:22px;font-weight:bold;text-align:center;padding:12px;width:33%">BRFM India</td>
-          <td style="background:#7f8c8d;color:#fff;font-size:20px;font-weight:bold;text-align:center;padding:12px;letter-spacing:2px;width:34%">TRIP SHEET</td>
-          <td style="padding:0;width:33%">
-            <table style="width:100%;height:100%">
-              <tr>
-                <td style="text-align:center;padding:8px;border-right:1px solid #bbb">
-                  <div style="font-size:10px;color:#888;margin-bottom:2px">TRIP ID</div>
-                  <div style="font-size:13px;font-weight:bold">${ts.trip_number || ""}</div>
-                </td>
-                <td style="text-align:center;padding:8px">
-                  <div style="font-size:10px;color:#888;margin-bottom:2px">Date</div>
-                  <div style="font-size:13px;font-weight:bold">${fmt(ts.created_at)}</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Info grid -->
-      <table>
-        <tr>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px;width:15%">Truck No.</td>
-          <td style="padding:8px;width:35%">${truck.truck_number || ""}</td>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px;width:15%">Driver Name</td>
-          <td style="padding:8px;width:35%">${driver.driver_name || ""}</td>
-        </tr>
-        <tr>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Customer Name</td>
-          <td style="padding:8px" colspan="1">${customerNames}</td>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Delivery Place</td>
-          <td style="padding:8px">${deliveryAddr}</td>
-        </tr>
-        <tr>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px" colspan="2">Weight</td>
-          <td style="padding:8px" colspan="2">${totalWeight ? `${totalWeight} Ton` : ""}</td>
-        </tr>
-        <tr>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Bill No.</td>
-          <td style="padding:8px">${bill.invoice_number || ""}</td>
-          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">D Note #</td>
-          <td style="padding:8px">${ts.d_note_number || "NA"}</td>
-        </tr>
-      </table>
-
-      <!-- Journey table -->
-      <table>
-        <thead>
-          <tr style="background:#2c3e50">
-            <th style="color:#fff;padding:8px;width:30px;text-align:center">#</th>
-            <th style="color:#fff;padding:8px;text-align:left">Milestone</th>
-            <th style="color:#fff;padding:8px;text-align:left">Date</th>
-            <th style="color:#fff;padding:8px;text-align:left">Time</th>
-            <th style="color:#fff;padding:8px;text-align:left">KM / Amount</th>
-            <th style="color:#fff;padding:8px;text-align:left">Signed</th>
-          </tr>
-        </thead>
-        <tbody>${journeyRows}</tbody>
-      </table>
-
-      <!-- Bottom section -->
-      <table style="border-top:2px solid #bbb;min-height:140px">
-        <tr>
-          <td style="width:40%;vertical-align:top;padding:0;border-right:1px solid #bbb">
-            <div style="background:#c0392b;color:#fff;font-weight:bold;font-size:12px;padding:6px 10px">Remarks / Incidents</div>
-            <div style="padding:10px;font-size:12px">${sg?.remarks || ""}</div>
-          </td>
-          <td style="width:30%;vertical-align:top;padding:0;border-right:1px solid #bbb">
-            <div style="background:#c0392b;color:#fff;font-weight:bold;font-size:12px;padding:6px 10px">Driver</div>
-            <div style="padding:10px">
-              <div style="font-size:12px;margin-bottom:6px">Name: ${driver.driver_name || "_____________"}</div>
-              ${driverSig
-                ? `<img src="${assetUrl(driverSig)}" style="width:120px;height:48px;object-fit:contain;display:block;margin:4px 0" crossorigin="anonymous" />`
-                : `<div style="font-size:12px;margin-bottom:6px">Sign: _____________</div>`
-              }
-              <div style="font-size:12px">Date: ${sg?.driver_sign_date ? fmt(sg.driver_sign_date) : "__/__/____"}</div>
-            </div>
-          </td>
-          <td style="width:30%;vertical-align:top;padding:0">
-            <div style="background:#e8f4f8;color:#2c3e50;font-weight:bold;font-size:12px;padding:6px 10px">Supervisor</div>
-            <div style="padding:10px">
-              <div style="font-size:12px;margin-bottom:6px">Freight Received: ₹ ${sg?.freight_received || "_________"}</div>
-              <div style="font-size:12px;margin-bottom:6px">Excel Updated: ${excelTxt}</div>
-              <div style="font-size:12px;margin-bottom:6px">Sign: _____________</div>
-              <div style="font-size:12px">Date: ${sg?.supervisor_sign_date ? fmt(sg.supervisor_sign_date) : "__/__/____"}</div>
-            </div>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Footer -->
-      <div style="padding:10px;border-top:1px solid #ddd;text-align:center;font-size:11px;color:#888;font-style:italic">
-        BRFM India | Return this sheet to the Supervisor when the vehicle arrives back at the factory.
-      </div>
-    </div>
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn-back"  onclick="window.close()">&#8592; Close</button>
+    <button class="btn-print" onclick="window.print()">&#128424; Print A4</button>
   </div>
+
+  <div class="sheet">
+
+    <!-- ── Title bar ── -->
+    <table style="border:none">
+      <tr>
+        <td class="t-company">BRFM India</td>
+        <td class="t-label">TRIP&nbsp;SHEET</td>
+        <td class="t-meta">
+          <table>
+            <tr>
+              <td style="border-right:1px solid #c8c8c8">
+                <div class="lbl">TRIP ID</div>
+                <div class="val">${ts.trip_number || "—"}</div>
+              </td>
+              <td>
+                <div class="lbl">Date</div>
+                <div class="val">${fmt(ts.created_at)}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- ── Info grid ── -->
+    <table style="border-top:2px solid #1a3a5c">
+      <colgroup>
+        <col style="width:14%"><col style="width:36%">
+        <col style="width:14%"><col style="width:36%">
+      </colgroup>
+      <tr>
+        <td class="lh">Truck No.</td>
+        <td class="lv">${truck.truck_number || ""}</td>
+        <td class="lh">Driver Name</td>
+        <td class="lv">${driver.driver_name || ""}</td>
+      </tr>
+      <tr>
+        <td class="lh">Customer&nbsp;Name</td>
+        <td class="lv">${customerNames}</td>
+        <td class="lh">Delivery&nbsp;Place</td>
+        <td class="lv">${deliveryAddr}</td>
+      </tr>
+      <tr>
+        <td class="lh" colspan="2">Weight</td>
+        <td class="lv" colspan="2">${totalWeight ? `${totalWeight} Ton` : "—"}</td>
+      </tr>
+      <tr>
+        <td class="lh">Bill No.</td>
+        <td class="lv">${bill.invoice_number || ""}</td>
+        <td class="lh">D Note #</td>
+        <td class="lv">${ts.d_note_number || "NA"}</td>
+      </tr>
+    </table>
+
+    <!-- ── Journey table ── -->
+    <table style="border-top:2px solid #1a3a5c;margin-top:0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Milestone</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>KM / Amount</th>
+          <th>Signed</th>
+        </tr>
+      </thead>
+      <tbody>${journeyRows}</tbody>
+    </table>
+
+    <!-- ── Bottom section ── -->
+    <table style="border-top:2px solid #1a3a5c;min-height:160px">
+      <colgroup>
+        <col style="width:38%"><col style="width:31%"><col style="width:31%">
+      </colgroup>
+      <tr style="vertical-align:top">
+        <td style="padding:0;border-right:2px solid #c8c8c8">
+          <div class="b-hdr" style="background:#c0392b;color:#fff">Remarks / Incidents</div>
+          <div class="b-body">${sg?.remarks || "NA"}</div>
+        </td>
+        <td style="padding:0;border-right:2px solid #c8c8c8">
+          <div class="b-hdr" style="background:#c0392b;color:#fff">Driver</div>
+          <div class="b-body">
+            <p><strong>Name:</strong> ${driver.driver_name || "___________"}</p>
+            ${driverSig
+              ? `<div class="sig-block"><img src="${assetUrl(driverSig)}" class="sig-img" crossorigin="anonymous" /></div>`
+              : `<p>Sign: ___________________</p>`
+            }
+            <p>Date: ${sg?.driver_sign_date ? fmt(sg.driver_sign_date) : "__&nbsp;/&nbsp;__&nbsp;/&nbsp;____"}</p>
+          </div>
+        </td>
+        <td style="padding:0">
+          <div class="b-hdr" style="background:#d6eaf8;color:#1a3a5c">Supervisor</div>
+          <div class="b-body">
+            <p>Freight Received: ₹ ${sg?.freight_received || "___________"}</p>
+            <p>Excel Updated: ${excelTxt}</p>
+            <p>Sign: ___________________</p>
+            <p>Date: ${sg?.supervisor_sign_date ? fmt(sg.supervisor_sign_date) : "__&nbsp;/&nbsp;__&nbsp;/&nbsp;____"}</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- ── Footer ── -->
+    <div class="footer">
+      BRFM India &nbsp;|&nbsp; Return this sheet to the Supervisor when the vehicle arrives back at the factory.
+    </div>
+
+  </div><!-- /sheet -->
 </body>
 </html>`;
 }
