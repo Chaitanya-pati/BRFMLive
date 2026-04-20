@@ -892,6 +892,22 @@ def create_or_update_delivery_stop(
             models.DispatchDeliveryStop.dispatch_id == dispatch_id,
             models.DispatchDeliveryStop.order_id == order_id
         ).first()
+        # Also adopt an existing null-order_id stop for this dispatch if no exact match
+        if not existing:
+            null_stop = db.query(models.DispatchDeliveryStop).filter(
+                models.DispatchDeliveryStop.dispatch_id == dispatch_id,
+                models.DispatchDeliveryStop.order_id == None
+            ).first()
+            if null_stop:
+                null_stop.order_id = order_id
+                db.commit()
+                existing = null_stop
+    else:
+        # No order_id — find the first null-order_id stop to prevent duplicates
+        existing = db.query(models.DispatchDeliveryStop).filter(
+            models.DispatchDeliveryStop.dispatch_id == dispatch_id,
+            models.DispatchDeliveryStop.order_id == None
+        ).first()
 
     def _parse(dt_str):
         return parse_ist(dt_str)

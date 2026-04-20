@@ -395,9 +395,19 @@ export default function DriverViewScreen({ navigation }) {
   const buildStops = (existingStops, dispatch) => {
     const orderIds = getOrderIds(dispatch);
     if (orderIds.length > 0) {
+      // Null-order_id stops in DB can be adopted into the first unmatched slot
+      const nullStops = existingStops.filter(s => s.order_id == null);
+      let nullIdx = 0;
       return orderIds.map((oid, idx) => {
         const ex = existingStops.find(s => s.order_id === oid);
-        return ex || { _pending: true, order_id: oid, customer_name: dispatch.order?.customer?.customer_name || `Customer ${idx + 1}`, photos: [] };
+        if (ex) return ex;
+        // Adopt an existing null-order_id DB row rather than creating a new pending stop
+        if (nullIdx < nullStops.length) {
+          const adopted = { ...nullStops[nullIdx], order_id: oid };
+          nullIdx++;
+          return adopted;
+        }
+        return { _pending: true, order_id: oid, customer_name: dispatch.order?.customer?.customer_name || `Customer ${idx + 1}`, photos: [] };
       });
     }
     if (existingStops.length > 0) return existingStops;
