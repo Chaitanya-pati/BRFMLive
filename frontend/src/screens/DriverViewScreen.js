@@ -31,6 +31,14 @@ function allStopsDone(stops) {
   if (!stops || stops.length === 0) return false;
   return stops.every(s => !s._pending && !!s.unloading_end);
 }
+// Return journey started = any stop has return_journey_at
+function getReturnJourneyAt(stops) {
+  if (!stops || stops.length === 0) return null;
+  for (const s of stops) {
+    if (s.return_journey_at) return s.return_journey_at;
+  }
+  return null;
+}
 
 // ─── Signature modal — rendered into document.body via portal ────────────────
 // The canvas MUST have explicit width/height attributes (not just CSS) so that
@@ -491,6 +499,20 @@ export default function DriverViewScreen({ navigation }) {
     } finally { setActionBusy(false); }
   };
 
+  // ── RETURN JOURNEY STARTED ────────────────────────────────────────────────
+  const handleReturnJourneyStart = async () => {
+    setActionBusy(true);
+    try {
+      const validStop = (stops || []).find(s => !s._pending && s.id);
+      if (!validStop) { showError("No delivery stop found."); return; }
+      const fd = buildFD({ return_journey_at: new Date().toISOString() });
+      await dispatchApi.updateStopTimes(selected.dispatch_id, validStop.id, fd);
+      await refreshStops();
+      showSuccess("Return journey started! Head back safely.");
+    } catch { showError("Could not save. Try again."); }
+    finally { setActionBusy(false); }
+  };
+
   // ── RETURN TO FACTORY ──────────────────────────────────────────────────────
   const handleReturn = async () => {
     if (!returnKm.trim()) { showError("Enter the odometer reading at factory gate"); return; }
@@ -553,6 +575,7 @@ export default function DriverViewScreen({ navigation }) {
   const stage = getTripStage(tripSheet);
   const tsStop = tripSheet?.stop || {};
   const done = allStopsDone(stops || []);
+  const returnJourneyAt = getReturnJourneyAt(stops || []);
   const customer = selected.order?.customer?.customer_name || selected.customer_name || "Customer";
   const kmDriven = tsStop.factory_exit_km && tsStop.factory_return_km
     ? Math.round(tsStop.factory_return_km - tsStop.factory_exit_km) : null;
@@ -635,14 +658,41 @@ export default function DriverViewScreen({ navigation }) {
             {done && (
               <View style={s.returnCard}>
                 <Text style={s.stageTitle}>③ Return to Factory</Text>
-                <Text style={s.stageHint}>All stops complete! Enter the odometer reading at the factory gate.</Text>
-                <View style={s.kmRow}>
-                  <Text style={s.kmLabel}>KM Reading</Text>
-                  <TextInput style={s.kmInput} value={returnKm} onChangeText={setReturnKm} keyboardType="numeric" placeholder="e.g. 45510" />
-                </View>
-                <TouchableOpacity style={[s.returnBtn, actionBusy && { opacity: 0.6 }]} onPress={handleReturn} disabled={actionBusy}>
-                  {actionBusy ? <ActivityIndicator color="#fff" /> : <Text style={s.returnBtnTxt}>🏭  RETURN TO FACTORY</Text>}
-                </TouchableOpacity>
+
+                {/* Step A: Return Journey Start */}
+                {!returnJourneyAt ? (
+                  <>
+                    <Text style={s.stageHint}>All stops complete! Tap below when you start heading back to the factory.</Text>
+                    <TouchableOpacity
+                      style={[s.journeyStartBtn, actionBusy && { opacity: 0.6 }]}
+                      onPress={handleReturnJourneyStart}
+                      disabled={actionBusy}
+                    >
+                      {actionBusy
+                        ? <ActivityIndicator color="#fff" />
+                        : <Text style={s.journeyStartBtnTxt}>🚗  RETURN JOURNEY STARTED</Text>
+                      }
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    {/* Confirmed return journey started */}
+                    <View style={[s.doneRow, { marginBottom: 12 }]}>
+                      <View style={s.doneCheck}><Text style={s.doneCheckTxt}>✓</Text></View>
+                      <Text style={s.doneTxt}>🚗 Return journey started at {fmtTime(returnJourneyAt)}</Text>
+                    </View>
+
+                    {/* Step B: Enter KM & Return to Factory */}
+                    <Text style={s.stageHint}>Enter the odometer reading at the factory gate.</Text>
+                    <View style={s.kmRow}>
+                      <Text style={s.kmLabel}>KM Reading</Text>
+                      <TextInput style={s.kmInput} value={returnKm} onChangeText={setReturnKm} keyboardType="numeric" placeholder="e.g. 45510" />
+                    </View>
+                    <TouchableOpacity style={[s.returnBtn, actionBusy && { opacity: 0.6 }]} onPress={handleReturn} disabled={actionBusy}>
+                      {actionBusy ? <ActivityIndicator color="#fff" /> : <Text style={s.returnBtnTxt}>🏭  RETURN TO FACTORY</Text>}
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
           </>
@@ -724,6 +774,8 @@ const s = StyleSheet.create({
 
   startBtn: { backgroundColor: "#1565C0", padding: 15, borderRadius: 10, alignItems: "center" },
   startBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.5 },
+  journeyStartBtn: { backgroundColor: "#2e7d32", padding: 15, borderRadius: 10, alignItems: "center", marginTop: 4 },
+  journeyStartBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.5 },
   returnBtn: { backgroundColor: "#e65100", padding: 15, borderRadius: 10, alignItems: "center" },
   returnBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
 

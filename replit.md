@@ -86,6 +86,11 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### April 20, 2026 (updated)
+- Added **"Return Journey Started"** step to **Driver View** (`DriverViewScreen.js`):
+  - After all delivery stops are completed, driver first taps a green **"RETURN JOURNEY STARTED"** button, which records `return_journey_at` on the `dispatch_delivery_stops` table.
+  - Only after that step is confirmed does the KM reading input and orange **"RETURN TO FACTORY"** button appear, enforcing the correct two-step return flow.
+
 ### April 20, 2026
 - Implemented **Driver View** (`DriverViewScreen.js`) — a dedicated, driver-friendly sequential workflow screen:
   - **Stage 1 — Start Trip**: Driver sees their assigned dispatch cards, taps "Open Trip", enters start KM reading, taps "START TRIP" → creates trip sheet with `factory_exit_at` and `factory_exit_km`.
