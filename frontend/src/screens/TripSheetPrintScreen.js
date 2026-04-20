@@ -17,13 +17,20 @@ function fmtTime(isoStr) {
   } catch { return ""; }
 }
 
-// Render either an image or a text value in a cell
+// Build absolute URL from a stored path like "/uploads/abc.png"
+function assetUrl(path) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  // path already starts with '/', so don't add another slash
+  return `${API_BASE_URL}${path}`;
+}
+
+// Render a signature image in a table cell
 function SigCell({ path }) {
   if (!path) return null;
-  const url = `${API_BASE_URL}/${path}`;
   return (
     <Image
-      source={{ uri: url }}
+      source={{ uri: assetUrl(path) }}
       style={{ width: 80, height: 36, resizeMode: "contain" }}
     />
   );
@@ -175,7 +182,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
   return (
     <ScrollView style={st.page} contentContainerStyle={st.pageContent}>
       {/* Controls */}
-      <View style={st.controls}>
+      <View style={st.controls} nativeID="trip-print-controls">
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.ctrlBtn}>
           <Text style={st.ctrlBtnTxt}>← Back</Text>
         </TouchableOpacity>
@@ -281,17 +288,20 @@ export default function TripSheetPrintScreen({ route, navigation }) {
         <View style={st.bottom}>
           <View style={st.bottomRemarks}>
             <View style={st.bottomHdr}><Text style={st.bottomHdrTxt}>Remarks / Incidents</Text></View>
-            <View style={st.bottomBody}><Text style={st.bottomBodyTxt}>{sg.remarks || ""}</Text></View>
+            <View style={st.bottomBody}><Text style={st.bottomBodyTxt}>{sg?.remarks || ""}</Text></View>
           </View>
           <View style={st.bottomDriver}>
             <View style={st.bottomHdr}><Text style={st.bottomHdrTxt}>Driver</Text></View>
             <View style={st.bottomBody}>
               <Text style={st.signLine}>Name: {driver.driver_name || "_____________"}</Text>
-              {stop.driver_signature
-                ? <Image source={{ uri: `${API_BASE_URL}/${stop.driver_signature}` }} style={{ width: 120, height: 44, resizeMode: "contain", marginVertical: 4 }} />
+              {(allStops[0]?.driver_signature || stop.driver_signature)
+                ? <Image
+                    source={{ uri: assetUrl(allStops[0]?.driver_signature || stop.driver_signature) }}
+                    style={{ width: 120, height: 44, resizeMode: "contain", marginVertical: 4 }}
+                  />
                 : <Text style={st.signLine}>Sign: _____________</Text>
               }
-              <Text style={st.signLine}>Date: {sg.driver_sign_date ? fmt(sg.driver_sign_date) : "__/__/____"}</Text>
+              <Text style={st.signLine}>Date: {sg?.driver_sign_date ? fmt(sg.driver_sign_date) : "__/__/____"}</Text>
             </View>
           </View>
           <View style={st.bottomSupervisor}>
@@ -299,12 +309,12 @@ export default function TripSheetPrintScreen({ route, navigation }) {
               <Text style={[st.bottomHdrTxt, { color: "#2c3e50" }]}>Supervisor</Text>
             </View>
             <View style={st.bottomBody}>
-              <Text style={st.signLine}>Freight Received: ₹ {sg.freight_received || "_________"}</Text>
+              <Text style={st.signLine}>Freight Received: ₹ {sg?.freight_received || "_________"}</Text>
               <Text style={st.signLine}>
-                Excel Updated: {sg.excel_updated === true ? "● Yes  ○ No" : sg.excel_updated === false ? "○ Yes  ● No" : "○ Yes  ○ No"}
+                Excel Updated: {sg?.excel_updated === true ? "● Yes  ○ No" : sg?.excel_updated === false ? "○ Yes  ● No" : "○ Yes  ○ No"}
               </Text>
               <Text style={st.signLine}>Sign: _____________</Text>
-              <Text style={st.signLine}>Date: {sg.supervisor_sign_date ? fmt(sg.supervisor_sign_date) : "__/__/____"}</Text>
+              <Text style={st.signLine}>Date: {sg?.supervisor_sign_date ? fmt(sg.supervisor_sign_date) : "__/__/____"}</Text>
             </View>
           </View>
         </View>
@@ -320,8 +330,17 @@ export default function TripSheetPrintScreen({ route, navigation }) {
           @media print {
             body * { visibility: hidden; }
             #trip-sheet-print, #trip-sheet-print * { visibility: visible; }
-            #trip-sheet-print { position: fixed; top: 0; left: 0; width: 210mm; min-height: 297mm; margin: 0; padding: 10mm; box-sizing: border-box; }
-            .controls { display: none !important; }
+            #trip-sheet-print {
+              position: fixed;
+              top: 0; left: 0;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0;
+              padding: 8mm;
+              box-sizing: border-box;
+              background: #fff;
+            }
+            #trip-print-controls { display: none !important; }
           }
         `}</style>
       )}

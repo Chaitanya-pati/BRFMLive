@@ -304,9 +304,17 @@ def upsert_trip_stop(trip_id: int, data: schemas.DispatchDeliveryStopUpdate,
     ts = db.query(models.TripSheet).filter(models.TripSheet.id == trip_id).first()
     if not ts:
         raise HTTPException(status_code=404, detail="Trip sheet not found")
-    stop = db.query(models.DispatchDeliveryStop).filter(
-        models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id
-    ).first()
+    # Prefer a stop with a real order_id; orphaned null-order_id stops are last resort
+    stop = (
+        db.query(models.DispatchDeliveryStop)
+        .filter(models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id,
+                models.DispatchDeliveryStop.order_id.isnot(None))
+        .first()
+        or
+        db.query(models.DispatchDeliveryStop)
+        .filter(models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id)
+        .first()
+    )
     if not stop:
         stop = models.DispatchDeliveryStop(dispatch_id=ts.dispatch_id)
         db.add(stop)
@@ -336,8 +344,17 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
         joinedload(models.DispatchDeliveryStop.order).joinedload(models.CustomerOrder.customer)
     ).order_by(models.DispatchDeliveryStop.id).all()
 
-    # First stop holds trip-level journey fields (factory exit/return)
-    first_stop = all_stops_db[0] if all_stops_db else None
+    # Prefer the stop that has actual trip-level journey data (factory exit/return),
+    # then the stop with a real order_id, then fall back to the first stop by id.
+    def _has_delivery_data(s):
+        return any([s.order_id, s.arrived_at, s.unloading_start, s.unloading_end,
+                    s.driver_signature, s.customer_signature])
+
+    first_stop = (
+        next((s for s in all_stops_db if s.factory_exit_at), None) or
+        next((s for s in all_stops_db if _has_delivery_data(s)), None) or
+        (all_stops_db[0] if all_stops_db else None)
+    )
 
     bill = db.query(models.DeliveryBill).filter(
         models.DeliveryBill.dispatch_id == ts.dispatch_id
@@ -354,9 +371,12 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
 
     customer = dispatch.order.customer if dispatch and dispatch.order else None
 
-    # Build per-stop data with customer names resolved from relationship
+    # Build per-stop data with customer names resolved from relationship.
+    # Exclude orphaned null-order_id stops that have no delivery data at all.
     stops_data = []
     for st in all_stops_db:
+        if not _has_delivery_data(st):
+            continue
         cname = get_customer_name_for_stop(st)
         stops_data.append({
             "id": st.id,
