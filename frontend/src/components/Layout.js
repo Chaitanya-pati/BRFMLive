@@ -289,8 +289,8 @@ const menuItems = [
       subItems: [
         { name: "Customer Orders", route: "CustomerOrderMaster", icon: SvgFileTextIcon },
         { name: "Dispatch Management", route: "DispatchManagement", icon: SvgTruckIcon },
-        { name: "Trip Sheet", route: "TripSheet", icon: SvgTruckIcon },
-        { name: "Driver Delivery", route: "DriverDelivery", icon: SvgTruckIcon },
+        { name: "Driver View", route: "DriverView", icon: SvgTruckIcon },
+        { name: "Trip Sheet (Admin)", route: "TripSheet", icon: SvgFileTextIcon },
         { name: "Bills", route: "DeliveryBills", icon: SvgFileTextIcon },
         { name: "Bill Profile", route: "BranchBillProfile", icon: SvgFileTextIcon },
       ]

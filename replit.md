@@ -86,6 +86,18 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### April 20, 2026
+- Implemented **Driver View** (`DriverViewScreen.js`) — a dedicated, driver-friendly sequential workflow screen:
+  - **Stage 1 — Start Trip**: Driver sees their assigned dispatch cards, taps "Open Trip", enters start KM reading, taps "START TRIP" → creates trip sheet with `factory_exit_at` and `factory_exit_km`.
+  - **Stage 2 — Delivering**: For each customer stop (1 or multiple), driver taps sequential large buttons: "WE ARRIVED" → "UNLOADING STARTED" → "UNLOADING DONE" → photo capture → customer signature → driver signature. "Return to Factory" button appears only when ALL stops have `unloading_end` recorded. Driver enters end KM and taps "RETURN TO FACTORY" → sets `factory_return_at`/`factory_return_km` and marks dispatch as DELIVERED.
+  - **Stage 3 — Returned**: Shows trip summary with total KM driven. Driver's work is complete.
+  - Handles single and multi-customer dispatches. Status derived from existing DB fields (no schema changes).
+- Redesigned **Trip Sheet screen** (`TripSheetScreen.js`) as admin/supervisor-only view:
+  - Removed all duplicate journey entry fields. Journey tab is now read-only, showing milestones captured by driver.
+  - Summary tab: dispatch info, products, KM summary, D Note and Freight Amount editable.
+  - Sign-Off tab: freight received, Excel updated Y/N, supervisor/driver sign dates, remarks.
+- Sidebar updated: "Driver View" added under Dispatch & Orders; old "Driver Delivery" entry removed in favour of the new flow; "Trip Sheet" renamed to "Trip Sheet (Admin)".
+
 ### April 18, 2026
 - Implemented **Trip Sheet** system end-to-end:
   - **Backend models**: Added `TripSheet` and `TripSheetSignoff` tables; added 6 journey-tracking columns to `dispatch_delivery_stops` (`factory_exit_at`, `factory_exit_km`, `factory_exit_signed`, `return_journey_at`, `factory_return_at`, `factory_return_km`).

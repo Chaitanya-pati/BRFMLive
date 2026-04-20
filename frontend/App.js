@@ -52,6 +52,7 @@ import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import LiveAddScreen from './src/screens/LiveAddScreen';
 import TripSheetScreen from './src/screens/TripSheetScreen';
 import TripSheetPrintScreen from './src/screens/TripSheetPrintScreen';
+import DriverViewScreen from './src/screens/DriverViewScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -181,6 +182,7 @@ export default function App() {
           <Stack.Screen name="ProductionPipeline" component={ProductionPipelineScreen} />
           <Stack.Screen name="TripSheet" component={TripSheetScreen} />
           <Stack.Screen name="TripSheetPrint" component={TripSheetPrintScreen} />
+          <Stack.Screen name="DriverView" component={DriverViewScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}
