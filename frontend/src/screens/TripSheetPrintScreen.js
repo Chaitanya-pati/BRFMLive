@@ -17,15 +17,13 @@ function fmtTime(isoStr) {
   } catch { return ""; }
 }
 
-// Build absolute URL from a stored path like "/uploads/abc.png"
 function assetUrl(path) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  // path already starts with '/', so don't add another slash
   return `${API_BASE_URL}${path}`;
 }
 
-// Render a signature image in a table cell
+// On-screen signature preview (React Native Image is fine here)
 function SigCell({ path }) {
   if (!path) return null;
   return (
@@ -36,6 +34,210 @@ function SigCell({ path }) {
   );
 }
 
+// ─── HTML Print Generator ─────────────────────────────────────────────────────
+function buildPrintHtml(data) {
+  const ts       = data.trip_sheet || {};
+  const sg       = data.signoff || {};
+  const dispatch = data.dispatch || {};
+  const driver   = data.driver || {};
+  const truck    = data.truck || {};
+  const customer = data.customer || {};
+  const bill     = data.bill || {};
+  const stop     = data.stop || {};
+  const allStops = data.all_stops || [];
+  const items    = data.items || [];
+
+  const multiCustomer = allStops.length > 1;
+  const customerNames = multiCustomer
+    ? allStops.map((s, i) => s.customer_name || `Customer ${i+1}`).join(", ")
+    : (allStops[0]?.customer_name || customer.customer_name || "");
+  const deliveryAddr = allStops.length > 0
+    ? [...new Set(allStops.map(s => s.customer_city).filter(Boolean))].join(", ")
+    : customer.city || "";
+  const totalWeight = items.reduce((s, i) => s + (i.dispatched_qty_ton || 0), 0);
+  const driverSig = allStops[0]?.driver_signature || stop.driver_signature;
+
+  // Build journey rows as HTML
+  const sigImg = (path, label) => {
+    if (!path) return "";
+    const url = assetUrl(path);
+    return `<div style="font-size:9px;color:#555;margin-bottom:2px">${label || ""}</div>
+            <img src="${url}" style="width:80px;height:36px;object-fit:contain;display:block" crossorigin="anonymous" />`;
+  };
+
+  const row = (num, label, bg, date, time, km, signed, sigPath) => `
+    <tr>
+      <td style="background:${bg};color:#fff;font-weight:bold;text-align:center;width:30px;padding:8px 4px">${num}</td>
+      <td style="background:${bg};color:#fff;font-weight:bold;padding:8px 10px">${label}</td>
+      <td style="padding:8px">${date || ""}</td>
+      <td style="padding:8px">${time || ""}</td>
+      <td style="padding:8px">${km || ""}</td>
+      <td style="padding:8px">${sigPath ? sigImg(sigPath, signed) : (signed || "")}</td>
+    </tr>`;
+
+  const custHeader = (label) => `
+    <tr>
+      <td colspan="6" style="background:#ecf0f1;font-weight:bold;font-size:13px;color:#2c3e50;padding:6px 12px">${label}</td>
+    </tr>`;
+
+  let journeyRows = row("1","Factory Exit","#2c3e50",fmt(stop.factory_exit_at),fmtTime(stop.factory_exit_at),stop.factory_exit_km?`${stop.factory_exit_km} km`:"","","");
+
+  if (multiCustomer) {
+    allStops.forEach((s, idx) => {
+      journeyRows += custHeader(`Customer ${idx+1}: ${s.customer_name || `Customer ${idx+1}`}`);
+      journeyRows += row("2","Customer Arrived","#2980b9",fmt(s.arrived_at),fmtTime(s.arrived_at),"",s.driver_signature?"Driver":"",s.driver_signature);
+      journeyRows += row("3","Unloading Start","#8e44ad",fmt(s.unloading_start),fmtTime(s.unloading_start),"","","");
+      journeyRows += row("4","Unloading End","#c0392b",fmt(s.unloading_end),fmtTime(s.unloading_end),"",s.customer_signature?"Customer":"",s.customer_signature);
+    });
+  } else {
+    const s = allStops[0] || {};
+    journeyRows += row("2","Customer Arrived","#2980b9",fmt(s.arrived_at),fmtTime(s.arrived_at),"",s.driver_signature?"Driver":"",s.driver_signature);
+    journeyRows += row("3","Unloading Start","#8e44ad",fmt(s.unloading_start),fmtTime(s.unloading_start),"","","");
+    journeyRows += row("4","Unloading End","#c0392b",fmt(s.unloading_end),fmtTime(s.unloading_end),"",s.customer_signature?"Customer":"",s.customer_signature);
+  }
+
+  journeyRows += row("₹","Freight Amount","#f39c12",ts.freight_amount?`₹ ${ts.freight_amount}`:"","","","","");
+  journeyRows += row("5","Return Journey","#16a085",fmt(stop.return_journey_at),fmtTime(stop.return_journey_at),"","","");
+  journeyRows += row("6","Factory Return","#27ae60",fmt(stop.factory_return_at),fmtTime(stop.factory_return_at),stop.factory_return_km?`${stop.factory_return_km} km`:"","","");
+
+  const excelTxt = sg.excel_updated === true ? "&#9679; Yes &nbsp; &#9675; No"
+    : sg.excel_updated === false ? "&#9675; Yes &nbsp; &#9679; No"
+    : "&#9675; Yes &nbsp; &#9675; No";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Trip Sheet ${ts.trip_number || ""}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+    body { background:#e8e8e8; display:flex; justify-content:center; padding:20px; }
+    .sheet { background:#fff; width:210mm; min-height:297mm; box-shadow:0 4px 16px rgba(0,0,0,0.15); }
+    table { border-collapse:collapse; width:100%; }
+    td, th { border:1px solid #bbb; vertical-align:middle; font-size:12px; }
+    .title-row td { border:none; }
+    img { display:block; }
+    @media print {
+      body { background:#fff; padding:0; justify-content:flex-start; }
+      .no-print { display:none !important; }
+      .sheet { box-shadow:none; width:100%; min-height:auto; }
+      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <!-- Controls (hidden on print) -->
+    <div class="no-print" style="display:flex;gap:12px;margin-bottom:16px">
+      <button onclick="window.close()" style="padding:10px 18px;background:#2c3e50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">← Back</button>
+      <button onclick="window.print()" style="padding:10px 18px;background:#27ae60;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">🖨 Print (A4)</button>
+    </div>
+
+    <div class="sheet">
+      <!-- Title row -->
+      <table class="title-row" style="margin-bottom:0">
+        <tr>
+          <td style="background:#2c3e50;color:#fff;font-size:22px;font-weight:bold;text-align:center;padding:12px;width:33%">BRFM India</td>
+          <td style="background:#7f8c8d;color:#fff;font-size:20px;font-weight:bold;text-align:center;padding:12px;letter-spacing:2px;width:34%">TRIP SHEET</td>
+          <td style="padding:0;width:33%">
+            <table style="width:100%;height:100%">
+              <tr>
+                <td style="text-align:center;padding:8px;border-right:1px solid #bbb">
+                  <div style="font-size:10px;color:#888;margin-bottom:2px">TRIP ID</div>
+                  <div style="font-size:13px;font-weight:bold">${ts.trip_number || ""}</div>
+                </td>
+                <td style="text-align:center;padding:8px">
+                  <div style="font-size:10px;color:#888;margin-bottom:2px">Date</div>
+                  <div style="font-size:13px;font-weight:bold">${fmt(ts.created_at)}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Info grid -->
+      <table>
+        <tr>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px;width:15%">Truck No.</td>
+          <td style="padding:8px;width:35%">${truck.truck_number || ""}</td>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px;width:15%">Driver Name</td>
+          <td style="padding:8px;width:35%">${driver.driver_name || ""}</td>
+        </tr>
+        <tr>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Customer Name</td>
+          <td style="padding:8px" colspan="1">${customerNames}</td>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Delivery Place</td>
+          <td style="padding:8px">${deliveryAddr}</td>
+        </tr>
+        <tr>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px" colspan="2">Weight</td>
+          <td style="padding:8px" colspan="2">${totalWeight ? `${totalWeight} Ton` : ""}</td>
+        </tr>
+        <tr>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">Bill No.</td>
+          <td style="padding:8px">${bill.invoice_number || ""}</td>
+          <td style="background:#1a5276;color:#fff;font-weight:bold;padding:8px">D Note #</td>
+          <td style="padding:8px">${ts.d_note_number || "NA"}</td>
+        </tr>
+      </table>
+
+      <!-- Journey table -->
+      <table>
+        <thead>
+          <tr style="background:#2c3e50">
+            <th style="color:#fff;padding:8px;width:30px;text-align:center">#</th>
+            <th style="color:#fff;padding:8px;text-align:left">Milestone</th>
+            <th style="color:#fff;padding:8px;text-align:left">Date</th>
+            <th style="color:#fff;padding:8px;text-align:left">Time</th>
+            <th style="color:#fff;padding:8px;text-align:left">KM / Amount</th>
+            <th style="color:#fff;padding:8px;text-align:left">Signed</th>
+          </tr>
+        </thead>
+        <tbody>${journeyRows}</tbody>
+      </table>
+
+      <!-- Bottom section -->
+      <table style="border-top:2px solid #bbb;min-height:140px">
+        <tr>
+          <td style="width:40%;vertical-align:top;padding:0;border-right:1px solid #bbb">
+            <div style="background:#c0392b;color:#fff;font-weight:bold;font-size:12px;padding:6px 10px">Remarks / Incidents</div>
+            <div style="padding:10px;font-size:12px">${sg?.remarks || ""}</div>
+          </td>
+          <td style="width:30%;vertical-align:top;padding:0;border-right:1px solid #bbb">
+            <div style="background:#c0392b;color:#fff;font-weight:bold;font-size:12px;padding:6px 10px">Driver</div>
+            <div style="padding:10px">
+              <div style="font-size:12px;margin-bottom:6px">Name: ${driver.driver_name || "_____________"}</div>
+              ${driverSig
+                ? `<img src="${assetUrl(driverSig)}" style="width:120px;height:48px;object-fit:contain;display:block;margin:4px 0" crossorigin="anonymous" />`
+                : `<div style="font-size:12px;margin-bottom:6px">Sign: _____________</div>`
+              }
+              <div style="font-size:12px">Date: ${sg?.driver_sign_date ? fmt(sg.driver_sign_date) : "__/__/____"}</div>
+            </div>
+          </td>
+          <td style="width:30%;vertical-align:top;padding:0">
+            <div style="background:#e8f4f8;color:#2c3e50;font-weight:bold;font-size:12px;padding:6px 10px">Supervisor</div>
+            <div style="padding:10px">
+              <div style="font-size:12px;margin-bottom:6px">Freight Received: ₹ ${sg?.freight_received || "_________"}</div>
+              <div style="font-size:12px;margin-bottom:6px">Excel Updated: ${excelTxt}</div>
+              <div style="font-size:12px;margin-bottom:6px">Sign: _____________</div>
+              <div style="font-size:12px">Date: ${sg?.supervisor_sign_date ? fmt(sg.supervisor_sign_date) : "__/__/____"}</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Footer -->
+      <div style="padding:10px;border-top:1px solid #ddd;text-align:center;font-size:11px;color:#888;font-style:italic">
+        BRFM India | Return this sheet to the Supervisor when the vehicle arrives back at the factory.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Screen Component ─────────────────────────────────────────────────────────
 export default function TripSheetPrintScreen({ route, navigation }) {
   const { tripId } = route.params || {};
   const [data, setData] = useState(null);
@@ -50,6 +252,18 @@ export default function TripSheetPrintScreen({ route, navigation }) {
       setData(res.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const handlePrint = () => {
+    if (Platform.OS !== "web" || !data) return;
+    const html = buildPrintHtml(data);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    // Allow images to fully load before triggering the browser print dialog
+    win.onload = () => { win.focus(); win.print(); };
   };
 
   if (loading) return (
@@ -68,116 +282,53 @@ export default function TripSheetPrintScreen({ route, navigation }) {
     </View>
   );
 
-  const ts      = data.trip_sheet || {};
-  const sg      = data.signoff || {};
+  const ts       = data.trip_sheet || {};
+  const sg       = data.signoff || {};
   const dispatch = data.dispatch || {};
-  const driver  = data.driver || {};
-  const truck   = data.truck || {};
+  const driver   = data.driver || {};
+  const truck    = data.truck || {};
   const customer = data.customer || {};
-  const bill    = data.bill || {};
-  const stop    = data.stop || {};           // trip-level (factory exit/return)
-  const allStops = data.all_stops || [];     // per-customer stops
-  const items   = data.items || [];
+  const bill     = data.bill || {};
+  const stop     = data.stop || {};
+  const allStops = data.all_stops || [];
+  const items    = data.items || [];
 
   const multiCustomer = allStops.length > 1;
   const deliveryAddr  = allStops.length > 0
     ? [...new Set(allStops.map(s => s.customer_city).filter(Boolean))].join(", ")
     : [customer.city].filter(Boolean).join(", ");
   const totalWeight   = items.reduce((s, i) => s + (i.dispatched_qty_ton || 0), 0);
-
-  // Customer names for info row
   const customerNames = multiCustomer
     ? allStops.map((s, i) => s.customer_name || `Customer ${i+1}`).join(", ")
     : (allStops[0]?.customer_name || customer.customer_name || "");
 
-  // Build journey rows
-  // For single-customer: flat table as before
-  // For multi-customer: group per stop with a separator header row
   const buildJourneyRows = () => {
     const rows = [];
-
-    // Row 1: Factory Exit (trip-level) — signed column intentionally left blank
-    rows.push({
-      type: "row",
-      num: "1", label: "Factory Exit", bg: "#2c3e50", color: "#fff",
-      date: fmt(stop.factory_exit_at), time: fmtTime(stop.factory_exit_at),
-      km: stop.factory_exit_km ? `${stop.factory_exit_km} km` : "",
-      signed: "", sigPath: null,
-    });
+    rows.push({ type:"row", num:"1", label:"Factory Exit", bg:"#2c3e50", color:"#fff",
+      date:fmt(stop.factory_exit_at), time:fmtTime(stop.factory_exit_at),
+      km:stop.factory_exit_km?`${stop.factory_exit_km} km`:"", signed:"", sigPath:null });
 
     if (multiCustomer) {
       allStops.forEach((s, idx) => {
-        // Customer header row
-        rows.push({
-          type: "header",
-          label: `Customer ${idx + 1}: ${s.customer_name || `Customer ${idx+1}`}`,
-        });
-        rows.push({
-          type: "row",
-          num: "2", label: "Customer Arrived", bg: "#2980b9", color: "#fff",
-          date: fmt(s.arrived_at), time: fmtTime(s.arrived_at),
-          km: "", signed: s.driver_signature ? "Driver" : "", sigPath: s.driver_signature || null,
-        });
-        rows.push({
-          type: "row",
-          num: "3", label: "Unloading Start", bg: "#8e44ad", color: "#fff",
-          date: fmt(s.unloading_start), time: fmtTime(s.unloading_start),
-          km: "", signed: "", sigPath: null,
-        });
-        rows.push({
-          type: "row",
-          num: "4", label: "Unloading End", bg: "#c0392b", color: "#fff",
-          date: fmt(s.unloading_end), time: fmtTime(s.unloading_end),
-          km: "", signed: s.customer_signature ? "Customer" : "", sigPath: s.customer_signature || null,
-        });
+        rows.push({ type:"header", label:`Customer ${idx+1}: ${s.customer_name || `Customer ${idx+1}`}` });
+        rows.push({ type:"row", num:"2", label:"Customer Arrived", bg:"#2980b9", color:"#fff", date:fmt(s.arrived_at), time:fmtTime(s.arrived_at), km:"", signed:s.driver_signature?"Driver":"", sigPath:s.driver_signature||null });
+        rows.push({ type:"row", num:"3", label:"Unloading Start",  bg:"#8e44ad", color:"#fff", date:fmt(s.unloading_start), time:fmtTime(s.unloading_start), km:"", signed:"", sigPath:null });
+        rows.push({ type:"row", num:"4", label:"Unloading End",    bg:"#c0392b", color:"#fff", date:fmt(s.unloading_end), time:fmtTime(s.unloading_end), km:"", signed:s.customer_signature?"Customer":"", sigPath:s.customer_signature||null });
       });
     } else {
       const s = allStops[0] || {};
-      rows.push({
-        type: "row",
-        num: "2", label: "Customer Arrived", bg: "#2980b9", color: "#fff",
-        date: fmt(s.arrived_at), time: fmtTime(s.arrived_at),
-        km: "", signed: s.driver_signature ? "Driver" : "", sigPath: s.driver_signature || null,
-      });
-      rows.push({
-        type: "row",
-        num: "3", label: "Unloading Start", bg: "#8e44ad", color: "#fff",
-        date: fmt(s.unloading_start), time: fmtTime(s.unloading_start),
-        km: "", signed: "", sigPath: null,
-      });
-      rows.push({
-        type: "row",
-        num: "4", label: "Unloading End", bg: "#c0392b", color: "#fff",
-        date: fmt(s.unloading_end), time: fmtTime(s.unloading_end),
-        km: "", signed: s.customer_signature ? "Customer" : "", sigPath: s.customer_signature || null,
-      });
+      rows.push({ type:"row", num:"2", label:"Customer Arrived", bg:"#2980b9", color:"#fff", date:fmt(s.arrived_at), time:fmtTime(s.arrived_at), km:"", signed:s.driver_signature?"Driver":"", sigPath:s.driver_signature||null });
+      rows.push({ type:"row", num:"3", label:"Unloading Start",  bg:"#8e44ad", color:"#fff", date:fmt(s.unloading_start), time:fmtTime(s.unloading_start), km:"", signed:"", sigPath:null });
+      rows.push({ type:"row", num:"4", label:"Unloading End",    bg:"#c0392b", color:"#fff", date:fmt(s.unloading_end), time:fmtTime(s.unloading_end), km:"", signed:s.customer_signature?"Customer":"", sigPath:s.customer_signature||null });
     }
-
-    // Freight, Return Journey, Factory Return
-    rows.push({
-      type: "row",
-      num: "₹", label: "Freight Amount", bg: "#f39c12", color: "#fff",
-      date: ts.freight_amount ? `₹ ${ts.freight_amount}` : "",
-      time: "", km: "", signed: "", sigPath: null,
-    });
-    rows.push({
-      type: "row",
-      num: "5", label: "Return Journey", bg: "#16a085", color: "#fff",
-      date: fmt(stop.return_journey_at), time: fmtTime(stop.return_journey_at),
-      km: "", signed: "", sigPath: null,
-    });
-    rows.push({
-      type: "row",
-      num: "6", label: "Factory Return", bg: "#27ae60", color: "#fff",
-      date: fmt(stop.factory_return_at), time: fmtTime(stop.factory_return_at),
-      km: stop.factory_return_km ? `${stop.factory_return_km} km` : "",
-      signed: "", sigPath: null,
-    });
-
+    rows.push({ type:"row", num:"₹", label:"Freight Amount", bg:"#f39c12", color:"#fff", date:ts.freight_amount?`₹ ${ts.freight_amount}`:"", time:"", km:"", signed:"", sigPath:null });
+    rows.push({ type:"row", num:"5", label:"Return Journey", bg:"#16a085", color:"#fff", date:fmt(stop.return_journey_at), time:fmtTime(stop.return_journey_at), km:"", signed:"", sigPath:null });
+    rows.push({ type:"row", num:"6", label:"Factory Return", bg:"#27ae60", color:"#fff", date:fmt(stop.factory_return_at), time:fmtTime(stop.factory_return_at), km:stop.factory_return_km?`${stop.factory_return_km} km`:"", signed:"", sigPath:null });
     return rows;
   };
 
   const journeyRows = buildJourneyRows();
+  const driverSig = allStops[0]?.driver_signature || stop.driver_signature;
 
   return (
     <ScrollView style={st.page} contentContainerStyle={st.pageContent}>
@@ -186,14 +337,13 @@ export default function TripSheetPrintScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.ctrlBtn}>
           <Text style={st.ctrlBtnTxt}>← Back</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => Platform.OS === "web" && window.print()} style={[st.ctrlBtn, { backgroundColor: "#27ae60" }]}>
+        <TouchableOpacity onPress={handlePrint} style={[st.ctrlBtn, { backgroundColor: "#27ae60" }]}>
           <Text style={st.ctrlBtnTxt}>🖨 Print (A4)</Text>
         </TouchableOpacity>
       </View>
 
-      {/* A4 Sheet */}
+      {/* A4 Sheet — on-screen preview */}
       <View style={st.sheet} nativeID="trip-sheet-print">
-
         {/* Title row */}
         <View style={st.titleRow}>
           <View style={st.titleCompany}><Text style={st.titleCompanyTxt}>BRFM India</Text></View>
@@ -238,7 +388,6 @@ export default function TripSheetPrintScreen({ route, navigation }) {
 
         {/* Journey table */}
         <View style={st.jTable}>
-          {/* Table header */}
           <View style={st.jHead}>
             <View style={[st.jHCell, { width: 30 }]}><Text style={st.jHCellTxt}>#</Text></View>
             <View style={[st.jHCell, { flex: 2 }]}><Text style={st.jHCellTxt}>Milestone</Text></View>
@@ -284,7 +433,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
           })}
         </View>
 
-        {/* Bottom: Remarks / Driver / Supervisor */}
+        {/* Bottom section */}
         <View style={st.bottom}>
           <View style={st.bottomRemarks}>
             <View style={st.bottomHdr}><Text style={st.bottomHdrTxt}>Remarks / Incidents</Text></View>
@@ -294,11 +443,8 @@ export default function TripSheetPrintScreen({ route, navigation }) {
             <View style={st.bottomHdr}><Text style={st.bottomHdrTxt}>Driver</Text></View>
             <View style={st.bottomBody}>
               <Text style={st.signLine}>Name: {driver.driver_name || "_____________"}</Text>
-              {(allStops[0]?.driver_signature || stop.driver_signature)
-                ? <Image
-                    source={{ uri: assetUrl(allStops[0]?.driver_signature || stop.driver_signature) }}
-                    style={{ width: 120, height: 44, resizeMode: "contain", marginVertical: 4 }}
-                  />
+              {driverSig
+                ? <Image source={{ uri: assetUrl(driverSig) }} style={{ width: 120, height: 44, resizeMode: "contain", marginVertical: 4 }} />
                 : <Text style={st.signLine}>Sign: _____________</Text>
               }
               <Text style={st.signLine}>Date: {sg?.driver_sign_date ? fmt(sg.driver_sign_date) : "__/__/____"}</Text>
@@ -324,26 +470,6 @@ export default function TripSheetPrintScreen({ route, navigation }) {
           <Text style={st.footerTxt}>BRFM India | Return this sheet to the Supervisor when the vehicle arrives back at the factory.</Text>
         </View>
       </View>
-
-      {Platform.OS === "web" && (
-        <style>{`
-          @media print {
-            body * { visibility: hidden; }
-            #trip-sheet-print, #trip-sheet-print * { visibility: visible; }
-            #trip-sheet-print {
-              position: fixed;
-              top: 0; left: 0;
-              width: 210mm;
-              min-height: 297mm;
-              margin: 0;
-              padding: 8mm;
-              box-sizing: border-box;
-              background: #fff;
-            }
-            #trip-print-controls { display: none !important; }
-          }
-        `}</style>
-      )}
     </ScrollView>
   );
 }
@@ -382,7 +508,6 @@ const st = StyleSheet.create({
   jHCell: { padding: 8, borderRightWidth: 1, borderRightColor: "#555", justifyContent: "center", alignItems: "center" },
   jHCellTxt: { color: "#fff", fontWeight: "bold", fontSize: 12 },
 
-  // Customer section header row
   jCustHeader: { backgroundColor: "#ecf0f1", paddingVertical: 6, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: "#ddd" },
   jCustHeaderTxt: { fontWeight: "bold", fontSize: 13, color: "#2c3e50" },
 
