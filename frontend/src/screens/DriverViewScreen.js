@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, TextInput, Image, Platform, FlatList,
+  ActivityIndicator, TextInput, Image, Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import SignatureCanvas from "react-signature-canvas";
@@ -12,120 +12,113 @@ import { storage } from "../utils/storage";
 import { showError, showSuccess } from "../utils/customAlerts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
 function fmtTime(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
-function fmtDate(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-function fmtDateTime(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true });
 }
 function buildFD(obj) {
   const fd = new FormData();
   Object.entries(obj).forEach(([k, v]) => { if (v != null) fd.append(k, String(v)); });
   return fd;
 }
-
-// Derive trip stage from trip sheet data
 function getTripStage(tripSheet) {
   if (!tripSheet) return "NEW";
-  if (!tripSheet.stop?.factory_return_at && tripSheet.stop?.factory_exit_at) return "IN_TRANSIT";
   if (tripSheet.stop?.factory_return_at) return "RETURNED";
-  // trip sheet exists but exit not set yet (edge case)
+  if (tripSheet.stop?.factory_exit_at) return "IN_TRANSIT";
   return "NEW";
 }
+function allStopsDone(stops) {
+  const real = stops.filter(s => !s._pending);
+  return real.length > 0 && real.every(s => !!s.unloading_end);
+}
 
-// ─── Signature modal (web) ───────────────────────────────────────────────────
+// ─── Signature modal (web only) ─────────────────────────────────────────────
 function SigModal({ label, onClose, onSave }) {
   const ref = useRef(null);
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 480 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontSize: 18, fontWeight: 700 }}>{label}</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>✕</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 460 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>{label}</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>✕</button>
         </div>
-        <div style={{ border: "2px dashed #6366f1", borderRadius: 10, overflow: "hidden", background: "#f8fafc", cursor: "crosshair" }}>
-          <SignatureCanvas ref={ref} penColor="#111" canvasProps={{ width: 432, height: 200, style: { display: "block", width: "100%", height: 200, touchAction: "none" } }} backgroundColor="rgba(248,250,252,1)" />
+        <div style={{ border: "2px dashed #1565C0", borderRadius: 10, overflow: "hidden", background: "#f0f4ff" }}>
+          <SignatureCanvas ref={ref} penColor="#111" canvasProps={{ width: 412, height: 180, style: { display: "block", width: "100%", touchAction: "none" } }} backgroundColor="rgba(240,244,255,1)" />
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <button onClick={() => ref.current?.clear()} style={{ flex: 1, padding: "12px 0", borderRadius: 8, border: "1px solid #ddd", background: "#f1f5f9", fontWeight: 600, fontSize: 15, cursor: "pointer" }}>Clear</button>
-          <button onClick={() => { if (!ref.current || ref.current.isEmpty()) return showError("Draw signature first"); ref.current.getCanvas().toBlob(b => b && onSave(b), "image/png"); }} style={{ flex: 2, padding: "12px 0", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save Signature</button>
+        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <button onClick={() => ref.current?.clear()} style={{ flex: 1, padding: "11px 0", borderRadius: 8, border: "1px solid #ddd", background: "#f1f5f9", fontWeight: 600, cursor: "pointer" }}>Clear</button>
+          <button onClick={() => { if (!ref.current || ref.current.isEmpty()) return showError("Draw signature first"); ref.current.getCanvas().toBlob(b => b && onSave(b), "image/png"); }} style={{ flex: 2, padding: "11px 0", borderRadius: 8, border: "none", background: "#1565C0", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save Signature</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Big Action Button ───────────────────────────────────────────────────────
-function BigBtn({ label, sublabel, color, icon, onPress, disabled, loading }) {
+// ─── Action Button ───────────────────────────────────────────────────────────
+function ActionBtn({ icon, label, sublabel, color, onPress, disabled, loading }) {
   return (
     <TouchableOpacity
-      style={[s.bigBtn, { backgroundColor: disabled ? "#b0bec5" : color || "#2196F3" }, disabled && { opacity: 0.6 }]}
+      style={[s.actionBtn, { borderLeftColor: disabled ? "#ccc" : color, opacity: disabled ? 0.5 : 1 }]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.85}
+      activeOpacity={0.8}
     >
       {loading
-        ? <ActivityIndicator color="#fff" size="large" />
-        : <>
-          {icon ? <Text style={s.bigBtnIcon}>{icon}</Text> : null}
-          <Text style={s.bigBtnLabel}>{label}</Text>
-          {sublabel ? <Text style={s.bigBtnSub}>{sublabel}</Text> : null}
-        </>
+        ? <ActivityIndicator color={color} />
+        : (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={[s.actionBtnCircle, { backgroundColor: disabled ? "#ccc" : color }]}>
+              <Text style={s.actionBtnIcon}>{icon}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.actionBtnLabel, { color: disabled ? "#999" : "#1a2a3a" }]}>{label}</Text>
+              {sublabel ? <Text style={s.actionBtnSub}>{sublabel}</Text> : null}
+            </View>
+            {!disabled && <Text style={{ fontSize: 18, color: color }}>›</Text>}
+          </View>
+        )
       }
     </TouchableOpacity>
   );
 }
 
-// ─── Step pill indicator ─────────────────────────────────────────────────────
-function StepPill({ num, label, done, active }) {
+// ─── Done badge ──────────────────────────────────────────────────────────────
+function DoneTag({ time }) {
   return (
-    <View style={s.stepPillWrap}>
-      <View style={[s.stepCircle, done && s.stepCircleDone, active && s.stepCircleActive]}>
-        <Text style={[s.stepNum, (done || active) && { color: "#fff" }]}>{done ? "✓" : num}</Text>
-      </View>
-      <Text style={[s.stepLabel, active && { color: "#1565C0", fontWeight: "700" }, done && { color: "#2e7d32" }]}>{label}</Text>
+    <View style={s.doneTag}>
+      <Text style={s.doneTagIcon}>✓</Text>
+      <Text style={s.doneTagText}>{time}</Text>
     </View>
   );
 }
 
 // ─── Single stop section ─────────────────────────────────────────────────────
-function StopSection({ stop, dispatch, stopIndex, totalStops, onRefresh }) {
+function StopSection({ stop, dispatch, stopIndex, totalStops, onRecordTime, onUploadSig, onUploadPhoto }) {
   const [busy, setBusy] = useState(null);
   const [sigFor, setSigFor] = useState(null);
+  const isL = (k) => busy === k;
+  const { arrived_at, unloading_start, unloading_end, customer_signature, driver_signature, photos } = stop;
 
-  const recordTime = async (field) => {
+  const doRecord = async (field) => {
     setBusy(field);
     try {
-      const fd = buildFD({ [field]: new Date().toISOString() });
-      await dispatchApi.updateStopTimes(dispatch.dispatch_id, stop.id, fd);
-      await onRefresh();
-      showSuccess("✅ Time saved!");
+      await onRecordTime(stop, field);
+      showSuccess("Saved!");
     } catch { showError("Could not save. Try again."); }
     finally { setBusy(null); }
   };
 
-  const uploadSigBlob = async (type, blob) => {
+  const doSig = async (type, blob) => {
     setSigFor(null);
     setBusy(`sig_${type}`);
     try {
-      const fd = new FormData();
-      fd.append("signature", blob, "sig.png");
-      if (type === "driver") await dispatchApi.uploadDriverSignature(dispatch.dispatch_id, stop.id, fd);
-      else await dispatchApi.uploadCustomerSignature(dispatch.dispatch_id, stop.id, fd);
-      await onRefresh();
+      await onUploadSig(stop, type, blob);
       showSuccess("Signature saved!");
     } catch { showError("Upload failed. Try again."); }
     finally { setBusy(null); }
   };
 
-  const capturePhoto = async () => {
+  const doPhoto = async () => {
     try {
       const res = await ImagePicker.launchCameraAsync({ quality: 0.8 });
       if (res.canceled || !res.assets?.[0]) return;
@@ -133,100 +126,72 @@ function StopSection({ stop, dispatch, stopIndex, totalStops, onRefresh }) {
       const asset = res.assets[0];
       const fd = new FormData();
       if (asset.uri.startsWith("data:") || asset.uri.startsWith("blob:")) {
-        const blob = await fetch(asset.uri).then(r => r.blob());
-        fd.append("photo", blob, "photo.jpg");
+        fd.append("photo", await fetch(asset.uri).then(r => r.blob()), "photo.jpg");
       } else {
         fd.append("photo", { uri: asset.uri, type: asset.mimeType || "image/jpeg", name: "photo.jpg" });
       }
-      await dispatchApi.addStopPhoto(dispatch.dispatch_id, stop.id, fd);
-      await onRefresh();
+      await onUploadPhoto(stop, fd);
       showSuccess("Photo added!");
     } catch { showError("Photo upload failed."); }
     finally { setBusy(null); }
   };
 
-  const triggerSig = (type) => {
-    if (Platform.OS === "web") setSigFor(type);
-    else capturePhoto(); // mobile fallback
-  };
-
-  const isL = (k) => busy === k;
-  const { arrived_at, unloading_start, unloading_end, customer_signature, driver_signature, photos } = stop;
+  const allDoneForStop = !!arrived_at && !!unloading_start && !!unloading_end;
 
   return (
-    <View style={s.stopBox}>
+    <View style={s.stopCard}>
       {/* Stop header */}
-      <View style={s.stopHeaderRow}>
-        <View style={s.stopNumCircle}>
-          <Text style={s.stopNumText}>{stopIndex + 1}</Text>
+      <View style={s.stopHeader}>
+        <View style={[s.stopNum, allDoneForStop && { backgroundColor: "#2e7d32" }]}>
+          <Text style={s.stopNumText}>{allDoneForStop ? "✓" : stopIndex + 1}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.stopCustomer}>{stop.customer_name || "Customer"}</Text>
-          {stop.order_id ? <Text style={s.stopOrderId}>Order #{stop.order_id}</Text> : null}
-          {totalStops > 1 && <Text style={s.stopOf}>Stop {stopIndex + 1} of {totalStops}</Text>}
+          {stop.order_id ? <Text style={s.stopMeta}>Order #{stop.order_id}</Text> : null}
+          {totalStops > 1 ? <Text style={s.stopMeta}>Stop {stopIndex + 1} of {totalStops}</Text> : null}
         </View>
-        {unloading_end && <View style={s.donePill}><Text style={s.donePillText}>DONE ✓</Text></View>}
+        {allDoneForStop && (
+          <View style={s.donePill}>
+            <Text style={s.donePillText}>Delivered</Text>
+          </View>
+        )}
       </View>
 
-      {/* Sequential steps */}
-      <View style={s.stopSteps}>
-
+      <View style={s.stopBody}>
         {/* ARRIVED */}
-        <View style={s.stopStep}>
-          <View style={[s.stepDot, arrived_at && s.stepDotDone]} />
-          <View style={{ flex: 1 }}>
-            {arrived_at
-              ? <Text style={s.stepDoneText}>✅ Arrived — {fmtTime(arrived_at)}</Text>
-              : <BigBtn icon="📍" label="WE ARRIVED" sublabel="Tap when you reach customer" color="#1565C0" onPress={() => recordTime("arrived_at")} loading={isL("arrived_at")} disabled={!!arrived_at} />
-            }
-          </View>
-        </View>
+        {arrived_at
+          ? <DoneTag time={`📍 Arrived at ${fmtTime(arrived_at)}`} />
+          : <ActionBtn icon="📍" label="WE ARRIVED" sublabel="Tap when you reach the customer" color="#1565C0" onPress={() => doRecord("arrived_at")} loading={isL("arrived_at")} />
+        }
 
         {/* UNLOADING START */}
         {arrived_at && (
-          <View style={s.stopStep}>
-            <View style={[s.stepDot, unloading_start && s.stepDotDone]} />
-            <View style={{ flex: 1 }}>
-              {unloading_start
-                ? <Text style={s.stepDoneText}>✅ Unloading started — {fmtTime(unloading_start)}</Text>
-                : <BigBtn icon="🔓" label="UNLOADING STARTED" sublabel="Tap when unloading begins" color="#7B1FA2" onPress={() => recordTime("unloading_start")} loading={isL("unloading_start")} disabled={!!unloading_start} />
-              }
-            </View>
-          </View>
+          unloading_start
+            ? <DoneTag time={`🔓 Unloading started at ${fmtTime(unloading_start)}`} />
+            : <ActionBtn icon="🔓" label="UNLOADING STARTED" sublabel="Tap when unloading begins" color="#7B1FA2" onPress={() => doRecord("unloading_start")} loading={isL("unloading_start")} />
         )}
 
-        {/* UNLOADING END */}
+        {/* UNLOADING DONE */}
         {unloading_start && (
-          <View style={s.stopStep}>
-            <View style={[s.stepDot, unloading_end && s.stepDotDone]} />
-            <View style={{ flex: 1 }}>
-              {unloading_end
-                ? <Text style={s.stepDoneText}>✅ Unloading done — {fmtTime(unloading_end)}</Text>
-                : <BigBtn icon="✅" label="UNLOADING DONE" sublabel="Tap when all goods are unloaded" color="#C62828" onPress={() => recordTime("unloading_end")} loading={isL("unloading_end")} disabled={!!unloading_end} />
-              }
-            </View>
-          </View>
+          unloading_end
+            ? <DoneTag time={`✅ Unloading done at ${fmtTime(unloading_end)}`} />
+            : <ActionBtn icon="✅" label="UNLOADING DONE" sublabel="Tap when all goods are offloaded" color="#2e7d32" onPress={() => doRecord("unloading_end")} loading={isL("unloading_end")} />
         )}
 
-        {/* PHOTO + SIGNATURE — only after unloading done */}
+        {/* POST-UNLOADING: photo + signatures */}
         {unloading_end && (
           <View style={s.postUnload}>
-            {/* Delivery photo */}
-            <TouchableOpacity style={s.photoCapBtn} onPress={capturePhoto} disabled={isL("photo")}>
-              {isL("photo")
-                ? <ActivityIndicator color="#fff" />
-                : <><Text style={{ fontSize: 28 }}>📸</Text><Text style={s.photoCapLabel}>Add Delivery Photo</Text></>
-              }
-            </TouchableOpacity>
-            {photos?.length > 0 && (
-              <ScrollView horizontal style={{ marginTop: 8 }} showsHorizontalScrollIndicator={false}>
-                {photos.map(p => (
-                  <Image key={p.id} source={{ uri: `${API_BASE_URL}/${p.photo_path}` }} style={s.photoThumb} resizeMode="cover" />
-                ))}
-              </ScrollView>
-            )}
+            {/* Photo */}
+            <View style={s.postRow}>
+              <TouchableOpacity style={s.photoBtn} onPress={doPhoto} disabled={isL("photo")}>
+                {isL("photo") ? <ActivityIndicator color="#1565C0" /> : <><Text style={{ fontSize: 20 }}>📸</Text><Text style={s.photoBtnLabel}>{(photos?.length || 0) > 0 ? `Photos (${photos.length})` : "Add Photo"}</Text></>}
+              </TouchableOpacity>
+              {(photos?.length || 0) > 0 && photos.map(p => (
+                <Image key={p.id} source={{ uri: `${API_BASE_URL}/${p.photo_path}` }} style={s.photoThumb} resizeMode="cover" />
+              ))}
+            </View>
 
-            {/* Customer Signature */}
+            {/* Signatures */}
             <View style={s.sigRow}>
               <View style={s.sigBlock}>
                 <Text style={s.sigTitle}>Customer Sign</Text>
@@ -234,8 +199,8 @@ function StopSection({ stop, dispatch, stopIndex, totalStops, onRefresh }) {
                   ? <Image source={{ uri: `${API_BASE_URL}/${customer_signature}` }} style={s.sigImg} resizeMode="contain" />
                   : <View style={s.sigPlaceholder}><Text style={s.sigPlaceholderText}>Not captured</Text></View>
                 }
-                <TouchableOpacity style={[s.sigBtn, { backgroundColor: customer_signature ? "#546e7a" : "#00796B" }]} onPress={() => triggerSig("customer")} disabled={isL("sig_customer")}>
-                  {isL("sig_customer") ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sigBtnText}>{customer_signature ? "Re-sign" : "GET SIGNATURE"}</Text>}
+                <TouchableOpacity style={[s.sigBtn, { backgroundColor: customer_signature ? "#546e7a" : "#00796B" }]} onPress={() => Platform.OS === "web" ? setSigFor("customer") : doPhoto()} disabled={isL("sig_customer")}>
+                  {isL("sig_customer") ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sigBtnText}>{customer_signature ? "Re-sign" : "Get Signature"}</Text>}
                 </TouchableOpacity>
               </View>
               <View style={s.sigBlock}>
@@ -244,8 +209,8 @@ function StopSection({ stop, dispatch, stopIndex, totalStops, onRefresh }) {
                   ? <Image source={{ uri: `${API_BASE_URL}/${driver_signature}` }} style={s.sigImg} resizeMode="contain" />
                   : <View style={s.sigPlaceholder}><Text style={s.sigPlaceholderText}>Not captured</Text></View>
                 }
-                <TouchableOpacity style={[s.sigBtn, { backgroundColor: driver_signature ? "#546e7a" : "#1565C0" }]} onPress={() => triggerSig("driver")} disabled={isL("sig_driver")}>
-                  {isL("sig_driver") ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sigBtnText}>{driver_signature ? "Re-sign" : "MY SIGNATURE"}</Text>}
+                <TouchableOpacity style={[s.sigBtn, { backgroundColor: driver_signature ? "#546e7a" : "#1565C0" }]} onPress={() => Platform.OS === "web" ? setSigFor("driver") : doPhoto()} disabled={isL("sig_driver")}>
+                  {isL("sig_driver") ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sigBtnText}>{driver_signature ? "Re-sign" : "My Signature"}</Text>}
                 </TouchableOpacity>
               </View>
             </View>
@@ -254,10 +219,49 @@ function StopSection({ stop, dispatch, stopIndex, totalStops, onRefresh }) {
       </View>
 
       {Platform.OS === "web" && sigFor && (
-        <SigModal label={sigFor === "driver" ? "Driver Signature" : "Customer Signature"} onClose={() => setSigFor(null)} onSave={b => uploadSigBlob(sigFor, b)} />
+        <SigModal label={sigFor === "driver" ? "Driver Signature" : "Customer Signature"} onClose={() => setSigFor(null)} onSave={b => doSig(sigFor, b)} />
       )}
     </View>
   );
+}
+
+// ─── Dispatch list card ───────────────────────────────────────────────────────
+function DispatchCard({ dispatch, onPress }) {
+  const items = dispatch.items || [];
+  const totalBags = items.reduce((a, i) => a + (i.dispatched_bags || 0), 0);
+  const totalTon = items.reduce((a, i) => a + (parseFloat(i.dispatched_qty_ton) || 0), 0).toFixed(2);
+  const customerName = dispatch.order?.customer?.customer_name || dispatch.customer_name || "Customer";
+  const city = dispatch.order?.customer?.city || "";
+
+  return (
+    <TouchableOpacity style={s.dispCard} onPress={onPress} activeOpacity={0.86}>
+      <View style={s.dispCardTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.dispCardCustomer}>{customerName}</Text>
+          {city ? <Text style={s.dispCardCity}>{city}</Text> : null}
+        </View>
+        <View style={s.dispCardBadge}>
+          <Text style={s.dispCardBadgeText}>#{dispatch.dispatch_id}</Text>
+        </View>
+      </View>
+      <View style={s.dispCardMeta}>
+        <Text style={s.dispCardMetaItem}>🚛 {dispatch.truck?.truck_number || "N/A"}</Text>
+        <Text style={s.dispCardMetaItem}>📦 {totalBags} bags</Text>
+        <Text style={s.dispCardMetaItem}>⚖️ {totalTon} T</Text>
+      </View>
+      <View style={s.dispCardFooter}>
+        <Text style={s.dispCardItems}>{items.map(i => i.product_name || i.finished_good_name || "Product").join(", ")}</Text>
+        <Text style={s.dispCardOpen}>Open →</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Stage pill ──────────────────────────────────────────────────────────────
+function StagePill({ stage }) {
+  const map = { NEW: { label: "Start Trip", color: "#1565C0", bg: "#e3f2fd" }, IN_TRANSIT: { label: "In Transit", color: "#e65100", bg: "#fff3e0" }, RETURNED: { label: "Returned", color: "#2e7d32", bg: "#e8f5e9" } };
+  const m = map[stage] || map.NEW;
+  return <View style={[s.stagePill, { backgroundColor: m.bg }]}><Text style={[s.stagePillText, { color: m.color }]}>{m.label}</Text></View>;
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -265,8 +269,8 @@ export default function DriverViewScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [dispatches, setDispatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null); // selected dispatch
-  const [tripData, setTripData] = useState(null);  // { tripSheet, stop, stops[] }
+  const [selected, setSelected] = useState(null);
+  const [tripData, setTripData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [startKm, setStartKm] = useState("");
   const [returnKm, setReturnKm] = useState("");
@@ -285,8 +289,8 @@ export default function DriverViewScreen({ navigation }) {
     setLoading(true);
     try {
       const res = await dispatchApi.getAll();
-      let all = (res.data || []).filter(d => ["DISPATCHED", "PARTIALLY DELIVERED", "PARTIAL"].includes(d.status));
-      const isAdmin = userData?.role === "admin" || userData?.role === "manager";
+      let all = (res.data || []).filter(d => ["DISPATCHED", "PARTIALLY DELIVERED", "PARTIAL", "IN_TRANSIT"].includes(d.status));
+      const isAdmin = !userData || userData?.role === "admin" || userData?.role === "manager";
       if (!isAdmin) {
         const uid = userData?.driver_id?.toString();
         const uname = (userData?.full_name || userData?.username || "").toLowerCase().trim();
@@ -296,52 +300,8 @@ export default function DriverViewScreen({ navigation }) {
         });
       }
       setDispatches(all);
-    } catch { showError("Could not load dispatches"); }
+    } catch { showError("Could not load deliveries"); }
     finally { setLoading(false); }
-  };
-
-  const openDispatch = async (dispatch) => {
-    setSelected(dispatch);
-    setDetailLoading(true);
-    setStartKm("");
-    setReturnKm("");
-    try {
-      const [tsRes, stopsRes] = await Promise.all([
-        client.get(`/trip-sheets/by-dispatch/${dispatch.dispatch_id}`),
-        dispatchApi.getDeliveryStops(dispatch.dispatch_id),
-      ]);
-      const ts = tsRes.data;
-      let stop = null;
-      let fullTs = ts;
-
-      if (ts) {
-        const fullRes = await client.get(`/trip-sheets/${ts.id}/full`);
-        stop = fullRes.data?.stop || null;
-        fullTs = { ...ts, stop };
-      }
-
-      // Build stops list
-      const existingStops = stopsRes.data || [];
-      const orderIds = getOrderIds(dispatch);
-      let stops;
-      if (orderIds.length > 0) {
-        stops = orderIds.map((oid, idx) => {
-          const ex = existingStops.find(s => s.order_id === oid);
-          return ex || { _pending: true, order_id: oid, customer_name: dispatch.order?.customer?.customer_name || `Customer ${idx + 1}`, photos: [] };
-        });
-      } else if (existingStops.length > 0) {
-        stops = existingStops;
-      } else {
-        stops = [{ _pending: true, order_id: null, customer_name: dispatch.order?.customer?.customer_name || "Customer", photos: [] }];
-      }
-
-      setTripData({ tripSheet: fullTs, stop, stops });
-    } catch (e) {
-      console.error(e);
-      setTripData({ tripSheet: null, stop: null, stops: [] });
-    } finally {
-      setDetailLoading(false);
-    }
   };
 
   const getOrderIds = (dispatch) => {
@@ -354,74 +314,110 @@ export default function DriverViewScreen({ navigation }) {
     return ids.length > 0 ? ids : (dispatch.order_id ? [dispatch.order_id] : []);
   };
 
-  const refreshDetail = useCallback(async () => {
-    if (!selected) return;
-    await openDispatch(selected);
-  }, [selected]);
+  const buildStops = (existingStops, dispatch) => {
+    const orderIds = getOrderIds(dispatch);
+    if (orderIds.length > 0) {
+      return orderIds.map((oid, idx) => {
+        const ex = existingStops.find(s => s.order_id === oid);
+        return ex || { _pending: true, order_id: oid, customer_name: dispatch.order?.customer?.customer_name || `Customer ${idx + 1}`, photos: [] };
+      });
+    }
+    if (existingStops.length > 0) return existingStops;
+    return [{ _pending: true, order_id: null, customer_name: dispatch.order?.customer?.customer_name || "Customer", photos: [] }];
+  };
 
-  // Ensure a stop exists in DB before updating it
-  const ensureStop = async (pendingStop) => {
-    const fd = buildFD({ order_id: pendingStop.order_id, customer_name: pendingStop.customer_name });
-    const res = await dispatchApi.createOrUpdateStop(selected.dispatch_id, fd);
-    return res.data;
+  const openDispatch = async (dispatch) => {
+    setSelected(dispatch);
+    setDetailLoading(true);
+    setStartKm(""); setReturnKm("");
+    try {
+      const [tsRes, stopsRes] = await Promise.all([
+        client.get(`/trip-sheets/by-dispatch/${dispatch.dispatch_id}`),
+        dispatchApi.getDeliveryStops(dispatch.dispatch_id),
+      ]);
+      const ts = tsRes.data;
+      let fullTs = ts;
+      let tsStop = null;
+      if (ts?.id) {
+        const fullRes = await client.get(`/trip-sheets/${ts.id}/full`);
+        tsStop = fullRes.data?.stop || null;
+        fullTs = { ...ts, stop: tsStop };
+      }
+      const stops = buildStops(stopsRes.data || [], dispatch);
+      setTripData({ tripSheet: fullTs, stops });
+    } catch (e) {
+      console.error(e);
+      setTripData({ tripSheet: null, stops: [] });
+    } finally { setDetailLoading(false); }
   };
 
   const refreshStops = useCallback(async () => {
-    if (!selected || !tripData) return;
+    if (!selected) return;
     const stopsRes = await dispatchApi.getDeliveryStops(selected.dispatch_id);
-    const existingStops = stopsRes.data || [];
-    const orderIds = getOrderIds(selected);
-    let stops;
-    if (orderIds.length > 0) {
-      stops = orderIds.map((oid, idx) => {
-        const ex = existingStops.find(s => s.order_id === oid);
-        return ex || { _pending: true, order_id: oid, customer_name: selected.order?.customer?.customer_name || `Customer ${idx + 1}`, photos: [] };
-      });
-    } else {
-      stops = existingStops.length > 0 ? existingStops : [{ _pending: true, order_id: null, customer_name: "Customer", photos: [] }];
-    }
+    const stops = buildStops(stopsRes.data || [], selected);
     setTripData(prev => ({ ...prev, stops }));
-  }, [selected, tripData]);
+  }, [selected]);
 
-  // Wrap StopSection so pending stops get created first
-  const makeRefreshForStop = (stop) => async () => {
-    if (stop._pending) {
-      const created = await ensureStop(stop);
-      setTripData(prev => ({
-        ...prev,
-        stops: prev.stops.map(s => s._pending && s.order_id === stop.order_id ? created : s),
-      }));
-    }
+  // ── Ensure a pending stop is created before any action ──────────────────
+  const ensureStopCreated = async (stop) => {
+    if (!stop._pending) return stop;
+    const fd = buildFD({ order_id: stop.order_id, customer_name: stop.customer_name });
+    const res = await dispatchApi.createOrUpdateStop(selected.dispatch_id, fd);
+    const created = res.data;
+    setTripData(prev => ({
+      ...prev,
+      stops: prev.stops.map(s => (s._pending && s.order_id === stop.order_id) ? created : s),
+    }));
+    return created;
+  };
+
+  // ── Record time action: ensure stop exists first, then PATCH ────────────
+  const handleRecordTime = async (stop, field) => {
+    const actualStop = await ensureStopCreated(stop);
+    if (!actualStop?.id) throw new Error("Could not create delivery stop");
+    const fd = buildFD({ [field]: new Date().toISOString() });
+    await dispatchApi.updateStopTimes(selected.dispatch_id, actualStop.id, fd);
     await refreshStops();
   };
 
-  // ── START TRIP ─────────────────────────────────────────────────────────────
+  const handleUploadSig = async (stop, type, blob) => {
+    const actualStop = await ensureStopCreated(stop);
+    const fd = new FormData();
+    fd.append("signature", blob, "sig.png");
+    if (type === "driver") await dispatchApi.uploadDriverSignature(selected.dispatch_id, actualStop.id, fd);
+    else await dispatchApi.uploadCustomerSignature(selected.dispatch_id, actualStop.id, fd);
+    await refreshStops();
+  };
+
+  const handleUploadPhoto = async (stop, fd) => {
+    const actualStop = await ensureStopCreated(stop);
+    await dispatchApi.addStopPhoto(selected.dispatch_id, actualStop.id, fd);
+    await refreshStops();
+  };
+
+  // ── START TRIP ──────────────────────────────────────────────────────────
   const handleStartTrip = async () => {
-    if (!startKm) { showError("Please enter the current KM reading"); return; }
+    if (!startKm.trim()) { showError("Enter the odometer reading before leaving"); return; }
     setActionBusy(true);
     try {
-      const tsRes = await client.post("/trip-sheets", {
-        dispatch_id: selected.dispatch_id,
-        freight_amount: null,
-        d_note_number: null,
-      });
+      const tsRes = await client.post("/trip-sheets", { dispatch_id: selected.dispatch_id, freight_amount: null, d_note_number: null });
       const tsId = tsRes.data.id;
       await client.put(`/trip-sheets/${tsId}/stop`, {
         factory_exit_at: new Date().toISOString(),
         factory_exit_km: parseFloat(startKm),
         factory_exit_signed: user?.full_name || user?.username || null,
       });
-      showSuccess("🚛 Trip started! Safe journey.");
+      showSuccess("Trip started! Safe drive.");
       await openDispatch(selected);
     } catch (e) {
-      const msg = e?.response?.data?.detail || "Failed to start trip";
-      showError(msg === "Trip sheet already exists for this dispatch" ? "Trip already started for this dispatch." : msg);
+      const msg = e?.response?.data?.detail || "";
+      showError(msg.includes("already exists") ? "Trip already started for this dispatch." : "Failed to start trip.");
     } finally { setActionBusy(false); }
   };
 
-  // ── RETURN TO FACTORY ──────────────────────────────────────────────────────
+  // ── RETURN TO FACTORY ───────────────────────────────────────────────────
   const handleReturnToFactory = async () => {
-    if (!returnKm) { showError("Please enter the KM reading at factory"); return; }
+    if (!returnKm.trim()) { showError("Enter the odometer reading at factory gate"); return; }
     setActionBusy(true);
     try {
       const tsId = tripData.tripSheet.id;
@@ -429,42 +425,34 @@ export default function DriverViewScreen({ navigation }) {
         factory_return_at: new Date().toISOString(),
         factory_return_km: parseFloat(returnKm),
       });
-      // Mark dispatch delivered
       try {
         const form = new FormData();
         form.append("delivery_date", new Date().toISOString());
         form.append("driver_photo", new Blob([""], { type: "image/jpeg" }), "placeholder.jpg");
         await dispatchApi.uploadDeliveryProof(selected.dispatch_id, form);
       } catch {}
-      showSuccess("🏭 Returned to factory! Well done.");
+      showSuccess("Returned to factory! Well done.");
       await loadDispatches(user);
-      setSelected(null);
-      setTripData(null);
+      setSelected(null); setTripData(null);
     } catch { showError("Could not save return. Try again."); }
     finally { setActionBusy(false); }
   };
 
-  const allStopsDone = (stops) => stops.filter(s => !s._pending).every(s => !!s.unloading_end) && stops.some(s => !s._pending && s.unloading_end);
-
-  // ─── RENDER LIST ──────────────────────────────────────────────────────────
+  // ─── LIST VIEW ───────────────────────────────────────────────────────────
   if (!selected) {
-    const driverName = user?.full_name || user?.username || "Driver";
+    const name = user?.full_name || user?.username || "Driver";
     return (
-      <Layout title="My Deliveries" navigation={navigation}>
+      <Layout title="Driver View" navigation={navigation}>
         <ScrollView style={s.page} contentContainerStyle={s.pageContent}>
-          <View style={s.helloRow}>
-            <Text style={s.helloEmoji}>🚛</Text>
-            <View>
-              <Text style={s.helloName}>Hello, {driverName}</Text>
-              <Text style={s.helloSub}>Your pending deliveries are below</Text>
-            </View>
+          <View style={s.greetRow}>
+            <Text style={s.greetName}>Hello, {name} 👋</Text>
+            <Text style={s.greetSub}>Your deliveries for today</Text>
           </View>
-
           {loading
             ? <ActivityIndicator size="large" color="#1565C0" style={{ marginTop: 60 }} />
             : dispatches.length === 0
               ? <View style={s.emptyBox}>
-                <Text style={{ fontSize: 60 }}>🎉</Text>
+                <Text style={{ fontSize: 52 }}>🎉</Text>
                 <Text style={s.emptyTitle}>All Done!</Text>
                 <Text style={s.emptyText}>No pending deliveries right now.</Text>
               </View>
@@ -475,174 +463,128 @@ export default function DriverViewScreen({ navigation }) {
     );
   }
 
-  // ─── RENDER DETAIL ────────────────────────────────────────────────────────
+  // ─── LOADING DETAIL ──────────────────────────────────────────────────────
   if (detailLoading) {
     return (
-      <Layout title="Loading..." navigation={navigation}>
+      <Layout title="Driver View" navigation={navigation}>
         <View style={s.centerFill}>
           <ActivityIndicator size="large" color="#1565C0" />
-          <Text style={s.loadingText}>Loading trip details...</Text>
+          <Text style={{ marginTop: 14, color: "#888" }}>Loading trip details...</Text>
         </View>
       </Layout>
     );
   }
 
-  const { tripSheet, stops } = tripData || { tripSheet: null, stops: [] };
+  const { tripSheet, stops } = tripData || {};
   const stage = getTripStage(tripSheet);
-  const stopObj = tripSheet?.stop || null;
-  const allDone = allStopsDone(stops);
+  const tsStop = tripSheet?.stop || {};
+  const isDone = allStopsDone(stops || []);
+  const customerName = selected.order?.customer?.customer_name || selected.customer_name || "Customer";
+  const kmDriven = tsStop.factory_exit_km && tsStop.factory_return_km
+    ? (tsStop.factory_return_km - tsStop.factory_exit_km).toFixed(0) : null;
 
-  // Labels for step pills
-  const stageNum = stage === "NEW" ? 1 : stage === "IN_TRANSIT" ? 2 : 3;
-
+  // ─── DETAIL VIEW ─────────────────────────────────────────────────────────
   return (
-    <Layout title="My Deliveries" navigation={navigation}>
+    <Layout title="Driver View" navigation={navigation}>
       <ScrollView style={s.page} contentContainerStyle={s.pageContent}>
 
-        {/* Back + trip number */}
-        <View style={s.detailTopRow}>
+        {/* Header */}
+        <View style={s.detailHeader}>
           <TouchableOpacity style={s.backBtn} onPress={() => { setSelected(null); setTripData(null); }}>
             <Text style={s.backBtnText}>← Back</Text>
           </TouchableOpacity>
-          {tripSheet?.trip_number && (
-            <View style={s.tripNumBadge}>
-              <Text style={s.tripNumText}>{tripSheet.trip_number}</Text>
-            </View>
-          )}
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={s.detailCustomer}>{customerName}</Text>
+            <Text style={s.detailMeta}>Dispatch #{selected.dispatch_id} · {selected.truck?.truck_number || "Truck N/A"}</Text>
+          </View>
+          <StagePill stage={stage} />
         </View>
 
-        {/* Dispatch summary card */}
-        <View style={s.summaryCard}>
-          <View style={s.summaryRow}><Text style={s.summaryIcon}>🚛</Text><Text style={s.summaryVal}>{selected.truck?.truck_number || "Truck N/A"}</Text></View>
-          <View style={s.summaryRow}><Text style={s.summaryIcon}>📦</Text><Text style={s.summaryVal}>{selected.dispatched_quantity_ton} Ton — {selected.dispatched_bags || 0} Bags</Text></View>
-          {selected.order?.customer?.customer_name &&
-            <View style={s.summaryRow}><Text style={s.summaryIcon}>🏢</Text><Text style={s.summaryVal}>{selected.order.customer.customer_name}</Text></View>
-          }
-          {[selected.order?.customer?.address, selected.order?.customer?.city].filter(Boolean).length > 0 &&
-            <View style={s.summaryRow}><Text style={s.summaryIcon}>📍</Text><Text style={s.summaryVal}>{[selected.order?.customer?.address, selected.order?.customer?.city].filter(Boolean).join(", ")}</Text></View>
-          }
-        </View>
-
-        {/* Step Progress */}
-        <View style={s.stepRow}>
-          <StepPill num="1" label="Start Trip" done={stageNum > 1} active={stageNum === 1} />
-          <View style={s.stepLine} />
-          <StepPill num="2" label="Delivering" done={stageNum > 2} active={stageNum === 2} />
-          <View style={s.stepLine} />
-          <StepPill num="3" label="Returned" done={stageNum === 3} active={stageNum === 3} />
-        </View>
-
-        {/* ═══ STAGE 1: START TRIP ════════════════════════════════════════ */}
+        {/* ── STAGE 1: Start Trip ── */}
         {stage === "NEW" && (
-          <View style={s.stageBox}>
-            <Text style={s.stageTitle}>📋 Ready to Start?</Text>
-            <Text style={s.stageSub}>Enter the KM reading on the odometer before leaving the factory.</Text>
+          <View style={s.stageCard}>
+            <View style={s.stageCardTitle}>
+              <Text style={s.stageNum}>①</Text>
+              <Text style={s.stageLabel}>Start Your Trip</Text>
+            </View>
+            <Text style={s.stageHint}>Enter the odometer reading now, before leaving the factory.</Text>
             <View style={s.kmRow}>
-              <Text style={s.kmLabel}>KM Reading</Text>
+              <Text style={s.kmLabel}>Current KM</Text>
               <TextInput
                 style={s.kmInput}
                 value={startKm}
                 onChangeText={setStartKm}
                 keyboardType="numeric"
                 placeholder="e.g. 45230"
-                placeholderTextColor="#aaa"
               />
-              <Text style={s.kmUnit}>km</Text>
             </View>
-            <BigBtn icon="🚛" label="START TRIP" sublabel="Tap to begin journey" color="#2e7d32" onPress={handleStartTrip} loading={actionBusy} disabled={!startKm} />
+            <TouchableOpacity style={[s.startBtn, actionBusy && { opacity: 0.6 }]} onPress={handleStartTrip} disabled={actionBusy}>
+              {actionBusy ? <ActivityIndicator color="#fff" /> : <Text style={s.startBtnText}>🚛  START TRIP</Text>}
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* ═══ STAGE 2: IN TRANSIT ════════════════════════════════════════ */}
+        {/* ── STAGE 2: Delivering ── */}
         {stage === "IN_TRANSIT" && (
-          <View style={s.stageBox}>
-            {/* Factory exit summary */}
-            <View style={s.exitSummaryBox}>
-              <Text style={s.exitSummaryText}>
-                🏭 Left factory at {fmtTime(stopObj?.factory_exit_at) || "—"}  ·  {stopObj?.factory_exit_km || "—"} km
-              </Text>
+          <View>
+            <View style={s.stageCard}>
+              <View style={s.stageCardTitle}>
+                <Text style={s.stageNum}>②</Text>
+                <Text style={s.stageLabel}>Delivering to Customer{(stops?.length || 0) > 1 ? "s" : ""}</Text>
+              </View>
+              <Text style={s.stageHint}>Complete each stop in order. Tap the buttons as you go.</Text>
             </View>
 
-            <Text style={s.stageTitle}>🏪 Customer Deliveries</Text>
-            <Text style={s.stageSub}>
-              {stops.length === 1
-                ? "Complete the delivery steps for the customer below."
-                : `You have ${stops.length} customers to deliver to. Complete each one.`}
-            </Text>
-
-            {stops.map((stop, idx) => (
+            {(stops || []).map((stop, idx) => (
               <StopSection
-                key={stop.id || `pending-${idx}`}
+                key={stop.id || stop.order_id || idx}
                 stop={stop}
                 dispatch={selected}
                 stopIndex={idx}
                 totalStops={stops.length}
-                onRefresh={makeRefreshForStop(stop)}
+                onRecordTime={handleRecordTime}
+                onUploadSig={handleUploadSig}
+                onUploadPhoto={handleUploadPhoto}
               />
             ))}
 
-            {/* Return section — appears only when all stops are done */}
-            {allDone && (
-              <View style={s.returnBox}>
-                <Text style={s.returnTitle}>🏁 All deliveries done!</Text>
-                <Text style={s.returnSub}>Enter the current KM reading and tap Return to Factory.</Text>
+            {/* Return to Factory */}
+            {isDone && (
+              <View style={s.returnCard}>
+                <View style={s.stageCardTitle}>
+                  <Text style={s.stageNum}>③</Text>
+                  <Text style={s.stageLabel}>Return to Factory</Text>
+                </View>
+                <Text style={s.stageHint}>All stops complete! Enter the odometer reading at the factory gate.</Text>
                 <View style={s.kmRow}>
-                  <Text style={s.kmLabel}>KM Reading</Text>
+                  <Text style={s.kmLabel}>Current KM</Text>
                   <TextInput
                     style={s.kmInput}
                     value={returnKm}
                     onChangeText={setReturnKm}
                     keyboardType="numeric"
-                    placeholder="e.g. 45650"
-                    placeholderTextColor="#aaa"
+                    placeholder="e.g. 45510"
                   />
-                  <Text style={s.kmUnit}>km</Text>
                 </View>
-                <BigBtn icon="🏭" label="RETURN TO FACTORY" sublabel="Tap when you reach back" color="#e65100" onPress={handleReturnToFactory} loading={actionBusy} disabled={!returnKm} />
-              </View>
-            )}
-
-            {!allDone && (
-              <View style={s.pendingHint}>
-                <Text style={s.pendingHintText}>⏳ Complete all customer stops above to enable the Return button.</Text>
+                <TouchableOpacity style={[s.returnBtn, actionBusy && { opacity: 0.6 }]} onPress={handleReturnToFactory} disabled={actionBusy}>
+                  {actionBusy ? <ActivityIndicator color="#fff" /> : <Text style={s.returnBtnText}>🏭  RETURN TO FACTORY</Text>}
+                </TouchableOpacity>
               </View>
             )}
           </View>
         )}
 
-        {/* ═══ STAGE 3: RETURNED ══════════════════════════════════════════ */}
+        {/* ── STAGE 3: Returned ── */}
         {stage === "RETURNED" && (
-          <View style={s.returnedBox}>
-            <Text style={{ fontSize: 64, textAlign: "center" }}>🎉</Text>
+          <View style={[s.stageCard, { backgroundColor: "#e8f5e9" }]}>
+            <Text style={{ fontSize: 42, textAlign: "center", marginBottom: 10 }}>🎉</Text>
             <Text style={s.returnedTitle}>Trip Complete!</Text>
-            <Text style={s.returnedSub}>You have successfully completed this delivery.</Text>
-            <View style={s.returnedDetails}>
-              <View style={s.returnedRow}>
-                <Text style={s.returnedLabel}>Left Factory</Text>
-                <Text style={s.returnedVal}>{fmtDateTime(stopObj?.factory_exit_at) || "—"}</Text>
-              </View>
-              <View style={s.returnedRow}>
-                <Text style={s.returnedLabel}>Start KM</Text>
-                <Text style={s.returnedVal}>{stopObj?.factory_exit_km ? `${stopObj.factory_exit_km} km` : "—"}</Text>
-              </View>
-              <View style={s.returnedRow}>
-                <Text style={s.returnedLabel}>Returned</Text>
-                <Text style={s.returnedVal}>{fmtDateTime(stopObj?.factory_return_at) || "—"}</Text>
-              </View>
-              <View style={s.returnedRow}>
-                <Text style={s.returnedLabel}>End KM</Text>
-                <Text style={s.returnedVal}>{stopObj?.factory_return_km ? `${stopObj.factory_return_km} km` : "—"}</Text>
-              </View>
-              {stopObj?.factory_exit_km && stopObj?.factory_return_km && (
-                <View style={[s.returnedRow, { backgroundColor: "#e8f5e9" }]}>
-                  <Text style={[s.returnedLabel, { color: "#2e7d32", fontWeight: "800" }]}>Total KM Driven</Text>
-                  <Text style={[s.returnedVal, { color: "#2e7d32", fontWeight: "800" }]}>
-                    {(stopObj.factory_return_km - stopObj.factory_exit_km).toFixed(0)} km
-                  </Text>
-                </View>
-              )}
+            {kmDriven && <Text style={s.returnedKm}>Total driven: {kmDriven} km</Text>}
+            <View style={s.returnedInfo}>
+              <Text style={s.returnedInfoRow}>🕐 Left factory: {tsStop.factory_exit_at ? new Date(tsStop.factory_exit_at).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, day: "2-digit", month: "short" }) : "—"}</Text>
+              <Text style={s.returnedInfoRow}>🏭 Returned: {tsStop.factory_return_at ? new Date(tsStop.factory_return_at).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, day: "2-digit", month: "short" }) : "—"}</Text>
             </View>
-            <Text style={s.returnedNote}>The supervisor will complete the freight details and close this trip sheet.</Text>
+            <Text style={s.returnedNote}>The supervisor will complete the paperwork. Well done!</Text>
           </View>
         )}
 
@@ -651,162 +593,104 @@ export default function DriverViewScreen({ navigation }) {
   );
 }
 
-// ─── Dispatch card on the list ───────────────────────────────────────────────
-function DispatchCard({ dispatch, onPress }) {
-  const customerName = dispatch.order?.customer?.customer_name || "Customer";
-  const city = dispatch.order?.customer?.city || "";
-  const items = dispatch.items || [];
-
-  return (
-    <TouchableOpacity style={s.dispCard} onPress={onPress} activeOpacity={0.85}>
-      <View style={s.dispCardTop}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.dispCustomer}>{customerName}</Text>
-          {city ? <Text style={s.dispCity}>📍 {city}</Text> : null}
-        </View>
-        <View style={s.dispQtyBadge}>
-          <Text style={s.dispQtyText}>{dispatch.dispatched_quantity_ton} T</Text>
-        </View>
-      </View>
-      <View style={s.dispCardMid}>
-        <Text style={s.dispMeta}>🚛 {dispatch.truck?.truck_number || "—"}</Text>
-        <Text style={s.dispMeta}>📦 {dispatch.dispatched_bags || 0} bags</Text>
-        <Text style={s.dispMeta}>#{dispatch.dispatch_id}</Text>
-      </View>
-      {items.length > 0 && (
-        <View style={s.dispItems}>
-          {items.slice(0, 3).map((item, i) => (
-            <View key={i} style={s.dispItemPill}>
-              <Text style={s.dispItemText}>{item.finished_good?.product_name || "Product"} — {item.dispatched_qty_ton}T</Text>
-            </View>
-          ))}
-        </View>
-      )}
-      <View style={s.dispCardBtn}>
-        <Text style={s.dispCardBtnText}>OPEN TRIP  →</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#f0f4f8" },
-  pageContent: { padding: 16, paddingBottom: 50 },
+  page: { flex: 1, backgroundColor: "#f4f6f8" },
+  pageContent: { padding: 14, paddingBottom: 50 },
   centerFill: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, fontSize: 15, color: "#555" },
 
-  helloRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#1565C0", borderRadius: 16, padding: 20, marginBottom: 20, gap: 14 },
-  helloEmoji: { fontSize: 40 },
-  helloName: { fontSize: 20, fontWeight: "800", color: "#fff" },
-  helloSub: { fontSize: 13, color: "#bbdefb", marginTop: 2 },
+  // Greeting
+  greetRow: { marginBottom: 16 },
+  greetName: { fontSize: 20, fontWeight: "800", color: "#1a2a3a" },
+  greetSub: { fontSize: 13, color: "#888", marginTop: 2 },
 
-  emptyBox: { alignItems: "center", marginTop: 80, padding: 30 },
-  emptyTitle: { fontSize: 22, fontWeight: "800", color: "#2c3e50", marginTop: 12 },
-  emptyText: { fontSize: 14, color: "#888", marginTop: 6, textAlign: "center" },
+  // Dispatch card
+  dispCard: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 5, elevation: 2 },
+  dispCardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
+  dispCardCustomer: { fontSize: 16, fontWeight: "800", color: "#1a2a3a" },
+  dispCardCity: { fontSize: 12, color: "#888", marginTop: 1 },
+  dispCardBadge: { backgroundColor: "#e3f2fd", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7, marginLeft: 8 },
+  dispCardBadgeText: { fontSize: 11, color: "#1565C0", fontWeight: "700" },
+  dispCardMeta: { flexDirection: "row", gap: 12, marginBottom: 8 },
+  dispCardMetaItem: { fontSize: 12, color: "#555" },
+  dispCardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dispCardItems: { fontSize: 12, color: "#888", flex: 1 },
+  dispCardOpen: { fontSize: 13, color: "#1565C0", fontWeight: "700" },
 
-  // Dispatch cards list
-  dispCard: { backgroundColor: "#fff", borderRadius: 16, marginBottom: 16, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
-  dispCardTop: { flexDirection: "row", alignItems: "flex-start", padding: 16, paddingBottom: 8 },
-  dispCustomer: { fontSize: 18, fontWeight: "800", color: "#1a2a3a" },
-  dispCity: { fontSize: 13, color: "#666", marginTop: 3 },
-  dispQtyBadge: { backgroundColor: "#1565C0", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
-  dispQtyText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  dispCardMid: { flexDirection: "row", gap: 16, paddingHorizontal: 16, paddingVertical: 6 },
-  dispMeta: { fontSize: 13, color: "#444" },
-  dispItems: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, paddingBottom: 8, gap: 6 },
-  dispItemPill: { backgroundColor: "#e3f2fd", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  dispItemText: { fontSize: 12, color: "#1565C0", fontWeight: "600" },
-  dispCardBtn: { backgroundColor: "#1565C0", padding: 14, alignItems: "center" },
-  dispCardBtnText: { color: "#fff", fontWeight: "800", fontSize: 15, letterSpacing: 1 },
+  // Detail header
+  detailHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  backBtn: { paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "#fff", borderRadius: 8 },
+  backBtnText: { color: "#1565C0", fontWeight: "700", fontSize: 13 },
+  detailCustomer: { fontSize: 15, fontWeight: "800", color: "#1a2a3a" },
+  detailMeta: { fontSize: 12, color: "#888", marginTop: 1 },
 
-  // Detail view
-  detailTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  backBtn: { backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  backBtnText: { color: "#1565C0", fontWeight: "700", fontSize: 14 },
-  tripNumBadge: { backgroundColor: "#1565C0", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  tripNumText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  // Stage pill
+  stagePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  stagePillText: { fontSize: 12, fontWeight: "700" },
 
-  summaryCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 16, gap: 8 },
-  summaryRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  summaryIcon: { fontSize: 20, width: 28 },
-  summaryVal: { fontSize: 15, color: "#1a2a3a", fontWeight: "600", flex: 1 },
+  // Stage card
+  stageCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 10 },
+  stageCardTitle: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+  stageNum: { fontSize: 20, color: "#1565C0" },
+  stageLabel: { fontSize: 15, fontWeight: "800", color: "#1a2a3a" },
+  stageHint: { fontSize: 13, color: "#888", marginBottom: 14, lineHeight: 18 },
 
-  // Step pills
-  stepRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 16 },
-  stepPillWrap: { alignItems: "center", flex: 1 },
-  stepCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#e0e0e0", justifyContent: "center", alignItems: "center", marginBottom: 5 },
-  stepCircleDone: { backgroundColor: "#2e7d32" },
-  stepCircleActive: { backgroundColor: "#1565C0" },
-  stepNum: { fontWeight: "700", color: "#888", fontSize: 15 },
-  stepLabel: { fontSize: 11, fontWeight: "600", color: "#aaa", textAlign: "center" },
-  stepLine: { height: 3, flex: 0.5, backgroundColor: "#e0e0e0", marginBottom: 18 },
+  kmRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
+  kmLabel: { fontSize: 13, fontWeight: "700", color: "#555", width: 90 },
+  kmInput: { flex: 1, height: 44, borderWidth: 1, borderColor: "#ddd", borderRadius: 9, paddingHorizontal: 12, fontSize: 16, backgroundColor: "#f8f9fa" },
 
-  // Stage boxes
-  stageBox: { backgroundColor: "#fff", borderRadius: 16, padding: 18, marginBottom: 16 },
-  stageTitle: { fontSize: 20, fontWeight: "800", color: "#1a2a3a", marginBottom: 6 },
-  stageSub: { fontSize: 14, color: "#666", marginBottom: 18, lineHeight: 20 },
-  exitSummaryBox: { backgroundColor: "#e8f5e9", borderRadius: 10, padding: 12, marginBottom: 16 },
-  exitSummaryText: { fontSize: 14, color: "#2e7d32", fontWeight: "600" },
+  startBtn: { backgroundColor: "#1565C0", padding: 15, borderRadius: 10, alignItems: "center" },
+  startBtnText: { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.5 },
+  returnCard: { backgroundColor: "#fff3e0", borderRadius: 12, padding: 16, marginTop: 6, marginBottom: 10 },
+  returnBtn: { backgroundColor: "#e65100", padding: 15, borderRadius: 10, alignItems: "center" },
+  returnBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
-  // KM input
-  kmRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#f4f6f8", borderRadius: 12, padding: 12, marginBottom: 16, gap: 10 },
-  kmLabel: { fontSize: 15, fontWeight: "700", color: "#333", width: 110 },
-  kmInput: { flex: 1, fontSize: 22, fontWeight: "800", color: "#1a2a3a", height: 48, textAlign: "center" },
-  kmUnit: { fontSize: 15, color: "#888", width: 28 },
+  // Stop card
+  stopCard: { backgroundColor: "#fff", borderRadius: 12, marginBottom: 10, overflow: "hidden" },
+  stopHeader: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  stopNum: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#1565C0", justifyContent: "center", alignItems: "center" },
+  stopNumText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  stopCustomer: { fontSize: 15, fontWeight: "800", color: "#1a2a3a" },
+  stopMeta: { fontSize: 12, color: "#888", marginTop: 1 },
+  donePill: { backgroundColor: "#e8f5e9", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
+  donePillText: { fontSize: 12, color: "#2e7d32", fontWeight: "700" },
+  stopBody: { padding: 12, gap: 8 },
 
-  // Big action button
-  bigBtn: { borderRadius: 16, padding: 20, alignItems: "center", justifyContent: "center", marginBottom: 8, gap: 4, minHeight: 80 },
-  bigBtnIcon: { fontSize: 32 },
-  bigBtnLabel: { fontSize: 20, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
-  bigBtnSub: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2 },
+  // Action button
+  actionBtn: { borderLeftWidth: 4, borderRadius: 10, padding: 12, backgroundColor: "#fafafa" },
+  actionBtnCircle: { width: 38, height: 38, borderRadius: 19, justifyContent: "center", alignItems: "center" },
+  actionBtnIcon: { fontSize: 18 },
+  actionBtnLabel: { fontSize: 14, fontWeight: "800" },
+  actionBtnSub: { fontSize: 11, color: "#999", marginTop: 1 },
 
-  // Stop sections
-  stopBox: { backgroundColor: "#f8fafc", borderRadius: 16, borderWidth: 1, borderColor: "#e2e8f0", marginBottom: 16, overflow: "hidden" },
-  stopHeaderRow: { flexDirection: "row", alignItems: "center", padding: 14, backgroundColor: "#1e3a5f", gap: 12 },
-  stopNumCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center" },
-  stopNumText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  stopCustomer: { fontSize: 16, fontWeight: "800", color: "#fff" },
-  stopOrderId: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-  stopOf: { fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 },
-  donePill: { backgroundColor: "#2e7d32", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  donePillText: { color: "#fff", fontWeight: "800", fontSize: 12 },
+  // Done tag
+  doneTag: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#e8f5e9", borderRadius: 8, padding: 10 },
+  doneTagIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#2e7d32", color: "#fff", textAlign: "center", lineHeight: 24, fontSize: 13, fontWeight: "800" },
+  doneTagText: { fontSize: 13, color: "#2e7d32", fontWeight: "600" },
 
-  stopSteps: { padding: 14, gap: 10 },
-  stopStep: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  stepDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: "#ccc", marginTop: 18 },
-  stepDotDone: { backgroundColor: "#2e7d32" },
-  stepDoneText: { fontSize: 14, color: "#2e7d32", fontWeight: "700", paddingVertical: 14, paddingHorizontal: 8, backgroundColor: "#e8f5e9", borderRadius: 10 },
-
-  postUnload: { marginTop: 8, gap: 10 },
-  photoCapBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#455a64", borderRadius: 12, padding: 14, gap: 10 },
-  photoCapLabel: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  photoThumb: { width: 80, height: 80, borderRadius: 10, marginRight: 8 },
+  // Post-unload
+  postUnload: { gap: 10 },
+  postRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  photoBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#e3f2fd" },
+  photoBtnLabel: { fontSize: 13, color: "#1565C0", fontWeight: "700" },
+  photoThumb: { width: 48, height: 48, borderRadius: 6 },
 
   sigRow: { flexDirection: "row", gap: 10 },
-  sigBlock: { flex: 1, alignItems: "center", backgroundColor: "#fff", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#e0e0e0" },
-  sigTitle: { fontSize: 13, fontWeight: "700", color: "#444", marginBottom: 8 },
-  sigImg: { width: "100%", height: 80, borderRadius: 8, marginBottom: 8 },
-  sigPlaceholder: { width: "100%", height: 60, borderRadius: 8, backgroundColor: "#f4f6f8", justifyContent: "center", alignItems: "center", marginBottom: 8, borderWidth: 1, borderStyle: "dashed", borderColor: "#bbb" },
-  sigPlaceholderText: { fontSize: 12, color: "#aaa" },
-  sigBtn: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, width: "100%", alignItems: "center" },
-  sigBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  sigBlock: { flex: 1, backgroundColor: "#f8f9fa", borderRadius: 10, padding: 10, alignItems: "center" },
+  sigTitle: { fontSize: 11, fontWeight: "700", color: "#888", marginBottom: 6, textTransform: "uppercase" },
+  sigImg: { width: "100%", height: 56, marginBottom: 6 },
+  sigPlaceholder: { width: "100%", height: 40, borderRadius: 6, backgroundColor: "#e0e0e0", justifyContent: "center", alignItems: "center", marginBottom: 6 },
+  sigPlaceholderText: { fontSize: 10, color: "#aaa" },
+  sigBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 7, width: "100%", alignItems: "center" },
+  sigBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 
-  // Return section
-  returnBox: { backgroundColor: "#fff3e0", borderRadius: 16, padding: 18, marginTop: 8, borderWidth: 2, borderColor: "#e65100" },
-  returnTitle: { fontSize: 20, fontWeight: "800", color: "#e65100", marginBottom: 4 },
-  returnSub: { fontSize: 14, color: "#555", marginBottom: 16 },
+  // Returned
+  returnedTitle: { fontSize: 20, fontWeight: "800", color: "#2e7d32", textAlign: "center", marginBottom: 4 },
+  returnedKm: { fontSize: 24, fontWeight: "900", color: "#1a2a3a", textAlign: "center", marginBottom: 12 },
+  returnedInfo: { backgroundColor: "#fff", borderRadius: 10, padding: 12, gap: 6, marginBottom: 12 },
+  returnedInfoRow: { fontSize: 13, color: "#555", lineHeight: 20 },
+  returnedNote: { fontSize: 12, color: "#888", textAlign: "center", fontStyle: "italic" },
 
-  pendingHint: { backgroundColor: "#fff8e1", borderRadius: 10, padding: 14, marginTop: 8 },
-  pendingHintText: { fontSize: 13, color: "#f57f17", textAlign: "center", fontWeight: "600" },
-
-  // Stage 3 returned
-  returnedBox: { backgroundColor: "#fff", borderRadius: 16, padding: 24, alignItems: "center" },
-  returnedTitle: { fontSize: 26, fontWeight: "900", color: "#1a2a3a", marginTop: 8 },
-  returnedSub: { fontSize: 15, color: "#555", marginTop: 4, marginBottom: 20, textAlign: "center" },
-  returnedDetails: { width: "100%", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#e0e0e0", marginBottom: 20 },
-  returnedRow: { flexDirection: "row", justifyContent: "space-between", padding: 14, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
-  returnedLabel: { fontSize: 14, color: "#555", fontWeight: "600" },
-  returnedVal: { fontSize: 14, color: "#1a2a3a", fontWeight: "700" },
-  returnedNote: { fontSize: 13, color: "#888", textAlign: "center", fontStyle: "italic" },
+  emptyBox: { alignItems: "center", paddingTop: 60, gap: 8 },
+  emptyTitle: { fontSize: 22, fontWeight: "800", color: "#1a2a3a" },
+  emptyText: { fontSize: 14, color: "#888" },
 });
