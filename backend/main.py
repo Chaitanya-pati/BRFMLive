@@ -362,6 +362,7 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
             "id": st.id,
             "order_id": st.order_id,
             "customer_name": cname or (customer.customer_name if customer else None),
+            "customer_city": (st.order.customer.city if (st.order and st.order.customer) else None) or (customer.city if customer else None),
             "arrived_at": fmt_dt(st.arrived_at),
             "unloading_start": fmt_dt(st.unloading_start),
             "unloading_end": fmt_dt(st.unloading_end),
