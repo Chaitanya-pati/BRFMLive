@@ -763,6 +763,18 @@ export default function DriverDeliveryScreen({ navigation }) {
 
               <View style={styles.dividerSection}>
                 <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Return Journey</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <JourneyTimingSection
+                stops={stops}
+                dispatch={selectedDispatch}
+                onRefresh={refreshStops}
+              />
+
+              <View style={styles.dividerSection}>
+                <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>Finalise</Text>
                 <View style={styles.dividerLine} />
               </View>
@@ -782,6 +794,82 @@ export default function DriverDeliveryScreen({ navigation }) {
         </ScrollView>
       </Modal>
     </Layout>
+  );
+}
+
+function JourneyTimingSection({ stops, dispatch, onRefresh }) {
+  const [busy, setBusy] = useState(null);
+
+  const firstRealStop = stops.find(s => !s._pending);
+  if (!firstRealStop) return null;
+
+  const recordJourneyTime = async (field) => {
+    setBusy(field);
+    try {
+      const fd = buildFormData({ [field]: new Date().toISOString() });
+      await dispatchApi.updateStopTimes(dispatch.dispatch_id, firstRealStop.id, fd);
+      await onRefresh();
+      showSuccess("Time recorded");
+    } catch (e) {
+      showError(e?.message || "Failed to record time");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const returnStarted = !!firstRealStop.return_journey_at;
+  const factoryReturned = !!firstRealStop.factory_return_at;
+
+  return (
+    <View style={ss.journeySection}>
+      {/* Return Journey Start */}
+      <View style={ss.journeyRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={ss.journeyLabel}>Return Journey Start</Text>
+          {returnStarted ? (
+            <Text style={ss.journeyTime}>{formatDateTime(firstRealStop.return_journey_at)}</Text>
+          ) : (
+            <Text style={ss.journeyMissing}>Not recorded</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[ss.journeyBtn, returnStarted && ss.journeyBtnDone]}
+          onPress={() => recordJourneyTime("return_journey_at")}
+          disabled={busy === "return_journey_at"}
+        >
+          {busy === "return_journey_at" ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={ss.journeyBtnText}>{returnStarted ? "Update" : "Record Now"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Factory Return — only after return journey started */}
+      {returnStarted && (
+        <View style={ss.journeyRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={ss.journeyLabel}>Factory Return</Text>
+            {factoryReturned ? (
+              <Text style={ss.journeyTime}>{formatDateTime(firstRealStop.factory_return_at)}</Text>
+            ) : (
+              <Text style={ss.journeyMissing}>Not recorded</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[ss.journeyBtn, { backgroundColor: "#27ae60" }, factoryReturned && ss.journeyBtnDone]}
+            onPress={() => recordJourneyTime("factory_return_at")}
+            disabled={busy === "factory_return_at"}
+          >
+            {busy === "factory_return_at" ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={ss.journeyBtnText}>{factoryReturned ? "Update" : "Record Now"}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -1016,4 +1104,28 @@ const ss = StyleSheet.create({
     width: "100%",
   },
   sigBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  journeySection: { marginBottom: 8 },
+  journeyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0fdf4",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  journeyLabel: { fontSize: 13, fontWeight: "700", color: "#065f46" },
+  journeyTime: { fontSize: 12, color: "#059669", marginTop: 3 },
+  journeyMissing: { fontSize: 12, color: "#94a3b8", marginTop: 3 },
+  journeyBtn: {
+    backgroundColor: "#16a085",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  journeyBtnDone: { backgroundColor: "#10b981" },
+  journeyBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
 });

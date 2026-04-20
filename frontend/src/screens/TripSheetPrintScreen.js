@@ -89,13 +89,13 @@ export default function TripSheetPrintScreen({ route, navigation }) {
   const buildJourneyRows = () => {
     const rows = [];
 
-    // Row 1: Factory Exit (trip-level)
+    // Row 1: Factory Exit (trip-level) — signed column intentionally left blank
     rows.push({
       type: "row",
       num: "1", label: "Factory Exit", bg: "#2c3e50", color: "#fff",
       date: fmt(stop.factory_exit_at), time: fmtTime(stop.factory_exit_at),
       km: stop.factory_exit_km ? `${stop.factory_exit_km} km` : "",
-      signed: stop.factory_exit_signed || "", sigPath: null,
+      signed: "", sigPath: null,
     });
 
     if (multiCustomer) {
@@ -109,7 +109,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
           type: "row",
           num: "2", label: "Customer Arrived", bg: "#2980b9", color: "#fff",
           date: fmt(s.arrived_at), time: fmtTime(s.arrived_at),
-          km: "", signed: "", sigPath: null,
+          km: "", signed: s.driver_signature ? "Driver" : "", sigPath: s.driver_signature || null,
         });
         rows.push({
           type: "row",
@@ -121,7 +121,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
           type: "row",
           num: "4", label: "Unloading End", bg: "#c0392b", color: "#fff",
           date: fmt(s.unloading_end), time: fmtTime(s.unloading_end),
-          km: "", signed: "Customer:", sigPath: s.customer_signature || null,
+          km: "", signed: s.customer_signature ? "Customer" : "", sigPath: s.customer_signature || null,
         });
       });
     } else {
@@ -130,7 +130,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
         type: "row",
         num: "2", label: "Customer Arrived", bg: "#2980b9", color: "#fff",
         date: fmt(s.arrived_at), time: fmtTime(s.arrived_at),
-        km: "", signed: "", sigPath: null,
+        km: "", signed: s.driver_signature ? "Driver" : "", sigPath: s.driver_signature || null,
       });
       rows.push({
         type: "row",
@@ -142,8 +142,7 @@ export default function TripSheetPrintScreen({ route, navigation }) {
         type: "row",
         num: "4", label: "Unloading End", bg: "#c0392b", color: "#fff",
         date: fmt(s.unloading_end), time: fmtTime(s.unloading_end),
-        km: "", signed: s.customer_signature ? "Customer:" : "",
-        sigPath: s.customer_signature || null,
+        km: "", signed: s.customer_signature ? "Customer" : "", sigPath: s.customer_signature || null,
       });
     }
 
@@ -262,10 +261,16 @@ export default function TripSheetPrintScreen({ route, navigation }) {
                 <View style={[st.jCell, { flex: 1.5 }]}><Text style={st.jCellTxt}>{row.time}</Text></View>
                 <View style={[st.jCell, { flex: 2 }]}><Text style={st.jCellTxt}>{row.km}</Text></View>
                 <View style={[st.jCell, { flex: 2, alignItems: "flex-start" }]}>
-                  {row.sigPath
-                    ? <SigCell path={row.sigPath} />
-                    : <Text style={st.jCellTxt}>{row.signed}</Text>
-                  }
+                  {row.sigPath ? (
+                    <View>
+                      {row.signed ? (
+                        <Text style={[st.jCellTxt, { fontSize: 9, color: "#555", marginBottom: 2 }]}>{row.signed}</Text>
+                      ) : null}
+                      <SigCell path={row.sigPath} />
+                    </View>
+                  ) : (
+                    <Text style={st.jCellTxt}>{row.signed}</Text>
+                  )}
                 </View>
               </View>
             );

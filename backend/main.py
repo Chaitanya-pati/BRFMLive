@@ -937,6 +937,8 @@ def update_delivery_stop_times(
     arrived_at: Optional[str] = Form(None),
     unloading_start: Optional[str] = Form(None),
     unloading_end: Optional[str] = Form(None),
+    return_journey_at: Optional[str] = Form(None),
+    factory_return_at: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     stop = db.query(models.DispatchDeliveryStop).filter(
@@ -960,6 +962,10 @@ def update_delivery_stop_times(
         stop.unloading_start = _parse(unloading_start)
     if unloading_end is not None:
         stop.unloading_end = _parse(unloading_end)
+    if return_journey_at is not None:
+        stop.return_journey_at = _parse(return_journey_at)
+    if factory_return_at is not None:
+        stop.factory_return_at = _parse(factory_return_at)
     db.commit()
     return _reload_stop_as_dict(stop.id, db)
 
