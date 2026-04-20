@@ -209,6 +209,7 @@ function TripDetail({ tripId, onBack, navigation }) {
   const stop = fullData.stop || {};
   const bill = fullData.bill || {};
   const items = fullData.items || [];
+  const allStops = fullData.all_stops || [];
   const status = getTripStatus(fullData);
 
   const milestones = [
@@ -260,7 +261,11 @@ function TripDetail({ tripId, onBack, navigation }) {
             <InfoRow label="Truck" value={truck.truck_number} />
             <InfoRow label="Driver" value={driver.driver_name} />
             <InfoRow label="Customer" value={customer.customer_name} />
-            <InfoRow label="Delivery To" value={[customer.address, customer.city, customer.state].filter(Boolean).join(", ")} />
+            <InfoRow label="Delivery Place" value={
+              allStops.length > 0
+                ? [...new Set(allStops.map(s => s.customer_city).filter(Boolean))].join(", ")
+                : customer.city || ""
+            } />
             <InfoRow label="Dispatch Date" value={fmtDate(dispatch.actual_dispatch_date)} />
             <InfoRow label="Bill #" value={bill.invoice_number} />
           </View>

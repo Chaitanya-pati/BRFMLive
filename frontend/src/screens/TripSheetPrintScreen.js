@@ -73,7 +73,9 @@ export default function TripSheetPrintScreen({ route, navigation }) {
   const items   = data.items || [];
 
   const multiCustomer = allStops.length > 1;
-  const deliveryAddr  = [customer.address, customer.city, customer.state].filter(Boolean).join(", ");
+  const deliveryAddr  = allStops.length > 0
+    ? [...new Set(allStops.map(s => s.customer_city).filter(Boolean))].join(", ")
+    : [customer.city].filter(Boolean).join(", ");
   const totalWeight   = items.reduce((s, i) => s + (i.dispatched_qty_ton || 0), 0);
 
   // Customer names for info row
