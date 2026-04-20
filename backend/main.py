@@ -268,6 +268,36 @@ def upsert_trip_signoff(trip_id: int, data: schemas.TripSheetSignoffCreate,
     return signoff
 
 
+def _reload_stop_as_dict(stop_id: int, db):
+    """Reload a delivery stop from DB with relationships and return as dict.
+    customer_name is always resolved from customer_orders → customers, never from the stored column.
+    """
+    st = db.query(models.DispatchDeliveryStop).options(
+        joinedload(models.DispatchDeliveryStop.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.DispatchDeliveryStop.photos)
+    ).filter(models.DispatchDeliveryStop.id == stop_id).first()
+    cname = st.order.customer.customer_name if (st and st.order and st.order.customer) else None
+    return {
+        "id": st.id,
+        "dispatch_id": st.dispatch_id,
+        "order_id": st.order_id,
+        "customer_name": cname,
+        "arrived_at": st.arrived_at,
+        "unloading_start": st.unloading_start,
+        "unloading_end": st.unloading_end,
+        "driver_signature": st.driver_signature,
+        "customer_signature": st.customer_signature,
+        "factory_exit_at": st.factory_exit_at,
+        "factory_exit_km": st.factory_exit_km,
+        "factory_exit_signed": st.factory_exit_signed,
+        "return_journey_at": st.return_journey_at,
+        "factory_return_at": st.factory_return_at,
+        "factory_return_km": st.factory_return_km,
+        "created_at": st.created_at,
+        "photos": st.photos,
+    }
+
+
 @app.put("/api/trip-sheets/{trip_id}/stop", response_model=schemas.DispatchDeliveryStopRead)
 def upsert_trip_stop(trip_id: int, data: schemas.DispatchDeliveryStopUpdate,
                      db: Session = Depends(get_db)):
@@ -284,8 +314,7 @@ def upsert_trip_stop(trip_id: int, data: schemas.DispatchDeliveryStopUpdate,
     for k, v in data.dict(exclude_unset=True).items():
         setattr(stop, k, v)
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop.id, db)
 
 
 @app.get("/api/trip-sheets/{trip_id}/full")
@@ -300,9 +329,11 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
         joinedload(models.Dispatch.items).joinedload(models.DispatchItem.finished_good),
     ).filter(models.Dispatch.dispatch_id == ts.dispatch_id).first()
 
-    # Fetch ALL stops for this dispatch
+    # Fetch ALL stops for this dispatch, eagerly loading order → customer
     all_stops_db = db.query(models.DispatchDeliveryStop).filter(
         models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id
+    ).options(
+        joinedload(models.DispatchDeliveryStop.order).joinedload(models.CustomerOrder.customer)
     ).order_by(models.DispatchDeliveryStop.id).all()
 
     # First stop holds trip-level journey fields (factory exit/return)
@@ -316,21 +347,14 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
         return format_ist(dt) if dt else None
 
     def get_customer_name_for_stop(stop):
-        # Prefer stored customer_name on the stop
-        if stop.customer_name:
-            return stop.customer_name
-        # Fall back to lookup via order
-        if stop.order_id:
-            order = db.query(models.CustomerOrder).options(
-                joinedload(models.CustomerOrder.customer)
-            ).filter(models.CustomerOrder.id == stop.order_id).first()
-            if order and order.customer:
-                return order.customer.customer_name
+        # Always resolve from customer_orders → customers relationship
+        if stop.order and stop.order.customer:
+            return stop.order.customer.customer_name
         return None
 
     customer = dispatch.order.customer if dispatch and dispatch.order else None
 
-    # Build per-stop data with customer names
+    # Build per-stop data with customer names resolved from relationship
     stops_data = []
     for st in all_stops_db:
         cname = get_customer_name_for_stop(st)
@@ -824,16 +848,41 @@ def get_delivery_stops(dispatch_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dispatch not found")
     stops = db.query(models.DispatchDeliveryStop)\
         .filter(models.DispatchDeliveryStop.dispatch_id == dispatch_id)\
-        .options(joinedload(models.DispatchDeliveryStop.photos))\
+        .options(
+            joinedload(models.DispatchDeliveryStop.photos),
+            joinedload(models.DispatchDeliveryStop.order).joinedload(models.CustomerOrder.customer)
+        )\
         .all()
-    return stops
+    # Build response dicts resolving customer_name from the relationship
+    result = []
+    for st in stops:
+        cname = st.order.customer.customer_name if (st.order and st.order.customer) else None
+        result.append({
+            "id": st.id,
+            "dispatch_id": st.dispatch_id,
+            "order_id": st.order_id,
+            "customer_name": cname,
+            "arrived_at": st.arrived_at,
+            "unloading_start": st.unloading_start,
+            "unloading_end": st.unloading_end,
+            "driver_signature": st.driver_signature,
+            "customer_signature": st.customer_signature,
+            "factory_exit_at": st.factory_exit_at,
+            "factory_exit_km": st.factory_exit_km,
+            "factory_exit_signed": st.factory_exit_signed,
+            "return_journey_at": st.return_journey_at,
+            "factory_return_at": st.factory_return_at,
+            "factory_return_km": st.factory_return_km,
+            "created_at": st.created_at,
+            "photos": st.photos,
+        })
+    return result
 
 
 @app.post("/api/dispatches/{dispatch_id}/delivery-stops", response_model=schemas.DispatchDeliveryStopRead)
 def create_or_update_delivery_stop(
     dispatch_id: int,
     order_id: Optional[int] = Form(None),
-    customer_name: Optional[str] = Form(None),
     arrived_at: Optional[str] = Form(None),
     unloading_start: Optional[str] = Form(None),
     unloading_end: Optional[str] = Form(None),
@@ -864,33 +913,20 @@ def create_or_update_delivery_stop(
             existing.unloading_start = _parse(unloading_start)
         if unloading_end is not None:
             existing.unloading_end = _parse(unloading_end)
-        if customer_name is not None:
-            existing.customer_name = customer_name
         db.commit()
-        db.refresh(existing)
-        return existing
+        return _reload_stop_as_dict(existing.id, db)
 
-    # Auto-populate customer_name from order if not provided
-    resolved_customer_name = customer_name
-    if not resolved_customer_name and order_id:
-        corder = db.query(models.CustomerOrder).options(
-            joinedload(models.CustomerOrder.customer)
-        ).filter(models.CustomerOrder.id == order_id).first()
-        if corder and corder.customer:
-            resolved_customer_name = corder.customer.customer_name
-
+    # Create new stop — customer_name is NOT stored; always resolved from the relationship
     stop = models.DispatchDeliveryStop(
         dispatch_id=dispatch_id,
         order_id=order_id,
-        customer_name=resolved_customer_name,
         arrived_at=_parse(arrived_at),
         unloading_start=_parse(unloading_start),
         unloading_end=_parse(unloading_end),
     )
     db.add(stop)
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop.id, db)
 
 
 @app.patch("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}", response_model=schemas.DispatchDeliveryStopRead)
@@ -924,8 +960,7 @@ def update_delivery_stop_times(
     if unloading_end is not None:
         stop.unloading_end = _parse(unloading_end)
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop.id, db)
 
 
 @app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/photos", response_model=schemas.DispatchDeliveryStopRead)
@@ -950,8 +985,7 @@ async def add_stop_photo(
     db_photo = models.DispatchStopPhoto(stop_id=stop_id, photo_path=photo_path)
     db.add(db_photo)
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop_id, db)
 
 
 @app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/driver-signature", response_model=schemas.DispatchDeliveryStopRead)
@@ -964,7 +998,7 @@ async def upload_driver_signature(
     stop = db.query(models.DispatchDeliveryStop).filter(
         models.DispatchDeliveryStop.id == stop_id,
         models.DispatchDeliveryStop.dispatch_id == dispatch_id
-    ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
+    ).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
 
@@ -975,8 +1009,7 @@ async def upload_driver_signature(
         raise HTTPException(status_code=500, detail=f"Failed to save signature: {str(e)}")
 
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop_id, db)
 
 
 @app.post("/api/dispatches/{dispatch_id}/delivery-stops/{stop_id}/customer-signature", response_model=schemas.DispatchDeliveryStopRead)
@@ -989,7 +1022,7 @@ async def upload_customer_signature(
     stop = db.query(models.DispatchDeliveryStop).filter(
         models.DispatchDeliveryStop.id == stop_id,
         models.DispatchDeliveryStop.dispatch_id == dispatch_id
-    ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
+    ).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
 
@@ -1000,8 +1033,7 @@ async def upload_customer_signature(
         raise HTTPException(status_code=500, detail=f"Failed to save signature: {str(e)}")
 
     db.commit()
-    db.refresh(stop)
-    return stop
+    return _reload_stop_as_dict(stop_id, db)
 
 
 def _number_to_words(n: float) -> str:

@@ -565,7 +565,6 @@ export default function DriverDeliveryScreen({ navigation }) {
   const ensureStop = async (dispatch, pendingStop) => {
     const fd = buildFormData({
       order_id: pendingStop.order_id,
-      customer_name: pendingStop.customer_name,
     });
     const res = await dispatchApi.createOrUpdateStop(dispatch.dispatch_id, fd);
     return res.data;
@@ -794,7 +793,6 @@ function PendingStopCard({ stop, dispatch, onCreated }) {
     try {
       const fd = buildFormData({
         order_id: stop.order_id,
-        customer_name: stop.customer_name,
       });
       await dispatchApi.createOrUpdateStop(dispatch.dispatch_id, fd);
       await onCreated();
