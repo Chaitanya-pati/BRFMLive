@@ -546,7 +546,7 @@ def update_order_statuses(order_id: int, db: Session):
     if all_items_fully_delivered and any_item_has_delivery:
         order.order_status = 'DELIVERED'
         if not order.completed_time:
-            order.completed_time = datetime.now()
+            order.completed_time = ist_now()
     elif any_item_has_delivery:
         order.order_status = 'PARTIALLY DELIVERED'
     # If no delivery proof yet, leave status as DISPATCHED (set at dispatch creation)
@@ -813,13 +813,7 @@ async def upload_delivery_proof(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save photo: {str(e)}")
 
-    if delivery_date:
-        try:
-            db_dispatch.delivery_date = datetime.fromisoformat(delivery_date.replace('Z', '+00:00'))
-        except Exception:
-            db_dispatch.delivery_date = datetime.now()
-    else:
-        db_dispatch.delivery_date = datetime.now()
+    db_dispatch.delivery_date = parse_ist(delivery_date) if delivery_date else ist_now()
 
     db.commit()
 
@@ -900,12 +894,7 @@ def create_or_update_delivery_stop(
         ).first()
 
     def _parse(dt_str):
-        if not dt_str:
-            return None
-        try:
-            return datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
-        except Exception:
-            return datetime.now()
+        return parse_ist(dt_str)
 
     if existing:
         if arrived_at is not None:
@@ -949,12 +938,7 @@ def update_delivery_stop_times(
         raise HTTPException(status_code=404, detail="Delivery stop not found")
 
     def _parse(dt_str):
-        if not dt_str:
-            return None
-        try:
-            return datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
-        except Exception:
-            return datetime.now()
+        return parse_ist(dt_str)
 
     if arrived_at is not None:
         stop.arrived_at = _parse(arrived_at)
