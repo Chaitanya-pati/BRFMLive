@@ -300,9 +300,13 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
         joinedload(models.Dispatch.items).joinedload(models.DispatchItem.finished_good),
     ).filter(models.Dispatch.dispatch_id == ts.dispatch_id).first()
 
-    stop = db.query(models.DispatchDeliveryStop).filter(
+    # Fetch ALL stops for this dispatch
+    all_stops_db = db.query(models.DispatchDeliveryStop).filter(
         models.DispatchDeliveryStop.dispatch_id == ts.dispatch_id
-    ).first()
+    ).order_by(models.DispatchDeliveryStop.id).all()
+
+    # First stop holds trip-level journey fields (factory exit/return)
+    first_stop = all_stops_db[0] if all_stops_db else None
 
     bill = db.query(models.DeliveryBill).filter(
         models.DeliveryBill.dispatch_id == ts.dispatch_id
@@ -311,7 +315,35 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
     def fmt_dt(dt):
         return format_ist(dt) if dt else None
 
+    def get_customer_name_for_stop(stop):
+        # Prefer stored customer_name on the stop
+        if stop.customer_name:
+            return stop.customer_name
+        # Fall back to lookup via order
+        if stop.order_id:
+            order = db.query(models.CustomerOrder).options(
+                joinedload(models.CustomerOrder.customer)
+            ).filter(models.CustomerOrder.id == stop.order_id).first()
+            if order and order.customer:
+                return order.customer.customer_name
+        return None
+
     customer = dispatch.order.customer if dispatch and dispatch.order else None
+
+    # Build per-stop data with customer names
+    stops_data = []
+    for st in all_stops_db:
+        cname = get_customer_name_for_stop(st)
+        stops_data.append({
+            "id": st.id,
+            "order_id": st.order_id,
+            "customer_name": cname or (customer.customer_name if customer else None),
+            "arrived_at": fmt_dt(st.arrived_at),
+            "unloading_start": fmt_dt(st.unloading_start),
+            "unloading_end": fmt_dt(st.unloading_end),
+            "customer_signature": st.customer_signature,
+            "driver_signature": st.driver_signature,
+        })
 
     return {
         "trip_sheet": {
@@ -353,19 +385,22 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
             "invoice_number": bill.invoice_number if bill else None,
             "invoice_date": fmt_dt(bill.invoice_date) if bill else None,
         },
+        # Legacy single-stop key for backward compat (trip-level journey fields)
         "stop": {
-            "arrived_at": fmt_dt(stop.arrived_at) if stop else None,
-            "unloading_start": fmt_dt(stop.unloading_start) if stop else None,
-            "unloading_end": fmt_dt(stop.unloading_end) if stop else None,
-            "factory_exit_at": fmt_dt(stop.factory_exit_at) if stop else None,
-            "factory_exit_km": stop.factory_exit_km if stop else None,
-            "factory_exit_signed": stop.factory_exit_signed if stop else None,
-            "return_journey_at": fmt_dt(stop.return_journey_at) if stop else None,
-            "factory_return_at": fmt_dt(stop.factory_return_at) if stop else None,
-            "factory_return_km": stop.factory_return_km if stop else None,
-            "customer_signature": stop.customer_signature if stop else None,
-            "driver_signature": stop.driver_signature if stop else None,
-        } if stop else {},
+            "arrived_at": fmt_dt(first_stop.arrived_at) if first_stop else None,
+            "unloading_start": fmt_dt(first_stop.unloading_start) if first_stop else None,
+            "unloading_end": fmt_dt(first_stop.unloading_end) if first_stop else None,
+            "factory_exit_at": fmt_dt(first_stop.factory_exit_at) if first_stop else None,
+            "factory_exit_km": first_stop.factory_exit_km if first_stop else None,
+            "factory_exit_signed": first_stop.factory_exit_signed if first_stop else None,
+            "return_journey_at": fmt_dt(first_stop.return_journey_at) if first_stop else None,
+            "factory_return_at": fmt_dt(first_stop.factory_return_at) if first_stop else None,
+            "factory_return_km": first_stop.factory_return_km if first_stop else None,
+            "customer_signature": first_stop.customer_signature if first_stop else None,
+            "driver_signature": first_stop.driver_signature if first_stop else None,
+        } if first_stop else {},
+        # All stops with per-customer data
+        "all_stops": stops_data,
         "items": [
             {
                 "product_name": i.finished_good.product_name if i.finished_good else "N/A",
@@ -835,10 +870,19 @@ def create_or_update_delivery_stop(
         db.refresh(existing)
         return existing
 
+    # Auto-populate customer_name from order if not provided
+    resolved_customer_name = customer_name
+    if not resolved_customer_name and order_id:
+        corder = db.query(models.CustomerOrder).options(
+            joinedload(models.CustomerOrder.customer)
+        ).filter(models.CustomerOrder.id == order_id).first()
+        if corder and corder.customer:
+            resolved_customer_name = corder.customer.customer_name
+
     stop = models.DispatchDeliveryStop(
         dispatch_id=dispatch_id,
         order_id=order_id,
-        customer_name=customer_name,
+        customer_name=resolved_customer_name,
         arrived_at=_parse(arrived_at),
         unloading_start=_parse(unloading_start),
         unloading_end=_parse(unloading_end),

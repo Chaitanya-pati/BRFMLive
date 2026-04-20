@@ -32,41 +32,55 @@ function allStopsDone(stops) {
   return stops.every(s => !s._pending && !!s.unloading_end);
 }
 
-// ─── Signature modal — rendered into document.body via portal ───────────────
+// ─── Signature modal — rendered into document.body via portal ────────────────
+// The canvas MUST have explicit width/height attributes (not just CSS) so that
+// react-signature-canvas captures the right pixel buffer.
+const SIG_W = 440;
+const SIG_H = 200;
+
 function SigModal({ label, onClose, onSave }) {
   const ref = useRef(null);
 
+  const handleSave = () => {
+    if (!ref.current || ref.current.isEmpty()) {
+      showError("Please draw a signature first");
+      return;
+    }
+    // Export at the canvas's native resolution
+    ref.current.getCanvas().toBlob(b => { if (b) onSave(b); }, "image/png");
+  };
+
   const content = (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 99999,
-      background: "rgba(0,0,0,0.7)",
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 99999,
+      background: "rgba(0,0,0,0.72)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: 16,
     }}>
       <div style={{
         background: "#fff", borderRadius: 16, padding: 24,
-        width: "100%", maxWidth: 480,
-        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+        width: "100%", maxWidth: SIG_W + 48,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#1a2a3a" }}>{label}</span>
-          <button
-            onClick={onClose}
-            style={{ background: "#f1f5f9", border: "none", borderRadius: 8, width: 34, height: 34, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >✕</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#1a2a3a" }}>{label}</span>
+          <button onClick={onClose} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, width: 34, height: 34, fontSize: 18, cursor: "pointer" }}>✕</button>
         </div>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 12, marginTop: 0 }}>Draw signature in the box below using mouse or finger.</p>
-        <div style={{ border: "2px solid #1565C0", borderRadius: 10, overflow: "hidden", background: "#f8faff", cursor: "crosshair" }}>
+        <p style={{ fontSize: 12, color: "#999", marginBottom: 10, marginTop: 0 }}>Draw your signature below using mouse or finger</p>
+        <div style={{ border: "2px solid #1565C0", borderRadius: 10, overflow: "hidden", background: "#f8faff", cursor: "crosshair", display: "inline-block", width: "100%" }}>
           <SignatureCanvas
             ref={ref}
-            penColor="#1a2a3a"
+            penColor="#111"
             canvasProps={{
-              style: { display: "block", width: "100%", height: 200, touchAction: "none" },
+              width: SIG_W,
+              height: SIG_H,
+              style: { display: "block", width: "100%", touchAction: "none" },
             }}
             backgroundColor="rgb(248,250,255)"
           />
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
           <button
             onClick={() => ref.current?.clear()}
             style={{ flex: 1, padding: "12px 0", borderRadius: 9, border: "1px solid #ddd", background: "#f1f5f9", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#555" }}
@@ -74,10 +88,7 @@ function SigModal({ label, onClose, onSave }) {
             Clear
           </button>
           <button
-            onClick={() => {
-              if (!ref.current || ref.current.isEmpty()) { showError("Please draw a signature first"); return; }
-              ref.current.getCanvas().toBlob(b => { if (b) onSave(b); }, "image/png");
-            }}
+            onClick={handleSave}
             style={{ flex: 2, padding: "12px 0", borderRadius: 9, border: "none", background: "#1565C0", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}
           >
             ✓ Save Signature
@@ -88,7 +99,6 @@ function SigModal({ label, onClose, onSave }) {
   );
 
   if (Platform.OS === "web") {
-    // Use createPortal to render at document.body — bypasses all scroll/stacking contexts
     const ReactDOM = require("react-dom");
     return ReactDOM.createPortal(content, document.body);
   }
@@ -598,17 +608,27 @@ export default function DriverViewScreen({ navigation }) {
             </View>
 
             {(stops || []).map((stop, idx) => (
-              <StopSection
-                key={stop.id || stop.order_id || idx}
-                stop={stop}
-                stopIndex={idx}
-                totalStops={(stops || []).length}
-                onRecordTime={handleRecordTime}
-                onUploadSig={null}
-                onUploadPhoto={handleUploadPhoto}
-                onOpenSig={handleOpenSig}
-                photosByStep={{}}
-              />
+              <View key={stop.id || stop.order_id || idx}>
+                {/* Show customer name header only for multi-stop trips */}
+                {(stops || []).length > 1 && (
+                  <View style={s.custHeader}>
+                    <View style={s.custHeaderDot}><Text style={s.custHeaderNum}>{idx + 1}</Text></View>
+                    <Text style={s.custHeaderName}>
+                      {stop.customer_name || `Customer ${idx + 1}`}
+                    </Text>
+                  </View>
+                )}
+                <StopSection
+                  stop={stop}
+                  stopIndex={idx}
+                  totalStops={(stops || []).length}
+                  onRecordTime={handleRecordTime}
+                  onUploadSig={null}
+                  onUploadPhoto={handleUploadPhoto}
+                  onOpenSig={handleOpenSig}
+                  photosByStep={{}}
+                />
+              </View>
             ))}
 
             {/* Return to Factory — only when ALL stops done */}
@@ -659,6 +679,12 @@ const s = StyleSheet.create({
   emptyBox: { alignItems: "center", paddingTop: 60, gap: 8 },
   emptyTitle: { fontSize: 22, fontWeight: "800", color: "#1a2a3a" },
   emptySub: { fontSize: 14, color: "#888" },
+
+  // Customer section header (multi-stop only)
+  custHeader: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 4, marginBottom: 2, marginTop: 6 },
+  custHeaderDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#1565C0", justifyContent: "center", alignItems: "center" },
+  custHeaderNum: { color: "#fff", fontWeight: "900", fontSize: 13 },
+  custHeaderName: { fontSize: 15, fontWeight: "800", color: "#1a2a3a", flex: 1 },
 
   // Dispatch card
   dispCard: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 5, elevation: 2 },
