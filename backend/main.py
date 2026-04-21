@@ -370,12 +370,19 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
         return None
 
     customer = dispatch.order.customer if dispatch and dispatch.order else None
+    # Fallback: if dispatch has no direct order, use the first stop's customer
+    if not customer:
+        for st in all_stops_db:
+            if st.order and st.order.customer:
+                customer = st.order.customer
+                break
 
     # Build per-stop data with customer names resolved from relationship.
-    # Exclude orphaned null-order_id stops that have no delivery data at all.
+    # Include any stop that has either delivery data OR a linked order (so freshly
+    # planned trips still show customer + delivery place before the journey starts).
     stops_data = []
     for st in all_stops_db:
-        if not _has_delivery_data(st):
+        if not _has_delivery_data(st) and not st.order_id:
             continue
         cname = get_customer_name_for_stop(st)
         stops_data.append({

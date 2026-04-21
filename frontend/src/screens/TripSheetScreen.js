@@ -260,7 +260,11 @@ function TripDetail({ tripId, onBack, navigation }) {
             <InfoRow label="Dispatch #" value={String(dispatch.dispatch_id || "")} />
             <InfoRow label="Truck" value={truck.truck_number} />
             <InfoRow label="Driver" value={driver.driver_name} />
-            <InfoRow label="Customer" value={customer.customer_name} />
+            <InfoRow label="Customer" value={
+              allStops.length > 0
+                ? [...new Set(allStops.map(s => s.customer_name).filter(Boolean))].join(", ")
+                : customer.customer_name || ""
+            } />
             <InfoRow label="Delivery Place" value={
               allStops.length > 0
                 ? [...new Set(allStops.map(s => s.customer_city).filter(Boolean))].join(", ")
