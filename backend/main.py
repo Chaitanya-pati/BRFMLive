@@ -617,7 +617,13 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
     
     if not dispatch_data.get('branch_id'):
         raise HTTPException(status_code=400, detail="branch_id is required")
-        
+
+    # Require at least one customer order linkage: either a direct order_id on the
+    # dispatch, or order_items that resolve to a customer order. Without this,
+    # downstream features (trip sheet, delivery stops) have no customer/place info.
+    if not dispatch_data.get('order_id') and not dispatch_items_data:
+        raise HTTPException(status_code=400, detail="Dispatch must reference a customer order (order_id or dispatch_items)")
+
     # Auto-set status and dispatch date
     dispatch_data['status'] = "DISPATCHED"
     dispatch_data['actual_dispatch_date'] = ist_now()
@@ -686,6 +692,26 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
         # Also include direct order_id if set
         if db_dispatch.order_id:
             order_ids_to_update.add(db_dispatch.order_id)
+
+        # Auto-create one DispatchDeliveryStop per linked customer order so the
+        # trip sheet immediately has customer + delivery place information.
+        for oid in order_ids_to_update:
+            existing = db.query(models.DispatchDeliveryStop).filter(
+                models.DispatchDeliveryStop.dispatch_id == db_dispatch.dispatch_id,
+                models.DispatchDeliveryStop.order_id == oid,
+            ).first()
+            if existing:
+                continue
+            order = db.query(models.CustomerOrder).filter(
+                models.CustomerOrder.order_id == oid
+            ).first()
+            cname = order.customer.customer_name if (order and order.customer) else None
+            db.add(models.DispatchDeliveryStop(
+                dispatch_id=db_dispatch.dispatch_id,
+                order_id=oid,
+                customer_name=cname,
+            ))
+        db.flush()
 
         # Set each affected order to DISPATCHED only if no prior dispatch existed for it
         for oid in order_ids_to_update:
