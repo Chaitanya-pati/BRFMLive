@@ -263,19 +263,13 @@ export default function ProductionPipelineScreen({ route, navigation }) {
   };
 
   // ── build stage actions based on current status ────────────────────────────
-  const buildStageActions = (stages, order) => {
+  const buildStageActions = (stages, order, totalPlannedQty, totalTransferredQty) => {
     const rawWheatActions = [];
     const transfer24hActions = [];
     const transfer12hActions = [];
     const grindingActions = [];
 
     // Raw Wheat
-    const totalPlannedQty = (stages.raw_wheat.source_bins || []).reduce(
-      (sum, b) => sum + (Number(b.planned_quantity) || 0), 0
-    );
-    const totalTransferredQty = (stages.transfer_24h.records || []).reduce(
-      (sum, r) => sum + (Number(r.quantity_transferred) || 0), 0
-    );
     const planFullyExtracted = totalPlannedQty > 0 && totalTransferredQty >= totalPlannedQty - 0.0001;
 
     if (stages.raw_wheat.status === 'PENDING') {
@@ -474,8 +468,14 @@ export default function ProductionPipelineScreen({ route, navigation }) {
 
   const renderPipelineStages = () => {
     if (!pipeline || !stages) return null;
+    const totalPlannedQty = (stages.raw_wheat.source_bins || []).reduce(
+      (sum, b) => sum + (Number(b.planned_quantity) || 0), 0
+    );
+    const totalTransferredQty = (stages.transfer_24h.records || []).reduce(
+      (sum, r) => sum + (Number(r.quantity_transferred) || 0), 0
+    );
     const { rawWheatActions, transfer24hActions, transfer12hActions, grindingActions } =
-      buildStageActions(stages, order);
+      buildStageActions(stages, order, totalPlannedQty, totalTransferredQty);
 
     // Per-bin extracted = blend_percentage × total transferred for this order
     const sourceBinsWithExtracted = (stages.raw_wheat.source_bins || []).map((b) => {
