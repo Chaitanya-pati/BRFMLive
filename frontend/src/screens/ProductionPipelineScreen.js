@@ -270,6 +270,14 @@ export default function ProductionPipelineScreen({ route, navigation }) {
     const grindingActions = [];
 
     // Raw Wheat
+    const totalPlannedQty = (stages.raw_wheat.source_bins || []).reduce(
+      (sum, b) => sum + (Number(b.planned_quantity) || 0), 0
+    );
+    const totalTransferredQty = (stages.transfer_24h.records || []).reduce(
+      (sum, r) => sum + (Number(r.quantity_transferred) || 0), 0
+    );
+    const planFullyExtracted = totalPlannedQty > 0 && totalTransferredQty >= totalPlannedQty - 0.0001;
+
     if (stages.raw_wheat.status === 'PENDING') {
       rawWheatActions.push({
         label: '▶  Plan This Order',
@@ -278,6 +286,13 @@ export default function ProductionPipelineScreen({ route, navigation }) {
           orderId: order.id,
           returnToPipeline: true,
         }),
+      });
+    } else if (planFullyExtracted) {
+      rawWheatActions.push({
+        label: '🔒  Plan Locked',
+        color: '#94a3b8',
+        outline: true,
+        onPress: () => {},
       });
     } else {
       rawWheatActions.push({
