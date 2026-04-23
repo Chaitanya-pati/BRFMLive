@@ -309,7 +309,7 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
             <Text style={styles.excelProductText}>{s.productName}</Text>
           ) : null}
         </View>
-        <View style={[styles.excelDataCell, { width: SIEVE_COL_W, backgroundColor: '#f2f2f2' }]}>
+        <View style={[styles.excelDataCell, { width: SIEVE_COL_W, backgroundColor: '#f2f2f2', paddingHorizontal: 12, alignItems: 'center' }]}>
           <Text style={styles.excelSubHeaderText}>{s.sieve}</Text>
         </View>
         {globalRows.map(row => {
