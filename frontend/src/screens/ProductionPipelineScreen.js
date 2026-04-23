@@ -477,6 +477,14 @@ export default function ProductionPipelineScreen({ route, navigation }) {
     const { rawWheatActions, transfer24hActions, transfer12hActions, grindingActions } =
       buildStageActions(stages, order);
 
+    // Per-bin extracted = blend_percentage × total transferred for this order
+    const sourceBinsWithExtracted = (stages.raw_wheat.source_bins || []).map((b) => {
+      const planned = Number(b.planned_quantity) || 0;
+      const blendPct = Number(b.blend_percentage) || 0;
+      const extracted = Math.min(planned, (totalTransferredQty * blendPct) / 100);
+      return { ...b, extracted_quantity: extracted };
+    });
+
     const stage1 = (
       <StageCard
         num="1"
@@ -484,11 +492,27 @@ export default function ProductionPipelineScreen({ route, navigation }) {
         status={stages.raw_wheat.status}
         actions={rawWheatActions}
       >
-        {stages.raw_wheat.source_bins.length > 0 ? (
+        {sourceBinsWithExtracted.length > 0 ? (
           <>
-            <BinRow bins={stages.raw_wheat.source_bins} size="sm" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.binRow}>
+              {sourceBinsWithExtracted.map((bin, i) => (
+                <View key={bin.id || i} style={{ marginRight: 10, alignItems: 'center' }}>
+                  <BinVisual
+                    binNumber={bin.bin_number}
+                    capacity={bin.capacity}
+                    currentQuantity={bin.current_quantity}
+                    size="sm"
+                    label={bin.blend_percentage ? `${bin.blend_percentage}% blend` : null}
+                  />
+                  <Text style={styles.binExtractedText}>
+                    Extracted: {bin.extracted_quantity.toFixed(2)} / {(Number(bin.planned_quantity) || 0).toFixed(2)} T
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
             <Text style={styles.stageNote}>
-              {stages.raw_wheat.source_bins.length} source bin{stages.raw_wheat.source_bins.length !== 1 ? 's' : ''} planned
+              Total extracted: {totalTransferredQty.toFixed(2)} / {totalPlannedQty.toFixed(2)} T
+              {' '}({totalPlannedQty > 0 ? Math.min(100, Math.round((totalTransferredQty / totalPlannedQty) * 100)) : 0}%)
             </Text>
           </>
         ) : (
@@ -989,6 +1013,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.text.secondary,
     marginTop: 6,
+  },
+  binExtractedText: {
+    fontSize: 10,
+    color: '#10b981',
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
   },
   emptyStageText: {
     fontSize: 12,
