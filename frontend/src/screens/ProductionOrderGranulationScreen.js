@@ -247,74 +247,82 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
 
   const activeTemplates = Object.values(templates).filter(t => t.is_active);
 
-  const renderExcelHeader = () => {
-    const totalCols = activeTemplates.reduce((sum, t) => sum + (t.columns_definition?.columns || []).length, 0);
-    return (
-      <View>
-        <View style={styles.excelHeaderRow}>
-          <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#4a90e2', borderBottomWidth: 0 }]}>
-            <Text style={[styles.excelHeaderText, { color: '#fff' }]}>Main</Text>
-          </View>
-          <View style={[styles.excelHeaderCell, { flex: 1, backgroundColor: '#4a90e2', width: totalCols * 80, borderBottomWidth: 0 }]}>
-            <Text style={[styles.excelHeaderText, { color: '#fff', fontSize: 16 }]}>Granulation</Text>
-          </View>
+  // Build a flat list of (product, sieve) pairs — one per displayed row
+  const sieveRows = [];
+  activeTemplates.forEach(t => {
+    const cols = t.columns_definition?.columns || [];
+    cols.forEach((c, idx) => {
+      sieveRows.push({
+        fgId: t.finished_good_id,
+        productName: t.finished_good?.product_name || "Product",
+        sieve: c,
+        firstOfGroup: idx === 0,
+        groupSize: cols.length,
+      });
+    });
+  });
+
+  const PRODUCT_COL_W = 110;
+  const SIEVE_COL_W = 80;
+  const ENTRY_COL_W = 90;
+
+  const renderTransposedHeader = () => (
+    <View>
+      <View style={styles.excelHeaderRow}>
+        <View style={[styles.excelHeaderCell, { width: PRODUCT_COL_W, backgroundColor: '#4a90e2', borderBottomWidth: 0 }]}>
+          <Text style={[styles.excelHeaderText, { color: '#fff' }]}>Product</Text>
         </View>
-        <View style={styles.excelHeaderRow}>
-          <View style={[styles.excelHeaderCell, styles.excelFixedCol, { backgroundColor: '#e8f0fe' }]}>
-            <Text style={styles.excelHeaderText}>Row #</Text>
-          </View>
-          {activeTemplates.map(t => {
-            const cols = t.columns_definition?.columns || [];
-            return (
-              <View key={t.id} style={[styles.excelProductGroup, { width: Math.max(cols.length * 80, 100) }]}>
-                <View style={styles.excelProductHeader}>
-                  <Text style={styles.excelProductText}>{t.finished_good?.product_name || "Product"}</Text>
-                </View>
-                <View style={styles.excelSubHeaderRow}>
-                  {cols.map(c => (
-                    <View key={c} style={[styles.excelSubHeaderCell, { width: 80 }]}>
-                      <Text style={styles.excelSubHeaderText}>{c}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            );
-          })}
+        <View style={[styles.excelHeaderCell, { width: SIEVE_COL_W, backgroundColor: '#4a90e2', borderBottomWidth: 0 }]}>
+          <Text style={[styles.excelHeaderText, { color: '#fff' }]}>Sieve</Text>
+        </View>
+        <View style={[styles.excelHeaderCell, { flex: 1, width: globalRows.length * ENTRY_COL_W, backgroundColor: '#4a90e2', borderBottomWidth: 0 }]}>
+          <Text style={[styles.excelHeaderText, { color: '#fff', fontSize: 16 }]}>Granulation Entries</Text>
         </View>
       </View>
-    );
-  };
-
-  const renderExcelRows = () => {
-    return globalRows.map((row, rowIndex) => (
-      <View key={row.id} style={styles.excelDataRow}>
-        <View style={[styles.excelDataCell, styles.excelFixedCol, { backgroundColor: '#fff', position: 'relative', overflow: 'visible' }]}>
-          <Text style={styles.excelRowIndexText}>{rowIndex + 1}</Text>
-          <TouchableOpacity 
-            style={styles.removeRowBtn} 
-            onPress={() => removeGlobalRow(row.id)}
-          >
-            <Text style={styles.removeRowText}>×</Text>
-          </TouchableOpacity>
+      <View style={styles.excelHeaderRow}>
+        <View style={[styles.excelHeaderCell, { width: PRODUCT_COL_W, backgroundColor: '#e8f0fe' }]}>
+          <Text style={styles.excelHeaderText}>Product</Text>
         </View>
-        {activeTemplates.map(t => {
-          const cols = t.columns_definition?.columns || [];
-          const fgId = t.finished_good_id;
-          const rowData = row.data[fgId] || {};
-          
+        <View style={[styles.excelHeaderCell, { width: SIEVE_COL_W, backgroundColor: '#e8f0fe' }]}>
+          <Text style={styles.excelHeaderText}>Sieve</Text>
+        </View>
+        {globalRows.map((row, idx) => (
+          <View key={row.id} style={[styles.excelHeaderCell, { width: ENTRY_COL_W, backgroundColor: '#e8f0fe', position: 'relative', overflow: 'visible' }]}>
+            <Text style={styles.excelHeaderText}>Row {idx + 1}</Text>
+            <TouchableOpacity
+              style={styles.removeRowBtn}
+              onPress={() => removeGlobalRow(row.id)}
+            >
+              <Text style={styles.removeRowText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderTransposedRows = () => {
+    return sieveRows.map((s, i) => (
+      <View key={`${s.fgId}-${s.sieve}`} style={styles.excelDataRow}>
+        <View style={[styles.excelDataCell, { width: PRODUCT_COL_W, backgroundColor: s.firstOfGroup ? '#d9e2f3' : '#f7faff' }]}>
+          {s.firstOfGroup ? (
+            <Text style={styles.excelProductText}>{s.productName}</Text>
+          ) : null}
+        </View>
+        <View style={[styles.excelDataCell, { width: SIEVE_COL_W, backgroundColor: '#f2f2f2' }]}>
+          <Text style={styles.excelSubHeaderText}>{s.sieve}</Text>
+        </View>
+        {globalRows.map(row => {
+          const rowData = row.data[s.fgId] || {};
           return (
-            <View key={t.id} style={[styles.excelProductDataGroup, { width: Math.max(cols.length * 80, 100) }]}>
-              {cols.map(c => (
-                <View key={c} style={[styles.excelDataCell, { width: 80 }]}>
-                  <TextInput
-                    style={styles.excelInput}
-                    value={String(rowData[c] || "")}
-                    onChangeText={(v) => updateGlobalValue(row.id, fgId, c, v)}
-                    keyboardType="numeric"
-                    placeholder="-"
-                  />
-                </View>
-              ))}
+            <View key={row.id} style={[styles.excelDataCell, { width: ENTRY_COL_W }]}>
+              <TextInput
+                style={styles.excelInput}
+                value={String(rowData[s.sieve] || "")}
+                onChangeText={(v) => updateGlobalValue(row.id, s.fgId, s.sieve, v)}
+                keyboardType="numeric"
+                placeholder="-"
+              />
             </View>
           );
         })}
@@ -340,15 +348,15 @@ export default function ProductionOrderGranulationScreen({ route, navigation }) 
           <View style={{ flex: 1 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.excelScrollView}>
               <View style={styles.excelMainContainer}>
-                {renderExcelHeader()}
+                {renderTransposedHeader()}
                 <ScrollView showsVerticalScrollIndicator={true}>
-                  {renderExcelRows()}
-                  <TouchableOpacity style={styles.addNewRowBtn} onPress={addGlobalRow}>
-                    <Text style={styles.addNewRowText}>+ Add New Entry Row</Text>
-                  </TouchableOpacity>
+                  {renderTransposedRows()}
                 </ScrollView>
               </View>
             </ScrollView>
+            <TouchableOpacity style={styles.addNewRowBtn} onPress={addGlobalRow}>
+              <Text style={styles.addNewRowText}>+ Add New Entry Column</Text>
+            </TouchableOpacity>
           </View>
         )}
 
