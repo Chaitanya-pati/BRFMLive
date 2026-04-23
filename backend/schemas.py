@@ -106,6 +106,10 @@ class Transfer12HourRecordCreate(Transfer12HourRecordBase):
     status: Optional[str] = "PLANNED"
     branch_id: Optional[int] = None
 
+    @validator('transfer_start_time', pre=True)
+    def _parse_start(cls, v):
+        return parse_datetime(v)
+
 class Transfer12HourRecordUpdate(BaseModel):
     quantity_transferred: Optional[float] = None
     status: Optional[str] = None
@@ -114,6 +118,10 @@ class Transfer12HourRecordUpdate(BaseModel):
     incoming_moisture: Optional[float] = None
     target_moisture: Optional[float] = None
     transfer_end_time: Optional[datetime] = None
+
+    @validator('transfer_end_time', pre=True)
+    def _parse_end(cls, v):
+        return parse_datetime(v)
 
 class CaptureParametersRequest(BaseModel):
     bin_id: int
@@ -1553,6 +1561,10 @@ class TransferRecordingBase(ISTModel):
     moisture_level: Optional[float] = None
     transfer_start_time: Optional[datetime] = None
     transfer_end_time: Optional[datetime] = None
+
+    @validator('transfer_start_time', 'transfer_end_time', pre=True)
+    def _parse_transfer_ts(cls, v):
+        return parse_datetime(v)
 
 class TransferRecordingCreate(TransferRecordingBase):
     branch_id: Optional[int] = None
