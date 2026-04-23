@@ -558,17 +558,28 @@ export default function ProductionPipelineScreen({ route, navigation }) {
       </StageCard>
     );
 
+    // Progressive disclosure: a stage only appears once the previous stage has
+    // at least one COMPLETED record. Raw Wheat is always shown; 24-Hour appears
+    // once raw-wheat planning exists (status != PENDING); 12-Hour appears once
+    // the 24-Hour stage has at least one completed transfer; Grinding appears
+    // once the 12-Hour stage has at least one completed transfer.
+    const show24h = stages.raw_wheat.status !== 'PENDING';
+    const has24hCompleted = (stages.transfer_24h.records || []).some(r => r.status === 'COMPLETED');
+    const has12hCompleted = (stages.transfer_12h.records || []).some(r => r.status === 'COMPLETED');
+    const show12h = show24h && has24hCompleted;
+    const showGrind = show12h && has12hCompleted;
+
     if (isWide) {
       return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wideFlow}>
           <View style={styles.wideFlowInner}>
             {stage1}
-            <StageConnector />
-            {stage2}
-            <StageConnector />
-            {stage3}
-            <StageConnector />
-            {stage4}
+            {show24h && <StageConnector />}
+            {show24h && stage2}
+            {show12h && <StageConnector />}
+            {show12h && stage3}
+            {showGrind && <StageConnector />}
+            {showGrind && stage4}
           </View>
         </ScrollView>
       );
@@ -577,12 +588,12 @@ export default function ProductionPipelineScreen({ route, navigation }) {
     return (
       <View style={styles.narrowFlow}>
         {stage1}
-        <StageConnector vertical />
-        {stage2}
-        <StageConnector vertical />
-        {stage3}
-        <StageConnector vertical />
-        {stage4}
+        {show24h && <StageConnector vertical />}
+        {show24h && stage2}
+        {show12h && <StageConnector vertical />}
+        {show12h && stage3}
+        {showGrind && <StageConnector vertical />}
+        {showGrind && stage4}
       </View>
     );
   };
