@@ -304,12 +304,6 @@ export default function FinishedGoodsManagementScreen({ navigation }) {
                   <Text style={styles.sectionTitle}>
                     Stock — {selectedGodown.godown_name}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.primaryBtn}
-                    onPress={() => setMovementModalVisible(true)}
-                  >
-                    <Text style={styles.primaryBtnText}>+ Move Stock</Text>
-                  </TouchableOpacity>
                 </View>
                 <DataTable
                   columns={stockColumns}
