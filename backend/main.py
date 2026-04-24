@@ -3596,6 +3596,7 @@ async def create_magnet_cleaning_record(
 @app.get("/api/magnet-cleaning-records",
          response_model=List[schemas.MagnetCleaningRecordWithDetails])
 def get_magnet_cleaning_records(magnet_id: Optional[int] = None,
+                                production_order_id: Optional[int] = None,
                                 skip: int = 0,
                                 limit: int = 100,
                                 db: Session = Depends(get_db)):
@@ -3603,6 +3604,9 @@ def get_magnet_cleaning_records(magnet_id: Optional[int] = None,
     if magnet_id:
         query = query.filter(
             models.MagnetCleaningRecord.magnet_id == magnet_id)
+    if production_order_id:
+        query = query.filter(
+            models.MagnetCleaningRecord.production_order_id == production_order_id)
 
     records = query.order_by(
         models.MagnetCleaningRecord.cleaning_timestamp.desc()).offset(
