@@ -12,6 +12,7 @@ import { Picker } from '@react-native-picker/picker';
 import Layout from '../components/Layout';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { routeConfigurationApi, magnetApi, machineApi, godownApi, binApi } from '../api/client';
 import { showToast, showAlert, showConfirm } from '../utils/customAlerts';
 import colors from '../theme/colors';
@@ -32,10 +33,7 @@ export default function RouteConfigurationScreen({ navigation }) {
     name: '',
     description: '',
     sourceType: 'godown',
-    stages: [
-      { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
-      { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
-    ],
+    stages: [],
   });
 
   const middleTypes = ['magnet', 'machine'];
@@ -120,10 +118,7 @@ export default function RouteConfigurationScreen({ navigation }) {
       name: '',
       description: '',
       sourceType: 'godown',
-      stages: [
-        { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
-        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
-      ],
+      stages: [],
     });
     setModalVisible(true);
   };
@@ -136,42 +131,43 @@ export default function RouteConfigurationScreen({ navigation }) {
       name: route.name,
       description: route.description || '',
       sourceType: sourceType,
-      stages: route.stages || [
-        { sequence_no: 1, component_type: sourceType, component_id: null, interval_hours: null },
-        { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
-      ],
+      stages: route.stages || [],
     });
     setModalVisible(true);
   };
 
-  // Add a new SOURCE stage at the start of source block (before middle stages)
-  const handleAddSource = () => {
-    const stages = [...formData.stages];
-    const roles = computeRoles(stages);
-    let insertAt = roles.filter((r) => r === 'source').length;
-    if (insertAt === 0) insertAt = 1; // safety
-
-    const newStage = {
+  // Replace all source stages with a fresh set built from the picked component IDs.
+  const handleSourcesChange = (newIds) => {
+    const roles = computeRoles(formData.stages);
+    const middle = formData.stages.filter((_, i) => roles[i] === 'middle');
+    const dests = formData.stages.filter((_, i) => roles[i] === 'destination');
+    const newSources = newIds.map((id) => ({
       sequence_no: 0,
       component_type: formData.sourceType,
-      component_id: null,
+      component_id: id,
       interval_hours: null,
-    };
-    stages.splice(insertAt, 0, newStage);
-    setFormData({ ...formData, stages: renumberStages(stages) });
+    }));
+    setFormData({
+      ...formData,
+      stages: renumberStages([...newSources, ...middle, ...dests]),
+    });
   };
 
-  // Add a new DESTINATION bin stage at the end
-  const handleAddDestination = () => {
-    const stages = [...formData.stages];
-    const newStage = {
+  // Replace all destination stages with a fresh set built from the picked bin IDs.
+  const handleDestinationsChange = (newIds) => {
+    const roles = computeRoles(formData.stages);
+    const sources = formData.stages.filter((_, i) => roles[i] === 'source');
+    const middle = formData.stages.filter((_, i) => roles[i] === 'middle');
+    const newDests = newIds.map((id) => ({
       sequence_no: 0,
       component_type: 'bin',
-      component_id: null,
+      component_id: id,
       interval_hours: null,
-    };
-    stages.push(newStage);
-    setFormData({ ...formData, stages: renumberStages(stages) });
+    }));
+    setFormData({
+      ...formData,
+      stages: renumberStages([...sources, ...middle, ...newDests]),
+    });
   };
 
   // Add a MIDDLE stage (magnet/machine) just before destinations begin
@@ -196,34 +192,16 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const handleRemoveStage = (index) => {
-    const roles = computeRoles(formData.stages);
-    const role = roles[index];
-    const sourceCount = roles.filter((r) => r === 'source').length;
-    const destCount = roles.filter((r) => r === 'destination').length;
-
-    if (role === 'source' && sourceCount <= 1) {
-      showAlert('Error', 'At least one source is required', 'error');
-      return;
-    }
-    if (role === 'destination' && destCount <= 1) {
-      showAlert('Error', 'At least one destination bin is required', 'error');
-      return;
-    }
-
     const stages = formData.stages.filter((_, idx) => idx !== index);
     setFormData({ ...formData, stages: renumberStages(stages) });
   };
 
-  // Changing source type rewrites every source-role stage to the new type
+  // Changing source type drops all currently picked sources (their type changed).
   const handleSourceTypeChange = (value) => {
     const stages = [...formData.stages];
     const roles = computeRoles(stages);
-    const updated = stages.map((s, idx) =>
-      roles[idx] === 'source'
-        ? { ...s, component_type: value, component_id: null, interval_hours: null }
-        : s
-    );
-    setFormData({ ...formData, sourceType: value, stages: updated });
+    const remaining = stages.filter((_, idx) => roles[idx] !== 'source');
+    setFormData({ ...formData, sourceType: value, stages: renumberStages(remaining) });
   };
 
   const handleStageChange = (index, field, value) => {
@@ -326,61 +304,37 @@ export default function RouteConfigurationScreen({ navigation }) {
     { label: 'Stages', field: 'stages', flex: 0.8, key: 'stages_count', render: (value, row) => row.stages?.length || 0 },
   ];
 
-  const renderStage = (stage, index, role, sameRoleSiblings) => {
+  // Render only middle (magnet/machine) stage cards. Sources & destinations
+  // are now picked through MultiSelectDropdowns above/below this list.
+  const renderMiddleStage = (stage, index) => {
     const components = getComponentsForType(stage.component_type);
 
-    let roleLabel = 'Stage';
-    let typeLockedTo = null;
-    if (role === 'source') {
-      roleLabel = sameRoleSiblings > 1 ? `Source ${stage.sequence_no}` : 'Source';
-      typeLockedTo = formData.sourceType;
-    } else if (role === 'destination') {
-      const destNum = stage.sequence_no - (formData.stages.length - sameRoleSiblings);
-      roleLabel = sameRoleSiblings > 1 ? `Destination Bin ${destNum}` : 'Destination Bin';
-      typeLockedTo = 'bin';
-    } else {
-      roleLabel = `Stage ${stage.sequence_no}`;
-    }
-
-    const canRemove =
-      (role === 'source' && sameRoleSiblings > 1) ||
-      (role === 'destination' && sameRoleSiblings > 1) ||
-      role === 'middle';
-
-    const roleStyle =
-      role === 'source'
-        ? styles.stageSource
-        : role === 'destination'
-        ? styles.stageDestination
-        : styles.stageMiddle;
-
     return (
-      <View key={index} style={[styles.stageContainer, roleStyle]}>
+      <View key={index} style={[styles.stageContainer, styles.stageMiddle]}>
         <View style={styles.stageHeader}>
-          <Text style={styles.stageTitle}>{roleLabel}</Text>
-          {canRemove && (
-            <TouchableOpacity
-              style={styles.removeStageButton}
-              onPress={() => handleRemoveStage(index)}
-            >
-              <Text style={styles.removeStageText}>✕</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.stageTitle}>Stage {stage.sequence_no}</Text>
+          <TouchableOpacity
+            style={styles.removeStageButton}
+            onPress={() => handleRemoveStage(index)}
+          >
+            <Text style={styles.removeStageText}>✕</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Component Type {typeLockedTo ? '(Locked)' : ''}
-          </Text>
-          <View style={[styles.pickerContainer, typeLockedTo && styles.disabledPicker]}>
+          <Text style={styles.label}>Component Type</Text>
+          <View style={styles.pickerContainer}>
             <Picker
               selectedValue={stage.component_type}
               onValueChange={(value) => handleStageChange(index, 'component_type', value)}
               style={styles.picker}
-              enabled={!typeLockedTo}
             >
-              {(typeLockedTo ? [typeLockedTo] : middleTypes).map((type) => (
-                <Picker.Item key={type} label={type.charAt(0).toUpperCase() + type.slice(1)} value={type} />
+              {middleTypes.map((type) => (
+                <Picker.Item
+                  key={type}
+                  label={type.charAt(0).toUpperCase() + type.slice(1)}
+                  value={type}
+                />
               ))}
             </Picker>
           </View>
@@ -432,6 +386,26 @@ export default function RouteConfigurationScreen({ navigation }) {
     const sourceCount = roles.filter((r) => r === 'source').length;
     const destCount = roles.filter((r) => r === 'destination').length;
 
+    const selectedSourceIds = formData.stages
+      .filter((_, i) => roles[i] === 'source')
+      .map((s) => s.component_id)
+      .filter((id) => id != null);
+
+    const selectedDestIds = formData.stages
+      .filter((_, i) => roles[i] === 'destination')
+      .map((s) => s.component_id)
+      .filter((id) => id != null);
+
+    const sourceOptions = getComponentsForType(formData.sourceType).map((c) => ({
+      value: c.id,
+      label: c.name || c.bin_number || `ID: ${c.id}`,
+    }));
+
+    const destOptions = bins.map((b) => ({
+      value: b.id,
+      label: b.bin_number || b.name || `ID: ${b.id}`,
+    }));
+
     return (
       <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.formGroup}>
@@ -480,24 +454,53 @@ export default function RouteConfigurationScreen({ navigation }) {
             </Text>
           </View>
 
+          {/* ── SOURCES (multi-select) ─────────────────────────── */}
+          <View style={[styles.stageContainer, styles.stageSource]}>
+            <Text style={styles.stageTitle}>
+              Sources ({formData.sourceType === 'godown' ? 'Godowns' : 'Bins'})
+            </Text>
+            <Text style={styles.helperText}>
+              Pick one or more {formData.sourceType === 'godown' ? 'godowns' : 'bins'} that feed this route.
+            </Text>
+            <View style={{ marginTop: 8 }}>
+              <MultiSelectDropdown
+                value={selectedSourceIds}
+                onValueChange={handleSourcesChange}
+                options={sourceOptions}
+                placeholder={`Select ${formData.sourceType === 'godown' ? 'godowns' : 'source bins'}…`}
+                itemNoun="sources"
+              />
+            </View>
+          </View>
+
+          {/* ── MIDDLE STAGES (magnet / machine) ───────────────── */}
           <View style={styles.actionRow}>
-            <TouchableOpacity style={[styles.smallButton, styles.sourceButton]} onPress={handleAddSource}>
-              <Text style={styles.smallButtonText}>+ Source</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={[styles.smallButton, styles.middleButton]} onPress={handleAddMiddle}>
-              <Text style={styles.smallButtonText}>+ Magnet/Machine</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.smallButton, styles.destButton]} onPress={handleAddDestination}>
-              <Text style={styles.smallButtonText}>+ Destination Bin</Text>
+              <Text style={styles.smallButtonText}>+ Magnet / Machine</Text>
             </TouchableOpacity>
           </View>
 
           {formData.stages.map((stage, index) => {
-            const role = roles[index];
-            const siblingCount =
-              role === 'source' ? sourceCount : role === 'destination' ? destCount : 1;
-            return renderStage(stage, index, role, siblingCount);
+            if (roles[index] !== 'middle') return null;
+            return renderMiddleStage(stage, index);
           })}
+
+          {/* ── DESTINATIONS (multi-select) ────────────────────── */}
+          <View style={[styles.stageContainer, styles.stageDestination]}>
+            <Text style={styles.stageTitle}>Destination Bins</Text>
+            <Text style={styles.helperText}>
+              Pick one or more bins where the route ends.
+            </Text>
+            <View style={{ marginTop: 8 }}>
+              <MultiSelectDropdown
+                value={selectedDestIds}
+                onValueChange={handleDestinationsChange}
+                options={destOptions}
+                placeholder="Select destination bins…"
+                itemNoun="bins"
+              />
+            </View>
+          </View>
         </View>
 
         <View style={styles.buttonContainer}>

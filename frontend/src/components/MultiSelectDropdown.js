@@ -26,6 +26,7 @@ export default function MultiSelectDropdown({
   options = [],
   placeholder = 'Select items…',
   searchable = true,
+  itemNoun = 'orders',
 }) {
   const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
@@ -50,7 +51,7 @@ export default function MultiSelectDropdown({
       ? placeholder
       : selectedCount === 1
       ? options.find(o => o.value === value[0])?.label || `${selectedCount} selected`
-      : `${selectedCount} orders selected`;
+      : `${selectedCount} ${itemNoun} selected`;
 
   const toggle = (val) => {
     if (value.includes(val)) {
