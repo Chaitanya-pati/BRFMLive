@@ -280,21 +280,22 @@ export default function RouteConfigurationScreen({ navigation }) {
   };
 
   const handleDelete = async (route) => {
-    showConfirm(
+    const confirmed = await showConfirm(
       'Delete Route',
-      `Are you sure you want to delete route "${route.name}"?`,
-      async () => {
-        try {
-          await routeConfigurationApi.delete(route.id);
-          showToast('Route Configuration deleted successfully!', 'success');
-          loadRoutes();
-        } catch (error) {
-          console.error('Error deleting route:', error);
-          const errorMessage = error.response?.data?.detail || 'Failed to delete route';
-          showToast(errorMessage, 'error');
-        }
-      }
+      `Are you sure you want to delete route "${route.name}"?`
     );
+    if (!confirmed) return;
+
+    try {
+      await routeConfigurationApi.delete(route.id);
+      showToast('Route Configuration deleted successfully!', 'success');
+      loadRoutes();
+    } catch (error) {
+      console.error('Error deleting route:', error);
+      const errorMessage =
+        error.response?.data?.detail || error.message || 'Failed to delete route';
+      showToast(errorMessage, 'error');
+    }
   };
 
   const columns = [
