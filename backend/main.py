@@ -2245,6 +2245,29 @@ def create_bag_size(bag_size: schemas.BagSizeCreate, db: Session = Depends(get_d
     db.refresh(db_obj)
     return db_obj
 
+@app.put("/api/bag-sizes/{bag_size_id}", response_model=schemas.BagSize)
+def update_bag_size(bag_size_id: int, bag_size: schemas.BagSizeCreate, db: Session = Depends(get_db)):
+    db_obj = db.query(models.BagSize).filter(models.BagSize.id == bag_size_id).first()
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Bag size not found")
+    data = bag_size.dict(exclude_unset=True)
+    for k, v in data.items():
+        if k == 'branch_id' and v is None:
+            continue
+        setattr(db_obj, k, v)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+@app.delete("/api/bag-sizes/{bag_size_id}")
+def delete_bag_size(bag_size_id: int, db: Session = Depends(get_db)):
+    db_obj = db.query(models.BagSize).filter(models.BagSize.id == bag_size_id).first()
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Bag size not found")
+    db.delete(db_obj)
+    db.commit()
+    return {"detail": "Bag size deleted"}
+
 # --- Grinding / Hourly Production API ---
 
 def check_and_mark_production_order_completed(production_order_id: int, db: Session):

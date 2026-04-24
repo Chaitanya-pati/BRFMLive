@@ -128,6 +128,9 @@ export const truckApi = {
 
 export const bagSizeApi = {
   getAll: () => api.get("/bag-sizes"),
+  create: (data) => api.post("/bag-sizes", data),
+  update: (id, data) => api.put(`/bag-sizes/${id}`, data),
+  delete: (id) => api.delete(`/bag-sizes/${id}`),
 };
 
 export const customerOrderApi = {
