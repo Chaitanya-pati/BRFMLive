@@ -205,22 +205,11 @@ export default function SupplierMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { label: 'ID', field: 'id', width: 80, key: 'id' },
-    { label: 'Supplier Name', field: 'supplier_name', width: 200, key: 'supplier_name' },
+    { label: 'Supplier Name', field: 'supplier_name', width: 220, key: 'supplier_name' },
     { label: 'Contact Person', field: 'contact_person', width: 180, key: 'contact_person' },
-    { label: 'Phone', field: 'phone', width: 130, key: 'phone' },
-    { label: 'Email', field: 'email', width: 200, key: 'email' },
-    { label: 'GSTIN', field: 'gstin', width: 150, key: 'gstin' },
-    { label: 'State', field: 'state', width: 130, key: 'state' },
-    { label: 'City', field: 'city', width: 130, key: 'city' },
-    { label: 'District', field: 'district', width: 130, key: 'district' },
-    {
-      label: 'Created',
-      field: 'created_at',
-      width: 150,
-      key: 'created_at',
-      render: (value) => formatISTDate(value)
-    },
+    { label: 'Phone', field: 'phone', width: 140, key: 'phone' },
+    { label: 'State', field: 'state', width: 140, key: 'state' },
+    { label: 'City', field: 'city', width: 140, key: 'city' },
   ];
 
   return (
