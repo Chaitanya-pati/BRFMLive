@@ -31,17 +31,15 @@ export default function RouteConfigurationScreen({ navigation }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sourceType: 'godown', // New field to track source type selection
+    sourceType: 'godown',
     stages: [
       { sequence_no: 1, component_type: 'godown', component_id: null, interval_hours: null },
       { sequence_no: 2, component_type: 'bin', component_id: null, interval_hours: null },
     ],
   });
 
-  const componentTypes = ['godown', 'magnet', 'machine', 'bin'];
+  const middleTypes = ['magnet', 'machine'];
   const firstStageTypes = ['godown', 'bin'];
-
-
 
   useEffect(() => {
     loadRoutes();
@@ -91,24 +89,29 @@ export default function RouteConfigurationScreen({ navigation }) {
     }
   };
 
-  const getComponentLabel = (type, componentId) => {
-    const components = getComponentsForType(type);
-    const component = components.find((c) => c.id === componentId);
-    if (!component) return 'Not selected';
+  // Compute role for each stage based on position + type, mirroring backend split_route_stages
+  const computeRoles = (stages) => {
+    if (!stages || stages.length === 0) return [];
+    const sorted = [...stages].sort((a, b) => a.sequence_no - b.sequence_no);
+    const sourceType = sorted[0].component_type;
 
-    switch (type) {
-      case 'godown':
-        return component.name;
-      case 'magnet':
-        return component.name;
-      case 'machine':
-        return component.name;
-      case 'bin':
-        return component.bin_number;
-      default:
-        return 'Unknown';
-    }
+    let i = 0;
+    while (i < sorted.length && sorted[i].component_type === sourceType) i++;
+    const sourceCount = i;
+
+    let j = sorted.length - 1;
+    while (j >= sourceCount && sorted[j].component_type === 'bin') j--;
+    const destStartIdx = j + 1;
+
+    return sorted.map((_, idx) => {
+      if (idx < sourceCount) return 'source';
+      if (idx >= destStartIdx) return 'destination';
+      return 'middle';
+    });
   };
+
+  const renumberStages = (stages) =>
+    stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 }));
 
   const openAddModal = () => {
     setEditMode(false);
@@ -141,43 +144,86 @@ export default function RouteConfigurationScreen({ navigation }) {
     setModalVisible(true);
   };
 
-  const handleAddStage = () => {
+  // Add a new SOURCE stage at the start of source block (before middle stages)
+  const handleAddSource = () => {
     const stages = [...formData.stages];
-    const lastStage = stages[stages.length - 1];
+    const roles = computeRoles(stages);
+    let insertAt = roles.filter((r) => r === 'source').length;
+    if (insertAt === 0) insertAt = 1; // safety
 
     const newStage = {
-      sequence_no: stages.length,
+      sequence_no: 0,
+      component_type: formData.sourceType,
+      component_id: null,
+      interval_hours: null,
+    };
+    stages.splice(insertAt, 0, newStage);
+    setFormData({ ...formData, stages: renumberStages(stages) });
+  };
+
+  // Add a new DESTINATION bin stage at the end
+  const handleAddDestination = () => {
+    const stages = [...formData.stages];
+    const newStage = {
+      sequence_no: 0,
+      component_type: 'bin',
+      component_id: null,
+      interval_hours: null,
+    };
+    stages.push(newStage);
+    setFormData({ ...formData, stages: renumberStages(stages) });
+  };
+
+  // Add a MIDDLE stage (magnet/machine) just before destinations begin
+  const handleAddMiddle = () => {
+    const stages = [...formData.stages];
+    const roles = computeRoles(stages);
+    let insertAt = roles.length;
+    for (let k = 0; k < roles.length; k++) {
+      if (roles[k] === 'destination') {
+        insertAt = k;
+        break;
+      }
+    }
+    const newStage = {
+      sequence_no: 0,
       component_type: 'magnet',
       component_id: null,
       interval_hours: null,
     };
-
-    stages[stages.length - 1] = newStage;
-
-    stages.push({
-      sequence_no: stages.length + 1,
-      component_type: 'bin',
-      component_id: lastStage.component_id,
-      interval_hours: null,
-    });
-
-    setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
+    stages.splice(insertAt, 0, newStage);
+    setFormData({ ...formData, stages: renumberStages(stages) });
   };
 
   const handleRemoveStage = (index) => {
-    if (index === 0 || index === formData.stages.length - 1) {
-      showAlert('Error', 'Cannot remove first or last stage', 'error');
+    const roles = computeRoles(formData.stages);
+    const role = roles[index];
+    const sourceCount = roles.filter((r) => r === 'source').length;
+    const destCount = roles.filter((r) => r === 'destination').length;
+
+    if (role === 'source' && sourceCount <= 1) {
+      showAlert('Error', 'At least one source is required', 'error');
+      return;
+    }
+    if (role === 'destination' && destCount <= 1) {
+      showAlert('Error', 'At least one destination bin is required', 'error');
       return;
     }
 
     const stages = formData.stages.filter((_, idx) => idx !== index);
-    setFormData({ ...formData, stages: stages.map((s, idx) => ({ ...s, sequence_no: idx + 1 })) });
+    setFormData({ ...formData, stages: renumberStages(stages) });
   };
 
+  // Changing source type rewrites every source-role stage to the new type
   const handleSourceTypeChange = (value) => {
     const stages = [...formData.stages];
-    stages[0] = { ...stages[0], component_type: value, component_id: null, interval_hours: null };
-    setFormData({ ...formData, sourceType: value, stages });
+    const roles = computeRoles(stages);
+    const updated = stages.map((s, idx) =>
+      roles[idx] === 'source'
+        ? { ...s, component_type: value, component_id: null, interval_hours: null }
+        : s
+    );
+    setFormData({ ...formData, sourceType: value, stages: updated });
   };
 
   const handleStageChange = (index, field, value) => {
@@ -197,32 +243,16 @@ export default function RouteConfigurationScreen({ navigation }) {
       return;
     }
 
-    for (let i = 0; i < formData.stages.length; i++) {
-      const stage = formData.stages[i];
-      // Convert component_id to integer if it's a string
-      const componentId = stage.component_id ? parseInt(stage.component_id) : null;
+    const roles = computeRoles(formData.stages);
+    const sourceCount = roles.filter((r) => r === 'source').length;
+    const destCount = roles.filter((r) => r === 'destination').length;
 
-      if (!componentId) {
-        showAlert('Validation Error', `Please select a component for stage ${i + 1}`, 'error');
-        return;
-      }
-
-      // Update the component_id to be an integer
-      formData.stages[i].component_id = componentId;
-
-      if (stage.component_type === 'magnet') {
-        const intervalValue = parseFloat(stage.interval_hours);
-        if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
-          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`, 'error');
-          return;
-        }
-        // Convert string to float for submission
-        formData.stages[i].interval_hours = intervalValue;
-      }
+    if (sourceCount < 1) {
+      showAlert('Validation Error', 'At least one source is required', 'error');
+      return;
     }
-
-    if (formData.stages.length < 2) {
-      showAlert('Validation Error', 'At least 2 stages (godown and bin) are required', 'error');
+    if (destCount < 1) {
+      showAlert('Validation Error', 'At least one destination bin is required', 'error');
       return;
     }
 
@@ -231,9 +261,24 @@ export default function RouteConfigurationScreen({ navigation }) {
       return;
     }
 
-    if (formData.stages[formData.stages.length - 1].component_type !== 'bin') {
-      showAlert('Validation Error', 'Last stage must be a bin', 'error');
-      return;
+    for (let i = 0; i < formData.stages.length; i++) {
+      const stage = formData.stages[i];
+      const componentId = stage.component_id ? parseInt(stage.component_id) : null;
+
+      if (!componentId) {
+        showAlert('Validation Error', `Please select a component for stage ${i + 1}`, 'error');
+        return;
+      }
+      formData.stages[i].component_id = componentId;
+
+      if (stage.component_type === 'magnet') {
+        const intervalValue = parseFloat(stage.interval_hours);
+        if (!stage.interval_hours || isNaN(intervalValue) || intervalValue <= 0) {
+          showAlert('Validation Error', `Please enter a valid cleaning interval for magnet in stage ${i + 1}`, 'error');
+          return;
+        }
+        formData.stages[i].interval_hours = intervalValue;
+      }
     }
 
     setLoading(true);
@@ -281,16 +326,39 @@ export default function RouteConfigurationScreen({ navigation }) {
     { label: 'Stages', field: 'stages', flex: 0.8, key: 'stages_count', render: (value, row) => row.stages?.length || 0 },
   ];
 
-  const renderStage = (stage, index) => {
-    const isFirst = index === 0;
-    const isLast = index === formData.stages.length - 1;
+  const renderStage = (stage, index, role, sameRoleSiblings) => {
     const components = getComponentsForType(stage.component_type);
 
+    let roleLabel = 'Stage';
+    let typeLockedTo = null;
+    if (role === 'source') {
+      roleLabel = sameRoleSiblings > 1 ? `Source ${stage.sequence_no}` : 'Source';
+      typeLockedTo = formData.sourceType;
+    } else if (role === 'destination') {
+      const destNum = stage.sequence_no - (formData.stages.length - sameRoleSiblings);
+      roleLabel = sameRoleSiblings > 1 ? `Destination Bin ${destNum}` : 'Destination Bin';
+      typeLockedTo = 'bin';
+    } else {
+      roleLabel = `Stage ${stage.sequence_no}`;
+    }
+
+    const canRemove =
+      (role === 'source' && sameRoleSiblings > 1) ||
+      (role === 'destination' && sameRoleSiblings > 1) ||
+      role === 'middle';
+
+    const roleStyle =
+      role === 'source'
+        ? styles.stageSource
+        : role === 'destination'
+        ? styles.stageDestination
+        : styles.stageMiddle;
+
     return (
-      <View key={index} style={styles.stageContainer}>
+      <View key={index} style={[styles.stageContainer, roleStyle]}>
         <View style={styles.stageHeader}>
-          <Text style={styles.stageTitle}>Stage {stage.sequence_no}</Text>
-          {!isFirst && !isLast && (
+          <Text style={styles.stageTitle}>{roleLabel}</Text>
+          {canRemove && (
             <TouchableOpacity
               style={styles.removeStageButton}
               onPress={() => handleRemoveStage(index)}
@@ -302,16 +370,16 @@ export default function RouteConfigurationScreen({ navigation }) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>
-            Component Type {isFirst ? '(Locked - Set by Source Type)' : isLast ? '(Last = Bin)' : ''}
+            Component Type {typeLockedTo ? '(Locked)' : ''}
           </Text>
-          <View style={[styles.pickerContainer, (isFirst || isLast) && styles.disabledPicker]}>
+          <View style={[styles.pickerContainer, typeLockedTo && styles.disabledPicker]}>
             <Picker
               selectedValue={stage.component_type}
               onValueChange={(value) => handleStageChange(index, 'component_type', value)}
               style={styles.picker}
-              enabled={!isFirst && !isLast}
+              enabled={!typeLockedTo}
             >
-              {(isFirst ? [formData.sourceType] : isLast ? ['bin'] : componentTypes).map((type) => (
+              {(typeLockedTo ? [typeLockedTo] : middleTypes).map((type) => (
                 <Picker.Item key={type} label={type.charAt(0).toUpperCase() + type.slice(1)} value={type} />
               ))}
             </Picker>
@@ -342,7 +410,6 @@ export default function RouteConfigurationScreen({ navigation }) {
               style={styles.input}
               value={stage.interval_hours?.toString() || ''}
               onChangeText={(text) => {
-                // Allow empty string, digits, and decimal point
                 if (text === '' || /^\d*\.?\d*$/.test(text)) {
                   const value = text === '' ? null : text;
                   handleStageChange(index, 'interval_hours', value);
@@ -360,81 +427,100 @@ export default function RouteConfigurationScreen({ navigation }) {
     );
   };
 
-  const renderModalContent = () => (
-    <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Route Name *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.name}
-          onChangeText={(text) => setFormData({ ...formData, name: text })}
-          placeholder="Enter route name"
-        />
-      </View>
+  const renderModalContent = () => {
+    const roles = computeRoles(formData.stages);
+    const sourceCount = roles.filter((r) => r === 'source').length;
+    const destCount = roles.filter((r) => r === 'destination').length;
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
-          placeholder="Enter description"
-          multiline
-          numberOfLines={3}
-        />
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Source Type (First Stage) *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={formData.sourceType}
-            onValueChange={handleSourceTypeChange}
-            style={styles.picker}
-          >
-            <Picker.Item label="Godown" value="godown" />
-            <Picker.Item label="Bin" value="bin" />
-          </Picker>
+    return (
+      <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Route Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.name}
+            onChangeText={(text) => setFormData({ ...formData, name: text })}
+            placeholder="Enter route name"
+          />
         </View>
-        <Text style={styles.helperText}>
-          This will set the component type for Stage 1 and cannot be changed after selection
-        </Text>
-      </View>
 
-      <View style={styles.stagesSection}>
-        <View style={styles.stagesSectionHeader}>
-          <Text style={styles.sectionTitle}>Workflow Stages</Text>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.description}
+            onChangeText={(text) => setFormData({ ...formData, description: text })}
+            placeholder="Enter description"
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Source Type *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.sourceType}
+              onValueChange={handleSourceTypeChange}
+              style={styles.picker}
+            >
+              <Picker.Item label="Godown (Raw Wheat → 24h)" value="godown" />
+              <Picker.Item label="Bin (24h → 12h)" value="bin" />
+            </Picker>
+          </View>
+          <Text style={styles.helperText}>
+            All source rows below will use this type. Destinations are always bins.
+          </Text>
+        </View>
+
+        <View style={styles.stagesSection}>
+          <View style={styles.stagesSectionHeader}>
+            <Text style={styles.sectionTitle}>
+              Workflow Stages ({sourceCount} source{sourceCount !== 1 ? 's' : ''} → middle → {destCount} destination{destCount !== 1 ? 's' : ''})
+            </Text>
+          </View>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.smallButton, styles.sourceButton]} onPress={handleAddSource}>
+              <Text style={styles.smallButtonText}>+ Source</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallButton, styles.middleButton]} onPress={handleAddMiddle}>
+              <Text style={styles.smallButtonText}>+ Magnet/Machine</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallButton, styles.destButton]} onPress={handleAddDestination}>
+              <Text style={styles.smallButtonText}>+ Destination Bin</Text>
+            </TouchableOpacity>
+          </View>
+
+          {formData.stages.map((stage, index) => {
+            const role = roles[index];
+            const siblingCount =
+              role === 'source' ? sourceCount : role === 'destination' ? destCount : 1;
+            return renderStage(stage, index, role, siblingCount);
+          })}
+        </View>
+
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.addStageButton}
-            onPress={handleAddStage}
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => setModalVisible(false)}
+            disabled={loading}
           >
-            <Text style={styles.addStageText}>+ Add Stage</Text>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Saving...' : editMode ? 'Update' : 'Create'}
+            </Text>
           </TouchableOpacity>
         </View>
-
-        {formData.stages.map((stage, index) => renderStage(stage, index))}
-      </View>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
-          onPress={() => setModalVisible(false)}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Saving...' : editMode ? 'Update' : 'Create'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
+      </ScrollView>
+    );
+  };
 
   return (
     <Layout navigation={navigation} title="Route Configuration">
@@ -534,26 +620,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   stagesSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: colors.text,
   },
-  addStageButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 15,
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 15,
+  },
+  smallButton: {
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 5,
   },
-  addStageText: {
+  smallButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
+  },
+  sourceButton: {
+    backgroundColor: '#0d6efd',
+  },
+  middleButton: {
+    backgroundColor: '#28a745',
+  },
+  destButton: {
+    backgroundColor: '#fd7e14',
   },
   stageContainer: {
     backgroundColor: '#f8f9fa',
@@ -562,6 +659,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#dee2e6',
+    borderLeftWidth: 4,
+  },
+  stageSource: {
+    borderLeftColor: '#0d6efd',
+  },
+  stageMiddle: {
+    borderLeftColor: '#28a745',
+  },
+  stageDestination: {
+    borderLeftColor: '#fd7e14',
   },
   stageHeader: {
     flexDirection: 'row',

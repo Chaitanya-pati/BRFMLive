@@ -613,6 +613,9 @@ class MagnetCleaningRecordBase(ISTModel):
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
+    production_order_id: Optional[int] = None
+    source_bin_id: Optional[int] = None
+    destination_bin_id: Optional[int] = None
 
     @validator('cleaning_timestamp', pre=True)
     def _parse_cleaning_timestamp(cls, v):
@@ -626,6 +629,9 @@ class MagnetCleaningRecordUpdate(ISTModel):
     transfer_session_id: Optional[int] = None
     cleaning_timestamp: Optional[datetime] = None
     notes: Optional[str] = None
+    production_order_id: Optional[int] = None
+    source_bin_id: Optional[int] = None
+    destination_bin_id: Optional[int] = None
 
     @validator('cleaning_timestamp', pre=True)
     def _parse_cleaning_timestamp(cls, v):

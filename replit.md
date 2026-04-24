@@ -86,6 +86,17 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### April 24, 2026
+- **Magnet cleaning – production order & transfer-stage tracking**:
+  - Added 3 new nullable columns to `magnet_cleaning_records`: `production_order_id`, `source_bin_id`, `destination_bin_id` (with indexes). Safely added via startup `ALTER TABLE IF NOT EXISTS` migration so existing data is untouched.
+  - Updated `MagnetCleaningRecordBase` schema and the `POST /api/magnet-cleaning-records` endpoint to accept the three new optional fields. All existing callers continue to work since the fields are optional.
+  - 24h vs 12h transfer stage is **derived** at read/report time from the destination bin's role (no `transfer_type` enum, no polymorphic FK).
+- **Route Configuration – multi-source / multi-destination**:
+  - Same `route_stages` table; no schema change. Routes can now have multiple leading source rows (all of the same source type) and multiple trailing bin rows (destinations).
+  - New backend helper `split_route_stages(route)` derives sources / middle / destinations purely by sequence position + component type.
+  - New endpoint `GET /api/route-configurations/match?destination_bin_id=&source_godown_id=|source_bin_id=` — returns the matching route + the magnets between the source and destination (most recently created route wins on ties).
+  - `RouteConfigurationScreen.js` rewritten to support the new structure: separate **+ Source**, **+ Magnet/Machine**, **+ Destination Bin** buttons; coloured left border per role (blue / green / orange); per-row remove allowed when more than one of that role exists; source-type picker rewrites all source rows in place.
+
 ### April 20, 2026 (updated)
 - Added **"Return Journey Started"** step to **Driver View** (`DriverViewScreen.js`):
   - After all delivery stops are completed, driver first taps a green **"RETURN JOURNEY STARTED"** button, which records `return_journey_at` on the `dispatch_delivery_stops` table.

@@ -86,6 +86,12 @@ def run_column_migrations():
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS return_journey_at TIMESTAMP",
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_return_at TIMESTAMP",
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_return_km FLOAT",
+            "ALTER TABLE magnet_cleaning_records ADD COLUMN IF NOT EXISTS production_order_id INTEGER REFERENCES production_orders(id) ON DELETE SET NULL",
+            "ALTER TABLE magnet_cleaning_records ADD COLUMN IF NOT EXISTS source_bin_id INTEGER REFERENCES bins(id) ON DELETE SET NULL",
+            "ALTER TABLE magnet_cleaning_records ADD COLUMN IF NOT EXISTS destination_bin_id INTEGER REFERENCES bins(id) ON DELETE SET NULL",
+            "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_production_order_id ON magnet_cleaning_records(production_order_id)",
+            "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_source_bin_id ON magnet_cleaning_records(source_bin_id)",
+            "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_destination_bin_id ON magnet_cleaning_records(destination_bin_id)",
         ]
         for sql in migrations:
             try:
@@ -3299,6 +3305,118 @@ def delete_route_magnet_mapping(mapping_id: int,
             detail=f"Failed to delete route magnet mapping: {str(e)}")
 
 
+def split_route_stages(route):
+    """
+    Derives sources, middle stages, and destinations from a route's stages
+    based on position and type — no extra columns required.
+
+    - Sources = leading stages whose component_type matches the first stage's type
+    - Destinations = trailing stages of type 'bin' (after the sources)
+    - Middle = everything in between (typically magnets and machines)
+    """
+    stages = sorted(route.stages, key=lambda s: s.sequence_no)
+    if not stages:
+        return [], [], []
+
+    source_type = stages[0].component_type
+    sources = []
+    i = 0
+    while i < len(stages) and stages[i].component_type == source_type:
+        sources.append(stages[i])
+        i += 1
+
+    destinations = []
+    j = len(stages) - 1
+    # Destinations only exist after the source block
+    while j >= i and stages[j].component_type == 'bin':
+        destinations.insert(0, stages[j])
+        j -= 1
+
+    # If source_type is 'bin' and there's no middle separator,
+    # treat all leading stages as sources and require none as destinations
+    middle = stages[i:j + 1]
+
+    return sources, middle, destinations
+
+
+@app.get("/api/route-configurations/match")
+def match_route_configuration(
+        destination_bin_id: int,
+        source_godown_id: Optional[int] = None,
+        source_bin_id: Optional[int] = None,
+        db: Session = Depends(get_db),
+        branch_id: Optional[int] = Depends(get_branch_id)):
+    """
+    Find the route configuration that matches a transfer's source and destination.
+    Source can be either a godown (raw -> 24h) or a bin (24h -> 12h).
+    Returns the matching route plus the magnets between the two endpoints.
+    If multiple routes match, the most recently created one wins.
+    """
+    if source_godown_id is None and source_bin_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Either source_godown_id or source_bin_id is required")
+
+    query = db.query(models.RouteConfiguration)
+    if branch_id:
+        query = query.filter(
+            models.RouteConfiguration.branch_id == branch_id)
+    routes = query.order_by(
+        models.RouteConfiguration.created_at.desc()).all()
+
+    for route in routes:
+        sources, middle, destinations = split_route_stages(route)
+        if not sources or not destinations:
+            continue
+
+        src_match = False
+        if source_godown_id is not None:
+            src_match = any(
+                s.component_type == 'godown'
+                and s.component_id == source_godown_id for s in sources)
+        if not src_match and source_bin_id is not None:
+            src_match = any(
+                s.component_type == 'bin'
+                and s.component_id == source_bin_id for s in sources)
+        if not src_match:
+            continue
+
+        dest_match = any(
+            d.component_type == 'bin'
+            and d.component_id == destination_bin_id for d in destinations)
+        if not dest_match:
+            continue
+
+        magnets_out = []
+        for stage in middle:
+            if stage.component_type == 'magnet':
+                magnet = db.query(models.Magnet).filter(
+                    models.Magnet.id == stage.component_id).first()
+                if magnet:
+                    magnets_out.append({
+                        'id': magnet.id,
+                        'name': magnet.name,
+                        'interval_hours': stage.interval_hours,
+                        'sequence_no': stage.sequence_no,
+                    })
+
+        return {
+            'route_id': route.id,
+            'route_name': route.name,
+            'magnets': magnets_out,
+            'source_count': len(sources),
+            'destination_count': len(destinations),
+        }
+
+    return {
+        'route_id': None,
+        'route_name': None,
+        'magnets': [],
+        'source_count': 0,
+        'destination_count': 0,
+    }
+
+
 @app.post("/api/route-configurations",
           response_model=schemas.RouteConfiguration)
 def create_route_configuration(
@@ -3405,6 +3523,9 @@ async def create_magnet_cleaning_record(
         transfer_session_id: Optional[int] = Form(None),
         cleaning_timestamp: Optional[str] = Form(None),
         notes: Optional[str] = Form(None),
+        production_order_id: Optional[int] = Form(None),
+        source_bin_id: Optional[int] = Form(None),
+        destination_bin_id: Optional[int] = Form(None),
         before_cleaning_photo: Optional[UploadFile] = File(None),
         after_cleaning_photo: Optional[UploadFile] = File(None),
         db: Session = Depends(get_db)):
@@ -3431,6 +3552,9 @@ async def create_magnet_cleaning_record(
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
     print(f"   Transfer Session ID: {transfer_session_id}")
+    print(f"   Production Order ID: {production_order_id}")
+    print(f"   Source Bin ID: {source_bin_id}")
+    print(f"   Destination Bin ID: {destination_bin_id}")
     print(
         f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}"
     )
@@ -3440,7 +3564,10 @@ async def create_magnet_cleaning_record(
         magnet_id=magnet_id,
         transfer_session_id=transfer_session_id,
         cleaning_timestamp=utc_now,
-        notes=notes)
+        notes=notes,
+        production_order_id=production_order_id,
+        source_bin_id=source_bin_id,
+        destination_bin_id=destination_bin_id)
 
     if before_cleaning_photo and before_cleaning_photo.filename:
         db_record.before_cleaning_photo = await save_upload_file(

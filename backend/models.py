@@ -825,11 +825,17 @@ class MagnetCleaningRecord(Base):
     before_cleaning_photo = Column(String(500))
     after_cleaning_photo = Column(String(500))
     notes = Column(Text)
+    production_order_id = Column(Integer, ForeignKey("production_orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_bin_id = Column(Integer, ForeignKey("bins.id", ondelete="SET NULL"), nullable=True, index=True)
+    destination_bin_id = Column(Integer, ForeignKey("bins.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, default=ist_now)
     updated_at = Column(DateTime, default=ist_now, onupdate=ist_now)
 
     magnet = relationship("Magnet")
     transfer_session = relationship("TransferSession", back_populates="cleaning_records")
+    production_order = relationship("ProductionOrder", foreign_keys=[production_order_id])
+    source_bin = relationship("Bin", foreign_keys=[source_bin_id])
+    destination_bin = relationship("Bin", foreign_keys=[destination_bin_id])
 
 class WasteEntry(Base):
     __tablename__ = "waste_entries"
