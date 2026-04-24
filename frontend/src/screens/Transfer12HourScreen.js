@@ -15,6 +15,7 @@ import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
 import BinVisual from "../components/BinVisual";
 import Card from "../components/Card";
+import MagnetCleaningPanel from "../components/MagnetCleaningPanel";
 import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
@@ -766,11 +767,26 @@ export default function Transfer12HourScreen({ route, navigation }) {
         </Card>
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: '#ea4335', alignSelf: 'stretch', marginBottom: 30 }]}
+          style={[styles.actionButton, { backgroundColor: '#ea4335', alignSelf: 'stretch', marginBottom: 12 }]}
           onPress={initiateStop}
         >
           <Text style={styles.buttonText}>Stop Transfer</Text>
         </TouchableOpacity>
+
+        {sourceBinId && destBinId && (
+          <View style={{ marginBottom: 30 }}>
+            <MagnetCleaningPanel
+              productionOrderId={
+                activeTransferRecord?.production_order_id || selectedOrder?.id
+              }
+              sourceBinId={sourceBinId}
+              destinationBinId={destBinId}
+              sourceName={sourceBinName}
+              destName={destBinName}
+              runningTime={formatTimer(timer)}
+            />
+          </View>
+        )}
 
         <Modal visible={showDataModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>

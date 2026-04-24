@@ -12,6 +12,7 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import BinVisual from "../components/BinVisual";
+import MagnetCleaningPanel from "../components/MagnetCleaningPanel";
 import colors from "../theme/colors";
 import { getApiClient, productionLabTestApi } from "../api/client";
 import { showSuccess, showError } from "../utils/customAlerts";
@@ -424,6 +425,21 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   >
                     <Text style={styles.actionBtnText}>✓ Complete Transfer</Text>
                   </TouchableOpacity>
+
+                  <MagnetCleaningPanel
+                    productionOrderId={order.id}
+                    sourceBinId={sourceBins[0]?.bin_id || null}
+                    destinationBinId={t.destination_bin_id}
+                    sourceName={
+                      sourceBins[0]?.bin_number ||
+                      sourceBins[0]?.bin?.bin_number ||
+                      (sourceBins[0]?.bin_id
+                        ? `Bin #${sourceBins[0].bin_id}`
+                        : "Source")
+                    }
+                    destName={transferBinName(t)}
+                    runningTime={t.transfer_start_time ? "in progress" : ""}
+                  />
                 </Card>
               ))}
             </Section>
