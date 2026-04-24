@@ -276,7 +276,6 @@ const menuItems = [
       section: "Operations",
       isHeader: true,
       subItems: [
-        { name: "Godown Management", route: "FinishedGoodsManagement", icon: SvgWarehouseIcon },
         { name: "Stock Tracking", route: "GodownStockView", icon: SvgDatabaseIcon },
       ]
     },
@@ -308,24 +307,6 @@ const menuItems = [
         { name: "Unloading Entry", route: "UnloadingEntry", icon: SvgPackageIcon },
         { name: "Lab Testing", route: "LabTest", icon: SvgClipboardIcon },
         { name: "Claim Tracking", route: "ClaimTracking", icon: SvgFileTextIcon },
-        { name: "Master View", route: "MasterView", icon: SvgDatabaseIcon },
-      ]
-    },
-
-    // Admin Section
-    {
-      name: "Admin Panel",
-      icon: SvgUserShieldIcon,
-      section: "Administration",
-      isAdminOnly: true,
-      isHeader: true,
-      subItems: [
-        { name: "User Management", route: "UserManagement", icon: SvgUserShieldIcon },
-        { name: "Branch Master", route: "BranchMaster", icon: SvgUserCogIcon },
-        { name: "Branch Selection", route: "BranchSelection", icon: SvgUserCogIcon },
-        { name: "Granulation Setup", route: "AdminDashboard", icon: SvgCogIcon },
-        { name: "Route Config", route: "RouteConfiguration", icon: SvgRouteIcon },
-        { name: "Machine Management", route: "MachineManagement", icon: SvgCogIcon },
       ]
     },
 

@@ -2,6 +2,7 @@ import React from "react";
 import TabbedMasterShell from "./TabbedMasterShell";
 import SupplierMasterScreen from "../SupplierMasterScreen";
 import MasterViewScreen from "../MasterViewScreen";
+import RouteConfigurationScreen from "../RouteConfigurationScreen";
 
 const fakeRoute = (params = {}) => ({ params });
 
@@ -39,6 +40,11 @@ export default function RawWheatMastersScreen({ navigation }) {
       render: (nav) => (
         <MasterViewScreen navigation={nav} route={fakeRoute({ initialTab: "bins", lockTab: true })} />
       ),
+    },
+    {
+      key: "route_config",
+      label: "Route Config",
+      render: (nav) => <RouteConfigurationScreen navigation={nav} route={fakeRoute()} />,
     },
   ];
 
