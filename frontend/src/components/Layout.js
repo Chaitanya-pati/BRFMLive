@@ -572,6 +572,20 @@ const menuItems = [
               .filter(item => item.section === "Home")
               .map((item, index) => renderMenuItem(item, index))}
 
+            {/* Masters Section Divider */}
+            {(!sidebarCollapsed || mobileMenuOpen) && (
+              <View style={styles.sectionDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.sectionLabel}>MASTERS</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            )}
+
+            {menuItems
+              .filter(item => item.section === "Masters")
+              .filter(item => !item.isAdminOnly || userRole === 'admin')
+              .map((item, index) => renderMenuItem(item, `masters-${index}`))}
+
             {/* Section Divider for Operations, only show if sidebar is not collapsed or menu is open */}
             {(!sidebarCollapsed || mobileMenuOpen) && (
               <View style={styles.sectionDivider}>
