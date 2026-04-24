@@ -68,16 +68,17 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
 
       <View style={styles.mobileCardContent}>
         {columns.slice(1, 5).map((col, colIndex) => {
+          const accessor = col.field || col.key;
           let cellContent = '-';
           try {
             if (col.render) {
-              cellContent = col.render(row[col.field || col.key], row);
-            } else if (col.type === 'datetime' && row[col.key]) {
-              cellContent = formatISTDateTime(row[col.key]);
-            } else if (col.type === 'date' && row[col.key]) {
-              cellContent = formatISTDate(row[col.key]);
-            } else if (row[col.key] !== undefined && row[col.key] !== null) {
-              cellContent = row[col.key];
+              cellContent = col.render(row[accessor], row);
+            } else if (col.type === 'datetime' && row[accessor]) {
+              cellContent = formatISTDateTime(row[accessor]);
+            } else if (col.type === 'date' && row[accessor]) {
+              cellContent = formatISTDate(row[accessor]);
+            } else if (row[accessor] !== undefined && row[accessor] !== null) {
+              cellContent = row[accessor];
             }
           } catch (error) {
             console.error('Error rendering mobile cell:', error);
@@ -169,16 +170,17 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
           filteredData.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.tableRow}>
               {columns.map((col, colIndex) => {
+                const accessor = col.field || col.key;
                 let cellContent = '-';
                 try {
                   if (col.render) {
-                    cellContent = col.render(row[col.field || col.key], row);
-                  } else if (col.type === 'datetime' && row[col.key]) {
-                    cellContent = formatISTDateTime(row[col.key]);
-                  } else if (col.type === 'date' && row[col.key]) {
-                    cellContent = formatISTDate(row[col.key]);
-                  } else if (row[col.key] !== undefined && row[col.key] !== null) {
-                    cellContent = row[col.key];
+                    cellContent = col.render(row[accessor], row);
+                  } else if (col.type === 'datetime' && row[accessor]) {
+                    cellContent = formatISTDateTime(row[accessor]);
+                  } else if (col.type === 'date' && row[accessor]) {
+                    cellContent = formatISTDate(row[accessor]);
+                  } else if (row[accessor] !== undefined && row[accessor] !== null) {
+                    cellContent = row[accessor];
                   }
                 } catch (error) {
                   console.error('Error rendering cell:', error);

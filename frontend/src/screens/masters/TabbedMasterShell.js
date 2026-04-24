@@ -16,7 +16,7 @@ export default function TabbedMasterShell({ navigation, title, tabs, initialKey 
           activeKey={activeKey}
           onChange={setActiveKey}
         />
-        <View style={styles.tabContent}>
+        <View style={styles.tabContent} key={activeKey}>
           <EmbeddedContext.Provider value={true}>
             {active && active.render(navigation)}
           </EmbeddedContext.Provider>
