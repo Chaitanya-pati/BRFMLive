@@ -41,8 +41,10 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
   }
 }
 
-export default function MasterViewScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState("supplier");
+export default function MasterViewScreen({ navigation, route }) {
+  const initialTab = route?.params?.initialTab || "supplier";
+  const lockTab = !!route?.params?.lockTab;
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [godowns, setGodowns] = useState([]);
   const [godownTypes, setGodownTypes] = useState([]); // State to store godown types
   const [suppliers, setSuppliers] = useState([]);
@@ -799,7 +801,7 @@ export default function MasterViewScreen({ navigation }) {
     );
   };
 
-  const tabs = [
+  const allTabs = [
     { key: "godown", label: "Godown Master" },
     { key: "silo", label: "Silo Master" },
     { key: "supplier", label: "Supplier Master" },
@@ -807,6 +809,7 @@ export default function MasterViewScreen({ navigation }) {
     { key: "magnets", label: "Magnets" },
     { key: "machines", label: "Machines" },
   ];
+  const tabs = lockTab ? allTabs.filter((t) => t.key === activeTab) : allTabs;
 
   const handleScroll = (event) => {
     if (!tabScrollRef.current) return;

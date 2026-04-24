@@ -53,6 +53,10 @@ import LiveAddScreen from './src/screens/LiveAddScreen';
 import TripSheetScreen from './src/screens/TripSheetScreen';
 import TripSheetPrintScreen from './src/screens/TripSheetPrintScreen';
 import DriverViewScreen from './src/screens/DriverViewScreen';
+import RawWheatMastersScreen from './src/screens/masters/RawWheatMastersScreen';
+import ProductionMastersScreen from './src/screens/masters/ProductionMastersScreen';
+import LogisticsMastersScreen from './src/screens/masters/LogisticsMastersScreen';
+import AdminMastersScreen from './src/screens/masters/AdminMastersScreen';
 import colors from './src/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -183,6 +187,10 @@ export default function App() {
           <Stack.Screen name="TripSheet" component={TripSheetScreen} />
           <Stack.Screen name="TripSheetPrint" component={TripSheetPrintScreen} />
           <Stack.Screen name="DriverView" component={DriverViewScreen} />
+          <Stack.Screen name="MastersRawWheat" component={RawWheatMastersScreen} />
+          <Stack.Screen name="MastersProduction" component={ProductionMastersScreen} />
+          <Stack.Screen name="MastersLogistics" component={LogisticsMastersScreen} />
+          <Stack.Screen name="MastersAdmin" component={AdminMastersScreen} />
         </Stack.Navigator>
           </BranchProvider>
         )}

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useBranch } from "../context/BranchContext";
+import { useEmbedded } from "../contexts/EmbeddedContext";
 import { storage } from "../utils/storage";
 import {
   FaHome,
@@ -185,6 +186,10 @@ const SvgLiveIcon = ({ active }) => {
 };
 
 export default function Layout({ children, title, currentRoute }) {
+  const embedded = useEmbedded();
+  if (embedded) {
+    return <View style={{ flex: 1 }}>{children}</View>;
+  }
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -230,21 +235,17 @@ const menuItems = [
     { name: "Dashboard", route: "Home", icon: SvgHomeIcon, section: "Home" },
     { name: "Live", route: "LiveAdd", icon: SvgLiveIcon, section: "Home" },
 
-    // Masters Section
+    // Masters Section (consolidated)
     {
       name: "Masters",
       icon: SvgDatabaseIcon,
       section: "Masters",
       isHeader: true,
       subItems: [
-        { name: "Master View", route: "MasterView", icon: SvgDatabaseIcon },
-        { name: "Product Master", route: "ProductMaster", icon: SvgTagIcon },
-        { name: "Supplier Master", route: "SupplierMaster", icon: SvgUserCogIcon },
-        { name: "Customer Master", route: "CustomerMaster", icon: SvgUserCogIcon },
-        { name: "Driver Master", route: "DriverMaster", icon: SvgUserCogIcon },
-        { name: "Truck Master", route: "TruckMaster", icon: SvgUserCogIcon },
-        { name: "Raw Product Master", route: "RawProductMaster", icon: SvgTagIcon },
-        { name: "Finished Goods Master", route: "FinishedGoodsMaster", icon: SvgTagIcon },
+        { name: "Raw Wheat Master", route: "MastersRawWheat", icon: SvgDatabaseIcon },
+        { name: "Production Master", route: "MastersProduction", icon: SvgTagIcon },
+        { name: "Logistics & Dispatch", route: "MastersLogistics", icon: SvgTruckIcon },
+        { name: "Admin Master", route: "MastersAdmin", icon: SvgUserShieldIcon },
       ]
     },
 
