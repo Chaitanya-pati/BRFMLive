@@ -117,39 +117,24 @@ export default function RawProductMasterScreen({ navigation }) {
   };
 
   const columns = [
-    { key: 'product_name', title: 'Product Name', width: 200 },
-    { key: 'product_initial', title: 'Initial', width: 100 },
-    { key: 'created_at', title: 'Created', width: 150, render: (val) => formatISTDate(val) },
+    { key: 'product_name', label: 'Product Name', flex: 2 },
+    { key: 'product_initial', label: 'Short Code', flex: 1 },
+    { key: 'created_at', label: 'Created', flex: 1.5, render: (val) => formatISTDate(val) },
   ];
-
-  const renderActions = (item) => (
-    <View style={styles.actionButtons}>
-      <TouchableOpacity style={styles.editButton} onPress={() => openEditModal(item)}>
-        <Text style={styles.buttonText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
-        <Text style={styles.buttonText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   return (
     <Layout title="Production Order Products" navigation={navigation}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Production Order Products</Text>
-          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-            <Text style={styles.addButtonText}>+ Add Production Order Product</Text>
-          </TouchableOpacity>
-        </View>
-
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <DataTable
             columns={columns}
             data={products}
-            renderActions={renderActions}
+            onAdd={openAddModal}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            searchPlaceholder="Search products..."
           />
         )}
 
@@ -199,48 +184,6 @@ export default function RawProductMasterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    backgroundColor: colors.info,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  deleteButton: {
-    backgroundColor: colors.danger,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 12,
   },
   form: {
     padding: 20,

@@ -18,7 +18,7 @@ export default function SiloMasterView() {
   const [formData, setFormData] = useState({
     bin_no: "",
     silo_name: "",
-    capacity_kg: "",
+    capacity_tons: "",
     current_stock_kg: "0",
     current_moisture_percent: "",
     status: "Active",
@@ -44,15 +44,18 @@ export default function SiloMasterView() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.bin_no || !formData.silo_name || !formData.capacity_kg) {
+    if (!formData.bin_no || !formData.silo_name || !formData.capacity_tons) {
       Alert.alert("Error", "Please fill required fields");
       return;
     }
 
     try {
       const payload = {
-        ...formData,
-        capacity_kg: parseFloat(formData.capacity_kg),
+        bin_no: formData.bin_no,
+        silo_name: formData.silo_name,
+        status: formData.status,
+        remarks: formData.remarks,
+        capacity_kg: parseFloat(formData.capacity_tons) * 1000,
         current_stock_kg: parseFloat(formData.current_stock_kg) || 0,
         current_moisture_percent: formData.current_moisture_percent ? parseFloat(formData.current_moisture_percent) : null,
       };
@@ -96,8 +99,8 @@ export default function SiloMasterView() {
   const columns = [
     { key: "bin_no", label: "Bin No", flex: 1 },
     { key: "silo_name", label: "Silo Name", flex: 1.5 },
-    { key: "capacity_kg", label: "Capacity (kg)", flex: 1 },
-    { key: "current_stock_kg", label: "Current Stock (kg)", flex: 1.2 },
+    { key: "capacity_kg", label: "Capacity (Tons)", flex: 1, render: (v) => v != null ? (v / 1000).toFixed(2) + " T" : "-" },
+    { key: "current_stock_kg", label: "Current Stock (Tons)", flex: 1.2, render: (v) => v != null ? (v / 1000).toFixed(2) + " T" : "-" },
     { key: "status", label: "Status", flex: 0.8 },
   ];
 
@@ -112,7 +115,7 @@ export default function SiloMasterView() {
             setFormData({
               bin_no: "",
               silo_name: "",
-              capacity_kg: "",
+              capacity_tons: "",
               current_stock_kg: "0",
               current_moisture_percent: "",
               status: "Active",
@@ -136,7 +139,7 @@ export default function SiloMasterView() {
             setFormData({
               bin_no: item.bin_no,
               silo_name: item.silo_name,
-              capacity_kg: item.capacity_kg.toString(),
+              capacity_tons: item.capacity_kg != null ? (item.capacity_kg / 1000).toString() : "",
               current_stock_kg: item.current_stock_kg.toString(),
               current_moisture_percent: item.current_moisture_percent ? item.current_moisture_percent.toString() : "",
               status: item.status,
@@ -165,9 +168,9 @@ export default function SiloMasterView() {
             onChangeText={(text) => setFormData({ ...formData, silo_name: text })}
           />
           <InputField
-            label="Capacity (kg) *"
-            value={formData.capacity_kg}
-            onChangeText={(text) => setFormData({ ...formData, capacity_kg: text })}
+            label="Capacity (Tons) *"
+            value={formData.capacity_tons}
+            onChangeText={(text) => setFormData({ ...formData, capacity_tons: text })}
             keyboardType="numeric"
           />
           <InputField
