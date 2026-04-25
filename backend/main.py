@@ -2611,6 +2611,26 @@ def get_granulation_templates(fg_id: Optional[int] = None, db: Session = Depends
         query = query.filter(models.FinishedGoodGranulationTemplate.finished_good_id == fg_id)
     return query.all()
 
+@app.put("/api/granulation-templates/{template_id}", response_model=schemas.GranulationTemplate)
+def update_granulation_template(template_id: int, template: schemas.GranulationTemplateCreate, db: Session = Depends(get_db)):
+    db_template = db.query(models.FinishedGoodGranulationTemplate).filter(models.FinishedGoodGranulationTemplate.id == template_id).first()
+    if not db_template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    for key, value in template.dict(exclude_unset=True).items():
+        setattr(db_template, key, value)
+    db.commit()
+    db.refresh(db_template)
+    return db_template
+
+@app.delete("/api/granulation-templates/{template_id}")
+def delete_granulation_template(template_id: int, db: Session = Depends(get_db)):
+    db_template = db.query(models.FinishedGoodGranulationTemplate).filter(models.FinishedGoodGranulationTemplate.id == template_id).first()
+    if not db_template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    db.delete(db_template)
+    db.commit()
+    return {"message": "Template deleted"}
+
 @app.post("/api/production-granulation", response_model=schemas.GranulationResult)
 def create_production_granulation(result: schemas.GranulationResultCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     data = result.dict()
