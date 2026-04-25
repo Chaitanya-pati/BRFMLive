@@ -23,7 +23,7 @@ export default function ProductMasterScreen({ navigation }) {
             style={[styles.tab, activeTab === "raw" && styles.activeTab]} 
             onPress={() => setActiveTab("raw")}
           >
-            <Text style={[styles.tabText, activeTab === "raw" && styles.activeTabText]}>Raw Products</Text>
+            <Text style={[styles.tabText, activeTab === "raw" && styles.activeTabText]}>Production Order Products</Text>
           </TouchableOpacity>
         </View>
 

@@ -13,7 +13,7 @@ export default function ProductionMastersScreen({ navigation }) {
   const tabs = [
     {
       key: "raw_products",
-      label: "Raw Products",
+      label: "Production Order Products",
       render: (nav) => <RawProductMasterScreen navigation={nav} route={fakeRoute()} />,
     },
     {

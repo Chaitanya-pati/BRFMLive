@@ -87,10 +87,10 @@ export default function RawProductMasterScreen({ navigation }) {
 
       if (editMode && currentProduct) {
         await rawProductApi.update(currentProduct.id, payload);
-        await showSuccess('Raw product updated successfully');
+        await showSuccess('Production order product updated successfully');
       } else {
         await rawProductApi.create(payload);
-        await showSuccess('Raw product created successfully');
+        await showSuccess('Production order product created successfully');
       }
 
       setModalVisible(false);
@@ -100,18 +100,18 @@ export default function RawProductMasterScreen({ navigation }) {
 
   const handleDelete = async (product) => {
     const confirmed = await showConfirm(
-      'Delete Raw Product',
+      'Delete Production Order Product',
       `Are you sure you want to delete "${product.product_name}"?`
     );
 
     if (confirmed) {
       try {
         await rawProductApi.delete(product.id);
-        await showSuccess('Raw product deleted successfully');
+        await showSuccess('Production order product deleted successfully');
         loadProducts();
       } catch (error) {
-        console.error('Error deleting raw product:', error);
-        showError('Failed to delete raw product');
+        console.error('Error deleting production order product:', error);
+        showError('Failed to delete production order product');
       }
     }
   };
@@ -134,12 +134,12 @@ export default function RawProductMasterScreen({ navigation }) {
   );
 
   return (
-    <Layout title="Raw Products Master" navigation={navigation}>
+    <Layout title="Production Order Products" navigation={navigation}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Raw Products</Text>
+          <Text style={styles.title}>Production Order Products</Text>
           <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-            <Text style={styles.addButtonText}>+ Add Raw Product</Text>
+            <Text style={styles.addButtonText}>+ Add Production Order Product</Text>
           </TouchableOpacity>
         </View>
 
@@ -156,7 +156,7 @@ export default function RawProductMasterScreen({ navigation }) {
         <Modal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          title={editMode ? 'Edit Raw Product' : 'Add Raw Product'}
+          title={editMode ? 'Edit Production Order Product' : 'Add Production Order Product'}
         >
           <View style={styles.form}>
             <Text style={styles.label}>Product Name *</Text>

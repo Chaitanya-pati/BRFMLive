@@ -357,8 +357,8 @@ export default function ProductionOrderScreen({ navigation }) {
               />
             )}
 
-            {/* 2. Raw Product */}
-            <Text style={styles.label}>Raw Product *</Text>
+            {/* 2. Production Order Product */}
+            <Text style={styles.label}>Production Order Product *</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={formData.raw_product_id}

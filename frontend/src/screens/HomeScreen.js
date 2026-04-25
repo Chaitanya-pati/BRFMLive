@@ -258,7 +258,7 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
-      title: "Raw Products",
+      title: "Production Order Products",
       route: "RawProductMaster",
       icon: "tasks",
       color: "#84cc16",
