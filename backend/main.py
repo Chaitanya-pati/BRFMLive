@@ -92,6 +92,7 @@ def run_column_migrations():
             "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_production_order_id ON magnet_cleaning_records(production_order_id)",
             "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_source_bin_id ON magnet_cleaning_records(source_bin_id)",
             "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_destination_bin_id ON magnet_cleaning_records(destination_bin_id)",
+            "ALTER TABLE waste_entries ALTER COLUMN transfer_session_id DROP NOT NULL",
         ]
         for sql in migrations:
             try:
@@ -5608,6 +5609,107 @@ def get_live_production_detail(po_id: int, db: Session = Depends(get_db)):
         ],
         "production_summary": grouped_summary,
     }
+
+
+VALID_WASTE_TYPES = {"Separator", "Magnets Machine", "Drum Sieve"}
+
+
+@app.get("/api/waste-entries", response_model=List[schemas.WasteEntryRead])
+def get_waste_entries(
+    branch_id: Optional[int] = Depends(get_branch_id),
+    db: Session = Depends(get_db)
+):
+    entries = db.query(models.WasteEntry).order_by(
+        models.WasteEntry.created_at.desc()
+    ).all()
+    result = []
+    for e in entries:
+        godown = db.query(models.GodownMaster).filter(
+            models.GodownMaster.id == e.godown_id
+        ).first()
+        result.append(schemas.WasteEntryRead(
+            id=e.id,
+            godown_id=e.godown_id,
+            godown_name=godown.name if godown else None,
+            waste_weight=e.waste_weight,
+            waste_type=e.waste_type,
+            notes=e.notes,
+            recorded_timestamp=e.recorded_timestamp,
+            created_at=e.created_at,
+        ))
+    return result
+
+
+@app.post("/api/waste-entries", response_model=schemas.WasteEntryRead)
+def create_waste_entry(
+    data: schemas.WasteEntryCreate,
+    branch_id: Optional[int] = Depends(get_branch_id),
+    db: Session = Depends(get_db)
+):
+    if data.waste_type not in VALID_WASTE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid waste_type. Must be one of: {', '.join(VALID_WASTE_TYPES)}"
+        )
+
+    godown = db.query(models.GodownMaster).filter(
+        models.GodownMaster.id == data.godown_id
+    ).first()
+    if not godown:
+        raise HTTPException(status_code=404, detail="Godown not found")
+
+    if (godown.current_storage or 0) < data.waste_weight:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Waste weight ({data.waste_weight} kg) exceeds godown current stock ({godown.current_storage or 0} kg)"
+        )
+
+    entry = models.WasteEntry(
+        godown_id=data.godown_id,
+        waste_weight=data.waste_weight,
+        waste_type=data.waste_type,
+        notes=data.notes,
+        transfer_session_id=None,
+    )
+    db.add(entry)
+
+    godown.current_storage = max(0.0, (godown.current_storage or 0.0) - data.waste_weight)
+
+    db.commit()
+    db.refresh(entry)
+
+    return schemas.WasteEntryRead(
+        id=entry.id,
+        godown_id=entry.godown_id,
+        godown_name=godown.name,
+        waste_weight=entry.waste_weight,
+        waste_type=entry.waste_type,
+        notes=entry.notes,
+        recorded_timestamp=entry.recorded_timestamp,
+        created_at=entry.created_at,
+    )
+
+
+@app.delete("/api/waste-entries/{entry_id}")
+def delete_waste_entry(
+    entry_id: int,
+    db: Session = Depends(get_db)
+):
+    entry = db.query(models.WasteEntry).filter(
+        models.WasteEntry.id == entry_id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Waste entry not found")
+
+    godown = db.query(models.GodownMaster).filter(
+        models.GodownMaster.id == entry.godown_id
+    ).first()
+    if godown:
+        godown.current_storage = (godown.current_storage or 0.0) + entry.waste_weight
+
+    db.delete(entry)
+    db.commit()
+    return {"message": "Waste entry deleted and stock restored", "id": entry_id}
 
 
 if __name__ == "__main__":

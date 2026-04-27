@@ -649,7 +649,7 @@ class MagnetCleaningRecordWithDetails(MagnetCleaningRecord):
     transfer_session: Optional[TransferSession] = None
 
 class WasteEntryBase(ISTModel):
-    transfer_session_id: int
+    transfer_session_id: Optional[int] = None
     godown_id: int
     waste_weight: float
     waste_type: Optional[str] = None
@@ -661,8 +661,11 @@ class WasteEntryBase(ISTModel):
     def _parse_recorded_timestamp(cls, v):
         return parse_datetime(v)
 
-class WasteEntryCreate(WasteEntryBase):
-    pass
+class WasteEntryCreate(ISTModel):
+    godown_id: int
+    waste_weight: float
+    waste_type: str
+    notes: Optional[str] = None
 
 class WasteEntryUpdate(ISTModel):
     waste_weight: Optional[float] = None
@@ -675,8 +678,18 @@ class WasteEntry(WasteEntryBase):
     created_at: datetime
     updated_at: datetime
 
+class WasteEntryRead(ISTModel):
+    id: int
+    godown_id: int
+    godown_name: Optional[str] = None
+    waste_weight: float
+    waste_type: Optional[str] = None
+    notes: Optional[str] = None
+    recorded_timestamp: Optional[datetime] = None
+    created_at: datetime
+
 class WasteEntryWithDetails(WasteEntry):
-    transfer_session: TransferSession
+    transfer_session: Optional[TransferSession] = None
     godown: GodownMaster
 
 class BranchBase(ISTModel):

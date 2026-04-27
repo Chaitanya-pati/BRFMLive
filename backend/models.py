@@ -841,7 +841,7 @@ class WasteEntry(Base):
     __tablename__ = "waste_entries"
 
     id = Column(Integer, primary_key=True, index=True)
-    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id"), nullable=False, index=True)
+    transfer_session_id = Column(Integer, ForeignKey("transfer_sessions.id"), nullable=True, index=True)
     godown_id = Column(Integer, ForeignKey("godown_master.id"), nullable=False)
     waste_weight = Column(Float, nullable=False)
     waste_type = Column(String(100))

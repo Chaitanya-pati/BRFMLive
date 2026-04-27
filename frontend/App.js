@@ -20,6 +20,7 @@ import CustomerOrderMasterScreen from './src/screens/CustomerOrderMasterScreen';
 import ClaimTrackingScreen from './src/screens/ClaimTrackingScreen';
 import MasterViewScreen from './src/screens/MasterViewScreen';
 import UnloadingEntryScreen from './src/screens/UnloadingEntryScreen';
+import WasteEntryScreen from './src/screens/WasteEntryScreen';
 import PrecleaningBinScreen from './src/screens/PrecleaningBinScreen';
 import BranchMasterScreen from './src/screens/BranchMasterScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
@@ -157,6 +158,7 @@ export default function App() {
           <Stack.Screen name="ClaimTracking" component={ClaimTrackingScreen} />
           <Stack.Screen name="MasterView" component={MasterViewScreen} />
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
+          <Stack.Screen name="WasteEntry" component={WasteEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
           <Stack.Screen name="DailyReport" component={DailyReportScreen} />
           <Stack.Screen name="PrecleaningTimeline" component={PrecleaningTimelineScreen} />

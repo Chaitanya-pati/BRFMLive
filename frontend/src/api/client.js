@@ -186,6 +186,12 @@ export const godownApi = {
   getTypes: () => api.get("/godown-types"),
 };
 
+export const wasteApi = {
+  getAll: () => api.get("/waste-entries"),
+  create: (data) => api.post("/waste-entries", data),
+  delete: (id) => api.delete(`/waste-entries/${id}`),
+};
+
 export const unloadingApi = {
   getAll: () => {
     const branchId = localStorage.getItem("selectedBranchId");

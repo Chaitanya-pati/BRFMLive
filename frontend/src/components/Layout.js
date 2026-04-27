@@ -306,6 +306,7 @@ const menuItems = [
         { name: "Vehicle Entry", route: "VehicleEntry", icon: SvgTruckIcon },
         { name: "Unloading Entry", route: "UnloadingEntry", icon: SvgPackageIcon },
         { name: "Lab Testing", route: "LabTest", icon: SvgClipboardIcon },
+        { name: "Waste Collection", route: "WasteEntry", icon: SvgCogIcon },
         { name: "Claim Tracking", route: "ClaimTracking", icon: SvgFileTextIcon },
       ]
     },
