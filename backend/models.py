@@ -384,6 +384,7 @@ class HourlyProduction(Base):
     production_order = relationship("ProductionOrder")
     details = relationship("HourlyProductionDetail", back_populates="hourly_production")
     silo_details = relationship("HourlyProductionSilo", back_populates="hourly_production")
+    bran_details = relationship("HourlyProductionBran", back_populates="hourly_production")
 
 class HourlyProductionDetail(Base):
     __tablename__ = "hourly_production_details"
@@ -410,6 +411,20 @@ class HourlyProductionSilo(Base):
     hourly_production = relationship("HourlyProduction", back_populates="silo_details")
     finished_good = relationship("FinishedGood")
     silo = relationship("SiloMaster")
+
+class HourlyProductionBran(Base):
+    __tablename__ = "hourly_production_bran"
+    id = Column(Integer, primary_key=True, index=True)
+    hourly_production_id = Column(Integer, ForeignKey("hourly_productions.id"), nullable=False)
+    finished_good_id = Column(Integer, ForeignKey("finished_goods.id"), nullable=False)
+    default_kg = Column(Float, default=0)
+    with_refraction_kg = Column(Float, default=0)
+    without_refraction_kg = Column(Float, default=0)
+    moisture_percent = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=ist_now)
+
+    hourly_production = relationship("HourlyProduction", back_populates="bran_details")
+    finished_good = relationship("FinishedGood")
 
 class ClaimStatus(str, enum.Enum):
     OPEN = "Open"

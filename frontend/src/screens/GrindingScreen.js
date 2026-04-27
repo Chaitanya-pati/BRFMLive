@@ -493,9 +493,26 @@ export default function GrindingScreen({ route, navigation }) {
               moisture_percent: parseFloat(s.moisture_percent) || null,
             }));
 
+          const validBranDetails = (row.branDetails || [])
+            .filter(
+              (b) =>
+                b.finished_good_id &&
+                ((parseFloat(b.default_kg) || 0) > 0 ||
+                  (parseFloat(b.with_refraction_kg) || 0) > 0 ||
+                  (parseFloat(b.without_refraction_kg) || 0) > 0),
+            )
+            .map((b) => ({
+              finished_good_id: parseInt(b.finished_good_id),
+              default_kg: parseFloat(b.default_kg) || 0,
+              with_refraction_kg: parseFloat(b.with_refraction_kg) || 0,
+              without_refraction_kg: parseFloat(b.without_refraction_kg) || 0,
+              moisture_percent: parseFloat(b.moisture_percent) || null,
+            }));
+
           if (
             validDetails.length === 0 &&
             validSiloDetails.length === 0 &&
+            validBranDetails.length === 0 &&
             reprocessQty === 0
           )
             continue;
@@ -509,6 +526,7 @@ export default function GrindingScreen({ route, navigation }) {
             reprocess: reprocessQty,
             details: validDetails,
             silo_details: validSiloDetails,
+            bran_details: validBranDetails,
           });
         }
       }
@@ -584,6 +602,9 @@ export default function GrindingScreen({ route, navigation }) {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [productBagSizeMap, setProductBagSizeMap] = useState({});
   const [selectedSiloIds, setSelectedSiloIds] = useState([]);
+  const [selectedBranProductIds, setSelectedBranProductIds] = useState([]);
+  const isBranProduct = (fg) =>
+    !!fg?.product_name && fg.product_name.toLowerCase().includes("bran");
   const [productionDate, setProductionDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -670,6 +691,7 @@ export default function GrindingScreen({ route, navigation }) {
           loadPerHour: row.load_per_hour_tons?.toString() || "",
           productionDetails: row.details || [],
           siloDetails: row.silo_details || [],
+          branDetails: row.bran_details || [],
           isSubmitted: true,
         }));
         formattedRows.push({
@@ -746,11 +768,12 @@ export default function GrindingScreen({ route, navigation }) {
           const templateKey = `grinding_template_${bin.production_order_id}`;
           const savedTemplate = await AsyncStorage.getItem(templateKey);
           if (savedTemplate) {
-            const { productIds, bagSizeMap, siloIds } =
+            const { productIds, bagSizeMap, siloIds, branProductIds } =
               JSON.parse(savedTemplate);
             setSelectedProductIds(productIds || []);
             setProductBagSizeMap(bagSizeMap || {});
             setSelectedSiloIds(siloIds || []);
+            setSelectedBranProductIds(branProductIds || []);
           }
         } catch (e) {
           console.log("Template load skipped:", e.message);
@@ -822,10 +845,12 @@ export default function GrindingScreen({ route, navigation }) {
       const templateKey = `grinding_template_${bin.production_order_id}`;
       const savedTemplate = await AsyncStorage.getItem(templateKey);
       if (savedTemplate) {
-        const { productIds, bagSizeMap, siloIds } = JSON.parse(savedTemplate);
+        const { productIds, bagSizeMap, siloIds, branProductIds } =
+          JSON.parse(savedTemplate);
         setSelectedProductIds(productIds || []);
         setProductBagSizeMap(bagSizeMap || {});
         setSelectedSiloIds(siloIds || []);
+        setSelectedBranProductIds(branProductIds || []);
       }
     } catch (e) {
       console.error("Failed to load template", e);
@@ -884,10 +909,36 @@ export default function GrindingScreen({ route, navigation }) {
     isSilo = false,
     siloId = null,
     field = "quantity_kg",
+    isBran = false,
+    branField = "default_kg",
   ) => {
     setProductionRows((prev) =>
       prev.map((row) => {
         if (row.id !== rowId) return row;
+        if (isBran) {
+          const newBranDetails = [...(row.branDetails || [])];
+          const index = newBranDetails.findIndex(
+            (d) => d.finished_good_id === fgId,
+          );
+          if (index > -1) {
+            newBranDetails[index] = {
+              ...newBranDetails[index],
+              [branField]: value,
+            };
+          } else {
+            newBranDetails.push({
+              finished_good_id: fgId,
+              default_kg: branField === "default_kg" ? value : "",
+              with_refraction_kg:
+                branField === "with_refraction_kg" ? value : "",
+              without_refraction_kg:
+                branField === "without_refraction_kg" ? value : "",
+              moisture_percent:
+                branField === "moisture_percent" ? value : "",
+            });
+          }
+          return { ...row, branDetails: newBranDetails };
+        }
         if (isSilo) {
           const newSiloDetails = [...(row.siloDetails || [])];
           const index = newSiloDetails.findIndex(
@@ -927,6 +978,10 @@ export default function GrindingScreen({ route, navigation }) {
   const toggleSilo = (id) =>
     setSelectedSiloIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  const toggleBranProduct = (id) =>
+    setSelectedBranProductIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   const toggleProduct = (id) =>
     setSelectedProductIds((prev) =>
@@ -986,31 +1041,60 @@ export default function GrindingScreen({ route, navigation }) {
                       {fg.product_name}
                     </Text>
                   </TouchableOpacity>
-                  {selectedProductIds.includes(fg.id) && (
-                    <View style={styles.bagSizeChipContainer}>
-                      {bagSizes.map((bs) => (
+                  {selectedProductIds.includes(fg.id) &&
+                    !isBranProduct(fg) && (
+                      <View style={styles.bagSizeChipContainer}>
+                        {bagSizes.map((bs) => (
+                          <TouchableOpacity
+                            key={bs.id}
+                            onPress={() =>
+                              toggleBagSizeForProduct(fg.id, bs.id)
+                            }
+                            style={[
+                              styles.miniChip,
+                              productBagSizeMap[fg.id]?.includes(bs.id) &&
+                                styles.chipActive,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.miniChipText,
+                                productBagSizeMap[fg.id]?.includes(bs.id) &&
+                                  styles.chipTextActive,
+                              ]}
+                            >
+                              {bs.weight_kg}k
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  {selectedProductIds.includes(fg.id) &&
+                    isBranProduct(fg) && (
+                      <View style={styles.bagSizeChipContainer}>
                         <TouchableOpacity
-                          key={bs.id}
-                          onPress={() => toggleBagSizeForProduct(fg.id, bs.id)}
+                          onPress={() => toggleBranProduct(fg.id)}
                           style={[
                             styles.miniChip,
-                            productBagSizeMap[fg.id]?.includes(bs.id) &&
-                              styles.chipActive,
+                            { backgroundColor: "#FFF3E0" },
+                            selectedBranProductIds.includes(fg.id) && {
+                              backgroundColor: "#F57C00",
+                            },
                           ]}
                         >
                           <Text
                             style={[
                               styles.miniChipText,
-                              productBagSizeMap[fg.id]?.includes(bs.id) &&
-                                styles.chipTextActive,
+                              selectedBranProductIds.includes(fg.id) && {
+                                color: "#FFF",
+                              },
                             ]}
                           >
-                            {bs.weight_kg}k
+                            Bran (3-field)
                           </Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+                      </View>
+                    )}
                   {selectedProductIds.includes(fg.id) &&
                     fg.product_name.toLowerCase().includes("maida") && (
                       <View
@@ -1096,7 +1180,14 @@ export default function GrindingScreen({ route, navigation }) {
             const relevantSilos = isMaida
               ? silos.filter((s) => selectedSiloIds.includes(s.silo_id))
               : [];
-            if (relevantBags.length === 0 && relevantSilos.length === 0)
+            const isBran = isBranProduct(fg);
+            const branActive =
+              isBran && selectedBranProductIds.includes(fg.id);
+            if (
+              relevantBags.length === 0 &&
+              relevantSilos.length === 0 &&
+              !branActive
+            )
               return null;
             return (
               <View
@@ -1127,6 +1218,42 @@ export default function GrindingScreen({ route, navigation }) {
                       </Text>
                     </View>
                   ))}
+                  {branActive && (
+                    <>
+                      <View
+                        style={[
+                          styles.subHeaderCell,
+                          { backgroundColor: "#FFF3E0", width: 80 },
+                        ]}
+                      >
+                        <Text style={styles.subHeaderText}>Default Kg</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.subHeaderCell,
+                          { backgroundColor: "#FFF3E0", width: 80 },
+                        ]}
+                      >
+                        <Text style={styles.subHeaderText}>With Ref Kg</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.subHeaderCell,
+                          { backgroundColor: "#FFF3E0", width: 80 },
+                        ]}
+                      >
+                        <Text style={styles.subHeaderText}>W/o Ref Kg</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.subHeaderCell,
+                          { backgroundColor: "#FFF3E0", width: 70 },
+                        ]}
+                      >
+                        <Text style={styles.subHeaderText}>Moist %</Text>
+                      </View>
+                    </>
+                  )}
                 </View>
               </View>
             );
@@ -1244,8 +1371,18 @@ export default function GrindingScreen({ route, navigation }) {
               const relevantSilos = isMaida
                 ? silos.filter((s) => selectedSiloIds.includes(s.silo_id))
                 : [];
-              if (relevantBags.length === 0 && relevantSilos.length === 0)
+              const isBran = isBranProduct(fg);
+              const branActive =
+                isBran && selectedBranProductIds.includes(fg.id);
+              if (
+                relevantBags.length === 0 &&
+                relevantSilos.length === 0 &&
+                !branActive
+              )
                 return null;
+              const branDetail = branActive
+                ? row.branDetails?.find((d) => d.finished_good_id === fg.id)
+                : null;
               return (
                 <View key={fg.id} style={{ flexDirection: "row" }}>
                   {relevantBags.map((bs) => {
@@ -1335,6 +1472,124 @@ export default function GrindingScreen({ route, navigation }) {
                       </View>
                     );
                   })}
+                  {branActive && (
+                    <>
+                      <View
+                        style={{
+                          width: 80,
+                          padding: 2,
+                          backgroundColor: "#FFF3E0",
+                        }}
+                      >
+                        <InputField
+                          value={branDetail?.default_kg?.toString() || ""}
+                          onChangeText={(v) =>
+                            handleGridUpdate(
+                              row.id,
+                              fg.id,
+                              null,
+                              v,
+                              false,
+                              null,
+                              "quantity_kg",
+                              true,
+                              "default_kg",
+                            )
+                          }
+                          keyboardType="numeric"
+                          disabled={row.isSubmitted}
+                          dense
+                        />
+                      </View>
+                      <View
+                        style={{
+                          width: 80,
+                          padding: 2,
+                          backgroundColor: "#FFF3E0",
+                        }}
+                      >
+                        <InputField
+                          value={
+                            branDetail?.with_refraction_kg?.toString() || ""
+                          }
+                          onChangeText={(v) =>
+                            handleGridUpdate(
+                              row.id,
+                              fg.id,
+                              null,
+                              v,
+                              false,
+                              null,
+                              "quantity_kg",
+                              true,
+                              "with_refraction_kg",
+                            )
+                          }
+                          keyboardType="numeric"
+                          disabled={row.isSubmitted}
+                          dense
+                        />
+                      </View>
+                      <View
+                        style={{
+                          width: 80,
+                          padding: 2,
+                          backgroundColor: "#FFF3E0",
+                        }}
+                      >
+                        <InputField
+                          value={
+                            branDetail?.without_refraction_kg?.toString() || ""
+                          }
+                          onChangeText={(v) =>
+                            handleGridUpdate(
+                              row.id,
+                              fg.id,
+                              null,
+                              v,
+                              false,
+                              null,
+                              "quantity_kg",
+                              true,
+                              "without_refraction_kg",
+                            )
+                          }
+                          keyboardType="numeric"
+                          disabled={row.isSubmitted}
+                          dense
+                        />
+                      </View>
+                      <View
+                        style={{
+                          width: 70,
+                          padding: 2,
+                          backgroundColor: "#FFF3E0",
+                        }}
+                      >
+                        <InputField
+                          value={
+                            branDetail?.moisture_percent?.toString() || ""
+                          }
+                          onChangeText={(v) =>
+                            handleGridUpdate(
+                              row.id,
+                              fg.id,
+                              null,
+                              v,
+                              false,
+                              null,
+                              "quantity_kg",
+                              true,
+                              "moisture_percent",
+                            )
+                          }
+                          keyboardType="numeric"
+                          disabled={row.isSubmitted}
+                          dense
+                        />
+                      </View>
+                    </>
+                  )}
                 </View>
               );
             })}
@@ -1399,6 +1654,7 @@ export default function GrindingScreen({ route, navigation }) {
           productIds: selectedProductIds,
           bagSizeMap: productBagSizeMap,
           siloIds: selectedSiloIds,
+          branProductIds: selectedBranProductIds,
         }),
       );
 
@@ -1426,9 +1682,26 @@ export default function GrindingScreen({ route, navigation }) {
             moisture_percent: parseFloat(d.moisture_percent) || null,
           }));
 
+        const validBranDetails = (row.branDetails || [])
+          .filter(
+            (b) =>
+              b.finished_good_id &&
+              ((parseFloat(b.default_kg) || 0) > 0 ||
+                (parseFloat(b.with_refraction_kg) || 0) > 0 ||
+                (parseFloat(b.without_refraction_kg) || 0) > 0),
+          )
+          .map((b) => ({
+            finished_good_id: parseInt(b.finished_good_id),
+            default_kg: parseFloat(b.default_kg) || 0,
+            with_refraction_kg: parseFloat(b.with_refraction_kg) || 0,
+            without_refraction_kg: parseFloat(b.without_refraction_kg) || 0,
+            moisture_percent: parseFloat(b.moisture_percent) || null,
+          }));
+
         if (
           validDetails.length === 0 &&
           validSiloDetails.length === 0 &&
+          validBranDetails.length === 0 &&
           reprocessQty === 0
         )
           continue;
@@ -1442,6 +1715,7 @@ export default function GrindingScreen({ route, navigation }) {
           reprocess: reprocessQty,
           details: validDetails,
           silo_details: validSiloDetails,
+          bran_details: validBranDetails,
         });
       }
       showToast("Success", "Hourly production recorded");

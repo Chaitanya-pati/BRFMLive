@@ -2375,6 +2375,7 @@ def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session =
     data = prod.dict()
     details_data = data.pop('details', [])
     silo_details_data = data.pop('silo_details', [])
+    bran_details_data = data.pop('bran_details', [])
     if branch_id and not data.get('branch_id'):
         data['branch_id'] = branch_id
     
@@ -2398,6 +2399,11 @@ def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session =
         if silo_detail.get("silo_id"):
             db_silo_detail = models.HourlyProductionSilo(**silo_detail, hourly_production_id=db_prod.id)
             db.add(db_silo_detail)
+
+    for bran_detail in bran_details_data or []:
+        if bran_detail.get("finished_good_id"):
+            db_bran_detail = models.HourlyProductionBran(**bran_detail, hourly_production_id=db_prod.id)
+            db.add(db_bran_detail)
     
     db.commit()
     db.refresh(db_prod)

@@ -86,6 +86,16 @@ The application is seeded with the following test users for different roles:
 
 ## Recent Changes
 
+### April 27, 2026
+- **Bran tracking in Grinding screen**:
+  - Added new `hourly_production_bran` table with columns: `id`, `hourly_production_id` (FK), `finished_good_id` (FK), `default_kg`, `with_refraction_kg`, `without_refraction_kg`, `moisture_percent`, `created_at`. Created via `Base.metadata.create_all` against the hardcoded Neon DB.
+  - Added `HourlyProductionBran` SQLAlchemy model and back-populated relationship on `HourlyProduction.bran_details`.
+  - Added `HourlyProductionBranBase`/`Create`/`Read` schemas; included `bran_details` in `HourlyProductionCreate` and `HourlyProduction` response schemas.
+  - Updated `POST /api/grinding/hourly-production` to persist `bran_details` rows alongside `details` and `silo_details` (existing tables untouched).
+  - `GrindingScreen.js`: products whose `product_name` contains "bran" now show a single orange "Bran (3-field)" badge in the product config card (instead of bag-size chips). When the badge is enabled, the hourly production grid renders 4 inline inputs per bran product per row: **Default Kg / With Ref Kg / W/o Ref Kg / Moist %**, persisted as `branDetails` in row state and posted as `bran_details`. The `branProductIds` selection is also persisted in the per-order template so it survives reload.
+- **DataTable / ProductionOrder fixes** (Replit migration polish): `DataTable` now accepts a `renderActions` render prop for both desktop and mobile views; `ProductionOrderScreen` columns migrated from `title`/`width` to `label`/`flex`.
+- Replit import: frontend deps installed with `--legacy-peer-deps`; `expo-doctor` passes 17/17 checks (advisory version warnings remain for `react`, `react-dom`, `expo`, `react-native-web`, `@expo/metro-runtime` but no missing deps).
+
 ### April 24, 2026
 - **Magnet cleaning – production order & transfer-stage tracking**:
   - Added 3 new nullable columns to `magnet_cleaning_records`: `production_order_id`, `source_bin_id`, `destination_bin_id` (with indexes). Safely added via startup `ALTER TABLE IF NOT EXISTS` migration so existing data is untouched.
