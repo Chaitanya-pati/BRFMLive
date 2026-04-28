@@ -34,6 +34,11 @@ export default function LabTestScreen({ navigation }) {
   const [currentLabTest, setCurrentLabTest] = useState(null);
   const [vehicleSearchText, setVehicleSearchText] = useState("");
   const [vehicleFilterType, setVehicleFilterType] = useState("vehicle"); // 'vehicle' or 'supplier'
+  const [currentStep, setCurrentStep] = useState(0); // step-wise progressive form
+  const PHYSICAL_KEYS = ["moisture", "hectoliter_weight", "protein_percent", "wet_gluten", "dry_gluten", "sedimentation_value"];
+  const FOREIGN_KEYS = ["chaff_husk", "straws_sticks", "other_foreign_matter", "mudballs", "stones", "dust_sand"];
+  const DAMAGE_KEYS = ["shriveled_wheat", "insect_damage", "blackened_wheat", "other_grains", "soft_wheat", "heat_damaged", "immature_wheat", "broken_wheat"];
+  const STEP_LABELS = ["Vehicle", "Basic & Physical", "Impurities", "Dockage", "Sign-off"];
 
   // Raise Claim Modal states
   const [raiseClaimModalVisible, setRaiseClaimModalVisible] = useState(false);
@@ -116,6 +121,21 @@ export default function LabTestScreen({ navigation }) {
     formData.broken_wheat,
   ]);
 
+  // Auto-advance step-wise form: each section unlocks after the previous gets activity.
+  useEffect(() => {
+    const hasAnyValue = (keys) =>
+      keys.some((k) => {
+        const v = formData[k];
+        return v !== "" && v !== null && v !== undefined;
+      });
+    let step = 0;
+    if (formData.vehicle_entry_id) step = Math.max(step, 1);
+    if (hasAnyValue(PHYSICAL_KEYS)) step = Math.max(step, 2);
+    if (hasAnyValue(FOREIGN_KEYS)) step = Math.max(step, 3);
+    if (hasAnyValue(DAMAGE_KEYS)) step = Math.max(step, 4);
+    setCurrentStep((prev) => Math.max(prev, step));
+  }, [formData]);
+
   const filteredVehicles = vehicles.filter((vehicle) => {
     if (!vehicleSearchText) return true;
     const searchLower = vehicleSearchText.toLowerCase();
@@ -192,6 +212,7 @@ export default function LabTestScreen({ navigation }) {
     setCurrentLabTest(null);
     setVehicleSearchText("");
     setVehicleFilterType("vehicle");
+    setCurrentStep(0);
     setFormData({
       vehicle_entry_id: "",
       test_date: new Date(),
@@ -233,6 +254,7 @@ export default function LabTestScreen({ navigation }) {
   const handleEdit = (labTest) => {
     setEditMode(true);
     setCurrentLabTest(labTest);
+    setCurrentStep(4); // existing record → reveal all sections
     setFormData({
       vehicle_entry_id: labTest.vehicle_entry_id.toString(),
       test_date: new Date(labTest.test_date),
@@ -480,11 +502,56 @@ export default function LabTestScreen({ navigation }) {
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
-            {/* ── Basic Information ── */}
+            {/* ── Step indicator ── */}
+            <View style={styles.stepperRow}>
+              {STEP_LABELS.map((label, idx) => {
+                const reached = currentStep >= idx;
+                const active = currentStep === idx;
+                return (
+                  <View key={label} style={styles.stepperItem}>
+                    <View
+                      style={[
+                        styles.stepperDot,
+                        reached && styles.stepperDotReached,
+                        active && styles.stepperDotActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.stepperDotText,
+                          reached && styles.stepperDotTextReached,
+                        ]}
+                      >
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.stepperLabel,
+                        reached && styles.stepperLabelReached,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                    {idx < STEP_LABELS.length - 1 && (
+                      <View
+                        style={[
+                          styles.stepperBar,
+                          currentStep > idx && styles.stepperBarReached,
+                        ]}
+                      />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* ── Step 1: Vehicle (always visible) ── */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Basic Information</Text>
+              <Text style={styles.sectionTitle}>Step 1 · Select Vehicle</Text>
               <View style={styles.formRow}>
-                <Text style={styles.rowLabel}>Select Vehicle *</Text>
+                <Text style={styles.rowLabel}>Vehicle *</Text>
                 <View style={styles.rowField}>
                   <TextInput
                     style={styles.input}
@@ -510,186 +577,226 @@ export default function LabTestScreen({ navigation }) {
                   </View>
                 </View>
               </View>
-              {renderDatePicker()}
-              <View style={styles.gridRow}>
-                <View style={styles.gridCell}>
-                  <Text style={styles.label}>Bill Number</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.bill_number}
-                    onChangeText={(v) => setFormData({ ...formData, bill_number: v })}
-                    placeholder="Bill No."
-                  />
-                </View>
-                <View style={styles.gridCell}>
-                  <Text style={styles.label}>Wheat Variety</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.wheat_variety}
-                    onChangeText={(v) => setFormData({ ...formData, wheat_variety: v })}
-                    placeholder="e.g. Sharbati"
-                  />
-                </View>
-                <View style={styles.gridCell}>
-                  <Text style={styles.label}>Department</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.department}
-                    onChangeText={(v) => setFormData({ ...formData, department: v })}
-                    placeholder="QA"
-                  />
-                </View>
-              </View>
+              {currentStep < 1 && (
+                <Text style={styles.hintText}>Pick a vehicle to continue.</Text>
+              )}
             </View>
 
-            {/* ── Physical Parameters ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Physical Parameters</Text>
-              <View style={styles.gridRow}>
-                {[
-                  { key: "moisture", label: "Moisture %" },
-                  { key: "hectoliter_weight", label: "Hectoliter Wt (Kg/Hl)" },
-                  { key: "protein_percent", label: "Protein %" },
-                  { key: "wet_gluten", label: "Wet Gluten %" },
-                  { key: "dry_gluten", label: "Dry Gluten %" },
-                  { key: "sedimentation_value", label: "Falling No. / Sed." },
-                ].map((f) => (
-                  <View key={f.key} style={styles.gridCell}>
-                    <Text style={styles.label}>{f.label}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData[f.key]}
-                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                    />
+            {/* ── Step 2: Basic Info + Physical Parameters ── */}
+            {currentStep >= 1 && (
+              <>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Step 2 · Basic Information</Text>
+                  {renderDatePicker()}
+                  <View style={styles.gridRow}>
+                    <View style={styles.gridCell}>
+                      <Text style={styles.label}>Bill Number</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.bill_number}
+                        onChangeText={(v) => setFormData({ ...formData, bill_number: v })}
+                        placeholder="Bill No."
+                      />
+                    </View>
+                    <View style={styles.gridCell}>
+                      <Text style={styles.label}>Wheat Variety</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.wheat_variety}
+                        onChangeText={(v) => setFormData({ ...formData, wheat_variety: v })}
+                        placeholder="e.g. Sharbati"
+                      />
+                    </View>
+                    <View style={styles.gridCell}>
+                      <Text style={styles.label}>Department</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.department}
+                        onChangeText={(v) => setFormData({ ...formData, department: v })}
+                        placeholder="QA"
+                      />
+                    </View>
                   </View>
-                ))}
-              </View>
-            </View>
+                </View>
 
-            {/* ── Foreign Matter / Impurities ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Foreign Matter / Impurities (%)</Text>
-              <View style={styles.gridRow}>
-                {[
-                  { key: "chaff_husk", label: "Chaff / Husk" },
-                  { key: "straws_sticks", label: "Straws / Sticks" },
-                  { key: "other_foreign_matter", label: "Other Foreign Matter" },
-                  { key: "mudballs", label: "Mud Balls" },
-                  { key: "stones", label: "Stones" },
-                  { key: "dust_sand", label: "Dust / Sand" },
-                ].map((f) => (
-                  <View key={f.key} style={styles.gridCell}>
-                    <Text style={styles.label}>{f.label}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData[f.key]}
-                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                    />
-                  </View>
-                ))}
-              </View>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Impurities %</Text>
-                <Text style={styles.totalValue}>{formData.total_impurities}</Text>
-              </View>
-            </View>
-
-            {/* ── Damaged Grains / Dockage ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Damaged Grains / Dockage (%)</Text>
-              <View style={styles.gridRow}>
-                {[
-                  { key: "shriveled_wheat", label: "Shriveled Wheat" },
-                  { key: "insect_damage", label: "Insect Damage" },
-                  { key: "blackened_wheat", label: "Blackened Wheat" },
-                  { key: "other_grains", label: "Other Grains / Sprouted" },
-                  { key: "soft_wheat", label: "Soft / Other Damage" },
-                  { key: "heat_damaged", label: "Heat Damaged" },
-                  { key: "immature_wheat", label: "Immature Wheat" },
-                  { key: "broken_wheat", label: "Broken Wheat" },
-                ].map((f) => (
-                  <View key={f.key} style={styles.gridCell}>
-                    <Text style={styles.label}>{f.label}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData[f.key]}
-                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                    />
-                  </View>
-                ))}
-              </View>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Dockage %</Text>
-                <Text style={styles.totalValue}>{formData.total_dockage}</Text>
-              </View>
-            </View>
-
-            {/* ── Categorization & Sign-off ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Categorization & Sign-off</Text>
-              <View style={styles.formRow}>
-                <Text style={styles.label}>Quality Category</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={formData.category}
-                    onValueChange={(v) => setFormData({ ...formData, category: v })}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Select Category" value="" />
-                    {qualityCategories.map((c) => (
-                      <Picker.Item key={c.value} label={c.label} value={c.value} />
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Step 2 · Physical Parameters</Text>
+                  <View style={styles.gridRow}>
+                    {[
+                      { key: "moisture", label: "Moisture %" },
+                      { key: "hectoliter_weight", label: "Hectoliter Wt (Kg/Hl)" },
+                      { key: "protein_percent", label: "Protein %" },
+                      { key: "wet_gluten", label: "Wet Gluten %" },
+                      { key: "dry_gluten", label: "Dry Gluten %" },
+                      { key: "sedimentation_value", label: "Falling No. / Sed." },
+                    ].map((f) => (
+                      <View key={f.key} style={styles.gridCell}>
+                        <Text style={styles.label}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData[f.key]}
+                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                          keyboardType="decimal-pad"
+                          placeholder="0.00"
+                        />
+                      </View>
                     ))}
-                  </Picker>
+                  </View>
+                  {currentStep < 2 && (
+                    <Text style={styles.hintText}>
+                      Enter at least one physical value to reveal Foreign Matter →
+                    </Text>
+                  )}
                 </View>
+              </>
+            )}
+
+            {/* ── Step 3: Foreign Matter ── */}
+            {currentStep >= 2 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Step 3 · Foreign Matter / Impurities (%)</Text>
+                <View style={styles.gridRow}>
+                  {[
+                    { key: "chaff_husk", label: "Chaff / Husk" },
+                    { key: "straws_sticks", label: "Straws / Sticks" },
+                    { key: "other_foreign_matter", label: "Other Foreign Matter" },
+                    { key: "mudballs", label: "Mud Balls" },
+                    { key: "stones", label: "Stones" },
+                    { key: "dust_sand", label: "Dust / Sand" },
+                  ].map((f) => (
+                    <View key={f.key} style={styles.gridCell}>
+                      <Text style={styles.label}>{f.label}</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData[f.key]}
+                        onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                        keyboardType="decimal-pad"
+                        placeholder="0.00"
+                      />
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Impurities %</Text>
+                  <Text style={styles.totalValue}>{formData.total_impurities}</Text>
+                </View>
+                {currentStep < 3 && (
+                  <Text style={styles.hintText}>
+                    Enter at least one impurity value to reveal Damaged Grains →
+                  </Text>
+                )}
               </View>
-              <View style={styles.gridRow}>
-                <View style={styles.gridCell}>
-                  <Text style={styles.label}>Tested By</Text>
+            )}
+
+            {/* ── Step 4: Damaged Grains ── */}
+            {currentStep >= 3 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Step 4 · Damaged Grains / Dockage (%)</Text>
+                <View style={styles.gridRow}>
+                  {[
+                    { key: "shriveled_wheat", label: "Shriveled Wheat" },
+                    { key: "insect_damage", label: "Insect Damage" },
+                    { key: "blackened_wheat", label: "Blackened Wheat" },
+                    { key: "other_grains", label: "Other Grains / Sprouted" },
+                    { key: "soft_wheat", label: "Soft / Other Damage" },
+                    { key: "heat_damaged", label: "Heat Damaged" },
+                    { key: "immature_wheat", label: "Immature Wheat" },
+                    { key: "broken_wheat", label: "Broken Wheat" },
+                  ].map((f) => (
+                    <View key={f.key} style={styles.gridCell}>
+                      <Text style={styles.label}>{f.label}</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData[f.key]}
+                        onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                        keyboardType="decimal-pad"
+                        placeholder="0.00"
+                      />
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Dockage %</Text>
+                  <Text style={styles.totalValue}>{formData.total_dockage}</Text>
+                </View>
+                {currentStep < 4 && (
+                  <Text style={styles.hintText}>
+                    Enter at least one dockage value to reveal Sign-off →
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* ── Step 5: Categorization & Sign-off ── */}
+            {currentStep >= 4 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Step 5 · Categorization & Sign-off</Text>
+                <View style={styles.formRow}>
+                  <Text style={styles.label}>Quality Category</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={formData.category}
+                      onValueChange={(v) => setFormData({ ...formData, category: v })}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select Category" value="" />
+                      {qualityCategories.map((c) => (
+                        <Picker.Item key={c.value} label={c.label} value={c.value} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCell}>
+                    <Text style={styles.label}>Tested By</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.tested_by}
+                      onChangeText={(v) => setFormData({ ...formData, tested_by: v })}
+                      placeholder="Lab analyst name"
+                    />
+                  </View>
+                </View>
+                <View style={styles.formRow}>
+                  <Text style={styles.label}>Comments / Action</Text>
                   <TextInput
-                    style={styles.input}
-                    value={formData.tested_by}
-                    onChangeText={(v) => setFormData({ ...formData, tested_by: v })}
-                    placeholder="Lab analyst name"
+                    style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+                    value={formData.comments_action}
+                    onChangeText={(v) => setFormData({ ...formData, comments_action: v })}
+                    placeholder="Remarks, recommended action, etc."
+                    multiline
                   />
                 </View>
-              </View>
-              <View style={styles.formRow}>
-                <Text style={styles.label}>Comments / Action</Text>
-                <TextInput
-                  style={[styles.input, { height: 80, textAlignVertical: "top" }]}
-                  value={formData.comments_action}
-                  onChangeText={(v) => setFormData({ ...formData, comments_action: v })}
-                  placeholder="Remarks, recommended action, etc."
-                  multiline
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.checkRow}
-                onPress={() =>
-                  setFormData({ ...formData, raise_claim: !formData.raise_claim })
-                }
-              >
-                <View
-                  style={[
-                    styles.checkBox,
-                    formData.raise_claim && styles.checkBoxOn,
-                  ]}
+                <TouchableOpacity
+                  style={styles.checkRow}
+                  onPress={() =>
+                    setFormData({ ...formData, raise_claim: !formData.raise_claim })
+                  }
                 >
-                  {formData.raise_claim && <Text style={styles.checkMark}>✓</Text>}
-                </View>
-                <Text style={styles.checkLabel}>Mark for Raise Claim</Text>
-              </TouchableOpacity>
-            </View>
+                  <View
+                    style={[
+                      styles.checkBox,
+                      formData.raise_claim && styles.checkBoxOn,
+                    ]}
+                  >
+                    {formData.raise_claim && <Text style={styles.checkMark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>Mark for Raise Claim</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
-              <Text style={styles.submitButtonText}>{loading ? "Saving..." : "Save Report"}</Text>
-            </TouchableOpacity>
+            {currentStep >= 1 && (
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                <Text style={styles.submitButtonText}>
+                  {loading ? "Saving..." : "Save Report"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </Modal>
@@ -797,4 +904,71 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#374151" },
   modalPadding: { padding: 20 },
   scrollContainer: { flex: 1 },
+  hintText: {
+    fontSize: 12,
+    fontStyle: "italic",
+    color: "#6b7280",
+    marginTop: 6,
+  },
+  stepperRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  stepperItem: {
+    flex: 1,
+    alignItems: "center",
+    position: "relative",
+  },
+  stepperDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    zIndex: 2,
+  },
+  stepperDotReached: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stepperDotActive: {
+    borderColor: "#fbbf24",
+    borderWidth: 3,
+  },
+  stepperDotText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#6b7280",
+  },
+  stepperDotTextReached: {
+    color: "#fff",
+  },
+  stepperLabel: {
+    fontSize: 10,
+    color: "#9ca3af",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  stepperLabelReached: {
+    color: colors.primary,
+    fontWeight: "600",
+  },
+  stepperBar: {
+    position: "absolute",
+    top: 14,
+    left: "60%",
+    right: "-40%",
+    height: 2,
+    backgroundColor: "#e5e7eb",
+    zIndex: 1,
+  },
+  stepperBarReached: {
+    backgroundColor: colors.primary,
+  },
 });
