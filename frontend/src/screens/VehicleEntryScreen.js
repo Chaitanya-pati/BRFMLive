@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, ActivityIndicator, Platform, Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import Layout from '../components/Layout';
 import InputField from '../components/InputField';
@@ -10,12 +11,12 @@ import SelectDropdown from '../components/SelectDropdown';
 import Button from '../components/Button';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
-import TimePicker from '../components/TimePicker';
+import TimePicker, { getCurrentTimeString } from '../components/TimePicker';
 import { vehicleApi, supplierApi, labTestApi, unloadingApi } from '../api/client';
 import { showNotification } from '../utils/notifications';
 import colors from '../theme/colors';
 
-const EMPTY_FORM = {
+const buildEmptyForm = () => ({
   vehicle_state_code: '',
   vehicle_second_part: '',
   vehicle_third_part: '',
@@ -23,9 +24,9 @@ const EMPTY_FORM = {
   bill_no: '',
   driver_name: '',
   driver_phone: '',
-  arrival_time: '12-00-AM',
+  arrival_time: getCurrentTimeString(),
   supplier_bill_photo: null,
-};
+});
 
 const EMPTY_GATEIN_FORM = {
   gross_weight: '',
@@ -121,7 +122,7 @@ export default function VehicleEntryScreen({ navigation }) {
   // Stage 1 entry modal
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ ...EMPTY_FORM });
+  const [formData, setFormData] = useState(buildEmptyForm());
 
   // Stage 3 Gate-In modal
   const [gateInVisible, setGateInVisible] = useState(false);
@@ -140,6 +141,13 @@ export default function VehicleEntryScreen({ navigation }) {
   useEffect(() => {
     fetchAll();
   }, []);
+
+  // Refresh whenever the screen comes back into focus so two devices stay in sync
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+    }, [])
+  );
 
   const fetchAll = async () => {
     setLoading(true);
@@ -192,13 +200,13 @@ export default function VehicleEntryScreen({ navigation }) {
 
   // ----- Stage 1 (Entry) handlers -----
   const resetEntryForm = () => {
-    setFormData({ ...EMPTY_FORM });
+    setFormData(buildEmptyForm());
     setEditingId(null);
     setIsModalVisible(false);
   };
 
   const openAdd = () => {
-    setFormData({ ...EMPTY_FORM });
+    setFormData(buildEmptyForm());
     setEditingId(null);
     setIsModalVisible(true);
   };
@@ -266,6 +274,19 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
+  // Re-fetch the latest server copy of a vehicle right before we PUT it back.
+  // This is what keeps two devices in sync — if user A on Device 1 just saved
+  // Gate-In, user B on Device 2 will read the fresh row before sending Gate-Out
+  // and therefore won't accidentally wipe A's gross_weight / photos.
+  const getFreshVehicle = async (id, fallback) => {
+    try {
+      const res = await vehicleApi.getById(id);
+      return res?.data || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   // Stage 1 submit. Preserves gate-in/gate-out values from existing record on edit.
   const handleSubmit = async () => {
     const vehicleNumber = (
@@ -285,10 +306,14 @@ export default function VehicleEntryScreen({ navigation }) {
       return;
     }
 
-    const editingVehicle = editingId ? vehicles.find((v) => v.id === editingId) : null;
-
     setIsSubmitting(true);
     try {
+      // Pull the freshest copy from the server so concurrent gate-in/out work
+      // performed on another device isn't overwritten by stale local state.
+      const editingVehicle = editingId
+        ? await getFreshVehicle(editingId, vehicles.find((v) => v.id === editingId))
+        : null;
+
       const fd = new FormData();
       fd.append('vehicle_number', vehicleNumber);
       fd.append('supplier_id', formData.supplier_id);
@@ -357,7 +382,9 @@ export default function VehicleEntryScreen({ navigation }) {
     }
     setIsSubmitting(true);
     try {
-      const v = gateInTarget;
+      // Always pull the freshest server copy first so we don't clobber another
+      // device's edits to non-Gate-In fields (driver, bill, notes, etc.).
+      const v = await getFreshVehicle(gateInTarget.id, gateInTarget);
       const fd = new FormData();
       // Required fields the PUT endpoint demands
       fd.append('vehicle_number', v.vehicle_number);
@@ -416,7 +443,14 @@ export default function VehicleEntryScreen({ navigation }) {
     }
     setIsSubmitting(true);
     try {
-      const v = gateOutTarget;
+      // Re-fetch first so we always carry the freshest gross_weight + driver
+      // info forward, even if a different device just updated this row.
+      const v = await getFreshVehicle(gateOutTarget.id, gateOutTarget);
+      if (!v.gross_weight || Number(v.gross_weight) <= 0) {
+        showNotification('Cannot record Gate-Out before Gate-In is completed', 'error');
+        setIsSubmitting(false);
+        return;
+      }
       const fd = new FormData();
       fd.append('vehicle_number', v.vehicle_number);
       fd.append('supplier_id', String(v.supplier_id));

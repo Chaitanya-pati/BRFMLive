@@ -14,7 +14,7 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Camera from 'expo-camera';
 import Layout from '../components/Layout';
-import TimePicker from '../components/TimePicker';
+import TimePicker, { getCurrentTimeString } from '../components/TimePicker';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import { unloadingApi, godownApi } from '../api/client';
@@ -36,8 +36,8 @@ export default function UnloadingEntryScreen({ navigation }) {
   const [formData, setFormData] = useState({
     vehicle_entry_id: '',
     godown_id: '',
-    unloading_start_time: '12-00-AM',
-    unloading_end_time: '12-00-AM',
+    unloading_start_time: getCurrentTimeString(),
+    unloading_end_time: getCurrentTimeString(),
     notes: '',
   });
 
