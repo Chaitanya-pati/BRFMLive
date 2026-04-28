@@ -480,6 +480,7 @@ export default function LabTestScreen({ navigation }) {
       >
         <ScrollView style={styles.scrollContainer}>
           <View style={styles.form}>
+            {/* ── Basic Information ── */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
               <View style={styles.formRow}>
@@ -510,7 +511,182 @@ export default function LabTestScreen({ navigation }) {
                 </View>
               </View>
               {renderDatePicker()}
+              <View style={styles.gridRow}>
+                <View style={styles.gridCell}>
+                  <Text style={styles.label}>Bill Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bill_number}
+                    onChangeText={(v) => setFormData({ ...formData, bill_number: v })}
+                    placeholder="Bill No."
+                  />
+                </View>
+                <View style={styles.gridCell}>
+                  <Text style={styles.label}>Wheat Variety</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.wheat_variety}
+                    onChangeText={(v) => setFormData({ ...formData, wheat_variety: v })}
+                    placeholder="e.g. Sharbati"
+                  />
+                </View>
+                <View style={styles.gridCell}>
+                  <Text style={styles.label}>Department</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.department}
+                    onChangeText={(v) => setFormData({ ...formData, department: v })}
+                    placeholder="QA"
+                  />
+                </View>
+              </View>
             </View>
+
+            {/* ── Physical Parameters ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Physical Parameters</Text>
+              <View style={styles.gridRow}>
+                {[
+                  { key: "moisture", label: "Moisture %" },
+                  { key: "hectoliter_weight", label: "Hectoliter Wt (Kg/Hl)" },
+                  { key: "protein_percent", label: "Protein %" },
+                  { key: "wet_gluten", label: "Wet Gluten %" },
+                  { key: "dry_gluten", label: "Dry Gluten %" },
+                  { key: "sedimentation_value", label: "Falling No. / Sed." },
+                ].map((f) => (
+                  <View key={f.key} style={styles.gridCell}>
+                    <Text style={styles.label}>{f.label}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData[f.key]}
+                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* ── Foreign Matter / Impurities ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Foreign Matter / Impurities (%)</Text>
+              <View style={styles.gridRow}>
+                {[
+                  { key: "chaff_husk", label: "Chaff / Husk" },
+                  { key: "straws_sticks", label: "Straws / Sticks" },
+                  { key: "other_foreign_matter", label: "Other Foreign Matter" },
+                  { key: "mudballs", label: "Mud Balls" },
+                  { key: "stones", label: "Stones" },
+                  { key: "dust_sand", label: "Dust / Sand" },
+                ].map((f) => (
+                  <View key={f.key} style={styles.gridCell}>
+                    <Text style={styles.label}>{f.label}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData[f.key]}
+                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                    />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Impurities %</Text>
+                <Text style={styles.totalValue}>{formData.total_impurities}</Text>
+              </View>
+            </View>
+
+            {/* ── Damaged Grains / Dockage ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Damaged Grains / Dockage (%)</Text>
+              <View style={styles.gridRow}>
+                {[
+                  { key: "shriveled_wheat", label: "Shriveled Wheat" },
+                  { key: "insect_damage", label: "Insect Damage" },
+                  { key: "blackened_wheat", label: "Blackened Wheat" },
+                  { key: "other_grains", label: "Other Grains / Sprouted" },
+                  { key: "soft_wheat", label: "Soft / Other Damage" },
+                  { key: "heat_damaged", label: "Heat Damaged" },
+                  { key: "immature_wheat", label: "Immature Wheat" },
+                  { key: "broken_wheat", label: "Broken Wheat" },
+                ].map((f) => (
+                  <View key={f.key} style={styles.gridCell}>
+                    <Text style={styles.label}>{f.label}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData[f.key]}
+                      onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                    />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Dockage %</Text>
+                <Text style={styles.totalValue}>{formData.total_dockage}</Text>
+              </View>
+            </View>
+
+            {/* ── Categorization & Sign-off ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Categorization & Sign-off</Text>
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Quality Category</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={formData.category}
+                    onValueChange={(v) => setFormData({ ...formData, category: v })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Category" value="" />
+                    {qualityCategories.map((c) => (
+                      <Picker.Item key={c.value} label={c.label} value={c.value} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              <View style={styles.gridRow}>
+                <View style={styles.gridCell}>
+                  <Text style={styles.label}>Tested By</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.tested_by}
+                    onChangeText={(v) => setFormData({ ...formData, tested_by: v })}
+                    placeholder="Lab analyst name"
+                  />
+                </View>
+              </View>
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Comments / Action</Text>
+                <TextInput
+                  style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+                  value={formData.comments_action}
+                  onChangeText={(v) => setFormData({ ...formData, comments_action: v })}
+                  placeholder="Remarks, recommended action, etc."
+                  multiline
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.checkRow}
+                onPress={() =>
+                  setFormData({ ...formData, raise_claim: !formData.raise_claim })
+                }
+              >
+                <View
+                  style={[
+                    styles.checkBox,
+                    formData.raise_claim && styles.checkBoxOn,
+                  ]}
+                >
+                  {formData.raise_claim && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <Text style={styles.checkLabel}>Mark for Raise Claim</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
               <Text style={styles.submitButtonText}>{loading ? "Saving..." : "Save Report"}</Text>
             </TouchableOpacity>
@@ -550,20 +726,75 @@ export default function LabTestScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   form: { padding: 16 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: colors.primary },
+  section: {
+    marginBottom: 20,
+    backgroundColor: "#f9fafb",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 12, color: colors.primary },
   formRow: { marginBottom: 12 },
   rowLabel: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
   rowField: { width: "100%" },
-  input: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 6, padding: 12, fontSize: 16, backgroundColor: "#fff", marginBottom: 8 },
-  pickerContainer: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 6, overflow: "hidden" },
-  picker: { height: 50 },
+  gridRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -6,
+  },
+  gridCell: {
+    width: "33.33%",
+    paddingHorizontal: 6,
+    marginBottom: 8,
+    minWidth: 160,
+  },
+  inputContainer: { marginBottom: 12 },
+  input: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 6, padding: 10, fontSize: 14, backgroundColor: "#fff", marginBottom: 4 },
+  pickerContainer: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 6, overflow: "hidden", backgroundColor: "#fff" },
+  picker: { height: 44 },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#eef2ff",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#c7d2fe",
+  },
+  totalLabel: { fontSize: 14, fontWeight: "600", color: colors.primary },
+  totalValue: { fontSize: 16, fontWeight: "bold", color: colors.primary },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#9ca3af",
+    backgroundColor: "#fff",
+    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkBoxOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkMark: { color: "#fff", fontWeight: "bold", fontSize: 14 },
+  checkLabel: { fontSize: 14, fontWeight: "500" },
   submitButton: { backgroundColor: colors.primary, padding: 16, borderRadius: 6, alignItems: "center", marginTop: 20 },
   submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   raiseClaimButton: { backgroundColor: "#fee2e2", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
   raiseClaimButtonText: { color: "#ef4444", fontWeight: "600" },
   claimedText: { color: "#10b981", fontWeight: "600" },
-  label: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
+  label: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#374151" },
   modalPadding: { padding: 20 },
   scrollContainer: { flex: 1 },
 });
