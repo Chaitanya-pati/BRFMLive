@@ -1783,25 +1783,39 @@ def get_vehicles_available_for_testing(
          response_model=List[schemas.VehicleEntryWithLabTests])
 def get_lab_tested_vehicles(db: Session = Depends(get_db),
                             branch_id: Optional[int] = Depends(get_branch_id)):
-    # Get all lab test records with their vehicle entries
-    lab_tests = db.query(models.LabTest).all()
+    """
+    Vehicles eligible to appear in the Unloading Entry vehicle dropdown.
+    Conditions:
+      1. Vehicle has at least one APPROVED lab test (lab_tests.approved = TRUE).
+      2. Vehicle is NOT already present in unloading_entries.
+    """
+    # 1. Vehicle IDs with an approved lab test
+    approved_vehicle_ids = [
+        vid for (vid, ) in db.query(models.LabTest.vehicle_entry_id).filter(
+            models.LabTest.approved.is_(True)).distinct().all()
+    ]
 
-    if not lab_tests:
+    if not approved_vehicle_ids:
         return []
 
-    # Get unique vehicle IDs from lab tests
-    tested_vehicle_ids = list(
-        set([test.vehicle_entry_id for test in lab_tests]))
+    # 2. Vehicle IDs that already have an unloading entry → exclude
+    already_unloaded_ids = [
+        vid for (vid, ) in db.query(
+            models.UnloadingEntry.vehicle_entry_id).distinct().all()
+    ]
 
-    # Fetch vehicles with those IDs
+    eligible_ids = [
+        vid for vid in approved_vehicle_ids if vid not in already_unloaded_ids
+    ]
+    if not eligible_ids:
+        return []
+
     query = db.query(models.VehicleEntry).filter(
-        models.VehicleEntry.id.in_(tested_vehicle_ids))
+        models.VehicleEntry.id.in_(eligible_ids))
     if branch_id:
         query = query.filter(models.VehicleEntry.branch_id == branch_id)
 
-    lab_tested_vehicles = query.all()
-
-    return lab_tested_vehicles
+    return query.all()
 
 
 @app.get("/api/vehicles", response_model=List[schemas.VehicleEntryWithSupplier])
