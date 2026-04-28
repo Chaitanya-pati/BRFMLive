@@ -365,6 +365,7 @@ export default function LabTestScreen({ navigation }) {
         remarks: formData.comments_action || null,
         tested_by: formData.tested_by || null,
         raise_claim: formData.raise_claim ? 1 : 0,
+        approved: formData.approved ? true : false,
       };
       if (editMode && currentLabTest) {
         await labTestApi.update(currentLabTest.id, submitData);
@@ -767,6 +768,24 @@ export default function LabTestScreen({ navigation }) {
                     multiline
                   />
                 </View>
+                <TouchableOpacity
+                  style={styles.checkRow}
+                  onPress={() =>
+                    setFormData({ ...formData, approved: !formData.approved })
+                  }
+                >
+                  <View
+                    style={[
+                      styles.checkBox,
+                      formData.approved && styles.checkBoxOn,
+                    ]}
+                  >
+                    {formData.approved && <Text style={styles.checkMark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>
+                    Mark as Approved (release vehicle for Gate-In)
+                  </Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.checkRow}
                   onPress={() =>

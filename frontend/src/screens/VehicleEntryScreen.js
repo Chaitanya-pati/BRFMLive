@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, ActivityIndicator, Platform, Alert,
@@ -11,7 +11,7 @@ import Button from '../components/Button';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import TimePicker from '../components/TimePicker';
-import { vehicleApi, supplierApi } from '../api/client';
+import { vehicleApi, supplierApi, labTestApi, unloadingApi } from '../api/client';
 import { showNotification } from '../utils/notifications';
 import colors from '../theme/colors';
 
@@ -24,16 +24,31 @@ const EMPTY_FORM = {
   driver_name: '',
   driver_phone: '',
   arrival_time: '12-00-AM',
-  empty_weight: '',
-  gross_weight: '',
-  notes: '',
   supplier_bill_photo: null,
+};
+
+const EMPTY_GATEIN_FORM = {
+  gross_weight: '',
   vehicle_photo_front: null,
   vehicle_photo_back: null,
   vehicle_photo_side: null,
   internal_weighment_slip: null,
   client_weighment_slip: null,
   transportation_copy: null,
+};
+
+const EMPTY_GATEOUT_FORM = {
+  empty_weight: '',
+  notes: '',
+};
+
+const STATUS = {
+  PENDING_LAB:      { key: 'pending_lab',      label: 'Pending Lab Test',      bg: '#FEF3C7', fg: '#92400E', dot: '#F59E0B' },
+  PENDING_APPROVAL: { key: 'pending_approval', label: 'Lab Pending Approval',  bg: '#FFEDD5', fg: '#9A3412', dot: '#F97316' },
+  PENDING_GATEIN:   { key: 'pending_gatein',   label: 'Pending Gate-In',       bg: '#DBEAFE', fg: '#1E40AF', dot: '#3B82F6' },
+  PENDING_UNLOAD:   { key: 'pending_unload',   label: 'Pending Unloading',     bg: '#EDE9FE', fg: '#5B21B6', dot: '#8B5CF6' },
+  PENDING_GATEOUT:  { key: 'pending_gateout',  label: 'Pending Gate-Out',      bg: '#FEF3C7', fg: '#78350F', dot: '#A16207' },
+  COMPLETED:        { key: 'completed',        label: 'Completed',             bg: '#D1FAE5', fg: '#065F46', dot: '#10B981' },
 };
 
 function isoToTimePicker(isoStr) {
@@ -67,43 +82,116 @@ function splitVehicleNumber(vehicleNumber = '') {
   };
 }
 
+function StatusPill({ status }) {
+  return (
+    <Text
+      style={[
+        pillStyles.text,
+        { backgroundColor: status.bg, color: status.fg },
+      ]}
+      numberOfLines={1}
+    >
+      <Text style={{ color: status.dot }}>● </Text>
+      {status.label}
+    </Text>
+  );
+}
+
+const pillStyles = StyleSheet.create({
+  text: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+});
+
 export default function VehicleEntryScreen({ navigation }) {
   const [vehicles, setVehicles] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [labTests, setLabTests] = useState([]);
+  const [unloadings, setUnloadings] = useState([]);
   const [loading, setLoading] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Stage 1 entry modal
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
+  // Stage 3 Gate-In modal
+  const [gateInVisible, setGateInVisible] = useState(false);
+  const [gateInTarget, setGateInTarget] = useState(null);
+  const [gateInForm, setGateInForm] = useState({ ...EMPTY_GATEIN_FORM });
+
+  // Stage 5 Gate-Out modal
+  const [gateOutVisible, setGateOutVisible] = useState(false);
+  const [gateOutTarget, setGateOutTarget] = useState(null);
+  const [gateOutForm, setGateOutForm] = useState({ ...EMPTY_GATEOUT_FORM });
+
+  // View modal
+  const [viewVisible, setViewVisible] = useState(false);
+  const [viewTarget, setViewTarget] = useState(null);
+
   useEffect(() => {
-    fetchVehicles();
-    fetchSuppliers();
+    fetchAll();
   }, []);
 
-  const fetchVehicles = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const res = await vehicleApi.getAll();
-      setVehicles(res.data || []);
+      const [vRes, sRes, lRes, uRes] = await Promise.all([
+        vehicleApi.getAll().catch(() => ({ data: [] })),
+        supplierApi.getAll().catch(() => ({ data: [] })),
+        labTestApi.getAll().catch(() => ({ data: [] })),
+        unloadingApi.getAll().catch(() => ({ data: [] })),
+      ]);
+      setVehicles(vRes.data || []);
+      setSuppliers(sRes.data || []);
+      setLabTests(lRes.data || []);
+      setUnloadings(uRes.data || []);
     } catch {
-      showNotification('Failed to load gate entries', 'error');
-      setVehicles([]);
+      showNotification('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSuppliers = async () => {
-    try {
-      const res = await supplierApi.getAll();
-      setSuppliers(res.data || []);
-    } catch {
-      showNotification('Failed to load suppliers', 'error');
-    }
+  // Build status maps
+  const labStatusMap = useMemo(() => {
+    const m = {};
+    labTests.forEach((t) => {
+      const vid = t.vehicle_entry_id;
+      if (!m[vid]) m[vid] = { tested: true, approved: false };
+      if (t.approved === true || t.approved === 1) m[vid].approved = true;
+    });
+    return m;
+  }, [labTests]);
+
+  const unloadingMap = useMemo(() => {
+    const m = {};
+    unloadings.forEach((u) => { m[u.vehicle_entry_id] = true; });
+    return m;
+  }, [unloadings]);
+
+  const getStatus = (v) => {
+    const lab = labStatusMap[v.id];
+    if (!lab) return STATUS.PENDING_LAB;
+    if (!lab.approved) return STATUS.PENDING_APPROVAL;
+    const grossDone = v.gross_weight && Number(v.gross_weight) > 0;
+    if (!grossDone) return STATUS.PENDING_GATEIN;
+    if (!unloadingMap[v.id]) return STATUS.PENDING_UNLOAD;
+    const emptyDone = v.empty_weight && Number(v.empty_weight) > 0;
+    if (!emptyDone) return STATUS.PENDING_GATEOUT;
+    return STATUS.COMPLETED;
   };
 
-  const resetForm = () => {
+  // ----- Stage 1 (Entry) handlers -----
+  const resetEntryForm = () => {
     setFormData({ ...EMPTY_FORM });
     setEditingId(null);
     setIsModalVisible(false);
@@ -126,16 +214,9 @@ export default function VehicleEntryScreen({ navigation }) {
       driver_name: item.driver_name || '',
       driver_phone: item.driver_phone || '',
       arrival_time: isoToTimePicker(item.arrival_time),
-      empty_weight: item.empty_weight != null ? item.empty_weight.toString() : '',
-      gross_weight: item.gross_weight != null ? item.gross_weight.toString() : '',
-      notes: item.notes || '',
-      supplier_bill_photo: item.supplier_bill_photo ? { uri: item.supplier_bill_photo, existing: true } : null,
-      vehicle_photo_front: item.vehicle_photo_front ? { uri: item.vehicle_photo_front, existing: true } : null,
-      vehicle_photo_back: item.vehicle_photo_back ? { uri: item.vehicle_photo_back, existing: true } : null,
-      vehicle_photo_side: item.vehicle_photo_side ? { uri: item.vehicle_photo_side, existing: true } : null,
-      internal_weighment_slip: item.internal_weighment_slip ? { uri: item.internal_weighment_slip, existing: true } : null,
-      client_weighment_slip: item.client_weighment_slip ? { uri: item.client_weighment_slip, existing: true } : null,
-      transportation_copy: item.transportation_copy ? { uri: item.transportation_copy, existing: true } : null,
+      supplier_bill_photo: item.supplier_bill_photo
+        ? { uri: item.supplier_bill_photo, existing: true }
+        : null,
     });
     setEditingId(item.id);
     setIsModalVisible(true);
@@ -150,7 +231,7 @@ export default function VehicleEntryScreen({ navigation }) {
           try {
             await vehicleApi.delete(item.id);
             showNotification('Entry deleted', 'success');
-            fetchVehicles();
+            fetchAll();
           } catch {
             showNotification('Failed to delete entry', 'error');
           }
@@ -159,7 +240,8 @@ export default function VehicleEntryScreen({ navigation }) {
     ]);
   };
 
-  const pickImage = async (fieldName) => {
+  // Universal photo picker
+  const pickImageInto = async (setter, fieldName) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -167,7 +249,7 @@ export default function VehicleEntryScreen({ navigation }) {
         quality: 0.8,
       });
       if (!result.canceled && result.assets?.length > 0) {
-        setFormData((prev) => ({ ...prev, [fieldName]: { uri: result.assets[0].uri } }));
+        setter((prev) => ({ ...prev, [fieldName]: { uri: result.assets[0].uri } }));
       }
     } catch {
       showNotification('Failed to pick image', 'error');
@@ -184,6 +266,7 @@ export default function VehicleEntryScreen({ navigation }) {
     }
   };
 
+  // Stage 1 submit. Preserves gate-in/gate-out values from existing record on edit.
   const handleSubmit = async () => {
     const vehicleNumber = (
       formData.vehicle_state_code + formData.vehicle_second_part + formData.vehicle_third_part
@@ -202,6 +285,8 @@ export default function VehicleEntryScreen({ navigation }) {
       return;
     }
 
+    const editingVehicle = editingId ? vehicles.find((v) => v.id === editingId) : null;
+
     setIsSubmitting(true);
     try {
       const fd = new FormData();
@@ -211,36 +296,166 @@ export default function VehicleEntryScreen({ navigation }) {
       if (formData.driver_name) fd.append('driver_name', formData.driver_name);
       if (formData.driver_phone) fd.append('driver_phone', formData.driver_phone);
       if (formData.arrival_time) fd.append('arrival_time', formData.arrival_time);
-      if (formData.empty_weight) fd.append('empty_weight', formData.empty_weight);
-      if (formData.gross_weight) fd.append('gross_weight', formData.gross_weight);
-      if (formData.notes) fd.append('notes', formData.notes);
+
+      // Preserve existing gate-in/out values when editing so they don't get reset to 0
+      if (editingVehicle) {
+        if (editingVehicle.gross_weight && Number(editingVehicle.gross_weight) > 0) {
+          fd.append('gross_weight', String(editingVehicle.gross_weight));
+        }
+        if (editingVehicle.empty_weight && Number(editingVehicle.empty_weight) > 0) {
+          fd.append('empty_weight', String(editingVehicle.empty_weight));
+        }
+        if (editingVehicle.notes) fd.append('notes', editingVehicle.notes);
+      }
 
       await appendFile(fd, 'supplier_bill_photo', formData.supplier_bill_photo, 'supplier_bill.jpg');
-      await appendFile(fd, 'vehicle_photo_front', formData.vehicle_photo_front, 'front.jpg');
-      await appendFile(fd, 'vehicle_photo_back', formData.vehicle_photo_back, 'back.jpg');
-      await appendFile(fd, 'vehicle_photo_side', formData.vehicle_photo_side, 'side.jpg');
-      await appendFile(fd, 'internal_weighment_slip', formData.internal_weighment_slip, 'internal_slip.jpg');
-      await appendFile(fd, 'client_weighment_slip', formData.client_weighment_slip, 'client_slip.jpg');
-      await appendFile(fd, 'transportation_copy', formData.transportation_copy, 'transport.jpg');
 
       if (editingId) {
         await vehicleApi.update(editingId, fd);
-        showNotification('Gate entry updated successfully', 'success');
+        showNotification('Vehicle entry updated', 'success');
       } else {
         await vehicleApi.create(fd);
-        showNotification('Gate entry created successfully', 'success');
+        showNotification('Vehicle entry created', 'success');
       }
-      resetForm();
-      fetchVehicles();
+      resetEntryForm();
+      fetchAll();
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Failed to save gate entry';
+      const msg = err?.response?.data?.detail || 'Failed to save vehicle entry';
       showNotification(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ----- Stage 3 (Gate-In) handlers -----
+  const openGateIn = (item) => {
+    setGateInTarget(item);
+    setGateInForm({
+      gross_weight: item.gross_weight && Number(item.gross_weight) > 0
+        ? String(item.gross_weight) : '',
+      vehicle_photo_front: item.vehicle_photo_front
+        ? { uri: item.vehicle_photo_front, existing: true } : null,
+      vehicle_photo_back: item.vehicle_photo_back
+        ? { uri: item.vehicle_photo_back, existing: true } : null,
+      vehicle_photo_side: item.vehicle_photo_side
+        ? { uri: item.vehicle_photo_side, existing: true } : null,
+      internal_weighment_slip: item.internal_weighment_slip
+        ? { uri: item.internal_weighment_slip, existing: true } : null,
+      client_weighment_slip: item.client_weighment_slip
+        ? { uri: item.client_weighment_slip, existing: true } : null,
+      transportation_copy: item.transportation_copy
+        ? { uri: item.transportation_copy, existing: true } : null,
+    });
+    setGateInVisible(true);
+  };
+
+  const submitGateIn = async () => {
+    if (!gateInTarget) return;
+    if (!gateInForm.gross_weight || Number(gateInForm.gross_weight) <= 0) {
+      showNotification('Please enter the gross (loaded) weight', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const v = gateInTarget;
+      const fd = new FormData();
+      // Required fields the PUT endpoint demands
+      fd.append('vehicle_number', v.vehicle_number);
+      fd.append('supplier_id', String(v.supplier_id));
+      fd.append('bill_no', v.bill_no || '');
+      // Preserve other Stage 1 fields
+      if (v.driver_name) fd.append('driver_name', v.driver_name);
+      if (v.driver_phone) fd.append('driver_phone', v.driver_phone);
+      if (v.arrival_time) fd.append('arrival_time', isoToTimePicker(v.arrival_time));
+      if (v.notes) fd.append('notes', v.notes);
+      // Preserve empty_weight (may already be set if user re-opens this stage)
+      if (v.empty_weight && Number(v.empty_weight) > 0) {
+        fd.append('empty_weight', String(v.empty_weight));
+      }
+
+      // New gate-in payload
+      fd.append('gross_weight', gateInForm.gross_weight);
+
+      await appendFile(fd, 'vehicle_photo_front', gateInForm.vehicle_photo_front, 'front.jpg');
+      await appendFile(fd, 'vehicle_photo_back', gateInForm.vehicle_photo_back, 'back.jpg');
+      await appendFile(fd, 'vehicle_photo_side', gateInForm.vehicle_photo_side, 'side.jpg');
+      await appendFile(fd, 'internal_weighment_slip', gateInForm.internal_weighment_slip, 'internal_slip.jpg');
+      await appendFile(fd, 'client_weighment_slip', gateInForm.client_weighment_slip, 'client_slip.jpg');
+      await appendFile(fd, 'transportation_copy', gateInForm.transportation_copy, 'transport.jpg');
+
+      await vehicleApi.update(v.id, fd);
+      showNotification('Gate-In recorded successfully', 'success');
+      setGateInVisible(false);
+      setGateInTarget(null);
+      setGateInForm({ ...EMPTY_GATEIN_FORM });
+      fetchAll();
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Failed to save Gate-In';
+      showNotification(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ----- Stage 5 (Gate-Out) handlers -----
+  const openGateOut = (item) => {
+    setGateOutTarget(item);
+    setGateOutForm({
+      empty_weight: item.empty_weight && Number(item.empty_weight) > 0
+        ? String(item.empty_weight) : '',
+      notes: item.notes || '',
+    });
+    setGateOutVisible(true);
+  };
+
+  const submitGateOut = async () => {
+    if (!gateOutTarget) return;
+    if (!gateOutForm.empty_weight || Number(gateOutForm.empty_weight) <= 0) {
+      showNotification('Please enter the empty (after-unloading) weight', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const v = gateOutTarget;
+      const fd = new FormData();
+      fd.append('vehicle_number', v.vehicle_number);
+      fd.append('supplier_id', String(v.supplier_id));
+      fd.append('bill_no', v.bill_no || '');
+      if (v.driver_name) fd.append('driver_name', v.driver_name);
+      if (v.driver_phone) fd.append('driver_phone', v.driver_phone);
+      if (v.arrival_time) fd.append('arrival_time', isoToTimePicker(v.arrival_time));
+      // Preserve gross weight from Stage 3
+      if (v.gross_weight && Number(v.gross_weight) > 0) {
+        fd.append('gross_weight', String(v.gross_weight));
+      }
+
+      // New gate-out payload
+      fd.append('empty_weight', gateOutForm.empty_weight);
+      fd.append('notes', gateOutForm.notes || '');
+
+      await vehicleApi.update(v.id, fd);
+      showNotification('Gate-Out recorded successfully', 'success');
+      setGateOutVisible(false);
+      setGateOutTarget(null);
+      setGateOutForm({ ...EMPTY_GATEOUT_FORM });
+      fetchAll();
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Failed to save Gate-Out';
+      showNotification(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ----- View handler -----
+  const openView = (item) => {
+    setViewTarget(item);
+    setViewVisible(true);
+  };
+
   const update = (key, val) => setFormData((prev) => ({ ...prev, [key]: val }));
+  const updateGateIn = (key, val) => setGateInForm((prev) => ({ ...prev, [key]: val }));
+  const updateGateOut = (key, val) => setGateOutForm((prev) => ({ ...prev, [key]: val }));
 
   const supplierOptions = suppliers.map((s) => ({
     label: s.supplier_name,
@@ -251,26 +466,57 @@ export default function VehicleEntryScreen({ navigation }) {
     { label: 'ID', key: 'id', flex: 0.4 },
     { label: 'Vehicle No.', key: 'vehicle_number', flex: 1.2 },
     {
-      label: 'Supplier', key: 'supplier', flex: 1.5,
+      label: 'Supplier', key: 'supplier', flex: 1.4,
       render: (val) => val?.supplier_name || '-',
     },
     { label: 'Bill No', key: 'bill_no', flex: 0.8 },
     {
-      label: 'Arrival Time', key: 'arrival_time', flex: 1.2,
+      label: 'Arrival', key: 'arrival_time', flex: 1,
       render: (val) => isoToDisplay(val),
     },
     {
-      label: 'Empty Wt (kg)', key: 'empty_weight', flex: 1,
-      render: (v) => (v != null && v !== '' ? v : '-'),
-    },
-    {
-      label: 'Gross Wt (kg)', key: 'gross_weight', flex: 1,
-      render: (v) => (v != null && v !== '' ? v : '-'),
+      label: 'Status', key: 'id', flex: 1.6,
+      render: (_v, row) => <StatusPill status={getStatus(row)} />,
     },
   ];
 
-  const PhotoField = ({ label, fieldName }) => {
-    const photo = formData[fieldName];
+  // Custom row actions based on stage
+  const renderActions = (row) => {
+    const status = getStatus(row);
+    return (
+      <View style={actionStyles.row}>
+        <TouchableOpacity style={[actionStyles.btn, actionStyles.viewBtn]} onPress={() => openView(row)}>
+          <Text style={actionStyles.viewText}>View</Text>
+        </TouchableOpacity>
+
+        {status.key === STATUS.PENDING_GATEIN.key && (
+          <TouchableOpacity style={[actionStyles.btn, actionStyles.gateInBtn]} onPress={() => openGateIn(row)}>
+            <Text style={actionStyles.primaryText}>Gate-In</Text>
+          </TouchableOpacity>
+        )}
+
+        {status.key === STATUS.PENDING_GATEOUT.key && (
+          <TouchableOpacity style={[actionStyles.btn, actionStyles.gateOutBtn]} onPress={() => openGateOut(row)}>
+            <Text style={actionStyles.primaryText}>Gate-Out</Text>
+          </TouchableOpacity>
+        )}
+
+        {(status.key === STATUS.PENDING_LAB.key || status.key === STATUS.PENDING_APPROVAL.key) && (
+          <TouchableOpacity style={[actionStyles.btn, actionStyles.editBtn]} onPress={() => openEdit(row)}>
+            <Text style={actionStyles.editText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={[actionStyles.btn, actionStyles.delBtn]} onPress={() => handleDelete(row)}>
+          <Text style={actionStyles.delText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Reusable PhotoField that operates on any (form, setForm) pair
+  const PhotoField = ({ label, fieldName, form, setForm }) => {
+    const photo = form[fieldName];
     return (
       <View style={styles.photoField}>
         <Text style={styles.photoLabel}>{label}</Text>
@@ -282,11 +528,14 @@ export default function VehicleEntryScreen({ navigation }) {
               <Text style={styles.photoPlaceholderText}>No photo</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.photoBtn} onPress={() => pickImage(fieldName)}>
+          <TouchableOpacity style={styles.photoBtn} onPress={() => pickImageInto(setForm, fieldName)}>
             <Text style={styles.photoBtnText}>{photo?.uri ? 'Change' : 'Upload'}</Text>
           </TouchableOpacity>
           {photo?.uri && (
-            <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => update(fieldName, null)}>
+            <TouchableOpacity
+              style={styles.photoRemoveBtn}
+              onPress={() => setForm((prev) => ({ ...prev, [fieldName]: null }))}
+            >
               <Text style={styles.photoRemoveBtnText}>Remove</Text>
             </TouchableOpacity>
           )}
@@ -296,7 +545,7 @@ export default function VehicleEntryScreen({ navigation }) {
   };
 
   return (
-    <Layout title="Gate Entry" navigation={navigation}>
+    <Layout title="Vehicle Entry" navigation={navigation}>
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
@@ -304,16 +553,24 @@ export default function VehicleEntryScreen({ navigation }) {
           columns={columns}
           data={vehicles}
           onAdd={openAdd}
-          onEdit={openEdit}
-          onDelete={handleDelete}
+          renderActions={renderActions}
           searchPlaceholder="Search by vehicle number, supplier..."
         />
       )}
 
-      <Modal visible={isModalVisible} onClose={resetForm} title={editingId ? 'Edit Gate Entry' : 'New Gate Entry'}>
+      {/* Stage 1 — Vehicle Arrival */}
+      <Modal
+        visible={isModalVisible}
+        onClose={resetEntryForm}
+        title={editingId ? 'Edit Vehicle Entry' : 'New Vehicle Entry'}
+      >
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          <Text style={styles.stageHint}>
+            Step 1 of 5 · Capture truck arrival. Lab Test, Gate-In, Unloading and Gate-Out
+            happen in later steps from this list.
+          </Text>
 
-          <Text style={styles.sectionHeader}>Vehicle Details</Text>
+          <Text style={styles.sectionHeader}>Vehicle Number</Text>
 
           <View style={styles.vehicleRow}>
             <View style={styles.vPart1}>
@@ -391,77 +648,296 @@ export default function VehicleEntryScreen({ navigation }) {
             keyboardType="phone-pad"
           />
 
-          <Text style={styles.sectionHeader}>Weight Information</Text>
+          <Text style={styles.sectionHeader}>Document</Text>
 
-          <View style={styles.weightRow}>
-            <View style={styles.weightHalf}>
-              <InputField
-                label="Empty Weight (kg)"
-                value={formData.empty_weight}
-                onChangeText={(t) => update('empty_weight', t)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.weightHalf}>
-              <InputField
-                label="Gross Weight (kg)"
-                value={formData.gross_weight}
-                onChangeText={(t) => update('gross_weight', t)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <InputField
-            label="Notes"
-            value={formData.notes}
-            onChangeText={(t) => update('notes', t)}
-            placeholder="Any remarks..."
-            multiline
-            numberOfLines={3}
+          <PhotoField
+            label="Supplier Bill Photo"
+            fieldName="supplier_bill_photo"
+            form={formData}
+            setForm={setFormData}
           />
 
-          <Text style={styles.sectionHeader}>Document Photos</Text>
-
-          <PhotoField label="Supplier Bill Photo" fieldName="supplier_bill_photo" />
-          <PhotoField label="Internal Weighment Slip" fieldName="internal_weighment_slip" />
-          <PhotoField label="Client Weighment Slip" fieldName="client_weighment_slip" />
-          <PhotoField label="Transportation Copy" fieldName="transportation_copy" />
-
-          <Text style={styles.sectionHeader}>Vehicle Photos</Text>
-
-          <PhotoField label="Front View" fieldName="vehicle_photo_front" />
-          <PhotoField label="Back View" fieldName="vehicle_photo_back" />
-          <PhotoField label="Side View" fieldName="vehicle_photo_side" />
-
           <View style={styles.buttonRow}>
+            <Button title="Cancel" onPress={resetEntryForm} style={styles.cancelBtn} textStyle={styles.cancelBtnText} />
             <Button
-              title="Cancel"
-              onPress={resetForm}
-              style={styles.cancelBtn}
-              textStyle={styles.cancelBtnText}
-            />
-            <Button
-              title={isSubmitting ? 'Saving...' : (editingId ? 'Update Entry' : 'Save Entry')}
+              title={isSubmitting ? 'Saving...' : (editingId ? 'Update Entry' : 'Save & Send to Lab')}
               onPress={handleSubmit}
               disabled={isSubmitting}
               style={styles.saveBtn}
             />
           </View>
-
           <View style={{ height: 40 }} />
         </ScrollView>
+      </Modal>
+
+      {/* Stage 3 — Gate-In */}
+      <Modal
+        visible={gateInVisible}
+        onClose={() => { setGateInVisible(false); setGateInTarget(null); }}
+        title="Gate-In · Loaded Vehicle"
+      >
+        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          <Text style={styles.stageHint}>
+            Step 3 of 5 · Capture loaded weight, vehicle photos and weighment paperwork
+            as the vehicle enters the premises.
+          </Text>
+
+          {gateInTarget && (
+            <View style={styles.contextCard}>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Vehicle: </Text>
+                {gateInTarget.vehicle_number}
+              </Text>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Supplier: </Text>
+                {gateInTarget.supplier?.supplier_name || '-'}
+              </Text>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Bill: </Text>
+                {gateInTarget.bill_no || '-'}
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.sectionHeader}>Loaded Weight</Text>
+          <InputField
+            label="Gross Weight (kg) *"
+            value={gateInForm.gross_weight}
+            onChangeText={(t) => updateGateIn('gross_weight', t)}
+            placeholder="e.g. 24500"
+            keyboardType="numeric"
+          />
+
+          <Text style={styles.sectionHeader}>Vehicle Photos</Text>
+          <PhotoField label="Front View" fieldName="vehicle_photo_front" form={gateInForm} setForm={setGateInForm} />
+          <PhotoField label="Back View" fieldName="vehicle_photo_back" form={gateInForm} setForm={setGateInForm} />
+          <PhotoField label="Side View" fieldName="vehicle_photo_side" form={gateInForm} setForm={setGateInForm} />
+
+          <Text style={styles.sectionHeader}>Weighment & Transport Documents</Text>
+          <PhotoField label="Internal Weighment Slip" fieldName="internal_weighment_slip" form={gateInForm} setForm={setGateInForm} />
+          <PhotoField label="Client Weighment Slip" fieldName="client_weighment_slip" form={gateInForm} setForm={setGateInForm} />
+          <PhotoField label="Transportation Copy" fieldName="transportation_copy" form={gateInForm} setForm={setGateInForm} />
+
+          <View style={styles.buttonRow}>
+            <Button
+              title="Cancel"
+              onPress={() => { setGateInVisible(false); setGateInTarget(null); }}
+              style={styles.cancelBtn}
+              textStyle={styles.cancelBtnText}
+            />
+            <Button
+              title={isSubmitting ? 'Saving...' : 'Confirm Gate-In'}
+              onPress={submitGateIn}
+              disabled={isSubmitting}
+              style={styles.saveBtn}
+            />
+          </View>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </Modal>
+
+      {/* Stage 5 — Gate-Out */}
+      <Modal
+        visible={gateOutVisible}
+        onClose={() => { setGateOutVisible(false); setGateOutTarget(null); }}
+        title="Gate-Out · Empty Vehicle"
+      >
+        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          <Text style={styles.stageHint}>
+            Step 5 of 5 · Capture empty truck weight after unloading and any closing remarks.
+          </Text>
+
+          {gateOutTarget && (
+            <View style={styles.contextCard}>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Vehicle: </Text>
+                {gateOutTarget.vehicle_number}
+              </Text>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Supplier: </Text>
+                {gateOutTarget.supplier?.supplier_name || '-'}
+              </Text>
+              <Text style={styles.contextLine}>
+                <Text style={styles.contextLabel}>Gross Weight (loaded): </Text>
+                {gateOutTarget.gross_weight ? `${gateOutTarget.gross_weight} kg` : '-'}
+              </Text>
+              {gateOutForm.empty_weight && Number(gateOutForm.empty_weight) > 0 && gateOutTarget.gross_weight && (
+                <Text style={[styles.contextLine, styles.netLine]}>
+                  <Text style={styles.contextLabel}>Net Weight: </Text>
+                  {(Number(gateOutTarget.gross_weight) - Number(gateOutForm.empty_weight)).toFixed(2)} kg
+                </Text>
+              )}
+            </View>
+          )}
+
+          <Text style={styles.sectionHeader}>Final Vehicle Data</Text>
+          <InputField
+            label="Empty Weight (kg) *"
+            value={gateOutForm.empty_weight}
+            onChangeText={(t) => updateGateOut('empty_weight', t)}
+            placeholder="e.g. 8200"
+            keyboardType="numeric"
+          />
+          <InputField
+            label="Closing Notes"
+            value={gateOutForm.notes}
+            onChangeText={(t) => updateGateOut('notes', t)}
+            placeholder="Any remarks at exit..."
+            multiline
+            numberOfLines={3}
+          />
+
+          <View style={styles.buttonRow}>
+            <Button
+              title="Cancel"
+              onPress={() => { setGateOutVisible(false); setGateOutTarget(null); }}
+              style={styles.cancelBtn}
+              textStyle={styles.cancelBtnText}
+            />
+            <Button
+              title={isSubmitting ? 'Saving...' : 'Confirm Gate-Out'}
+              onPress={submitGateOut}
+              disabled={isSubmitting}
+              style={styles.saveBtn}
+            />
+          </View>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </Modal>
+
+      {/* View / Summary */}
+      <Modal
+        visible={viewVisible}
+        onClose={() => { setViewVisible(false); setViewTarget(null); }}
+        title="Vehicle Entry Summary"
+      >
+        {viewTarget && (
+          <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+            <View style={{ marginBottom: 12 }}>
+              <StatusPill status={getStatus(viewTarget)} />
+            </View>
+
+            <Text style={styles.sectionHeader}>Stage 1 · Arrival</Text>
+            <SummaryRow label="Vehicle Number" value={viewTarget.vehicle_number} />
+            <SummaryRow label="Supplier" value={viewTarget.supplier?.supplier_name || '-'} />
+            <SummaryRow label="Bill No" value={viewTarget.bill_no || '-'} />
+            <SummaryRow label="Driver" value={viewTarget.driver_name || '-'} />
+            <SummaryRow label="Driver Phone" value={viewTarget.driver_phone || '-'} />
+            <SummaryRow label="Arrival Time" value={isoToDisplay(viewTarget.arrival_time)} />
+
+            <Text style={styles.sectionHeader}>Stage 2 · Lab Test</Text>
+            <SummaryRow
+              label="Lab Status"
+              value={
+                labStatusMap[viewTarget.id]?.approved ? 'Approved'
+                  : labStatusMap[viewTarget.id]?.tested ? 'Tested · awaiting approval'
+                  : 'Not tested yet'
+              }
+            />
+
+            <Text style={styles.sectionHeader}>Stage 3 · Gate-In</Text>
+            <SummaryRow
+              label="Gross Weight"
+              value={viewTarget.gross_weight && Number(viewTarget.gross_weight) > 0 ? `${viewTarget.gross_weight} kg` : '-'}
+            />
+
+            <Text style={styles.sectionHeader}>Stage 4 · Unloading</Text>
+            <SummaryRow
+              label="Unloading"
+              value={unloadingMap[viewTarget.id] ? 'Recorded' : 'Not yet recorded'}
+            />
+
+            <Text style={styles.sectionHeader}>Stage 5 · Gate-Out</Text>
+            <SummaryRow
+              label="Empty Weight"
+              value={viewTarget.empty_weight && Number(viewTarget.empty_weight) > 0 ? `${viewTarget.empty_weight} kg` : '-'}
+            />
+            {viewTarget.gross_weight && viewTarget.empty_weight &&
+              Number(viewTarget.gross_weight) > 0 && Number(viewTarget.empty_weight) > 0 && (
+              <SummaryRow
+                label="Net Weight"
+                value={`${(Number(viewTarget.gross_weight) - Number(viewTarget.empty_weight)).toFixed(2)} kg`}
+              />
+            )}
+            <SummaryRow label="Notes" value={viewTarget.notes || '-'} />
+
+            <View style={styles.buttonRow}>
+              <Button
+                title="Close"
+                onPress={() => { setViewVisible(false); setViewTarget(null); }}
+                style={styles.saveBtn}
+              />
+            </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        )}
       </Modal>
     </Layout>
   );
 }
 
+function SummaryRow({ label, value }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summaryValue}>{value}</Text>
+    </View>
+  );
+}
+
+const actionStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  btn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  viewBtn: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  viewText: { color: '#1D4ED8', fontSize: 12, fontWeight: '600' },
+  editBtn: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  editText: { color: '#047857', fontSize: 12, fontWeight: '600' },
+  gateInBtn: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  gateOutBtn: {
+    backgroundColor: '#A16207',
+    borderColor: '#A16207',
+  },
+  primaryText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  delBtn: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  delText: { color: '#DC2626', fontSize: 12, fontWeight: '600' },
+});
+
 const styles = StyleSheet.create({
   form: {
     padding: 20,
     flex: 1,
+  },
+  stageHint: {
+    fontSize: 12,
+    color: '#475569',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    marginBottom: 8,
+    lineHeight: 17,
   },
   sectionHeader: {
     fontSize: 13,
@@ -494,11 +970,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-  weightRow: {
-    flexDirection: 'row',
-    gap: 12,
+  contextCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 4,
   },
-  weightHalf: { flex: 1 },
+  contextLine: { fontSize: 13, color: '#1F2937' },
+  contextLabel: { fontWeight: '700', color: '#475569' },
+  netLine: { marginTop: 4, color: '#065F46', fontWeight: '600' },
   photoField: {
     marginBottom: 16,
   },
@@ -575,5 +1059,25 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 2,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '600',
+    flex: 1.4,
+    textAlign: 'right',
   },
 });

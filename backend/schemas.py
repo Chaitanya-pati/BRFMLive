@@ -317,6 +317,7 @@ class LabTestBase(ISTModel):
     remarks: Optional[str] = None
     tested_by: Optional[str] = None
     raise_claim: Optional[int] = 0  # 0 = No, 1 = Yes
+    approved: Optional[bool] = False
 
     @validator('test_date', pre=True)
     def _parse_dates(cls, v):
