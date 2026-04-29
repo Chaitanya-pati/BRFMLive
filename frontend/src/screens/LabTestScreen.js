@@ -17,7 +17,7 @@ import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import { vehicleApi, labTestApi, claimApi } from "../api/client";
 import colors from "../theme/colors";
-import { formatISTDate } from "../utils/dateUtils";
+import { formatISTDate, formatISTDateTime } from "../utils/dateUtils";
 
 async function getLogoBase64() {
   try {
@@ -43,6 +43,7 @@ function buildLabTestHTML(labTest, logoBase64) {
   const v = labTest.vehicle_entry || {};
   const supplier = v.supplier || {};
   const D = (d) => d ? formatISTDate(d) : '';
+  const DT = (d) => d ? formatISTDateTime(d) : '';
   const N = (n) => (n != null && n !== '') ? Number(n).toFixed(2) : '';
   const S = (s) => (s != null && s !== '') ? String(s) : '';
 
@@ -103,7 +104,7 @@ function buildLabTestHTML(labTest, logoBase64) {
     </tr>
     <tr>
       <td style="padding:4px 8px;border-right:1px solid #000;border-top:1px solid #000;font-size:9pt;">
-        <strong>VEHICLE NO:</strong> ${S(v.vehicle_number)}
+        <strong>VEHICLE NO:</strong> ${S(v.vehicle_number)}&nbsp;&nbsp;&nbsp;<strong>ENTRY ID:</strong> ${S(labTest.vehicle_entry_id)}
       </td>
       <td style="padding:4px 8px;border-top:1px solid #000;font-size:9pt;">
         <strong>CATEGORY:</strong> ${S(labTest.category)}
@@ -111,7 +112,7 @@ function buildLabTestHTML(labTest, logoBase64) {
     </tr>
     <tr>
       <td colspan="2" style="padding:4px 8px;border-top:1px solid #000;font-size:9pt;">
-        <strong>VEHICLE ARRIVAL DATE &amp; TIME:</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>VEHICLE ARRIVAL DATE &amp; TIME:</strong> ${v.arrival_time ? DT(v.arrival_time) : ''}
       </td>
     </tr>
   </table>
