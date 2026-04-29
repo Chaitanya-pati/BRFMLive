@@ -19,6 +19,211 @@ import { vehicleApi, labTestApi, claimApi } from "../api/client";
 import colors from "../theme/colors";
 import { formatISTDate } from "../utils/dateUtils";
 
+async function getLogoBase64() {
+  try {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const backendBase = (hostname === 'localhost' || hostname === '127.0.0.1')
+      ? `http://${hostname}:8000`
+      : `${protocol}//${hostname}:8000`;
+    const logoUrl = `${backendBase}/uploads/brfm-logo.png`;
+    const resp = await fetch(logoUrl);
+    const blob = await resp.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function buildLabTestHTML(labTest, logoBase64) {
+  const v = labTest.vehicle_entry || {};
+  const supplier = v.supplier || {};
+  const D = (d) => d ? formatISTDate(d) : '—';
+  const N = (n) => (n != null && n !== '') ? Number(n).toFixed(2) : '—';
+  const S = (s) => (s != null && s !== '') ? String(s) : '—';
+
+  const logoHTML = logoBase64
+    ? `<img src="${logoBase64}" alt="Logo" style="height:70px;width:70px;object-fit:contain;" />`
+    : '';
+
+  const categoryColor = {
+    'Mill': '#16a34a', 'Low Mill': '#ca8a04',
+    'HD': '#2563eb', 'Rejected': '#dc2626'
+  }[labTest.category] || '#374151';
+
+  const row = (label, value, extra = '') =>
+    `<tr><td style="padding:5px 8px;border:1px solid #e5e7eb;background:#f9fafb;font-size:9pt;color:#6b7280;width:40%;">${label}</td><td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:10pt;font-weight:600;${extra}">${value}</td></tr>`;
+
+  const paramRow = (label, value, unit = '%') =>
+    `<tr><td style="padding:5px 8px;border:1px solid #e5e7eb;background:#f9fafb;font-size:9pt;color:#6b7280;">${label}</td><td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:10pt;font-weight:600;text-align:right;">${value !== '—' ? value + ' ' + unit : '—'}</td></tr>`;
+
+  return `
+<div style="font-family:Arial,sans-serif;font-size:10pt;color:#111;max-width:800px;margin:0 auto;">
+
+  <!-- Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:2px solid #1e3a5f;margin-bottom:0;">
+    <tr>
+      <td style="padding:14px 18px;vertical-align:middle;width:80px;">${logoHTML}</td>
+      <td style="padding:14px 8px;vertical-align:middle;text-align:center;">
+        <div style="font-size:18pt;font-weight:900;color:#1e3a5f;letter-spacing:0.5px;">BRFM INDUSTRIES</div>
+        <div style="font-size:9pt;color:#374151;margin-top:2px;">Raw Wheat Quality Analysis Report</div>
+        <div style="font-size:8pt;color:#6b7280;margin-top:2px;">Lab Test Certificate</div>
+      </td>
+      <td style="padding:14px 18px;vertical-align:middle;text-align:right;width:160px;">
+        <div style="background:#1e3a5f;color:#fff;padding:6px 12px;border-radius:4px;font-size:9pt;font-weight:700;">Report #${S(labTest.id)}</div>
+        <div style="font-size:8pt;color:#6b7280;margin-top:6px;">Date: ${D(labTest.test_date)}</div>
+        <div style="font-size:8pt;color:#6b7280;">Dept: ${S(labTest.department)}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Divider -->
+  <div style="height:4px;background:linear-gradient(90deg,#1e3a5f,#3b82f6,#1e3a5f);margin-bottom:14px;"></div>
+
+  <!-- Vehicle / Supplier Info -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:14px;">
+    <tr>
+      <td width="50%" style="padding-right:8px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Vehicle Information</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${row('Vehicle Number', S(v.vehicle_number))}
+          ${row('Bill Number', S(labTest.bill_number))}
+          ${row('Wheat Variety', S(labTest.wheat_variety))}
+          ${row('Test Date', D(labTest.test_date))}
+        </table>
+      </td>
+      <td width="50%" style="padding-left:8px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Supplier Information</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${row('Supplier Name', S(supplier.supplier_name))}
+          ${row('Supplier Code', S(supplier.supplier_code))}
+          ${row('Category', `<span style="background:${categoryColor};color:#fff;padding:2px 8px;border-radius:3px;font-size:9pt;">${S(labTest.category)}</span>`, '')}
+          ${row('Approved', labTest.approved ? '<span style="color:#16a34a;font-weight:700;">✓ YES</span>' : '<span style="color:#dc2626;">✗ NO</span>', '')}
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Parameters Tables -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:14px;">
+    <tr>
+      <!-- Physical Parameters -->
+      <td width="33%" style="padding-right:6px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Physical Parameters</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${paramRow('Moisture', N(labTest.moisture))}
+          ${paramRow('Hectoliter Weight', N(labTest.test_weight), 'Kg/Hl')}
+          ${paramRow('Protein', N(labTest.protein_percent))}
+          ${paramRow('Wet Gluten', N(labTest.wet_gluten))}
+          ${paramRow('Dry Gluten', N(labTest.dry_gluten))}
+          ${paramRow('Falling Number', labTest.falling_number != null ? String(labTest.falling_number) : '—', 'sec')}
+        </table>
+      </td>
+      <!-- Impurities -->
+      <td width="33%" style="padding:0 6px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Impurities (%)</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${paramRow('Chaff / Husk', N(labTest.chaff_husk))}
+          ${paramRow('Straws / Sticks', N(labTest.straws_sticks))}
+          ${paramRow('Other Foreign Matter', N(labTest.other_foreign_matter))}
+          ${paramRow('Mud Balls', N(labTest.mudballs))}
+          ${paramRow('Stones', N(labTest.stones))}
+          ${paramRow('Dust / Sand', N(labTest.dust_sand))}
+          <tr><td colspan="2" style="padding:5px 8px;border:2px solid #1e3a5f;background:#eff6ff;font-size:10pt;font-weight:900;color:#1e3a5f;">Total Impurities: ${N(labTest.total_impurities)} %</td></tr>
+        </table>
+      </td>
+      <!-- Dockage -->
+      <td width="33%" style="padding-left:6px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Dockage (%)</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${paramRow('Shriveled Wheat', N(labTest.shriveled_wheat))}
+          ${paramRow('Insect Damage', N(labTest.insect_damage))}
+          ${paramRow('Blackened Wheat', N(labTest.blackened_wheat))}
+          ${paramRow('Other Grains / Sprouted', N(labTest.sprouted_grains))}
+          ${paramRow('Soft / Other Damage', N(labTest.other_grain_damage))}
+          <tr><td colspan="2" style="padding:5px 8px;border:2px solid #1e3a5f;background:#eff6ff;font-size:10pt;font-weight:900;color:#1e3a5f;">Total Dockage: ${N(labTest.total_dockage)} %</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Remarks & Sign-off -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:20px;">
+    <tr>
+      <td width="60%" style="padding-right:8px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Remarks / Action</div>
+        <div style="border:1px solid #e5e7eb;border-radius:4px;padding:10px;min-height:60px;font-size:9.5pt;color:#374151;background:#f9fafb;">
+          ${S(labTest.remarks)}
+        </div>
+      </td>
+      <td width="40%" style="padding-left:8px;vertical-align:top;">
+        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Sign-off</div>
+        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          ${row('Tested By', S(labTest.tested_by))}
+        </table>
+        <div style="margin-top:30px;border-top:1px solid #374151;text-align:center;font-size:8pt;color:#6b7280;padding-top:4px;">Authorized Signature</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Footer -->
+  <div style="border-top:2px solid #1e3a5f;padding-top:8px;display:flex;justify-content:space-between;font-size:8pt;color:#6b7280;">
+    <span>Generated on: ${new Date().toLocaleString('en-IN')}</span>
+    <span>BRFM Industries — Confidential Quality Report</span>
+    <span>Report ID: ${S(labTest.id)}</span>
+  </div>
+</div>`;
+}
+
+async function printLabTestReport(labTest) {
+  if (Platform.OS !== 'web') return;
+  const logoBase64 = await getLogoBase64();
+  const html = buildLabTestHTML(labTest, logoBase64);
+  const win = window.open('', '_blank', 'width=950,height=750');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Lab Test Report #${labTest.id}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #fff; color: #000; padding: 12mm; }
+    @page { size: A4 portrait; margin: 10mm; }
+    @media print {
+      body { padding: 0; margin: 0; }
+      .no-print { display: none !important; }
+    }
+    .print-btn-bar {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 10px 14px; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0; margin-bottom: 16px;
+    }
+    .print-btn-bar button {
+      padding: 8px 20px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .btn-print { background: #1e3a5f; color: #fff; }
+    .btn-close { background: #e2e8f0; color: #374151; }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar no-print">
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ Close</button>
+  </div>
+  ${html}
+  <script>window.onafterprint = function() { window.close(); };<\/script>
+</body>
+</html>`);
+  win.document.close();
+  win.focus();
+}
+
 export default function LabTestScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -463,12 +668,12 @@ export default function LabTestScreen({ navigation }) {
     {
       label: "Actions",
       field: "id",
-      width: 150,
+      width: 220,
       key: "actions",
       render: (labTest) => {
         const hasClaim = labTest && (labTest.has_claim === 1 || labTest.has_claim === true);
         return (
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {!hasClaim ? (
               <TouchableOpacity
                 style={styles.raiseClaimButton}
@@ -479,6 +684,12 @@ export default function LabTestScreen({ navigation }) {
             ) : (
               <Text style={styles.claimedText}>Claimed</Text>
             )}
+            <TouchableOpacity
+              style={styles.printButton}
+              onPress={() => printLabTestReport(labTest)}
+            >
+              <Text style={styles.printButtonText}>🖨 Print</Text>
+            </TouchableOpacity>
           </View>
         );
       },
@@ -920,6 +1131,8 @@ const styles = StyleSheet.create({
   raiseClaimButton: { backgroundColor: "#fee2e2", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
   raiseClaimButtonText: { color: "#ef4444", fontWeight: "600" },
   claimedText: { color: "#10b981", fontWeight: "600" },
+  printButton: { backgroundColor: "#1e3a5f", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
+  printButtonText: { color: "#fff", fontWeight: "600", fontSize: 12 },
   label: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#374151" },
   modalPadding: { padding: 20 },
   scrollContainer: { flex: 1 },
