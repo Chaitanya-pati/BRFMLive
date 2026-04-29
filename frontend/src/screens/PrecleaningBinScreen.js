@@ -254,11 +254,12 @@ export default function PrecleaningBinScreen({ navigation }) {
     });
   };
 
-  // Update available bins when source godown changes - show ALL active bins
+  // Update available bins when source godown changes - show only active 24-hour bins
   useEffect(() => {
     if (selectedSourceGodown) {
-      // Show all active bins, not just those with route mappings
-      const activeBins = bins.filter((b) => b.status === "Active");
+      const activeBins = bins.filter(
+        (b) => b.status === "Active" && b.bin_type === "24 hours bin"
+      );
       const sortedBins = getSortedBinsByLastDigit(activeBins);
       setAvailableDestinationBins(sortedBins);
     } else {
@@ -1405,44 +1406,20 @@ export default function PrecleaningBinScreen({ navigation }) {
                                   ]}
                                 >
                                   {isCurrentBt && isSessionActive && (
-                                    <>
-                                      <TouchableOpacity
-                                        style={styles.procActionDivert}
-                                        onPress={() => {
-                                          setActiveTransferSession(session);
-                                          setDivertTransferFormData({
-                                            new_bin_id: "",
-                                            quantity_transferred: "",
-                                          });
-                                          setDivertTransferModal(true);
-                                        }}
-                                      >
-                                        <Text
-                                          style={styles.procActionText}
-                                        >
-                                          Divert
-                                        </Text>
-                                      </TouchableOpacity>
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.procActionStop,
-                                          { marginTop: 4 },
-                                        ]}
-                                        onPress={() => {
-                                          setActiveTransferSession(session);
-                                          setStopTransferFormData({
-                                            transferred_quantity: "",
-                                          });
-                                          setStopTransferModal(true);
-                                        }}
-                                      >
-                                        <Text
-                                          style={styles.procActionText}
-                                        >
-                                          Stop
-                                        </Text>
-                                      </TouchableOpacity>
-                                    </>
+                                    <TouchableOpacity
+                                      style={styles.procActionStop}
+                                      onPress={() => {
+                                        setActiveTransferSession(session);
+                                        setStopTransferFormData({
+                                          transferred_quantity: "",
+                                        });
+                                        setStopTransferModal(true);
+                                      }}
+                                    >
+                                      <Text style={styles.procActionText}>
+                                        Stop
+                                      </Text>
+                                    </TouchableOpacity>
                                   )}
                                 </View>
                               </View>
@@ -1487,51 +1464,60 @@ export default function PrecleaningBinScreen({ navigation }) {
             {selectedSourceGodown && availableDestinationBins.length > 0 && (
               <View style={styles.binSelectionContainer}>
                 <Text style={styles.binSelectionLabel}>
-                  Destination Bin * (Ordered Sequentially)
+                  Destination Bin * — 24 Hour Bins
                 </Text>
                 <View style={styles.binListContainer}>
-                  {availableDestinationBins.map((bin) => (
-                    <TouchableOpacity
-                      key={bin.id}
-                      style={styles.binOption}
-                      onPress={() =>
-                        setTransferSessionFormData({
-                          ...transferSessionFormData,
-                          destination_bin_id: String(bin.id),
-                        })
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.radioOuter}>
-                        {transferSessionFormData.destination_bin_id ===
-                          String(bin.id) && <View style={styles.radioInner} />}
-                      </View>
-                      <View style={styles.binInfoContainer}>
-                        <Text style={styles.binNumberText}>
-                          Bin {bin.bin_number}
-                        </Text>
-                        <Text style={styles.binDetailsText}>
-                          Capacity: {bin.capacity} tons | Current:{" "}
-                          {bin.current_quantity || 0} tons
-                        </Text>
-                        <Text
-                          style={[
-                            styles.binStatusText,
-                            bin.status === "Active" && styles.binStatusActive,
-                          ]}
-                        >
-                          {bin.status}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                  {availableDestinationBins.map((bin) => {
+                    const isSelected =
+                      transferSessionFormData.destination_bin_id === String(bin.id);
+                    const fillPct = bin.capacity > 0
+                      ? Math.min(100, Math.round(((bin.current_quantity || 0) / bin.capacity) * 100))
+                      : 0;
+                    const fillColor = fillPct >= 90 ? "#ef4444" : fillPct >= 60 ? "#f59e0b" : "#10b981";
+                    return (
+                      <TouchableOpacity
+                        key={bin.id}
+                        style={[styles.binCard24, isSelected && styles.binCard24Selected]}
+                        onPress={() =>
+                          setTransferSessionFormData({
+                            ...transferSessionFormData,
+                            destination_bin_id: String(bin.id),
+                          })
+                        }
+                        activeOpacity={0.75}
+                      >
+                        <View style={[styles.binIconCircle, isSelected && { backgroundColor: colors.primary }]}>
+                          <Text style={styles.binIconEmoji}>🗄</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.binCardName, isSelected && { color: colors.primary }]}>
+                            Bin {bin.bin_number}
+                          </Text>
+                          <Text style={styles.binCardMeta}>
+                            Capacity: {bin.capacity} t  |  Current: {bin.current_quantity || 0} t
+                          </Text>
+                          <View style={styles.binFillBarBg}>
+                            <View style={[styles.binFillBarFill, { width: `${fillPct}%`, backgroundColor: fillColor }]} />
+                          </View>
+                          <Text style={[styles.binCardMeta, { color: fillColor, fontWeight: "600" }]}>
+                            {fillPct}% full
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <View style={styles.binSelectedCheck}>
+                            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13 }}>✓</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}
 
             {selectedSourceGodown && availableDestinationBins.length === 0 && (
               <Text style={styles.noBinsText}>
-                No active bins available. Please check bin status in the system.
+                No active 24-hour bins available. Please check bin status.
               </Text>
             )}
 
@@ -1647,14 +1633,6 @@ export default function PrecleaningBinScreen({ navigation }) {
             )}
 
             <View style={styles.buttonContainer}>
-              <Button
-                title="Divert to Next Bin"
-                onPress={() => {
-                  setViewActiveTransferModal(false);
-                  setDivertTransferModal(true);
-                }}
-                variant="secondary"
-              />
               <Button
                 title="Stop Transfer"
                 onPress={() => {
@@ -2176,9 +2154,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.primary,
   },
-  binInfoContainer: {
-    flex: 1,
-  },
+  binInfoContainer: { flex: 1 },
   binNumberText: {
     fontSize: 16,
     fontWeight: "600",
@@ -2192,11 +2168,71 @@ const styles = StyleSheet.create({
   },
   binStatusText: {
     fontSize: 12,
-    color: colors.gray[600],
+    color: colors.gray ? colors.gray[600] : "#6b7280",
     fontWeight: "500",
   },
-  binStatusActive: {
-    color: colors.success || "#10b981",
+  binStatusActive: { color: "#10b981" },
+  binCard24: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 3,
+    elevation: 2,
+    gap: 12,
+  },
+  binCard24Selected: {
+    borderColor: colors.primary,
+    backgroundColor: "#eff6ff",
+    shadowOpacity: 0.15,
+    elevation: 4,
+  },
+  binIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#e0f2fe",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  binIconEmoji: { fontSize: 22 },
+  binCardName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  binCardMeta: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 4,
+  },
+  binFillBarBg: {
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 3,
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  binFillBarFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  binSelectedCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
   },
   noBinsText: {
     fontSize: 14,
