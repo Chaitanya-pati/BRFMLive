@@ -26,7 +26,7 @@ async function getLogoBase64() {
     const backendBase = (hostname === 'localhost' || hostname === '127.0.0.1')
       ? `http://${hostname}:8000`
       : `${protocol}//${hostname}:8000`;
-    const logoUrl = `${backendBase}/uploads/brfm-logo.png`;
+    const logoUrl = `${backendBase}/uploads/new-logo.png`;
     const resp = await fetch(logoUrl);
     const blob = await resp.blob();
     return await new Promise((resolve) => {
@@ -42,140 +42,149 @@ async function getLogoBase64() {
 function buildLabTestHTML(labTest, logoBase64) {
   const v = labTest.vehicle_entry || {};
   const supplier = v.supplier || {};
-  const D = (d) => d ? formatISTDate(d) : '—';
-  const N = (n) => (n != null && n !== '') ? Number(n).toFixed(2) : '—';
-  const S = (s) => (s != null && s !== '') ? String(s) : '—';
+  const D = (d) => d ? formatISTDate(d) : '';
+  const N = (n) => (n != null && n !== '') ? Number(n).toFixed(2) : '';
+  const S = (s) => (s != null && s !== '') ? String(s) : '';
 
   const logoHTML = logoBase64
-    ? `<img src="${logoBase64}" alt="Logo" style="height:70px;width:70px;object-fit:contain;" />`
-    : '';
+    ? `<img src="${logoBase64}" alt="BRFM" style="width:64px;height:64px;object-fit:contain;display:block;" />`
+    : `<div style="width:64px;height:64px;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14pt;text-align:center;line-height:1.2;">BR<br/>FM</div>`;
 
-  const categoryColor = {
-    'Mill': '#16a34a', 'Low Mill': '#ca8a04',
-    'HD': '#2563eb', 'Rejected': '#dc2626'
-  }[labTest.category] || '#374151';
+  const td = (content, style = '') =>
+    `<td style="border:1px solid #000;padding:3px 5px;${style}">${content}</td>`;
 
-  const row = (label, value, extra = '') =>
-    `<tr><td style="padding:5px 8px;border:1px solid #e5e7eb;background:#f9fafb;font-size:9pt;color:#6b7280;width:40%;">${label}</td><td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:10pt;font-weight:600;${extra}">${value}</td></tr>`;
+  const sectionHeader = (label) =>
+    `<tr><td colspan="5" style="border:1px solid #000;padding:3px 5px;font-weight:bold;text-align:center;background:#f0f0f0;">${label}</td></tr>`;
 
-  const paramRow = (label, value, unit = '%') =>
-    `<tr><td style="padding:5px 8px;border:1px solid #e5e7eb;background:#f9fafb;font-size:9pt;color:#6b7280;">${label}</td><td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:10pt;font-weight:600;text-align:right;">${value !== '—' ? value + ' ' + unit : '—'}</td></tr>`;
+  const dataRow = (sr, test, uom, standard, actual) =>
+    `<tr>
+      ${td(sr, 'text-align:center;width:32px;')}
+      ${td(test)}
+      ${td(uom, 'text-align:center;width:50px;')}
+      ${td(standard, 'text-align:center;width:80px;')}
+      ${td(actual, 'text-align:center;width:110px;')}
+    </tr>`;
 
   return `
-<div style="font-family:Arial,sans-serif;font-size:10pt;color:#111;max-width:800px;margin:0 auto;">
+<div style="font-family:Arial,sans-serif;font-size:9.5pt;color:#000;width:100%;max-width:720px;margin:0 auto;border:1.5px solid #000;">
 
   <!-- Header -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:2px solid #1e3a5f;margin-bottom:0;">
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-bottom:1.5px solid #000;">
     <tr>
-      <td style="padding:14px 18px;vertical-align:middle;width:80px;">${logoHTML}</td>
-      <td style="padding:14px 8px;vertical-align:middle;text-align:center;">
-        <div style="font-size:18pt;font-weight:900;color:#1e3a5f;letter-spacing:0.5px;">BRFM INDUSTRIES</div>
-        <div style="font-size:9pt;color:#374151;margin-top:2px;">Raw Wheat Quality Analysis Report</div>
-        <div style="font-size:8pt;color:#6b7280;margin-top:2px;">Lab Test Certificate</div>
+      <td style="width:80px;padding:8px;border-right:1px solid #000;vertical-align:middle;text-align:center;">
+        ${logoHTML}
       </td>
-      <td style="padding:14px 18px;vertical-align:middle;text-align:right;width:160px;">
-        <div style="background:#1e3a5f;color:#fff;padding:6px 12px;border-radius:4px;font-size:9pt;font-weight:700;">Report #${S(labTest.id)}</div>
-        <div style="font-size:8pt;color:#6b7280;margin-top:6px;">Date: ${D(labTest.test_date)}</div>
-        <div style="font-size:8pt;color:#6b7280;">Dept: ${S(labTest.department)}</div>
+      <td style="padding:8px;vertical-align:middle;text-align:center;">
+        <div style="font-size:15pt;font-weight:900;letter-spacing:0.5px;">Raw Wheat Quality Report</div>
+      </td>
+      <td style="width:160px;padding:8px;border-left:1px solid #000;vertical-align:top;font-size:8.5pt;line-height:1.7;">
+        <div>Dept.-QA</div>
       </td>
     </tr>
   </table>
 
-  <!-- Divider -->
-  <div style="height:4px;background:linear-gradient(90deg,#1e3a5f,#3b82f6,#1e3a5f);margin-bottom:14px;"></div>
-
-  <!-- Vehicle / Supplier Info -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:14px;">
+  <!-- Info fields -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-bottom:1px solid #000;">
     <tr>
-      <td width="50%" style="padding-right:8px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Vehicle Information</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${row('Vehicle Number', S(v.vehicle_number))}
-          ${row('Bill Number', S(labTest.bill_number))}
-          ${row('Wheat Variety', S(labTest.wheat_variety))}
-          ${row('Test Date', D(labTest.test_date))}
-        </table>
+      <td style="padding:4px 8px;border-right:1px solid #000;font-size:9pt;width:50%;">
+        <strong>WHEAT VARIETY:</strong> ${S(labTest.wheat_variety)}
       </td>
-      <td width="50%" style="padding-left:8px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Supplier Information</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${row('Supplier Name', S(supplier.supplier_name))}
-          ${row('Supplier Code', S(supplier.supplier_code))}
-          ${row('Category', `<span style="background:${categoryColor};color:#fff;padding:2px 8px;border-radius:3px;font-size:9pt;">${S(labTest.category)}</span>`, '')}
-          ${row('Approved', labTest.approved ? '<span style="color:#16a34a;font-weight:700;">✓ YES</span>' : '<span style="color:#dc2626;">✗ NO</span>', '')}
-        </table>
+      <td style="padding:4px 8px;font-size:9pt;">
+        <strong>DATE:</strong> ${D(labTest.test_date)}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:4px 8px;border-right:1px solid #000;border-top:1px solid #000;font-size:9pt;" colspan="1">
+        <strong>TRADER/SUPPLIER NAME:</strong> ${S(supplier.supplier_name)}
+      </td>
+      <td style="padding:4px 8px;border-top:1px solid #000;font-size:9pt;">
+        <strong>BILL NO:</strong> ${S(labTest.bill_number)}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:4px 8px;border-right:1px solid #000;border-top:1px solid #000;font-size:9pt;">
+        <strong>VEHICLE NO:</strong> ${S(v.vehicle_number)}
+      </td>
+      <td style="padding:4px 8px;border-top:1px solid #000;font-size:9pt;">
+        <strong>CATEGORY:</strong> ${S(labTest.category)}
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:4px 8px;border-top:1px solid #000;font-size:9pt;">
+        <strong>VEHICLE ARRIVAL DATE &amp; TIME:</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
     </tr>
   </table>
 
-  <!-- Parameters Tables -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:14px;">
-    <tr>
-      <!-- Physical Parameters -->
-      <td width="33%" style="padding-right:6px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Physical Parameters</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${paramRow('Moisture', N(labTest.moisture))}
-          ${paramRow('Hectoliter Weight', N(labTest.test_weight), 'Kg/Hl')}
-          ${paramRow('Protein', N(labTest.protein_percent))}
-          ${paramRow('Wet Gluten', N(labTest.wet_gluten))}
-          ${paramRow('Dry Gluten', N(labTest.dry_gluten))}
-          ${paramRow('Falling Number', labTest.falling_number != null ? String(labTest.falling_number) : '—', 'sec')}
-        </table>
-      </td>
-      <!-- Impurities -->
-      <td width="33%" style="padding:0 6px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Impurities (%)</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${paramRow('Chaff / Husk', N(labTest.chaff_husk))}
-          ${paramRow('Straws / Sticks', N(labTest.straws_sticks))}
-          ${paramRow('Other Foreign Matter', N(labTest.other_foreign_matter))}
-          ${paramRow('Mud Balls', N(labTest.mudballs))}
-          ${paramRow('Stones', N(labTest.stones))}
-          ${paramRow('Dust / Sand', N(labTest.dust_sand))}
-          <tr><td colspan="2" style="padding:5px 8px;border:2px solid #1e3a5f;background:#eff6ff;font-size:10pt;font-weight:900;color:#1e3a5f;">Total Impurities: ${N(labTest.total_impurities)} %</td></tr>
-        </table>
-      </td>
-      <!-- Dockage -->
-      <td width="33%" style="padding-left:6px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Dockage (%)</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${paramRow('Shriveled Wheat', N(labTest.shriveled_wheat))}
-          ${paramRow('Insect Damage', N(labTest.insect_damage))}
-          ${paramRow('Blackened Wheat', N(labTest.blackened_wheat))}
-          ${paramRow('Other Grains / Sprouted', N(labTest.sprouted_grains))}
-          ${paramRow('Soft / Other Damage', N(labTest.other_grain_damage))}
-          <tr><td colspan="2" style="padding:5px 8px;border:2px solid #1e3a5f;background:#eff6ff;font-size:10pt;font-weight:900;color:#1e3a5f;">Total Dockage: ${N(labTest.total_dockage)} %</td></tr>
-        </table>
-      </td>
-    </tr>
+  <!-- Main test table -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+    <thead>
+      <tr>
+        ${td('<strong>Sr.</strong>', 'text-align:center;width:32px;background:#f0f0f0;')}
+        ${td('<strong>TEST</strong>', 'background:#f0f0f0;')}
+        ${td('<strong>UOM</strong>', 'text-align:center;width:50px;background:#f0f0f0;')}
+        ${td('<strong>STANDARD</strong>', 'text-align:center;width:80px;background:#f0f0f0;')}
+        ${td('<strong>ACTUAL REPORT</strong>', 'text-align:center;width:110px;background:#f0f0f0;')}
+      </tr>
+    </thead>
+    <tbody>
+      ${dataRow('1', 'Moisture', '%', '8-10.5', N(labTest.moisture))}
+      ${dataRow('2', 'Hectoliter weight', 'Kg/hl', '&gt;75', N(labTest.test_weight))}
+      ${sectionHeader('Gluten')}
+      ${dataRow('a', 'Wet Gluten', '%', '', N(labTest.wet_gluten))}
+      ${dataRow('b', 'Dry Gluten', '%', '32-33', N(labTest.dry_gluten))}
+      ${dataRow('3', 'Protein %', '%', '', N(labTest.protein_percent))}
+      ${dataRow('4', 'Sedimentation Value', 'ml', '24-25 ml', N(labTest.falling_number))}
+      ${sectionHeader('Refractions')}
+      ${dataRow('a', 'Chaff / Husk', '%', '', N(labTest.chaff_husk))}
+      ${dataRow('b', 'Straws / Sticks', '%', '', N(labTest.straws_sticks))}
+      ${dataRow('c', 'Other Foreign Matter (OFM)', '%', '', N(labTest.other_foreign_matter))}
+      ${dataRow('d', 'Mudballs', '%', '&lt;3', N(labTest.mudballs))}
+      ${dataRow('e', 'Stones', '%', '', N(labTest.stones))}
+      ${dataRow('f', 'Dust / Sand', '%', '', N(labTest.dust_sand))}
+      <tr>
+        <td colspan="3" style="border:1px solid #000;padding:3px 5px;font-weight:bold;">Total Impurities (%)</td>
+        <td style="border:1px solid #000;padding:3px 5px;text-align:center;font-weight:bold;"></td>
+        <td style="border:1px solid #000;padding:3px 5px;text-align:center;font-weight:bold;">${N(labTest.total_impurities)}</td>
+      </tr>
+      ${sectionHeader('Grain Dockage')}
+      ${dataRow('1', 'Shriveled wheat', '%', '0.5', N(labTest.shriveled_wheat))}
+      ${dataRow('2', 'Insect Bored damage', '%', '0.5', N(labTest.insect_damage))}
+      ${dataRow('3', 'Blackened wheat', '%', '0.5', N(labTest.blackened_wheat))}
+      ${dataRow('4', 'Other Grains', '%', '0.5', N(labTest.sprouted_grains))}
+      ${dataRow('5', 'Soft Wheat', '%', '0.5', N(labTest.other_grain_damage))}
+      ${dataRow('6', 'Heat Damaged wheat', '%', '0.5', '')}
+      ${dataRow('7', 'Immature wheat', '%', '0.5', '')}
+      ${dataRow('8', 'Broken wheat', '%', '0.5', '')}
+      <tr>
+        <td colspan="3" style="border:1px solid #000;padding:3px 5px;font-weight:bold;">Total Dockage</td>
+        <td style="border:1px solid #000;padding:3px 5px;text-align:center;">%</td>
+        <td style="border:1px solid #000;padding:3px 5px;text-align:center;font-weight:bold;">${N(labTest.total_dockage)}</td>
+      </tr>
+    </tbody>
   </table>
 
-  <!-- Remarks & Sign-off -->
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:20px;">
-    <tr>
-      <td width="60%" style="padding-right:8px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Remarks / Action</div>
-        <div style="border:1px solid #e5e7eb;border-radius:4px;padding:10px;min-height:60px;font-size:9.5pt;color:#374151;background:#f9fafb;">
-          ${S(labTest.remarks)}
-        </div>
-      </td>
-      <td width="40%" style="padding-left:8px;vertical-align:top;">
-        <div style="font-size:10pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">Sign-off</div>
-        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-          ${row('Tested By', S(labTest.tested_by))}
-        </table>
-        <div style="margin-top:30px;border-top:1px solid #374151;text-align:center;font-size:8pt;color:#6b7280;padding-top:4px;">Authorized Signature</div>
-      </td>
-    </tr>
-  </table>
-
-  <!-- Footer -->
-  <div style="border-top:2px solid #1e3a5f;padding-top:8px;display:flex;justify-content:space-between;font-size:8pt;color:#6b7280;">
-    <span>Generated on: ${new Date().toLocaleString('en-IN')}</span>
-    <span>BRFM Industries — Confidential Quality Report</span>
-    <span>Report ID: ${S(labTest.id)}</span>
+  <!-- Comments -->
+  <div style="border-top:1px solid #000;padding:6px 8px;">
+    <div style="font-weight:bold;font-size:9pt;margin-bottom:4px;">Comments &amp; Action:</div>
+    <div style="min-height:40px;font-size:9pt;">${S(labTest.remarks)}</div>
   </div>
+
+  <!-- Signatures -->
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-top:1px solid #000;">
+    <tr>
+      <td style="padding:10px 20px;width:50%;border-right:1px solid #000;font-size:9pt;">
+        <div style="font-weight:bold;margin-bottom:30px;">Lab Chemist Signature</div>
+        <div style="border-top:1px solid #000;width:120px;">&nbsp;</div>
+        <div style="font-size:8pt;margin-top:2px;">Tested by: ${S(labTest.tested_by)}</div>
+      </td>
+      <td style="padding:10px 20px;width:50%;font-size:9pt;">
+        <div style="font-weight:bold;margin-bottom:30px;">QA Head Signature</div>
+        <div style="border-top:1px solid #000;width:120px;">&nbsp;</div>
+        <div style="font-size:8pt;margin-top:2px;">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
 </div>`;
 }
 
@@ -183,41 +192,42 @@ async function printLabTestReport(labTest) {
   if (Platform.OS !== 'web') return;
   const logoBase64 = await getLogoBase64();
   const html = buildLabTestHTML(labTest, logoBase64);
-  const win = window.open('', '_blank', 'width=950,height=750');
+  const win = window.open('', '_blank', 'width=860,height=900');
   if (!win) return;
   win.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Lab Test Report #${labTest.id}</title>
+  <title>Raw Wheat Quality Report</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #fff; color: #000; padding: 12mm; }
-    @page { size: A4 portrait; margin: 10mm; }
+    body { font-family: Arial, sans-serif; background: #fff; color: #000; padding: 14mm 12mm; }
+    @page { size: A4 portrait; margin: 12mm; }
     @media print {
       body { padding: 0; margin: 0; }
       .no-print { display: none !important; }
     }
-    .print-btn-bar {
+    .no-print {
       display: flex; justify-content: flex-end; gap: 10px;
-      padding: 10px 14px; background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0; margin-bottom: 16px;
+      padding: 8px 12px; background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1; margin-bottom: 14px;
     }
-    .print-btn-bar button {
-      padding: 8px 20px; border-radius: 6px; border: none;
+    .no-print button {
+      padding: 7px 18px; border-radius: 5px; border: none;
       cursor: pointer; font-size: 13px; font-weight: 600;
     }
     .btn-print { background: #1e3a5f; color: #fff; }
     .btn-close { background: #e2e8f0; color: #374151; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border: 1px solid #000; }
   </style>
 </head>
 <body>
-  <div class="print-btn-bar no-print">
+  <div class="no-print">
     <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
     <button class="btn-close" onclick="window.close()">✕ Close</button>
   </div>
   ${html}
-  <script>window.onafterprint = function() { window.close(); };<\/script>
 </body>
 </html>`);
   win.document.close();
