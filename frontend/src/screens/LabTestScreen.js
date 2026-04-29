@@ -680,14 +680,14 @@ export default function LabTestScreen({ navigation }) {
       field: "id",
       width: 220,
       key: "actions",
-      render: (labTest) => {
-        const hasClaim = labTest && (labTest.has_claim === 1 || labTest.has_claim === true);
+      render: (_, row) => {
+        const hasClaim = row && (row.has_claim === 1 || row.has_claim === true);
         return (
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {!hasClaim ? (
               <TouchableOpacity
                 style={styles.raiseClaimButton}
-                onPress={() => openRaiseClaimModal(labTest)}
+                onPress={() => openRaiseClaimModal(row)}
               >
                 <Text style={styles.raiseClaimButtonText}>Raise Claim</Text>
               </TouchableOpacity>
@@ -696,7 +696,7 @@ export default function LabTestScreen({ navigation }) {
             )}
             <TouchableOpacity
               style={styles.printButton}
-              onPress={() => printLabTestReport(labTest)}
+              onPress={() => printLabTestReport(row)}
             >
               <Text style={styles.printButtonText}>🖨 Print</Text>
             </TouchableOpacity>
