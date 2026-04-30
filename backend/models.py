@@ -378,6 +378,8 @@ class HourlyProduction(Base):
     load_per_hour_tons = Column(Float)
     reprocess = Column(Float)
     refraction = Column(Float)
+    bran_percentage = Column(Float, default=0)
+    main_percentage = Column(Float, default=0)
     branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=ist_now)
 

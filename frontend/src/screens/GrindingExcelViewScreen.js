@@ -46,6 +46,12 @@ export default function GrindingExcelViewScreen({ navigation }) {
     }
   };
 
+  const formatPct = (v) => {
+    const n = Number(v);
+    if (!isFinite(n)) return "0%";
+    return `${n.toFixed(2)}%`;
+  };
+
   const renderHeader = () => (
     <View style={styles.tableHeader}>
       <Text style={[styles.headerText, { width: 100 }]}>Date</Text>
@@ -55,6 +61,8 @@ export default function GrindingExcelViewScreen({ navigation }) {
       <Text style={[styles.headerText, { width: 120 }]}>Product</Text>
       <Text style={[styles.headerText, { width: 80 }]}>Bag Size</Text>
       <Text style={[styles.headerText, { width: 80 }]}>Qty</Text>
+      <Text style={[styles.headerText, { width: 90 }]}>Bran %</Text>
+      <Text style={[styles.headerText, { width: 90 }]}>Main %</Text>
     </View>
   );
 
@@ -71,6 +79,8 @@ export default function GrindingExcelViewScreen({ navigation }) {
               <Text style={[styles.cellText, { width: 120 }]}>{detail.product_name}</Text>
               <Text style={[styles.cellText, { width: 80 }]}>{detail.bag_size_label}</Text>
               <Text style={[styles.cellText, { width: 80 }]}>{detail.quantity_bags}</Text>
+              <Text style={[styles.cellText, styles.branPct, { width: 90 }]}>{idx === 0 ? formatPct(row.bran_percentage) : ""}</Text>
+              <Text style={[styles.cellText, styles.mainPct, { width: 90 }]}>{idx === 0 ? formatPct(row.main_percentage) : ""}</Text>
             </View>
           ))
         ) : (
@@ -82,6 +92,8 @@ export default function GrindingExcelViewScreen({ navigation }) {
             <Text style={[styles.cellText, { width: 120 }]}>-</Text>
             <Text style={[styles.cellText, { width: 80 }]}>-</Text>
             <Text style={[styles.cellText, { width: 80 }]}>-</Text>
+            <Text style={[styles.cellText, styles.branPct, { width: 90 }]}>{formatPct(row.bran_percentage)}</Text>
+            <Text style={[styles.cellText, styles.mainPct, { width: 90 }]}>{formatPct(row.main_percentage)}</Text>
           </View>
         )}
       </View>
@@ -126,4 +138,6 @@ const styles = StyleSheet.create({
   rowGroup: { borderBottomWidth: 1, borderBottomColor: '#ddd' },
   tableRow: { flexDirection: 'row', padding: 12, backgroundColor: '#fff' },
   cellText: { fontSize: 13, textAlign: 'center', color: '#333' },
+  branPct: { color: '#b45309', fontWeight: '600' },
+  mainPct: { color: '#1d4ed8', fontWeight: '600' },
 });

@@ -223,6 +223,8 @@ class HourlyProduction(HourlyProductionBase):
     id: int
     branch_id: Optional[int] = None
     created_at: datetime
+    bran_percentage: Optional[float] = 0
+    main_percentage: Optional[float] = 0
     details: List[HourlyProductionDetail] = []
     silo_details: List[HourlyProductionSilo] = []
     bran_details: List[HourlyProductionBran] = []

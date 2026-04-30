@@ -93,6 +93,8 @@ def run_column_migrations():
             "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_source_bin_id ON magnet_cleaning_records(source_bin_id)",
             "CREATE INDEX IF NOT EXISTS ix_magnet_cleaning_records_destination_bin_id ON magnet_cleaning_records(destination_bin_id)",
             "ALTER TABLE waste_entries ALTER COLUMN transfer_session_id DROP NOT NULL",
+            "ALTER TABLE hourly_productions ADD COLUMN IF NOT EXISTS bran_percentage FLOAT DEFAULT 0",
+            "ALTER TABLE hourly_productions ADD COLUMN IF NOT EXISTS main_percentage FLOAT DEFAULT 0",
         ]
         for sql in migrations:
             try:
@@ -100,6 +102,27 @@ def run_column_migrations():
             except Exception:
                 pass
         conn.commit()
+
+    # Backfill bran/main percentages for existing hourly production rows
+    # that still have NULL or 0 values. Safe to re-run: only updates rows
+    # whose computed split actually has output (>0 total kg).
+    try:
+        from sqlalchemy.orm import Session as _Session
+        with _Session(engine) as _db:
+            rows_to_backfill = _db.query(models.HourlyProduction).filter(
+                (models.HourlyProduction.bran_percentage == None) |  # noqa: E711
+                (models.HourlyProduction.main_percentage == None) |  # noqa: E711
+                ((models.HourlyProduction.bran_percentage == 0) &
+                 (models.HourlyProduction.main_percentage == 0))
+            ).all()
+            for _r in rows_to_backfill:
+                bran_pct, main_pct = _compute_bran_main_percentages(_db, _r.id)
+                _r.bran_percentage = bran_pct
+                _r.main_percentage = main_pct
+            if rows_to_backfill:
+                _db.commit()
+    except Exception:
+        pass
 
 # CORS configuration - Allow all origins for development
 app.add_middleware(
@@ -2384,6 +2407,77 @@ def get_available_12h_bins(db: Session = Depends(get_db), branch_id: Optional[in
             
     return result
 
+def _is_bran_product_name(name: Optional[str]) -> bool:
+    """Bran detection rule: product name contains 'bran' (case-insensitive)."""
+    return bool(name) and "bran" in name.lower()
+
+
+def _compute_bran_main_percentages(db: Session, hourly_production_id: int) -> tuple:
+    """
+    Calculate (bran_percentage, main_percentage) for an HourlyProduction row.
+
+    Rules:
+      - Bran detection: FinishedGood.product_name contains 'bran' (case-insensitive).
+      - HourlyProductionDetail kg = quantity_bags * BagSize.weight_kg.
+      - HourlyProductionSilo kg = quantity_kg.
+      - HourlyProductionBran kg = default_kg + with_refraction_kg + without_refraction_kg
+        (always counted as bran, regardless of name).
+      - Reprocess is excluded from the calculation.
+      - If total kg is 0, both percentages are 0.
+    """
+    bran_kg = 0.0
+    main_kg = 0.0
+
+    # Detail rows (bags -> kg via bag size)
+    details = db.query(models.HourlyProductionDetail).filter(
+        models.HourlyProductionDetail.hourly_production_id == hourly_production_id
+    ).all()
+    for d in details:
+        bags = float(d.quantity_bags or 0)
+        if bags <= 0:
+            continue
+        bag_size = db.query(models.BagSize).filter(models.BagSize.id == d.bag_size_id).first()
+        weight_kg = float(getattr(bag_size, "weight_kg", 0) or 0)
+        kg = bags * weight_kg
+        fg = db.query(models.FinishedGood).filter(models.FinishedGood.id == d.finished_good_id).first()
+        if _is_bran_product_name(getattr(fg, "product_name", None)):
+            bran_kg += kg
+        else:
+            main_kg += kg
+
+    # Silo rows (kg directly)
+    silos = db.query(models.HourlyProductionSilo).filter(
+        models.HourlyProductionSilo.hourly_production_id == hourly_production_id
+    ).all()
+    for s in silos:
+        kg = float(s.quantity_kg or 0)
+        if kg <= 0:
+            continue
+        fg = db.query(models.FinishedGood).filter(models.FinishedGood.id == s.finished_good_id).first()
+        if _is_bran_product_name(getattr(fg, "product_name", None)):
+            bran_kg += kg
+        else:
+            main_kg += kg
+
+    # Bran-specific rows (always bran)
+    bran_rows = db.query(models.HourlyProductionBran).filter(
+        models.HourlyProductionBran.hourly_production_id == hourly_production_id
+    ).all()
+    for b in bran_rows:
+        bran_kg += (
+            float(b.default_kg or 0)
+            + float(b.with_refraction_kg or 0)
+            + float(b.without_refraction_kg or 0)
+        )
+
+    total = bran_kg + main_kg
+    if total <= 0:
+        return 0.0, 0.0
+    bran_pct = round((bran_kg / total) * 100, 2)
+    main_pct = round(100.0 - bran_pct, 2)
+    return bran_pct, main_pct
+
+
 @app.post("/api/grinding/hourly-production", response_model=schemas.HourlyProduction)
 def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
     data = prod.dict()
@@ -2418,7 +2512,13 @@ def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session =
         if bran_detail.get("finished_good_id"):
             db_bran_detail = models.HourlyProductionBran(**bran_detail, hourly_production_id=db_prod.id)
             db.add(db_bran_detail)
-    
+
+    # Flush so child rows are visible to the percentage calculation query
+    db.flush()
+    bran_pct, main_pct = _compute_bran_main_percentages(db, db_prod.id)
+    db_prod.bran_percentage = bran_pct
+    db_prod.main_percentage = main_pct
+
     db.commit()
     db.refresh(db_prod)
     return db_prod

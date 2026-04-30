@@ -605,6 +605,48 @@ export default function GrindingScreen({ route, navigation }) {
   const [selectedBranProductIds, setSelectedBranProductIds] = useState([]);
   const isBranProduct = (fg) =>
     !!fg?.product_name && fg.product_name.toLowerCase().includes("bran");
+
+  // Compute live bran/main percentages for the unsaved (last) production row,
+  // mirroring the backend logic. Reprocess is excluded; total 0 -> 0/0.
+  const computeRowPercentages = (row) => {
+    if (!row) return { bran: 0, main: 0 };
+    let branKg = 0;
+    let mainKg = 0;
+    const fgById = {};
+    finishedGoods.forEach((f) => { fgById[f.id] = f; });
+    const bagById = {};
+    bagSizes.forEach((b) => { bagById[b.id] = b; });
+
+    (row.productionDetails || []).forEach((d) => {
+      if (!d || d.finished_good_id === "REPROCESS") return;
+      const bags = parseFloat(d.quantity_bags) || 0;
+      if (bags <= 0) return;
+      const weight = parseFloat(bagById[d.bag_size_id]?.weight_kg) || 0;
+      const kg = bags * weight;
+      if (isBranProduct(fgById[d.finished_good_id])) branKg += kg;
+      else mainKg += kg;
+    });
+
+    (row.siloDetails || []).forEach((s) => {
+      const kg = parseFloat(s.quantity_kg) || 0;
+      if (kg <= 0) return;
+      if (isBranProduct(fgById[s.finished_good_id])) branKg += kg;
+      else mainKg += kg;
+    });
+
+    (row.branDetails || []).forEach((b) => {
+      branKg +=
+        (parseFloat(b.default_kg) || 0) +
+        (parseFloat(b.with_refraction_kg) || 0) +
+        (parseFloat(b.without_refraction_kg) || 0);
+    });
+
+    const total = branKg + mainKg;
+    if (total <= 0) return { bran: 0, main: 0 };
+    const bran = Math.round((branKg / total) * 10000) / 100;
+    const main = Math.round((100 - bran) * 100) / 100;
+    return { bran, main };
+  };
   const [productionDate, setProductionDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -692,6 +734,8 @@ export default function GrindingScreen({ route, navigation }) {
           productionDetails: row.details || [],
           siloDetails: row.silo_details || [],
           branDetails: row.bran_details || [],
+          bran_percentage: row.bran_percentage,
+          main_percentage: row.main_percentage,
           isSubmitted: true,
         }));
         formattedRows.push({
@@ -1834,6 +1878,42 @@ export default function GrindingScreen({ route, navigation }) {
 
               <ScrollView horizontal>{renderDynamicGrid()}</ScrollView>
 
+              {/* Bran vs Main % per hour */}
+              <View style={styles.percentSummaryWrap}>
+                <Text style={styles.percentSummaryTitle}>
+                  Bran vs Main % per Hour
+                </Text>
+                {productionRows.map((row, idx) => {
+                  const saved = !!row.isSubmitted;
+                  const pct = saved
+                    ? {
+                        bran: Number(row.bran_percentage) || 0,
+                        main: Number(row.main_percentage) || 0,
+                      }
+                    : computeRowPercentages(row);
+                  return (
+                    <View key={row.id} style={styles.percentSummaryRow}>
+                      <Text style={styles.percentSummaryLabel}>
+                        {row.productionTime || `Hour ${idx + 1}`}
+                        {saved ? " (saved)" : " (live)"}
+                      </Text>
+                      <View style={styles.percentPillRow}>
+                        <View style={[styles.percentPill, styles.percentPillBran]}>
+                          <Text style={styles.percentPillText}>
+                            Bran {pct.bran.toFixed(2)}%
+                          </Text>
+                        </View>
+                        <View style={[styles.percentPill, styles.percentPillMain]}>
+                          <Text style={styles.percentPillText}>
+                            Main {pct.main.toFixed(2)}%
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
               <View
                 style={{
                   marginTop: 20,
@@ -1920,6 +2000,45 @@ export default function GrindingScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#F8F9FA" },
+  percentSummaryWrap: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+  },
+  percentSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  percentSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  percentSummaryLabel: {
+    fontSize: 13,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  percentPillRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  percentPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  percentPillBran: { backgroundColor: "#FEF3C7" },
+  percentPillMain: { backgroundColor: "#DBEAFE" },
+  percentPillText: { fontSize: 12, fontWeight: "700", color: "#111827" },
   pipelineBackBanner: {
     backgroundColor: '#1e293b',
     paddingVertical: 10,

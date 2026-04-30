@@ -53,3 +53,16 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 ### Environment Configuration
 - `DATABASE_URL`: PostgreSQL connection string.
 - `EXPO_PUBLIC_API_URL`: Frontend API endpoint.
+
+### Hourly Grinding — Bran vs Main Percentage
+- Each `HourlyProduction` row stores `bran_percentage` and `main_percentage`
+  (added via `run_column_migrations` on startup; backfilled for existing rows).
+- Bran detection rule: `FinishedGood.product_name` contains `"bran"` (case-insensitive).
+  All `HourlyProductionBran` rows are always counted as bran regardless of name.
+- Bag → kg conversion uses `BagSize.weight_kg`. Reprocess is excluded from the calc.
+- If an hour has 0 total kg, both percentages are `0`.
+- Backend: `_compute_bran_main_percentages()` in `backend/main.py` is the single
+  source of truth and runs on every `POST /api/grinding/hourly-production`.
+- Frontend: `GrindingScreen.js` shows a per-hour "Bran vs Main %" pill panel
+  (live preview for unsaved row, stored values for saved rows).
+  `GrindingExcelViewScreen.js` includes "Bran %" and "Main %" columns.
