@@ -295,6 +295,7 @@ function KV({ label, value }) {
 export default function LiveAddScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const [liveOrders, setLiveOrders] = useState([]);
+  const [rawWheatSessions, setRawWheatSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -307,8 +308,12 @@ export default function LiveAddScreen({ navigation }) {
 
   const fetchLiveOrders = useCallback(async () => {
     try {
-      const res = await api.get('/live-production');
-      setLiveOrders(res.data || []);
+      const [ordersRes, sessionsRes] = await Promise.all([
+        api.get('/live-production'),
+        api.get('/transfer-sessions?status=active').catch(() => ({ data: [] })),
+      ]);
+      setLiveOrders(ordersRes.data || []);
+      setRawWheatSessions(sessionsRes.data || []);
     } catch (err) {
       console.error('Error fetching live orders:', err);
     } finally {
@@ -633,7 +638,72 @@ export default function LiveAddScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {liveOrders.length === 0 ? (
+        {/* ── RAW Wheat Bin Process (active transfer sessions) ─────────── */}
+        {rawWheatSessions.length > 0 && (
+          <View style={styles.liveSection}>
+            <View style={styles.liveSectionHeader}>
+              <Text style={styles.liveSectionTitle}>RAW Wheat Bin Process</Text>
+              <Text style={styles.liveSectionSubtitle}>
+                {rawWheatSessions.length} active transfer{rawWheatSessions.length === 1 ? '' : 's'}
+              </Text>
+            </View>
+            <View style={[styles.cardGrid, isWide && styles.cardGridWide]}>
+              {rawWheatSessions.map((session) => {
+                const sourceName = session.source_godown?.name || `Godown #${session.source_godown_id}`;
+                const destName =
+                  session.current_bin?.bin_number ||
+                  session.destination_bin?.bin_number ||
+                  `Bin #${session.current_bin_id || session.destination_bin_id}`;
+                const magnetName = session.magnet?.name || null;
+                const qty =
+                  session.transferred_quantity != null
+                    ? `${parseFloat(session.transferred_quantity).toFixed(2)} T`
+                    : '— T';
+                return (
+                  <View
+                    key={session.id}
+                    style={[styles.card, isWide ? { width: cardWidth } : { width: '100%' }]}
+                  >
+                    <View style={styles.cardBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveBadgeText}>LIVE</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>Transfer #{session.id}</Text>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>From</Text>
+                      <Text style={styles.cardValue}>{sourceName}</Text>
+                    </View>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>To</Text>
+                      <Text style={styles.cardValue}>{destName}</Text>
+                    </View>
+                    {magnetName && (
+                      <View style={styles.cardRow}>
+                        <Text style={styles.cardLabel}>Magnet</Text>
+                        <Text style={styles.cardValue}>{magnetName}</Text>
+                      </View>
+                    )}
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>Transferred</Text>
+                      <Text style={styles.cardValue}>{qty}</Text>
+                    </View>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>Started</Text>
+                      <Text style={styles.cardValue}>
+                        {session.start_timestamp
+                          ? formatISTDateTime(session.start_timestamp)
+                          : '—'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* ── Production Orders ───────────────────────────────────────── */}
+        {liveOrders.length === 0 && rawWheatSessions.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateIcon}>📭</Text>
             <Text style={styles.emptyStateTitle}>No Live Production Orders</Text>
@@ -641,31 +711,39 @@ export default function LiveAddScreen({ navigation }) {
               There are currently no active production orders.
             </Text>
           </View>
-        ) : (
-          <View style={[styles.cardGrid, isWide && styles.cardGridWide]}>
-            {liveOrders.map((order) => (
-              <TouchableOpacity
-                key={order.production_order_id}
-                style={[styles.card, isWide ? { width: cardWidth } : { width: '100%' }]}
-                onPress={() => handleCardPress(order)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.cardBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveBadgeText}>LIVE</Text>
-                </View>
-                <Text style={styles.cardTitle}>{order.order_number}</Text>
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardLabel}>Branch</Text>
-                  <Text style={styles.cardValue}>{order.branch_name}</Text>
-                </View>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.tapHint}>Tap to view details →</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+        ) : liveOrders.length > 0 ? (
+          <View style={styles.liveSection}>
+            <View style={styles.liveSectionHeader}>
+              <Text style={styles.liveSectionTitle}>Production Process</Text>
+              <Text style={styles.liveSectionSubtitle}>
+                {liveOrders.length} active order{liveOrders.length === 1 ? '' : 's'}
+              </Text>
+            </View>
+            <View style={[styles.cardGrid, isWide && styles.cardGridWide]}>
+              {liveOrders.map((order) => (
+                <TouchableOpacity
+                  key={order.production_order_id}
+                  style={[styles.card, isWide ? { width: cardWidth } : { width: '100%' }]}
+                  onPress={() => handleCardPress(order)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.cardBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveBadgeText}>LIVE</Text>
+                  </View>
+                  <Text style={styles.cardTitle}>{order.order_number}</Text>
+                  <View style={styles.cardRow}>
+                    <Text style={styles.cardLabel}>Branch</Text>
+                    <Text style={styles.cardValue}>{order.branch_name}</Text>
+                  </View>
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.tapHint}>Tap to view details →</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        )}
+        ) : null}
         <View style={{ height: 40 }} />
       </ScrollView>
     </Layout>
@@ -696,6 +774,23 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   pulseCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444' },
+
+  liveSection: { marginBottom: 24 },
+  liveSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  liveSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  liveSectionSubtitle: { fontSize: 12, color: colors.text.secondary, fontWeight: '600' },
 
   cardGrid: { gap: 14 },
   cardGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },

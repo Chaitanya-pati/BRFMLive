@@ -121,7 +121,25 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   // ---------- derived state ----------
   const inProgressTransfers = transfers.filter((t) => t.status === "IN_PROGRESS");
   const completedTransfers = transfers.filter((t) => t.status === "COMPLETED");
-  const canStartNew = inProgressTransfers.length === 0;
+
+  // Total planned (raw wheat) quantity from source bin configuration
+  const totalPlannedQty = sourceBins.reduce(
+    (sum, sb) => sum + (parseFloat(sb.quantity) || 0),
+    0
+  );
+  // Total raw wheat already pulled into 24-hour bins (counts both completed
+  // and currently running transfers — running ones reserve their share too).
+  const totalTransferredQty = transfers.reduce(
+    (sum, t) => sum + (parseFloat(t.quantity_transferred) || 0),
+    0
+  );
+  // When the planned quantity is fully consumed, the raw wheat bins are
+  // "locked" in the Pipeline view → the 24-hour transfer must lock too.
+  const planLocked =
+    totalPlannedQty > 0 && totalTransferredQty >= totalPlannedQty - 0.0001;
+  const remainingQty = Math.max(totalPlannedQty - totalTransferredQty, 0);
+
+  const canStartNew = inProgressTransfers.length === 0 && !planLocked;
 
   // ---------- START MODAL ----------
   const openStartModal = () => {
@@ -171,6 +189,28 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
     if (!formQty || isNaN(qty) || qty <= 0) {
       showError("Validation", "Please enter a valid quantity");
       return;
+    }
+    // Enforce planning lock: cannot transfer more than the planned quantity
+    // (matches the raw-wheat-bin lock in the Pipeline view).
+    if (totalPlannedQty > 0) {
+      const otherTransferredQty = transfers.reduce(
+        (sum, t) =>
+          t.id === completeModal.transfer.id
+            ? sum
+            : sum + (parseFloat(t.quantity_transferred) || 0),
+        0
+      );
+      const allowableQty = Math.max(
+        totalPlannedQty - otherTransferredQty,
+        0
+      );
+      if (qty > allowableQty + 0.0001) {
+        showError(
+          "Plan Limit Reached",
+          `You can transfer at most ${allowableQty.toFixed(2)} T more. The raw wheat plan for this order is ${totalPlannedQty.toFixed(2)} T.`
+        );
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -360,18 +400,35 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   })}
                 </View>
               )}
+              {totalPlannedQty > 0 && (
+                <View style={styles.planSummary}>
+                  <Text style={styles.planSummaryLabel}>Plan Progress</Text>
+                  <Text style={styles.planSummaryValue}>
+                    {totalTransferredQty.toFixed(2)} T / {totalPlannedQty.toFixed(2)} T
+                    {planLocked ? "  🔒" : `  • ${remainingQty.toFixed(2)} T left`}
+                  </Text>
+                </View>
+              )}
               <TouchableOpacity
                 style={[
                   styles.actionBtn,
-                  { backgroundColor: canStartNew && labTest ? "#3b82f6" : "#9ca3af" },
+                  {
+                    backgroundColor: planLocked
+                      ? "#9ca3af"
+                      : canStartNew && labTest
+                      ? "#3b82f6"
+                      : "#9ca3af",
+                  },
                 ]}
                 onPress={openStartModal}
                 disabled={!canStartNew || !labTest}
               >
                 <Text style={styles.actionBtnText}>
-                  {!labTest
+                  {planLocked
+                    ? "🔒 Plan Limit Reached — 24h Transfer Locked"
+                    : !labTest
                     ? "⚠️ Submit Lab Test First"
-                    : canStartNew
+                    : inProgressTransfers.length === 0
                     ? "▶ Start New Transfer"
                     : "⏳ Transfer In Progress"}
                 </Text>
@@ -878,6 +935,31 @@ const styles = StyleSheet.create({
   },
   sourceSummaryBin: { fontSize: 12, fontWeight: "600", color: "#0c4a6e" },
   sourceSummaryPct: { fontSize: 12, fontWeight: "700", color: "#0369a1" },
+
+  planSummary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  planSummaryLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#92400e",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  planSummaryValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#78350f",
+  },
 
   srcBreakdownWrap: {
     backgroundColor: "#f8fafc",

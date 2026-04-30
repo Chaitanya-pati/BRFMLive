@@ -1,17 +1,9 @@
 import { showAlert } from './customAlerts';
 
-export function redirectAfterPlanningSetup(navigation, order, returnToPipeline) {
-  if (returnToPipeline) {
-    navigation.navigate('ProductionPipeline', { orderId: order.id });
-    return;
-  }
-  navigation.navigate('TransferRecordingDetails', {
-    order: {
-      id: order.id,
-      order_number: order.order_number,
-      branch_name: order.branch_name,
-    },
-  });
+export function redirectAfterPlanningSetup(navigation, order, _returnToPipeline) {
+  // Always redirect to the Production Pipeline view with the just-saved
+  // order auto-selected, regardless of where the user came from.
+  navigation.navigate('ProductionPipeline', { orderId: order.id });
 }
 
 export function redirectAfterAllTransfersComplete(navigation, returnToPipeline, orderId) {
