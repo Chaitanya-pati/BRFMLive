@@ -23,7 +23,8 @@ const getCurrentAPIUrl = () => {
 
 // Use getCurrentAPIUrl() for dynamic URL, or fallback to environment variable
 //const API_URL = "https://brfmlive.onrender.com/api";
-const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
+const API_URL = "https://brfmlive-1.onrender.com/api";
+//process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
 
 export const API_BASE_URL = API_URL.replace("/api", "");
 
@@ -262,7 +263,8 @@ export const machineApi = {
 };
 
 export const siloApi = {
-  getAll: (skip = 0, limit = 100) => api.get(`/silos?skip=${skip}&limit=${limit}`),
+  getAll: (skip = 0, limit = 100) =>
+    api.get(`/silos?skip=${skip}&limit=${limit}`),
   getOne: (id) => api.get(`/silos/${id}`),
   create: (data) => api.post("/silos", data),
   update: (id, data) => api.put(`/silos/${id}`, data),
@@ -317,21 +319,28 @@ export const transferSessionApi = {
 };
 
 export const transfer12HourApi = {
-  getAvailableProductionOrders: () => api.get("/12hour-transfer/production-orders"),
+  getAvailableProductionOrders: () =>
+    api.get("/12hour-transfer/production-orders"),
   getSessions: () => api.get("/12hour-transfer/sessions"),
   getSession: (id) => api.get(`/12hour-transfer/session/${id}`),
   getAvailableSourceBins: (productionOrderId) =>
     api.get(`/12hour-transfer/available-source-bins/${productionOrderId}`),
   getAvailableDestinationBins: (productionOrderId) =>
     api.get(`/12hour-transfer/available-destination-bins/${productionOrderId}`),
-  createSessionNormal: (data) => api.post("/12hour-transfer/create-session-normal", data),
-  createSessionSpecial: (data) => api.post("/12hour-transfer/create-session-special", data),
-  startSession: (sessionId) => api.post(`/12hour-transfer/start-session/${sessionId}`),
-  recordTransfer: (sessionId, data) => api.post(`/12hour-transfer/record-transfer/${sessionId}`, data),
-  divertTransfer: (sessionId, data) => api.post(`/12hour-transfer/divert/${sessionId}`, data),
+  createSessionNormal: (data) =>
+    api.post("/12hour-transfer/create-session-normal", data),
+  createSessionSpecial: (data) =>
+    api.post("/12hour-transfer/create-session-special", data),
+  startSession: (sessionId) =>
+    api.post(`/12hour-transfer/start-session/${sessionId}`),
+  recordTransfer: (sessionId, data) =>
+    api.post(`/12hour-transfer/record-transfer/${sessionId}`, data),
+  divertTransfer: (sessionId, data) =>
+    api.post(`/12hour-transfer/divert/${sessionId}`, data),
   stopTransfer: (sessionId) => api.post(`/12hour-transfer/stop/${sessionId}`),
   pauseSession: (sessionId) => api.post(`/12hour-transfer/pause/${sessionId}`),
-  resumeSession: (sessionId) => api.post(`/12hour-transfer/resume/${sessionId}`),
+  resumeSession: (sessionId) =>
+    api.post(`/12hour-transfer/resume/${sessionId}`),
 };
 
 const STATIC_STATES = [
@@ -497,8 +506,10 @@ export const productionOrderApi = {
   update: (id, data) => api.put(`/production-orders/${id}`, data),
   delete: (id) => api.delete(`/production-orders/${id}`),
   getPlanning: (id) => api.get(`/production-orders/${id}/planning`),
-  savePlanning: (id, data) => api.post(`/production-orders/${id}/planning`, data),
-  validatePlanning: (id, data) => api.post(`/production-orders/${id}/planning/validate`, data),
+  savePlanning: (id, data) =>
+    api.post(`/production-orders/${id}/planning`, data),
+  validatePlanning: (id, data) =>
+    api.post(`/production-orders/${id}/planning/validate`, data),
 };
 
 export const planningBinsApi = {
@@ -518,7 +529,8 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
@@ -531,13 +543,21 @@ export const dispatchApi = {
       body: formData,
     });
     if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Upload failed" }));
+      const err = await response
+        .json()
+        .catch(() => ({ detail: "Upload failed" }));
       let detailMsg;
-      if (typeof err.detail === 'string') {
+      if (typeof err.detail === "string") {
         detailMsg = err.detail;
       } else if (Array.isArray(err.detail)) {
-        detailMsg = err.detail.map(e => (typeof e === 'object' && e.msg) ? `${e.loc ? e.loc.join(' -> ') : 'field'}: ${e.msg}` : JSON.stringify(e)).join(', ');
-      } else if (err.detail && typeof err.detail === 'object') {
+        detailMsg = err.detail
+          .map((e) =>
+            typeof e === "object" && e.msg
+              ? `${e.loc ? e.loc.join(" -> ") : "field"}: ${e.msg}`
+              : JSON.stringify(e),
+          )
+          .join(", ");
+      } else if (err.detail && typeof err.detail === "object") {
         detailMsg = JSON.stringify(err.detail);
       } else {
         detailMsg = `Upload failed with status ${response.status}`;
@@ -555,21 +575,29 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
       const token = await AsyncStorage.getItem("auth_token");
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } catch {}
-    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_URL}/dispatches/${dispatchId}/delivery-stops`,
+      {
+        method: "POST",
+        headers,
+        body: formData,
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed" }));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      throw new Error(
+        typeof err.detail === "string"
+          ? err.detail
+          : JSON.stringify(err.detail),
+      );
     }
     return { data: await response.json() };
   },
@@ -580,21 +608,29 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
       const token = await AsyncStorage.getItem("auth_token");
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } catch {}
-    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}`, {
-      method: "PATCH",
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}`,
+      {
+        method: "PATCH",
+        headers,
+        body: formData,
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed" }));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      throw new Error(
+        typeof err.detail === "string"
+          ? err.detail
+          : JSON.stringify(err.detail),
+      );
     }
     return { data: await response.json() };
   },
@@ -605,21 +641,29 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
       const token = await AsyncStorage.getItem("auth_token");
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } catch {}
-    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/photos`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/photos`,
+      {
+        method: "POST",
+        headers,
+        body: formData,
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed" }));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      throw new Error(
+        typeof err.detail === "string"
+          ? err.detail
+          : JSON.stringify(err.detail),
+      );
     }
     return { data: await response.json() };
   },
@@ -630,21 +674,29 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
       const token = await AsyncStorage.getItem("auth_token");
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } catch {}
-    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/driver-signature`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/driver-signature`,
+      {
+        method: "POST",
+        headers,
+        body: formData,
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed" }));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      throw new Error(
+        typeof err.detail === "string"
+          ? err.detail
+          : JSON.stringify(err.detail),
+      );
     }
     return { data: await response.json() };
   },
@@ -655,21 +707,29 @@ export const dispatchApi = {
       const activeBranchJson = await AsyncStorage.getItem("@active_branch");
       if (activeBranchJson) {
         const activeBranch = JSON.parse(activeBranchJson);
-        if (activeBranch?.id) headers["X-Branch-ID"] = activeBranch.id.toString();
+        if (activeBranch?.id)
+          headers["X-Branch-ID"] = activeBranch.id.toString();
       }
     } catch {}
     try {
       const token = await AsyncStorage.getItem("auth_token");
       if (token) headers["Authorization"] = `Bearer ${token}`;
     } catch {}
-    const response = await fetch(`${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/customer-signature`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_URL}/dispatches/${dispatchId}/delivery-stops/${stopId}/customer-signature`,
+      {
+        method: "POST",
+        headers,
+        body: formData,
+      },
+    );
     if (!response.ok) {
       const err = await response.json().catch(() => ({ detail: "Failed" }));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      throw new Error(
+        typeof err.detail === "string"
+          ? err.detail
+          : JSON.stringify(err.detail),
+      );
     }
     return { data: await response.json() };
   },
@@ -681,7 +741,10 @@ export const finishedGoodsGodownApi = {
   create: (data) => api.post("/finished-goods-godown", data),
   update: (id, data) => api.put(`/finished-goods-godown/${id}`, data),
   delete: (id) => api.delete(`/finished-goods-godown/${id}`),
-  getStock: (godownId) => api.get(`/finished-goods-godown-stock${godownId ? `?godown_id=${godownId}` : ""}`),
+  getStock: (godownId) =>
+    api.get(
+      `/finished-goods-godown-stock${godownId ? `?godown_id=${godownId}` : ""}`,
+    ),
   recordMovement: (data) => api.post("/finished-goods-godown-movement", data),
 };
 
@@ -728,7 +791,8 @@ export const branchBillProfileApi = {
   getAll: () => api.get("/branch-bill-profiles"),
   getByBranch: (branchId) => api.get(`/branch-bill-profiles/${branchId}`),
   upsert: (data) => api.post("/branch-bill-profiles", data),
-  update: (branchId, data) => api.put(`/branch-bill-profiles/${branchId}`, data),
+  update: (branchId, data) =>
+    api.put(`/branch-bill-profiles/${branchId}`, data),
   delete: (branchId) => api.delete(`/branch-bill-profiles/${branchId}`),
 };
 
@@ -738,12 +802,15 @@ export const branchesApi = {
 
 export const deliveryBillApi = {
   getAll: (params) => api.get("/delivery-bills", { params }),
-  getByDispatch: (dispatchId) => api.get("/delivery-bills", { params: { dispatch_id: dispatchId } }),
+  getByDispatch: (dispatchId) =>
+    api.get("/delivery-bills", { params: { dispatch_id: dispatchId } }),
   getById: (id) => api.get(`/delivery-bills/${id}`),
   create: (data) => api.post("/delivery-bills", data),
   update: (id, data) => api.put(`/delivery-bills/${id}`, data),
   updatePaymentStatus: (id, status) =>
-    api.patch(`/delivery-bills/${id}/payment-status`, null, { params: { status } }),
+    api.patch(`/delivery-bills/${id}/payment-status`, null, {
+      params: { status },
+    }),
   delete: (id) => api.delete(`/delivery-bills/${id}`),
 };
 
