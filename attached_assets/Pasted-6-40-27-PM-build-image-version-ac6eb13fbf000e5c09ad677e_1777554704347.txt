@@ -1,0 +1,70 @@
+6:40:27 PM: build-image version: ac6eb13fbf000e5c09ad677efd8b7c3c2d0142b6 (noble-new-builds)
+6:40:27 PM: buildbot version: 1e1f172b82fc46a7a7b4b14d04d14163b44b9b01
+6:40:27 PM: Fetching cached dependencies
+6:40:27 PM: Failed to fetch cache, continuing with build
+6:40:27 PM: Starting to prepare the repo for build
+6:40:27 PM: No cached dependencies found. Cloning fresh repo
+6:40:27 PM: git clone --filter=blob:none https://github.com/Chaitanya-pati/BRFMLive
+6:40:28 PM: Preparing Git Reference refs/heads/ProductionWorking
+6:40:29 PM: Custom build path detected. Proceeding with the specified path: 'frontend'
+6:40:29 PM: Custom publish path detected. Proceeding with the specified path: 'frontend/dist'
+6:40:30 PM: Installing dependencies
+6:40:30 PM: mise ~/.config/mise/config.toml tools: python@3.14.3
+6:40:30 PM: mise ~/.config/mise/config.toml tools: ruby@3.4.8
+6:40:30 PM: mise ~/.config/mise/config.toml tools: go@1.26.2
+6:40:31 PM: v22.22.2 is already installed.
+6:40:31 PM: Now using node v22.22.2 (npm v10.9.7)
+6:40:31 PM: Enabling Node.js Corepack
+6:40:31 PM: No npm workspaces detected
+6:40:31 PM: Installing npm packages using npm version 10.9.7
+6:40:32 PM: npm error code ERESOLVE
+6:40:32 PM: npm error ERESOLVE could not resolve
+6:40:32 PM: npm error
+6:40:32 PM: npm error While resolving: react-native@0.81.5
+6:40:32 PM: npm error Found: react@18.3.1
+6:40:32 PM: npm error node_modules/react
+6:40:32 PM: npm error   react@"^18.3.1" from the root project
+6:40:32 PM: npm error   peerOptional react@"*" from @expo/devtools@0.1.8
+6:40:32 PM: npm error   node_modules/@expo/devtools
+6:40:32 PM: npm error     @expo/devtools@"0.1.8" from expo@54.0.33
+6:40:32 PM: npm error     node_modules/expo
+6:40:32 PM: npm error       expo@"~54.0.0" from the root project
+6:40:32 PM: npm error       15 more (@expo/metro-runtime, ...)
+6:40:32 PM: npm error   28 more (@expo/metro-runtime, @expo/vector-icons, ...)
+6:40:32 PM: npm error
+6:40:32 PM: npm error Could not resolve dependency:
+6:40:32 PM: npm error peer react@"^19.1.0" from react-native@0.81.5
+6:40:32 PM: npm error node_modules/react-native
+6:40:32 PM: npm error   react-native@"^0.81.5" from the root project
+6:40:32 PM: npm error   peerOptional react-native@"*" from @expo/devtools@0.1.8
+6:40:32 PM: npm error   node_modules/@expo/devtools
+6:40:32 PM: npm error     @expo/devtools@"0.1.8" from expo@54.0.33
+6:40:32 PM: npm error     node_modules/expo
+6:40:32 PM: npm error       expo@"~54.0.0" from the root project
+6:40:32 PM: npm error       15 more (@expo/metro-runtime, ...)
+6:40:32 PM: npm error   22 more (@expo/metro-runtime, @expo/vector-icons, ...)
+6:40:32 PM: npm error
+6:40:32 PM: npm error Conflicting peer dependency: react@19.2.5
+6:40:32 PM: npm error node_modules/react
+6:40:32 PM: npm error   peer react@"^19.1.0" from react-native@0.81.5
+6:40:32 PM: npm error   node_modules/react-native
+6:40:32 PM: npm error     react-native@"^0.81.5" from the root project
+6:40:32 PM: npm error     peerOptional react-native@"*" from @expo/devtools@0.1.8
+6:40:32 PM: npm error     node_modules/@expo/devtools
+6:40:32 PM: npm error       @expo/devtools@"0.1.8" from expo@54.0.33
+6:40:32 PM: npm error       node_modules/expo
+6:40:32 PM: npm error         expo@"~54.0.0" from the root project
+6:40:32 PM: npm error         15 more (@expo/metro-runtime, ...)
+6:40:32 PM: npm error     22 more (@expo/metro-runtime, @expo/vector-icons, ...)
+6:40:32 PM: npm error
+6:40:32 PM: npm error Fix the upstream dependency conflict, or retry
+6:40:32 PM: npm error this command with --force or --legacy-peer-deps
+6:40:32 PM: npm error to accept an incorrect (and potentially broken) dependency resolution.
+6:40:32 PM: npm error
+6:40:32 PM: npm error
+6:40:32 PM: npm error For a full report see:
+6:40:32 PM: npm error /opt/buildhome/.npm/_logs/2026-04-30T13_10_31_475Z-eresolve-report.txt
+6:40:32 PM: npm error A complete log of this run can be found in: /opt/buildhome/.npm/_logs/2026-04-30T13_10_31_475Z-debug-0.log
+6:40:32 PM: Error during npm install
+6:40:32 PM: Failing build: Failed to install dependencies
+6:40:32 PM: Failed during stage 'Install dependencies': dependency_installation script returned non-zero exit code: 1
