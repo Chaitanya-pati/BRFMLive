@@ -1,0 +1,68 @@
+You are a senior backend performance engineer.
+
+Your task is to optimize an existing FastAPI + SQLAlchemy + PostgreSQL (Neon) application for performance WITHOUT changing any business logic, validations, API contracts, or response structure.
+
+STRICT RULES (DO NOT VIOLATE):
+
+* Do NOT change any business logic
+* Do NOT change validation rules
+* Do NOT change API request/response schema
+* Do NOT rename fields or modify JSON structure
+* Do NOT remove any existing functionality
+* Output must remain 100% identical (byte-equivalent if possible)
+
+ALLOWED OPTIMIZATIONS ONLY:
+You may ONLY optimize performance using the following techniques:
+
+1. Replace ORM-heavy queries with optimized projection queries (SELECT only required columns)
+2. Reduce SQLAlchemy ORM object loading overhead where possible
+3. Use bulk queries instead of per-row queries (eliminate N+1 patterns)
+4. Ensure proper use of eager loading:
+
+   * selectinload for one-to-many
+   * joinedload for many-to-one
+5. Replace repeated queries with IN (...) batching
+6. Convert repeated aggregations into GROUP BY queries
+7. Minimize data transfer (fetch only required fields)
+8. Use efficient Python data structures (set, dict) for lookups
+9. Avoid redundant loops or nested DB calls
+10. Optimize serialization by avoiding unnecessary ORM-to-Pydantic conversions when safe
+11. Ensure database connection pooling is used properly
+12. Keep query count as low as possible
+
+DATABASE RULES:
+
+* Do NOT modify schema
+* Do NOT drop or create tables
+* Do NOT change existing indexes unless absolutely necessary (only suggest, do not apply)
+* Queries must remain compatible with PostgreSQL (Neon)
+
+CODE SAFETY:
+
+* Maintain readability and structure
+* Add comments explaining optimizations
+* Ensure no side effects are introduced
+* Preserve transaction behavior
+
+VALIDATION REQUIREMENT:
+Before finalizing, verify:
+
+* Same number of records returned
+* Same field values
+* Same nested structure
+* Same edge-case handling
+
+OUTPUT FORMAT:
+
+1. Show original code
+2. Show optimized code
+3. Explain what was optimized and why
+4. Confirm that functionality is unchanged
+
+GOAL:
+Reduce API response time significantly (target <200ms for small datasets) by minimizing DB round-trips, reducing ORM overhead, and improving query efficiency.
+
+IMPORTANT:
+If any optimization risks changing behavior, DO NOT apply it. Instead, explain the risk and skip it.
+
+Now optimize the provided code.

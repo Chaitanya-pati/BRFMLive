@@ -247,6 +247,10 @@ def list_trip_sheets(branch_id: Optional[int] = Depends(get_branch_id),
     q = db.query(models.TripSheet)
     if branch_id:
         q = q.filter(models.TripSheet.branch_id == branch_id)
+    # PERF: TripSheetRead serializes `signoff` (one-to-one). Without eager
+    # loading, each row triggers an extra SELECT on trip_sheet_signoffs.
+    # selectinload batches them into a single IN-query.
+    q = q.options(selectinload(models.TripSheet.signoff))
     return q.order_by(models.TripSheet.id.desc()).all()
 
 
@@ -783,10 +787,43 @@ def get_dispatches(skip: int = 0,
     query = db.query(models.Dispatch)
     if branch_id:
         query = query.filter(models.Dispatch.branch_id == branch_id)
-    
+
+    # PERF: Eager-load every relationship the response schema touches so that
+    # accessing them in the loop below issues ZERO lazy queries.
+    #   - many-to-one  -> joinedload (no row multiplication)
+    #   - one-to-many  -> selectinload (avoids cartesian explosion)
+    query = query.options(
+        joinedload(models.Dispatch.order).joinedload(models.CustomerOrder.customer),
+        joinedload(models.Dispatch.truck),
+        joinedload(models.Dispatch.driver),
+        joinedload(models.Dispatch.bag_size),
+        selectinload(models.Dispatch.items).joinedload(models.DispatchItem.order_item).joinedload(models.OrderItem.bag_size),
+        selectinload(models.Dispatch.items).joinedload(models.DispatchItem.order_item).joinedload(models.OrderItem.finished_good),
+        selectinload(models.Dispatch.items).joinedload(models.DispatchItem.order_item).joinedload(models.OrderItem.order),
+        selectinload(models.Dispatch.items).joinedload(models.DispatchItem.finished_good),
+        selectinload(models.Dispatch.items).joinedload(models.DispatchItem.bag_size),
+    )
+
     dispatches = query.order_by(models.Dispatch.dispatch_id.desc()).offset(skip).limit(limit).all()
-    
-    # Compute totals for items
+
+    # PERF: Replace per-item SUM(dispatched_qty_ton) queries with ONE bulk
+    # GROUP BY across all order_item_ids in this page. Same numbers, ~N times
+    # fewer round-trips.
+    order_item_ids = {di.order_item_id for d in dispatches for di in d.items if di.order_item_id}
+    cumulative_dispatched: dict = {}
+    if order_item_ids:
+        rows = (
+            db.query(
+                models.DispatchItem.order_item_id,
+                func.coalesce(func.sum(models.DispatchItem.dispatched_qty_ton), 0.0).label("total_qty"),
+            )
+            .filter(models.DispatchItem.order_item_id.in_(order_item_ids))
+            .group_by(models.DispatchItem.order_item_id)
+            .all()
+        )
+        cumulative_dispatched = {r.order_item_id: float(r.total_qty or 0.0) for r in rows}
+
+    # Compute totals for items (logic preserved exactly)
     for d in dispatches:
         for di in d.items:
             # Use same bag-aware logic
@@ -794,12 +831,10 @@ def get_dispatches(skip: int = 0,
             if order_item:
                 weight_kg = order_item.bag_size.weight_kg if order_item.bag_size else 0
                 ordered_qty = order_item.quantity_ton if (order_item.quantity_ton and order_item.quantity_ton > 0) else ((order_item.number_of_bags * weight_kg / 1000.0) if (order_item.number_of_bags and weight_kg) else 0.0)
-                
-                # Cumulative dispatch for this order_item
-                total_dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-                    models.DispatchItem.order_item_id == di.order_item_id
-                ).scalar() or 0.0
-                
+
+                # Cumulative dispatch for this order_item (now an O(1) dict lookup)
+                total_dispatched = cumulative_dispatched.get(di.order_item_id, 0.0)
+
                 di.ordered_qty_ton = ordered_qty
                 di.remaining_qty_ton = max(0, ordered_qty - total_dispatched)
                 # Resolve product name correctly
