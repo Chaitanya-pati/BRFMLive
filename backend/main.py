@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Hea
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import List, Optional
 import base64
 from datetime import datetime
@@ -1848,7 +1848,9 @@ def get_all_vehicle_entries(
         limit: int = 100,
         branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
         db: Session = Depends(get_db)):
-    query = db.query(models.VehicleEntry)
+    query = db.query(models.VehicleEntry).options(
+        joinedload(models.VehicleEntry.supplier),
+    )
     if branch_id:
         query = query.filter(models.VehicleEntry.branch_id == branch_id)
     entries = query.order_by(models.VehicleEntry.arrival_time.desc()).offset(skip).limit(limit).all()
@@ -2181,19 +2183,32 @@ def get_all_lab_tests(skip: int = 0,
                       limit: int = 100,
                       branch_id: Optional[int] = Header(None, alias="X-Branch-Id"),
                       db: Session = Depends(get_db)):
-    query = db.query(models.LabTest)
+    query = db.query(models.LabTest).options(
+        joinedload(models.LabTest.vehicle_entry).joinedload(models.VehicleEntry.supplier),
+    )
     if branch_id:
         query = query.filter(models.LabTest.branch_id == branch_id)
     tests = query.order_by(models.LabTest.test_date.desc()).offset(skip).limit(limit).all()
+
+    # Bulk-fetch the set of lab_test_ids that have at least one claim,
+    # instead of issuing one query per lab test.
+    test_ids = [t.id for t in tests]
+    claim_ids = set()
+    if test_ids:
+        claim_ids = {
+            row[0]
+            for row in db.query(models.Claim.lab_test_id)
+            .filter(models.Claim.lab_test_id.in_(test_ids))
+            .distinct()
+            .all()
+        }
 
     # Add has_claim flag to each lab test
     result = []
     for lab_test in tests:
         lab_test_dict = schemas.LabTestWithVehicle.model_validate(
             lab_test).model_dump()
-        claim_exists = db.query(models.Claim).filter(
-            models.Claim.lab_test_id == lab_test.id).first()
-        lab_test_dict['has_claim'] = claim_exists is not None
+        lab_test_dict['has_claim'] = lab_test.id in claim_ids
         result.append(lab_test_dict)
 
     return result
@@ -2525,7 +2540,11 @@ def create_hourly_production(prod: schemas.HourlyProductionCreate, db: Session =
 
 @app.get("/api/grinding/hourly-production", response_model=List[schemas.HourlyProduction])
 def get_hourly_productions(production_order_id: Optional[int] = None, db: Session = Depends(get_db), branch_id: Optional[int] = Depends(get_branch_id)):
-    query = db.query(models.HourlyProduction)
+    query = db.query(models.HourlyProduction).options(
+        selectinload(models.HourlyProduction.details),
+        selectinload(models.HourlyProduction.silo_details),
+        selectinload(models.HourlyProduction.bran_details),
+    )
     if branch_id:
         query = query.filter(models.HourlyProduction.branch_id == branch_id)
     if production_order_id:

@@ -87,14 +87,31 @@ def get_orders(skip: int = 0,
     if branch_id:
         query = query.filter(models.CustomerOrder.branch_id == branch_id)
     # Eagerly load customer and items with their related models
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
     query = query.options(
         joinedload(models.CustomerOrder.customer),
-        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.finished_good),
-        joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.bag_size)
+        selectinload(models.CustomerOrder.items).joinedload(models.OrderItem.finished_good),
+        selectinload(models.CustomerOrder.items).joinedload(models.OrderItem.bag_size),
     )
     orders = query.order_by(models.CustomerOrder.order_id.desc()).offset(skip).limit(limit).all()
-    
+
+    # Bulk-fetch dispatch totals for ALL order items in ONE GROUP BY query,
+    # instead of issuing two queries per item.
+    item_ids = [item.order_item_id for order in orders for item in order.items]
+    dispatch_totals = {}
+    if item_ids:
+        rows = (
+            db.query(
+                models.DispatchItem.order_item_id,
+                func.coalesce(func.sum(models.DispatchItem.dispatched_qty_ton), 0.0).label("qty_ton"),
+                func.coalesce(func.sum(models.DispatchItem.dispatched_bags), 0).label("bags"),
+            )
+            .filter(models.DispatchItem.order_item_id.in_(item_ids))
+            .group_by(models.DispatchItem.order_item_id)
+            .all()
+        )
+        dispatch_totals = {r.order_item_id: (float(r.qty_ton or 0.0), int(r.bags or 0)) for r in rows}
+
     # Enrich orders with resolved data for the frontend
     for order in orders:
         # Standardize customer data for frontend dropdowns
@@ -113,17 +130,11 @@ def get_orders(skip: int = 0,
                 item.product_name = getattr(item.product, 'product_name', getattr(item.product, 'name', "Unknown Product"))
             else:
                 item.product_name = "Unknown Product"
-                
-            # Calculate dispatch statistics
-            dispatched = db.query(func.sum(models.DispatchItem.dispatched_qty_ton)).filter(
-                models.DispatchItem.order_item_id == item.order_item_id
-            ).scalar() or 0.0
-            item.dispatched_qty = dispatched
-            
-            dispatched_bags = db.query(func.sum(models.DispatchItem.dispatched_bags)).filter(
-                models.DispatchItem.order_item_id == item.order_item_id
-            ).scalar() or 0
-            item.dispatched_bags_total = dispatched_bags
+
+            # Apply pre-aggregated dispatch totals (defaults to 0/0 if none)
+            qty_ton, bags = dispatch_totals.get(item.order_item_id, (0.0, 0))
+            item.dispatched_qty = qty_ton
+            item.dispatched_bags_total = bags
 
             # Quantity and remaining weight logic
             weight_kg = item.bag_size.weight_kg if item.bag_size else (getattr(item, 'bag_size_weight', 0) or 0)

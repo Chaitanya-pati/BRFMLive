@@ -715,8 +715,11 @@ export default function GrindingScreen({ route, navigation }) {
     try {
       const client = getApiClient();
       const res = await client
-        .get("/grinding/hourly-production")
+        .get("/grinding/hourly-production", {
+          params: { production_order_id: orderId },
+        })
         .catch(() => ({ data: [] }));
+      // Defensive: still filter client-side in case the server ignores the filter.
       const existingData = (res.data || []).filter(
         (row) => row.production_order_id === orderId,
       );
