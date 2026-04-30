@@ -22,6 +22,7 @@ import MasterViewScreen from './src/screens/MasterViewScreen';
 import UnloadingEntryScreen from './src/screens/UnloadingEntryScreen';
 import WasteEntryScreen from './src/screens/WasteEntryScreen';
 import PrecleaningBinScreen from './src/screens/PrecleaningBinScreen';
+import MagnetCleaningScreen from './src/screens/MagnetCleaningScreen';
 import BranchMasterScreen from './src/screens/BranchMasterScreen';
 import UserManagementScreen from './src/screens/UserManagementScreen';
 import MachineManagementScreen from './src/screens/MachineManagementScreen';
@@ -160,6 +161,7 @@ export default function App() {
           <Stack.Screen name="UnloadingEntry" component={UnloadingEntryScreen} />
           <Stack.Screen name="WasteEntry" component={WasteEntryScreen} />
           <Stack.Screen name="PrecleaningBin" component={PrecleaningBinScreen} />
+          <Stack.Screen name="MagnetCleaning" component={MagnetCleaningScreen} />
           <Stack.Screen name="DailyReport" component={DailyReportScreen} />
           <Stack.Screen name="PrecleaningTimeline" component={PrecleaningTimelineScreen} />
           <Stack.Screen name="Reports" component={ReportsScreen} />

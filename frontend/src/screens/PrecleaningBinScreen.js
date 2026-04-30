@@ -30,13 +30,15 @@ import { showToast, showAlert, showConfirm, formatErrorMessage } from "../utils/
 import CleaningReminder from "../components/CleaningReminder";
 import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
 import { getFullImageUrl } from "../utils/imageUtils";
+import BinVisual from "../components/BinVisual";
+import DatePicker from "../components/DatePicker";
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024; // Define isTablet for modal width adjustments
 
-  const [activeTab, setActiveTab] = useState("cleaningRecords"); // Default to cleaningRecords tab
+  const [activeTab, setActiveTab] = useState("transferSessions"); // Only Transfer Sessions tab remains
   const [bins, setBins] = useState([]);
   const [magnets, setMagnets] = useState([]);
   const [routeMappings, setRouteMappings] = useState([]);
@@ -125,7 +127,7 @@ export default function PrecleaningBinScreen({ navigation }) {
   const [cleaningRecordFormData, setCleaningRecordFormData] = useState({
     magnet_id: "",
     transfer_session_id: "",
-    cleaning_timestamp: new Date().toISOString(),
+    cleaning_timestamp: new Date(),
     notes: "",
     before_cleaning_photo: null,
     after_cleaning_photo: null,
@@ -790,7 +792,7 @@ export default function PrecleaningBinScreen({ navigation }) {
     setCleaningRecordFormData({
       magnet_id: "",
       transfer_session_id: "",
-      cleaning_timestamp: new Date().toISOString(),
+      cleaning_timestamp: new Date(),
       notes: "",
       before_cleaning_photo: null,
       after_cleaning_photo: null,
@@ -926,6 +928,15 @@ export default function PrecleaningBinScreen({ navigation }) {
           "transfer_session_id",
           cleaningRecordFormData.transfer_session_id,
         );
+      }
+
+      // Send the user-selected timestamp so the backend stores the actual cleaning time
+      const tsValue = cleaningRecordFormData.cleaning_timestamp;
+      if (tsValue) {
+        const tsDate = tsValue instanceof Date ? tsValue : new Date(tsValue);
+        if (!isNaN(tsDate.getTime())) {
+          formDataToSend.append("cleaning_timestamp", tsDate.toISOString());
+        }
       }
 
       if (cleaningRecordFormData.notes) {
@@ -1100,79 +1111,12 @@ export default function PrecleaningBinScreen({ navigation }) {
 
   return (
     <Layout
-      title="Raw Wheat Bin Process"
+      title="Raw Wheat Transfer"
       navigation={navigation}
       currentRoute="PrecleaningBin"
     >
       <View style={styles.container}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabScrollView}
-          contentContainerStyle={styles.tabScrollContent}
-        >
-          <View
-            style={[styles.tabContainer, isMobile && styles.tabContainerMobile]}
-          >
-            {/* Route Mappings tab is removed */}
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "cleaningRecords" && styles.activeTab,
-                isMobile && styles.tabMobile,
-              ]}
-              onPress={() => setActiveTab("cleaningRecords")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "cleaningRecords" && styles.activeTabText,
-                  isMobile && styles.tabTextMobile,
-                ]}
-              >
-                {isMobile ? "Cleaning" : "Cleaning Records"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "transferSessions" && styles.activeTab,
-                isMobile && styles.tabMobile,
-              ]}
-              onPress={() => setActiveTab("transferSessions")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "transferSessions" && styles.activeTabText,
-                  isMobile && styles.tabTextMobile,
-                ]}
-              >
-                {isMobile ? "Transfers" : "Transfer Sessions"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-        {activeTab === "cleaningRecords" ? (
-          <>
-            <View style={styles.headerActions}>
-              <Button
-                title="Add Cleaning Record"
-                onPress={handleAddCleaningRecord}
-                variant="primary"
-              />
-            </View>
-
-            <DataTable
-              columns={cleaningRecordColumns}
-              data={cleaningRecords}
-              onEdit={openEditCleaningModal}
-              onDelete={handleDeleteCleaningRecord}
-              loading={loading}
-              emptyMessage="No cleaning records found"
-            />
-          </>
-        ) : activeTab === "transferSessions" ? (
+        {activeTab === "transferSessions" ? (
           <>
             <View style={styles.headerActions}>
               <Button
@@ -1418,49 +1362,26 @@ export default function PrecleaningBinScreen({ navigation }) {
                 <Text style={styles.binSelectionLabel}>
                   Destination Bin * — Raw Wheat Bins
                 </Text>
-                <View style={styles.binListContainer}>
+                <View style={styles.binVisualGrid}>
                   {availableDestinationBins.map((bin) => {
                     const isSelected =
                       transferSessionFormData.destination_bin_id === String(bin.id);
-                    const fillPct = bin.capacity > 0
-                      ? Math.min(100, Math.round(((bin.current_quantity || 0) / bin.capacity) * 100))
-                      : 0;
-                    const fillColor = fillPct >= 90 ? "#ef4444" : fillPct >= 60 ? "#f59e0b" : "#10b981";
                     return (
-                      <TouchableOpacity
-                        key={bin.id}
-                        style={[styles.binCard24, isSelected && styles.binCard24Selected]}
-                        onPress={() =>
-                          setTransferSessionFormData({
-                            ...transferSessionFormData,
-                            destination_bin_id: String(bin.id),
-                          })
-                        }
-                        activeOpacity={0.75}
-                      >
-                        <View style={[styles.binIconCircle, isSelected && { backgroundColor: colors.primary }]}>
-                          <Text style={styles.binIconEmoji}>🗄</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.binCardName, isSelected && { color: colors.primary }]}>
-                            Bin {bin.bin_number}
-                          </Text>
-                          <Text style={styles.binCardMeta}>
-                            Capacity: {bin.capacity} t  |  Current: {bin.current_quantity || 0} t
-                          </Text>
-                          <View style={styles.binFillBarBg}>
-                            <View style={[styles.binFillBarFill, { width: `${fillPct}%`, backgroundColor: fillColor }]} />
-                          </View>
-                          <Text style={[styles.binCardMeta, { color: fillColor, fontWeight: "600" }]}>
-                            {fillPct}% full
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <View style={styles.binSelectedCheck}>
-                            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13 }}>✓</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
+                      <View key={bin.id} style={styles.binVisualItem}>
+                        <BinVisual
+                          binNumber={`Bin ${bin.bin_number}`}
+                          capacity={bin.capacity}
+                          currentQuantity={bin.current_quantity || 0}
+                          size={isMobile ? "sm" : "md"}
+                          isSelected={isSelected}
+                          onPress={() =>
+                            setTransferSessionFormData({
+                              ...transferSessionFormData,
+                              destination_bin_id: String(bin.id),
+                            })
+                          }
+                        />
+                      </View>
                     );
                   })}
                 </View>
@@ -1774,16 +1695,25 @@ export default function PrecleaningBinScreen({ navigation }) {
               />
             )}
 
-            <InputField
-              label="Cleaning Timestamp (IST)"
-              placeholder="Will be set to current time when you submit"
+            <DatePicker
+              label="Cleaning Timestamp (IST) *"
+              mode="datetime"
               value={
-                editingCleaningRecord
-                  ? formatISTDateTime(cleaningRecordFormData.cleaning_timestamp)
-                  : "⏱️ Current time will be used automatically"
+                cleaningRecordFormData.cleaning_timestamp instanceof Date
+                  ? cleaningRecordFormData.cleaning_timestamp
+                  : new Date(cleaningRecordFormData.cleaning_timestamp || Date.now())
               }
-              editable={false}
+              onChange={(date) =>
+                setCleaningRecordFormData({
+                  ...cleaningRecordFormData,
+                  cleaning_timestamp: date,
+                })
+              }
+              placeholder="Select cleaning date & time"
             />
+            <Text style={{ fontSize: 12, color: "#64748b", marginTop: -8, marginBottom: 12, fontStyle: "italic" }}>
+              {formatISTDateTime(cleaningRecordFormData.cleaning_timestamp)}
+            </Text>
 
             {/* Before Cleaning Photo Section */}
             <View style={styles.imageSection}>
@@ -2078,6 +2008,17 @@ const styles = StyleSheet.create({
   },
   binListContainer: {
     gap: 12,
+  },
+  binVisualGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "flex-start",
+    paddingVertical: 4,
+  },
+  binVisualItem: {
+    width: 100,
+    alignItems: "center",
   },
   binOption: {
     flexDirection: "row",

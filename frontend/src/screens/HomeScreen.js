@@ -237,10 +237,17 @@ export default function HomeScreen({ navigation }) {
       adminOnly: false,
     },
     {
-      title: "Precleaning Bin",
+      title: "Raw Wheat Transfer",
       route: "PrecleaningBin",
       icon: "box",
       color: "#14b8a6",
+      adminOnly: false,
+    },
+    {
+      title: "Magnets Cleaning",
+      route: "MagnetCleaning",
+      icon: "tasks",
+      color: "#0ea5e9",
       adminOnly: false,
     },
     {

@@ -3590,6 +3590,15 @@ async def create_magnet_cleaning_record(
     ist_now = datetime.now(IST)
     utc_now = get_utc_now()
 
+    # Honor user-supplied cleaning_timestamp if provided, else use current time
+    if cleaning_timestamp:
+        try:
+            saved_timestamp = parse_ist_datetime(cleaning_timestamp)
+        except Exception:
+            saved_timestamp = utc_now
+    else:
+        saved_timestamp = utc_now
+
     print(f"\n📝 BACKEND: Creating cleaning record")
     print(f"   Magnet ID: {magnet_id}")
     print(f"   Transfer Session ID: {transfer_session_id}")
@@ -3599,12 +3608,12 @@ async def create_magnet_cleaning_record(
     print(
         f"   IST time (current): {ist_now.strftime('%Y-%m-%d %I:%M:%S %p IST')}"
     )
-    print(f"   UTC time (saving): {utc_now}")
+    print(f"   Saving timestamp: {saved_timestamp}")
 
     db_record = models.MagnetCleaningRecord(
         magnet_id=magnet_id,
         transfer_session_id=transfer_session_id,
-        cleaning_timestamp=utc_now,
+        cleaning_timestamp=saved_timestamp,
         notes=notes,
         production_order_id=production_order_id,
         source_bin_id=source_bin_id,
