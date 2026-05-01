@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   Platform,
@@ -10,7 +11,8 @@ import {
 } from "react-native";
 import Layout from "../components/Layout";
 import colors from "../theme/colors";
-import { supplierApi, vehicleApi, labTestApi } from "../api/client";
+import { supplierApi, vehicleApi, labTestApi, unloadingApi, transferSessionApi, dispatchApi } from "../api/client";
+import { formatISTDateTime } from "../utils/dateUtils";
 import {
   FaBuilding,
   FaTruck,
@@ -94,6 +96,8 @@ export default function HomeScreen({ navigation }) {
   ]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
     const checkBranch = async () => {
@@ -126,7 +130,109 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     fetchStatistics();
+    loadRecentActivity();
   }, []);
+
+  const loadRecentActivity = async () => {
+    try {
+      setActivityLoading(true);
+      const [vehiclesRes, labTestsRes, unloadingRes, transferRes, dispatchRes] = await Promise.allSettled([
+        vehicleApi.getAll(),
+        labTestApi.getAll(),
+        unloadingApi.getAll(),
+        transferSessionApi.getAll(),
+        dispatchApi.getAll(),
+      ]);
+
+      const activities = [];
+
+      if (vehiclesRes.status === 'fulfilled') {
+        vehiclesRes.value.data.forEach(v => {
+          if (v.arrival_time) {
+            activities.push({
+              type: 'vehicle',
+              icon: '🚛',
+              color: '#6366f1',
+              label: `Vehicle Entry: ${v.vehicle_number}`,
+              detail: v.supplier?.supplier_name || v.supplier_name || '—',
+              time: new Date(v.arrival_time),
+            });
+          }
+        });
+      }
+
+      if (labTestsRes.status === 'fulfilled') {
+        labTestsRes.value.data.forEach(lt => {
+          const t = lt.test_date || lt.created_at;
+          if (t) {
+            activities.push({
+              type: 'labtest',
+              icon: '🔬',
+              color: '#10b981',
+              label: `Lab Test${lt.vehicle?.vehicle_number ? ': ' + lt.vehicle.vehicle_number : ''}`,
+              detail: lt.category ? `Category: ${lt.category}` : (lt.wheat_variety || '—'),
+              time: new Date(t),
+            });
+          }
+        });
+      }
+
+      if (unloadingRes.status === 'fulfilled') {
+        unloadingRes.value.data.forEach(u => {
+          const t = u.unloading_start_time || u.created_at;
+          if (t) {
+            activities.push({
+              type: 'unloading',
+              icon: '📦',
+              color: '#8b5cf6',
+              label: `Unloading${u.vehicle?.vehicle_number ? ': ' + u.vehicle.vehicle_number : ''}`,
+              detail: u.godown?.name || u.godown_name || '—',
+              time: new Date(t),
+            });
+          }
+        });
+      }
+
+      if (transferRes.status === 'fulfilled') {
+        transferRes.value.data.forEach(s => {
+          const t = s.start_timestamp || s.created_at;
+          if (t) {
+            activities.push({
+              type: 'transfer',
+              icon: '🔀',
+              color: '#f59e0b',
+              label: `Transfer ${s.status === 'active' ? 'Started' : s.status === 'completed' ? 'Completed' : 'Updated'}`,
+              detail: s.transferred_quantity ? `${s.transferred_quantity} T` : 'In progress',
+              time: new Date(t),
+            });
+          }
+        });
+      }
+
+      if (dispatchRes.status === 'fulfilled') {
+        dispatchRes.value.data.forEach(d => {
+          const t = d.dispatched_at || d.created_at;
+          if (t) {
+            activities.push({
+              type: 'dispatch',
+              icon: '🚚',
+              color: '#ef4444',
+              label: `Dispatch: ${d.order_code || d.vehicle_number || 'Order'}`,
+              detail: d.customer?.customer_name || d.customer_name || '—',
+              time: new Date(t),
+            });
+          }
+        });
+      }
+
+      activities.sort((a, b) => b.time - a.time);
+      setRecentActivity(activities.slice(0, 5));
+    } catch (err) {
+      console.error('Failed to load recent activity', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
 
   const fetchStatistics = async () => {
     try {
@@ -414,7 +520,33 @@ export default function HomeScreen({ navigation }) {
           Recent Activity
         </Text>
         <View style={styles.activityCard}>
-          <Text style={styles.activityText}>No recent activity</Text>
+          {activityLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.activityText, { marginTop: 8, fontSize: 14 }]}>Loading activity…</Text>
+            </View>
+          ) : recentActivity.length === 0 ? (
+            <Text style={styles.activityText}>No recent activity</Text>
+          ) : (
+            recentActivity.map((item, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.activityItem,
+                  idx < recentActivity.length - 1 && styles.activityItemBorder,
+                ]}
+              >
+                <View style={[styles.activityIconWrap, { backgroundColor: item.color + '18' }]}>
+                  <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                </View>
+                <View style={styles.activityBody}>
+                  <Text style={styles.activityLabel} numberOfLines={1}>{item.label}</Text>
+                  <Text style={styles.activityDetail} numberOfLines={1}>{item.detail}</Text>
+                </View>
+                <Text style={styles.activityTime}>{formatISTDateTime(item.time)}</Text>
+              </View>
+            ))
+          )}
         </View>
       </View>
     </Layout>
@@ -490,25 +622,63 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     backgroundColor: "#ffffff",
-    padding: 30,
     borderRadius: 24,
-    minHeight: 180,
-    justifyContent: "center",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(226, 232, 240, 0.8)",
-    // Standard shadow props for cross-platform compatibility
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
     shadowRadius: 20,
     elevation: 4,
+    overflow: 'hidden',
   },
   activityText: {
     color: "#94a3b8",
     fontSize: 18,
     fontWeight: "500",
     fontStyle: "italic",
+    textAlign: 'center',
+    padding: 30,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  activityItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  activityIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  activityBody: {
+    flex: 1,
+  },
+  activityLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  activityDetail: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  activityTime: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '500',
+    flexShrink: 0,
+    textAlign: 'right',
   },
   sectionTitle: {
     fontSize: 24,

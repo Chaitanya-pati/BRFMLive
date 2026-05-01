@@ -538,75 +538,83 @@ export default function ReportsScreen({ navigation }) {
             <>
               {/* Vehicle header card */}
               <View style={ts.headerCard}>
-                <Text style={ts.vehicleNum}>{v.vehicle_number}</Text>
-                <Text style={ts.vehicleSub}>
-                  {v.supplier?.supplier_name || '—'}  ·  Bill: {v.bill_no || '—'}
-                </Text>
-                <Text style={ts.vehicleSub}>Arrived: {formatISTDateTime(v.arrival_time)}</Text>
-                <View style={[ts.overallBadge, { backgroundColor: hasGateOut ? '#d1fae5' : '#fef3c7' }]}>
-                  <Text style={[ts.overallBadgeText, { color: hasGateOut ? '#065f46' : '#92400e' }]}>
-                    {hasGateOut ? '✅ Completed' : '⏳ In Progress'}
-                  </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <View>
+                    <Text style={ts.vehicleNum}>{v.vehicle_number}</Text>
+                    <Text style={ts.vehicleSub}>
+                      {v.supplier?.supplier_name || '—'}  ·  Bill: {v.bill_no || '—'}
+                    </Text>
+                    <Text style={ts.vehicleSub}>Arrived: {formatISTDateTime(v.arrival_time)}</Text>
+                  </View>
+                  <View style={[ts.overallBadge, { backgroundColor: hasGateOut ? '#d1fae5' : '#fef3c7' }]}>
+                    <Text style={[ts.overallBadgeText, { color: hasGateOut ? '#065f46' : '#92400e' }]}>
+                      {hasGateOut ? '✅ Completed' : '⏳ In Progress'}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Timeline */}
-              <View style={ts.timelineWrap}>
-                {stages.map((stage, idx) => (
-                  <View key={stage.key} style={ts.stageRow}>
-                    {/* Left: connector + dot */}
-                    <View style={ts.connectorCol}>
-                      {idx > 0 && (
-                        <View style={[ts.connectorLine, { backgroundColor: stages[idx - 1].done ? stages[idx - 1].color : '#d1d5db' }]} />
-                      )}
-                      <View style={[ts.stageDot, { backgroundColor: stage.done ? stage.color : '#fff', borderColor: stage.done ? stage.color : '#d1d5db' }]}>
-                        <Text style={ts.stageIcon}>{stage.done ? stage.icon : '○'}</Text>
+              {/* Horizontal pipeline */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ts.pipelineScroll}>
+                <View style={ts.pipelineInner}>
+                  {stages.map((stage, idx) => (
+                    <View key={stage.key} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      {/* Stage card */}
+                      <View style={[ts.pipeCard, { borderTopColor: stage.done ? stage.color : '#e5e7eb' }]}>
+                        {/* Card header */}
+                        <View style={ts.pipeCardHeader}>
+                          <View style={[ts.pipeIconBadge, { backgroundColor: stage.done ? stage.color + '20' : '#f3f4f6' }]}>
+                            <Text style={{ fontSize: 20 }}>{stage.icon}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[ts.pipeCardTitle, { color: stage.done ? stage.color : '#9ca3af' }]}>
+                              {idx + 1}. {stage.title}
+                            </Text>
+                            <Text style={ts.pipeCardSub}>{stage.subtitle}</Text>
+                          </View>
+                          <View style={[ts.pipeBadge, { backgroundColor: stage.done ? stage.color + '20' : '#f3f4f6' }]}>
+                            <Text style={[ts.pipeBadgeText, { color: stage.done ? stage.color : '#9ca3af' }]}>
+                              {stage.done ? 'Done' : 'Pending'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Data rows */}
+                        {stage.done && stage.rows.length > 0 && (
+                          <View style={ts.pipeRows}>
+                            {stage.rows.map((row, ri) => (
+                              <View key={ri} style={ts.pipeRow}>
+                                <Text style={ts.pipeRowLabel}>{row.label}</Text>
+                                <Text style={[ts.pipeRowValue, row.highlight && { color: stage.color, fontWeight: '800' }]}>
+                                  {row.value}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {stage.action && (
+                          <TouchableOpacity style={[ts.pipeActionBtn, { borderColor: stage.color }]} onPress={stage.action.onPress}>
+                            <Text style={[ts.pipeActionText, { color: stage.color }]}>{stage.action.label}</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {!stage.done && (
+                          <Text style={ts.pipePendingHint}>Not yet recorded</Text>
+                        )}
                       </View>
+
+                      {/* Connector arrow between cards */}
                       {idx < stages.length - 1 && (
-                        <View style={[ts.connectorLineBottom, { backgroundColor: stage.done ? stage.color : '#d1d5db' }]} />
+                        <View style={ts.pipeConnector}>
+                          <View style={[ts.pipeConnectorLine, { backgroundColor: stage.done ? stage.color : '#d1d5db' }]} />
+                          <Text style={[ts.pipeConnectorArrow, { color: stage.done ? stage.color : '#d1d5db' }]}>›</Text>
+                        </View>
                       )}
                     </View>
-
-                    {/* Right: content card */}
-                    <View style={[ts.stageCard, stage.done && ts.stageCardDone]}>
-                      <View style={ts.stageCardHeader}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[ts.stageTitle, stage.done && { color: stage.color }]}>{stage.title}</Text>
-                          <Text style={ts.stageSub}>{stage.subtitle}</Text>
-                        </View>
-                        <View style={[ts.stageBadge, { backgroundColor: stage.done ? stage.color + '20' : '#f3f4f6' }]}>
-                          <Text style={[ts.stageBadgeText, { color: stage.done ? stage.color : '#9ca3af' }]}>
-                            {stage.done ? 'Done' : 'Pending'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {stage.done && stage.rows.length > 0 && (
-                        <View style={ts.stageRows}>
-                          {stage.rows.map((row, ri) => (
-                            <View key={ri} style={ts.stageDataRow}>
-                              <Text style={ts.stageDataLabel}>{row.label}</Text>
-                              <Text style={[ts.stageDataValue, row.highlight && { color: '#1e3a5f', fontWeight: '800', fontSize: 15 }]}>
-                                {row.value}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-
-                      {stage.action && (
-                        <TouchableOpacity style={ts.actionBtn} onPress={stage.action.onPress}>
-                          <Text style={ts.actionBtnText}>{stage.action.label}</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {!stage.done && (
-                        <Text style={ts.pendingHint}>Not yet recorded</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+              </ScrollView>
             </>
           )}
         </ScrollView>
@@ -724,12 +732,14 @@ export default function ReportsScreen({ navigation }) {
   );
 }
 
+const PIPE_CARD_W = 240;
+
 const ts = StyleSheet.create({
   headerCard: {
     backgroundColor: '#1e3a5f',
     borderRadius: 14,
     padding: 18,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   vehicleNum: {
     fontSize: 22,
@@ -748,136 +758,124 @@ const ts = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    marginTop: 10,
   },
   overallBadgeText: {
     fontWeight: '800',
     fontSize: 13,
   },
-  timelineWrap: {
-    paddingHorizontal: 4,
+  pipelineScroll: {
+    marginBottom: 16,
   },
-  stageRow: {
+  pipelineInner: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: 4,
+    alignItems: 'flex-start',
+    paddingBottom: 8,
+    paddingHorizontal: 2,
   },
-  connectorCol: {
-    width: 40,
-    alignItems: 'center',
-    marginRight: 12,
+  pipeCard: {
+    width: PIPE_CARD_W,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderTopWidth: 3,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  connectorLine: {
-    width: 2,
-    height: 16,
-    marginBottom: 0,
+  pipeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 10,
   },
-  connectorLineBottom: {
-    width: 2,
-    flex: 1,
-    minHeight: 16,
-    marginTop: 0,
-  },
-  stageDot: {
+  pipeIconBadge: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stageIcon: {
-    fontSize: 18,
-  },
-  stageCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    marginTop: 0,
-  },
-  stageCardDone: {
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  stageCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  stageTitle: {
-    fontSize: 15,
+  pipeCardTitle: {
+    fontSize: 13,
     fontWeight: '800',
-    color: '#1f2937',
     marginBottom: 2,
   },
-  stageSub: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  stageBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginLeft: 8,
-  },
-  stageBadgeText: {
+  pipeCardSub: {
     fontSize: 11,
+    color: '#6b7280',
+    lineHeight: 15,
+  },
+  pipeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  pipeBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
   },
-  stageRows: {
+  pipeRows: {
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
     paddingTop: 8,
+    gap: 4,
   },
-  stageDataRow: {
+  pipeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 3,
     borderBottomWidth: 1,
     borderBottomColor: '#f9fafb',
   },
-  stageDataLabel: {
-    fontSize: 12,
+  pipeRowLabel: {
+    fontSize: 11,
     color: '#6b7280',
     fontWeight: '600',
     flex: 1,
   },
-  stageDataValue: {
-    fontSize: 12,
+  pipeRowValue: {
+    fontSize: 11,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
     textAlign: 'right',
   },
-  actionBtn: {
+  pipeActionBtn: {
     marginTop: 10,
-    backgroundColor: '#eff6ff',
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderWidth: 1.5,
   },
-  actionBtnText: {
-    fontSize: 13,
+  pipeActionText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#1d4ed8',
   },
-  pendingHint: {
+  pipePendingHint: {
     fontSize: 12,
     color: '#9ca3af',
     fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 6,
+    paddingTop: 8,
+  },
+  pipeConnector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+    width: 32,
+  },
+  pipeConnectorLine: {
+    flex: 1,
+    height: 2,
+  },
+  pipeConnectorArrow: {
+    fontSize: 22,
+    marginLeft: -4,
   },
 });
 
