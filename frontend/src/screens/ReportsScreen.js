@@ -359,265 +359,331 @@ export default function ReportsScreen({ navigation }) {
     </View>
   );
 
-  const renderTraceabilityTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Vehicle Traceability Report</Text>
-        
-        <View style={styles.dateRangeContainer}>
-          <View style={styles.datePickerWrapper}>
-            <Text style={styles.label}>Start Date</Text>
-            <input
-              type="date"
-              value={startDate.toISOString().split('T')[0]}
-              onChange={(e) => setStartDate(new Date(e.target.value))}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                fontSize: '14px',
-                backgroundColor: '#fff',
-              }}
-            />
-          </View>
-          <View style={styles.datePickerWrapper}>
-            <Text style={styles.label}>End Date</Text>
-            <input
-              type="date"
-              value={endDate.toISOString().split('T')[0]}
-              onChange={(e) => setEndDate(new Date(e.target.value))}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                fontSize: '14px',
-                backgroundColor: '#fff',
-              }}
-            />
-          </View>
-        </View>
+  const renderTraceabilityTab = () => {
+    const v = traceabilityData?.vehicle;
+    const lt = traceabilityData?.labTest;
+    const ul = traceabilityData?.unloading;
 
-        <View style={styles.pickerContainer}>
-          <Text style={styles.label}>Select Vehicle</Text>
-          <Picker
-            selectedValue={selectedVehicle?.id || ''}
-            onValueChange={(value) => {
-              const vehicle = vehicles.find(v => v.id === parseInt(value));
-              setSelectedVehicle(vehicle);
-            }}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select a vehicle" value="" />
-            {vehicles.map((vehicle) => (
-              <Picker.Item
-                key={vehicle.id}
-                label={`${vehicle.vehicle_number} - ${vehicle.supplier?.supplier_name || 'Unknown'} - ${formatISTDate(vehicle.arrival_time)}`}
-                value={vehicle.id}
+    const hasGateIn = v && Number(v.gross_weight) > 0;
+    const hasGateOut = v && Number(v.empty_weight) > 0;
+    const netKg = hasGateIn && hasGateOut
+      ? (Number(v.gross_weight) - Number(v.empty_weight))
+      : null;
+
+    const stages = [
+      {
+        key: 'entry',
+        icon: '🚛',
+        title: 'Gate Entry',
+        subtitle: 'Vehicle arrival recorded',
+        done: true,
+        color: '#10b981',
+        rows: v ? [
+          { label: 'Vehicle No.', value: v.vehicle_number },
+          { label: 'Supplier', value: v.supplier?.supplier_name || '—' },
+          { label: 'Bill No.', value: v.bill_no || '—' },
+          { label: 'Arrival Time', value: formatISTDateTime(v.arrival_time) },
+          { label: 'Driver', value: v.driver_name || '—' },
+          { label: 'Driver Phone', value: v.driver_phone || '—' },
+        ] : [],
+      },
+      {
+        key: 'lab',
+        icon: '🔬',
+        title: 'Lab Test',
+        subtitle: lt
+          ? (lt.approved ? 'Tested & Approved' : 'Tested · Awaiting Approval')
+          : 'Pending',
+        done: !!lt,
+        approved: lt?.approved,
+        color: lt ? (lt.approved ? '#10b981' : '#f59e0b') : '#d1d5db',
+        rows: lt ? [
+          { label: 'Test Date', value: formatISTDate(lt.test_date) },
+          { label: 'Wheat Variety', value: lt.wheat_variety || '—' },
+          { label: 'Category', value: lt.category || '—' },
+          { label: 'Moisture %', value: lt.moisture != null ? `${lt.moisture}%` : '—' },
+          { label: 'Protein %', value: lt.protein_percent != null ? `${lt.protein_percent}%` : '—' },
+          { label: 'Wet Gluten %', value: lt.wet_gluten != null ? `${lt.wet_gluten}%` : '—' },
+          { label: 'Total Impurities %', value: lt.total_impurities != null ? `${lt.total_impurities}%` : '—' },
+          { label: 'Total Dockage %', value: lt.total_dockage != null ? `${lt.total_dockage}%` : '—' },
+          { label: 'Tested By', value: lt.tested_by || '—' },
+          { label: 'Remarks', value: lt.remarks || '—' },
+          { label: 'Claim Status', value: lt.raise_claim ? '⚠️ Claim Raised' : '✅ No Claim' },
+        ] : [],
+        action: lt ? {
+          label: 'View Full Lab Report',
+          onPress: () => { setSelectedLabTest(lt); setLabTestModalVisible(true); },
+        } : null,
+      },
+      {
+        key: 'gatein',
+        icon: '⚖️',
+        title: 'Gate-In (Loaded)',
+        subtitle: hasGateIn ? `${v.gross_weight} kg recorded` : 'Pending',
+        done: hasGateIn,
+        color: hasGateIn ? '#3b82f6' : '#d1d5db',
+        rows: hasGateIn ? [
+          { label: 'Gross Weight', value: `${v.gross_weight} kg` },
+        ] : [],
+      },
+      {
+        key: 'unloading',
+        icon: '📦',
+        title: 'Unloading',
+        subtitle: ul ? `${ul.godown?.name || 'Godown'}` : 'Pending',
+        done: !!ul,
+        color: ul ? '#8b5cf6' : '#d1d5db',
+        rows: ul ? [
+          { label: 'Godown', value: ul.godown?.name || '—' },
+          { label: 'Start Time', value: formatISTDateTime(ul.unloading_start_time) },
+          { label: 'End Time', value: ul.unloading_end_time ? formatISTDateTime(ul.unloading_end_time) : '—' },
+          { label: 'Gross Weight', value: ul.gross_weight ? `${ul.gross_weight} kg` : '—' },
+          { label: 'Empty Wt (Vehicle)', value: ul.empty_vehicle_weight ? `${ul.empty_vehicle_weight} kg` : '—' },
+          { label: 'Net Weight', value: ul.net_weight ? `${(ul.net_weight / 1000).toFixed(2)} T` : '—' },
+        ] : [],
+      },
+      {
+        key: 'gateout',
+        icon: '🚪',
+        title: 'Gate-Out (Empty)',
+        subtitle: hasGateOut
+          ? `${v.empty_weight} kg · Net ${netKg ? (netKg / 1000).toFixed(2) + ' T' : '—'}`
+          : 'Pending',
+        done: hasGateOut,
+        color: hasGateOut ? '#1e3a5f' : '#d1d5db',
+        rows: hasGateOut ? [
+          { label: 'Empty Weight', value: `${v.empty_weight} kg` },
+          ...(netKg != null ? [{ label: 'Net Weight', value: `${(netKg / 1000).toFixed(2)} T`, highlight: true }] : []),
+          ...(v.notes ? [{ label: 'Notes', value: v.notes }] : []),
+        ] : [],
+      },
+    ];
+
+    return (
+      <View style={styles.tabContent}>
+        {/* Filter header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Vehicle Traceability</Text>
+          <View style={styles.dateRangeContainer}>
+            <View style={styles.datePickerWrapper}>
+              <Text style={styles.label}>From</Text>
+              <input
+                type="date"
+                value={startDate.toISOString().split('T')[0]}
+                onChange={(e) => setStartDate(new Date(e.target.value + 'T00:00:00'))}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px', backgroundColor: '#fff', boxSizing: 'border-box' }}
               />
-            ))}
-          </Picker>
+            </View>
+            <View style={styles.datePickerWrapper}>
+              <Text style={styles.label}>To</Text>
+              <input
+                type="date"
+                value={endDate.toISOString().split('T')[0]}
+                onChange={(e) => setEndDate(new Date(e.target.value + 'T00:00:00'))}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px', backgroundColor: '#fff', boxSizing: 'border-box' }}
+              />
+            </View>
+          </View>
+          <View style={styles.pickerContainer}>
+            <Text style={styles.label}>
+              Select Vehicle{vehicles.length > 0 ? ` (${vehicles.length} found)` : ''}
+            </Text>
+            <Picker
+              selectedValue={selectedVehicle?.id || ''}
+              onValueChange={(value) => {
+                const vehicle = vehicles.find(vv => vv.id === parseInt(value));
+                setSelectedVehicle(vehicle || null);
+              }}
+              style={styles.picker}
+            >
+              <Picker.Item label="— Choose a vehicle —" value="" />
+              {vehicles.map((vv) => (
+                <Picker.Item
+                  key={vv.id}
+                  label={`${vv.vehicle_number}  ·  ${vv.supplier?.supplier_name || 'Unknown'}  ·  ${formatISTDate(vv.arrival_time)}`}
+                  value={vv.id}
+                />
+              ))}
+            </Picker>
+          </View>
         </View>
-      </View>
 
-      <ScrollView style={styles.content}>
-        {traceabilityLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading traceability report...</Text>
-          </View>
-        ) : !traceabilityData ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Please select a vehicle to view the traceability report</Text>
-          </View>
-        ) : (
-          <View style={styles.traceabilityReport}>
-            {/* Gate Entry Section */}
-            <View style={styles.reportSection}>
-              <Text style={styles.sectionTitle}>🚪 Gate Entry</Text>
-              <View style={styles.sectionContent}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Vehicle Number:</Text>
-                  <Text style={styles.infoValue}>{traceabilityData.vehicle.vehicle_number}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Supplier:</Text>
-                  <Text style={styles.infoValue}>{traceabilityData.vehicle.supplier?.supplier_name || 'N/A'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Bill Number:</Text>
-                  <Text style={styles.infoValue}>{traceabilityData.vehicle.bill_no || 'N/A'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Arrival Time:</Text>
-                  <Text style={styles.infoValue}>{formatISTDateTime(traceabilityData.vehicle.arrival_time)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Driver Name:</Text>
-                  <Text style={styles.infoValue}>{traceabilityData.vehicle.driver_name || 'N/A'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Driver Phone:</Text>
-                  <Text style={styles.infoValue}>{traceabilityData.vehicle.driver_phone || 'N/A'}</Text>
-                </View>
-              </View>
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+          {traceabilityLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading traceability report…</Text>
             </View>
-
-            {/* Lab Test Section */}
-            <View style={styles.reportSection}>
-              <Text style={styles.sectionTitle}>🔬 Lab Test</Text>
-              {traceabilityData.labTest ? (
-                <View style={styles.sectionContent}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Test Date:</Text>
-                    <Text style={styles.infoValue}>{formatISTDateTime(traceabilityData.labTest.test_date)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Category:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.labTest.category || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Moisture:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.labTest.moisture || 'N/A'}%</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Total Impurities:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.labTest.total_impurities || 'N/A'}%</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Status:</Text>
-                    <Text style={[styles.infoValue, { color: traceabilityData.labTest.raise_claim ? colors.error : colors.success }]}>
-                      {traceabilityData.labTest.raise_claim ? 'Failed' : 'Passed'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.detailsButton}
-                    onPress={() => {
-                      setSelectedLabTest(traceabilityData.labTest);
-                      setLabTestModalVisible(true);
-                    }}
-                  >
-                    <Text style={styles.detailsButtonText}>View Lab Test Details</Text>
-                  </TouchableOpacity>
+          ) : !traceabilityData ? (
+            <View style={styles.emptyState}>
+              <Text style={{ fontSize: 48 }}>🔍</Text>
+              <Text style={styles.emptyText}>
+                {vehicles.length === 0
+                  ? 'No vehicles found in the selected date range.'
+                  : 'Select a vehicle above to view its full traceability timeline.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Vehicle header card */}
+              <View style={ts.headerCard}>
+                <Text style={ts.vehicleNum}>{v.vehicle_number}</Text>
+                <Text style={ts.vehicleSub}>
+                  {v.supplier?.supplier_name || '—'}  ·  Bill: {v.bill_no || '—'}
+                </Text>
+                <Text style={ts.vehicleSub}>Arrived: {formatISTDateTime(v.arrival_time)}</Text>
+                <View style={[ts.overallBadge, { backgroundColor: hasGateOut ? '#d1fae5' : '#fef3c7' }]}>
+                  <Text style={[ts.overallBadgeText, { color: hasGateOut ? '#065f46' : '#92400e' }]}>
+                    {hasGateOut ? '✅ Completed' : '⏳ In Progress'}
+                  </Text>
                 </View>
-              ) : (
-                <View style={styles.sectionContent}>
-                  <Text style={styles.noDataText}>Lab test not yet conducted</Text>
-                </View>
-              )}
-            </View>
+              </View>
 
-            {/* Unloading Section */}
-            <View style={styles.reportSection}>
-              <Text style={styles.sectionTitle}>📦 Unloading</Text>
-              {traceabilityData.unloading ? (
-                <View style={styles.sectionContent}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Godown:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.unloading.godown?.name || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Start Time:</Text>
-                    <Text style={styles.infoValue}>{formatISTDateTime(traceabilityData.unloading.unloading_start_time)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>End Time:</Text>
-                    <Text style={styles.infoValue}>{formatISTDateTime(traceabilityData.unloading.unloading_end_time)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Gross Weight:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.unloading.gross_weight || 'N/A'} kg</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Empty Weight:</Text>
-                    <Text style={styles.infoValue}>{traceabilityData.unloading.empty_vehicle_weight || 'N/A'} kg</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Net Weight:</Text>
-                    <Text style={[styles.infoValue, styles.highlightValue]}>
-                      {traceabilityData.unloading.net_weight ? (traceabilityData.unloading.net_weight / 1000).toFixed(2) : 'N/A'} tons
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.sectionContent}>
-                  <Text style={styles.noDataText}>Vehicle not yet unloaded</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-      </ScrollView>
+              {/* Timeline */}
+              <View style={ts.timelineWrap}>
+                {stages.map((stage, idx) => (
+                  <View key={stage.key} style={ts.stageRow}>
+                    {/* Left: connector + dot */}
+                    <View style={ts.connectorCol}>
+                      {idx > 0 && (
+                        <View style={[ts.connectorLine, { backgroundColor: stages[idx - 1].done ? stages[idx - 1].color : '#d1d5db' }]} />
+                      )}
+                      <View style={[ts.stageDot, { backgroundColor: stage.done ? stage.color : '#fff', borderColor: stage.done ? stage.color : '#d1d5db' }]}>
+                        <Text style={ts.stageIcon}>{stage.done ? stage.icon : '○'}</Text>
+                      </View>
+                      {idx < stages.length - 1 && (
+                        <View style={[ts.connectorLineBottom, { backgroundColor: stage.done ? stage.color : '#d1d5db' }]} />
+                      )}
+                    </View>
 
-      {/* Lab Test Details Modal */}
-      <Modal
-        visible={labTestModalVisible}
-        onClose={() => setLabTestModalVisible(false)}
-        title="Lab Test Details"
-        width={isMobile ? "95%" : "600px"}
-      >
-        {selectedLabTest && (
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Basic Information</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Bill Number:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.bill_number || 'N/A'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Wheat Variety:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.wheat_variety || 'N/A'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Category:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.category || 'N/A'}</Text>
-              </View>
-            </View>
+                    {/* Right: content card */}
+                    <View style={[ts.stageCard, stage.done && ts.stageCardDone]}>
+                      <View style={ts.stageCardHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[ts.stageTitle, stage.done && { color: stage.color }]}>{stage.title}</Text>
+                          <Text style={ts.stageSub}>{stage.subtitle}</Text>
+                        </View>
+                        <View style={[ts.stageBadge, { backgroundColor: stage.done ? stage.color + '20' : '#f3f4f6' }]}>
+                          <Text style={[ts.stageBadgeText, { color: stage.done ? stage.color : '#9ca3af' }]}>
+                            {stage.done ? 'Done' : 'Pending'}
+                          </Text>
+                        </View>
+                      </View>
 
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Test Parameters</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Moisture:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.moisture || 'N/A'}%</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Protein:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.protein_percent || 'N/A'}%</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Wet Gluten:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.wet_gluten || 'N/A'}%</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Dry Gluten:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.dry_gluten || 'N/A'}%</Text>
-              </View>
-            </View>
+                      {stage.done && stage.rows.length > 0 && (
+                        <View style={ts.stageRows}>
+                          {stage.rows.map((row, ri) => (
+                            <View key={ri} style={ts.stageDataRow}>
+                              <Text style={ts.stageDataLabel}>{row.label}</Text>
+                              <Text style={[ts.stageDataValue, row.highlight && { color: '#1e3a5f', fontWeight: '800', fontSize: 15 }]}>
+                                {row.value}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
 
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Impurities & Dockage</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Total Impurities:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.total_impurities || 'N/A'}%</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Total Dockage:</Text>
-                <Text style={styles.infoValue}>{selectedLabTest.total_dockage || 'N/A'}%</Text>
-              </View>
-            </View>
+                      {stage.action && (
+                        <TouchableOpacity style={ts.actionBtn} onPress={stage.action.onPress}>
+                          <Text style={ts.actionBtnText}>{stage.action.label}</Text>
+                        </TouchableOpacity>
+                      )}
 
-            {selectedLabTest.remarks && (
+                      {!stage.done && (
+                        <Text style={ts.pendingHint}>Not yet recorded</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+
+        {/* Lab Test Details Modal */}
+        <Modal
+          visible={labTestModalVisible}
+          onClose={() => setLabTestModalVisible(false)}
+          title="Lab Test Details"
+          width={isMobile ? "95%" : "600px"}
+        >
+          {selectedLabTest && (
+            <ScrollView style={styles.modalContent}>
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Remarks</Text>
-                <Text style={styles.remarksText}>{selectedLabTest.remarks}</Text>
+                <Text style={styles.modalSectionTitle}>Basic Information</Text>
+                {[
+                  { label: 'Bill Number', value: selectedLabTest.bill_number },
+                  { label: 'Wheat Variety', value: selectedLabTest.wheat_variety },
+                  { label: 'Category', value: selectedLabTest.category },
+                  { label: 'Tested By', value: selectedLabTest.tested_by },
+                ].map((r) => (
+                  <View key={r.label} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{r.label}:</Text>
+                    <Text style={styles.infoValue}>{r.value || 'N/A'}</Text>
+                  </View>
+                ))}
               </View>
-            )}
-          </ScrollView>
-        )}
-      </Modal>
-    </View>
-  );
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Physical Parameters</Text>
+                {[
+                  { label: 'Moisture %', value: selectedLabTest.moisture },
+                  { label: 'Hectoliter Wt', value: selectedLabTest.test_weight },
+                  { label: 'Protein %', value: selectedLabTest.protein_percent },
+                  { label: 'Wet Gluten %', value: selectedLabTest.wet_gluten },
+                  { label: 'Dry Gluten %', value: selectedLabTest.dry_gluten },
+                  { label: 'Falling No.', value: selectedLabTest.falling_number },
+                ].map((r) => (
+                  <View key={r.label} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{r.label}:</Text>
+                    <Text style={styles.infoValue}>{r.value != null ? r.value : 'N/A'}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Foreign Matter</Text>
+                {[
+                  { label: 'Chaff/Husk', value: selectedLabTest.chaff_husk },
+                  { label: 'Straws/Sticks', value: selectedLabTest.straws_sticks },
+                  { label: 'Other FM', value: selectedLabTest.other_foreign_matter },
+                  { label: 'Mud Balls', value: selectedLabTest.mudballs },
+                  { label: 'Stones', value: selectedLabTest.stones },
+                  { label: 'Dust/Sand', value: selectedLabTest.dust_sand },
+                  { label: 'Total Impurities %', value: selectedLabTest.total_impurities },
+                ].map((r) => (
+                  <View key={r.label} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{r.label}:</Text>
+                    <Text style={styles.infoValue}>{r.value != null ? r.value : 'N/A'}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Grain Dockage</Text>
+                {[
+                  { label: 'Shriveled Wheat', value: selectedLabTest.shriveled_wheat },
+                  { label: 'Insect Damage', value: selectedLabTest.insect_damage },
+                  { label: 'Blackened Wheat', value: selectedLabTest.blackened_wheat },
+                  { label: 'Other Grains', value: selectedLabTest.sprouted_grains },
+                  { label: 'Soft/Other', value: selectedLabTest.other_grain_damage },
+                  { label: 'Total Dockage %', value: selectedLabTest.total_dockage },
+                ].map((r) => (
+                  <View key={r.label} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{r.label}:</Text>
+                    <Text style={styles.infoValue}>{r.value != null ? r.value : 'N/A'}</Text>
+                  </View>
+                ))}
+              </View>
+              {selectedLabTest.remarks && (
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Remarks</Text>
+                  <Text style={styles.remarksText}>{selectedLabTest.remarks}</Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </Modal>
+      </View>
+    );
+  };
 
   return (
     <Layout navigation={navigation} title="Reports" currentRoute="Reports">
@@ -646,6 +712,163 @@ export default function ReportsScreen({ navigation }) {
     </Layout>
   );
 }
+
+const ts = StyleSheet.create({
+  headerCard: {
+    backgroundColor: '#1e3a5f',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 20,
+  },
+  vehicleNum: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  vehicleSub: {
+    fontSize: 13,
+    color: '#93c5fd',
+    marginBottom: 2,
+  },
+  overallBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  overallBadgeText: {
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  timelineWrap: {
+    paddingHorizontal: 4,
+  },
+  stageRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: 4,
+  },
+  connectorCol: {
+    width: 40,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  connectorLine: {
+    width: 2,
+    height: 16,
+    marginBottom: 0,
+  },
+  connectorLineBottom: {
+    width: 2,
+    flex: 1,
+    minHeight: 16,
+    marginTop: 0,
+  },
+  stageDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stageIcon: {
+    fontSize: 18,
+  },
+  stageCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginTop: 0,
+  },
+  stageCardDone: {
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  stageCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  stageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  stageSub: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  stageBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginLeft: 8,
+  },
+  stageBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stageRows: {
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    paddingTop: 8,
+  },
+  stageDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9fafb',
+  },
+  stageDataLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '600',
+    flex: 1,
+  },
+  stageDataValue: {
+    fontSize: 12,
+    color: '#111827',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+  actionBtn: {
+    marginTop: 10,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  actionBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1d4ed8',
+  },
+  pendingHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 6,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
