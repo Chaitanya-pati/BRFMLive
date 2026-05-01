@@ -156,15 +156,26 @@ export default function ReportsScreen({ navigation }) {
   };
 
   // Traceability functions
+  const toISODateIST = (date) => {
+    // Returns YYYY-MM-DD in IST for reliable comparison
+    const d = new Date(date);
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    return `${y}-${m}-${day}`;
+  };
+
   const loadVehiclesInDateRange = async () => {
     try {
       const response = await vehicleApi.getAll();
-      const startDateStr = formatISTDate(startDate);
-      const endDateStr = formatISTDate(endDate);
+      const startStr = toISODateIST(startDate);
+      const endStr = toISODateIST(endDate);
 
       const filteredVehicles = response.data.filter(vehicle => {
-        const arrivalDate = formatISTDate(new Date(vehicle.arrival_time));
-        return arrivalDate >= startDateStr && arrivalDate <= endDateStr;
+        if (!vehicle.arrival_time) return false;
+        const arrivalStr = toISODateIST(new Date(vehicle.arrival_time));
+        return arrivalStr >= startStr && arrivalStr <= endStr;
       });
 
       setVehicles(filteredVehicles);
