@@ -527,22 +527,26 @@ export default function LabTestScreen({ navigation }) {
             type="date"
             value={formData.test_date.toISOString().split('T')[0]}
             onChange={(e) => {
-              const date = new Date(e.target.value);
+              const date = new Date(e.target.value + 'T00:00:00');
               setFormData({ ...formData, test_date: date });
             }}
             style={{
-              padding: 12,
+              display: 'block',
+              boxSizing: 'border-box',
+              padding: 10,
               borderRadius: 6,
               border: '1px solid #d1d5db',
-              fontSize: 16,
+              fontSize: 14,
               width: '100%',
-              marginBottom: 12
+              backgroundColor: '#fff',
+              outline: 'none',
+              cursor: 'pointer',
             }}
           />
         </View>
       );
     }
-    return null; // Fallback for native
+    return null;
   };
 
   const handleSubmit = async () => {
@@ -844,27 +848,59 @@ export default function LabTestScreen({ navigation }) {
 
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Step 2 · Physical Parameters</Text>
-                  <View style={styles.gridRow}>
-                    {[
-                      { key: "moisture", label: "Moisture %" },
-                      { key: "hectoliter_weight", label: "Hectoliter Wt (Kg/Hl)" },
-                      { key: "protein_percent", label: "Protein %" },
-                      { key: "wet_gluten", label: "Wet Gluten %" },
-                      { key: "dry_gluten", label: "Dry Gluten %" },
-                      { key: "sedimentation_value", label: "Falling No. / Sed." },
-                    ].map((f) => (
-                      <View key={f.key} style={styles.gridCell}>
-                        <Text style={styles.label}>{f.label}</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={formData[f.key]}
-                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                          keyboardType="decimal-pad"
-                          placeholder="0.00"
-                        />
+                  {isMobile ? (
+                    <View style={styles.paramTable}>
+                      <View style={[styles.paramRow, styles.paramHeaderRow]}>
+                        <Text style={[styles.paramSr, styles.paramHeaderText]}>Sr</Text>
+                        <Text style={[styles.paramName, styles.paramHeaderText]}>Parameter</Text>
+                        <Text style={[styles.paramStd, styles.paramHeaderText]}>Standard</Text>
+                        <Text style={[styles.paramVal, styles.paramHeaderText]}>Value</Text>
                       </View>
-                    ))}
-                  </View>
+                      {[
+                        { key: "moisture", label: "Moisture %", std: "12-14%" },
+                        { key: "hectoliter_weight", label: "Hectoliter Wt", std: ">75 Kg/Hl" },
+                        { key: "protein_percent", label: "Protein %", std: "12-13%" },
+                        { key: "wet_gluten", label: "Wet Gluten %", std: ">30%" },
+                        { key: "dry_gluten", label: "Dry Gluten %", std: "32-33%" },
+                        { key: "sedimentation_value", label: "Falling No./Sed.", std: "24-25 ml" },
+                      ].map((f, idx) => (
+                        <View key={f.key} style={[styles.paramRow, idx % 2 === 1 && styles.paramRowAlt]}>
+                          <Text style={styles.paramSr}>{idx + 1}</Text>
+                          <Text style={styles.paramName}>{f.label}</Text>
+                          <Text style={styles.paramStd}>{f.std}</Text>
+                          <TextInput
+                            style={styles.paramValInput}
+                            value={formData[f.key]}
+                            onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                            keyboardType="decimal-pad"
+                            placeholder="—"
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.gridRow}>
+                      {[
+                        { key: "moisture", label: "Moisture %" },
+                        { key: "hectoliter_weight", label: "Hectoliter Wt (Kg/Hl)" },
+                        { key: "protein_percent", label: "Protein %" },
+                        { key: "wet_gluten", label: "Wet Gluten %" },
+                        { key: "dry_gluten", label: "Dry Gluten %" },
+                        { key: "sedimentation_value", label: "Falling No. / Sed." },
+                      ].map((f) => (
+                        <View key={f.key} style={styles.gridCell}>
+                          <Text style={styles.label}>{f.label}</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={formData[f.key]}
+                            onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                            keyboardType="decimal-pad"
+                            placeholder="0.00"
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   {currentStep < 2 && (
                     <Text style={styles.hintText}>
                       Enter at least one physical value to reveal Foreign Matter →
@@ -878,27 +914,59 @@ export default function LabTestScreen({ navigation }) {
             {currentStep >= 2 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Step 3 · Foreign Matter / Impurities (%)</Text>
-                <View style={styles.gridRow}>
-                  {[
-                    { key: "chaff_husk", label: "Chaff / Husk" },
-                    { key: "straws_sticks", label: "Straws / Sticks" },
-                    { key: "other_foreign_matter", label: "Other Foreign Matter" },
-                    { key: "mudballs", label: "Mud Balls" },
-                    { key: "stones", label: "Stones" },
-                    { key: "dust_sand", label: "Dust / Sand" },
-                  ].map((f) => (
-                    <View key={f.key} style={styles.gridCell}>
-                      <Text style={styles.label}>{f.label}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={formData[f.key]}
-                        onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                        keyboardType="decimal-pad"
-                        placeholder="0.00"
-                      />
+                {isMobile ? (
+                  <View style={styles.paramTable}>
+                    <View style={[styles.paramRow, styles.paramHeaderRow]}>
+                      <Text style={[styles.paramSr, styles.paramHeaderText]}>Sr</Text>
+                      <Text style={[styles.paramName, styles.paramHeaderText]}>Parameter</Text>
+                      <Text style={[styles.paramStd, styles.paramHeaderText]}>Std %</Text>
+                      <Text style={[styles.paramVal, styles.paramHeaderText]}>Value</Text>
                     </View>
-                  ))}
-                </View>
+                    {[
+                      { key: "chaff_husk", label: "Chaff / Husk", std: "<3%" },
+                      { key: "straws_sticks", label: "Straws / Sticks", std: "<1%" },
+                      { key: "other_foreign_matter", label: "Other Foreign Matter", std: "<3%" },
+                      { key: "mudballs", label: "Mud Balls", std: "<0.5%" },
+                      { key: "stones", label: "Stones", std: "<0.1%" },
+                      { key: "dust_sand", label: "Dust / Sand", std: "<0.5%" },
+                    ].map((f, idx) => (
+                      <View key={f.key} style={[styles.paramRow, idx % 2 === 1 && styles.paramRowAlt]}>
+                        <Text style={styles.paramSr}>{String.fromCharCode(97 + idx)}</Text>
+                        <Text style={styles.paramName}>{f.label}</Text>
+                        <Text style={styles.paramStd}>{f.std}</Text>
+                        <TextInput
+                          style={styles.paramValInput}
+                          value={formData[f.key]}
+                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                          keyboardType="decimal-pad"
+                          placeholder="—"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.gridRow}>
+                    {[
+                      { key: "chaff_husk", label: "Chaff / Husk" },
+                      { key: "straws_sticks", label: "Straws / Sticks" },
+                      { key: "other_foreign_matter", label: "Other Foreign Matter" },
+                      { key: "mudballs", label: "Mud Balls" },
+                      { key: "stones", label: "Stones" },
+                      { key: "dust_sand", label: "Dust / Sand" },
+                    ].map((f) => (
+                      <View key={f.key} style={styles.gridCell}>
+                        <Text style={styles.label}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData[f.key]}
+                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                          keyboardType="decimal-pad"
+                          placeholder="0.00"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Impurities %</Text>
                   <Text style={styles.totalValue}>{formData.total_impurities}</Text>
@@ -915,29 +983,63 @@ export default function LabTestScreen({ navigation }) {
             {currentStep >= 3 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Step 4 · Damaged Grains / Dockage (%)</Text>
-                <View style={styles.gridRow}>
-                  {[
-                    { key: "shriveled_wheat", label: "Shriveled Wheat" },
-                    { key: "insect_damage", label: "Insect Damage" },
-                    { key: "blackened_wheat", label: "Blackened Wheat" },
-                    { key: "other_grains", label: "Other Grains / Sprouted" },
-                    { key: "soft_wheat", label: "Soft / Other Damage" },
-                    { key: "heat_damaged", label: "Heat Damaged" },
-                    { key: "immature_wheat", label: "Immature Wheat" },
-                    { key: "broken_wheat", label: "Broken Wheat" },
-                  ].map((f) => (
-                    <View key={f.key} style={styles.gridCell}>
-                      <Text style={styles.label}>{f.label}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={formData[f.key]}
-                        onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
-                        keyboardType="decimal-pad"
-                        placeholder="0.00"
-                      />
+                {isMobile ? (
+                  <View style={styles.paramTable}>
+                    <View style={[styles.paramRow, styles.paramHeaderRow]}>
+                      <Text style={[styles.paramSr, styles.paramHeaderText]}>Sr</Text>
+                      <Text style={[styles.paramName, styles.paramHeaderText]}>Parameter</Text>
+                      <Text style={[styles.paramStd, styles.paramHeaderText]}>Std %</Text>
+                      <Text style={[styles.paramVal, styles.paramHeaderText]}>Value</Text>
                     </View>
-                  ))}
-                </View>
+                    {[
+                      { key: "shriveled_wheat", label: "Shriveled Wheat", std: "0.5%" },
+                      { key: "insect_damage", label: "Insect Bored", std: "0.5%" },
+                      { key: "blackened_wheat", label: "Blackened Wheat", std: "0.5%" },
+                      { key: "other_grains", label: "Other Grains", std: "0.5%" },
+                      { key: "soft_wheat", label: "Soft Wheat", std: "0.5%" },
+                      { key: "heat_damaged", label: "Heat Damaged", std: "0.5%" },
+                      { key: "immature_wheat", label: "Immature Wheat", std: "0.5%" },
+                      { key: "broken_wheat", label: "Broken Wheat", std: "0.5%" },
+                    ].map((f, idx) => (
+                      <View key={f.key} style={[styles.paramRow, idx % 2 === 1 && styles.paramRowAlt]}>
+                        <Text style={styles.paramSr}>{idx + 1}</Text>
+                        <Text style={styles.paramName}>{f.label}</Text>
+                        <Text style={styles.paramStd}>{f.std}</Text>
+                        <TextInput
+                          style={styles.paramValInput}
+                          value={formData[f.key]}
+                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                          keyboardType="decimal-pad"
+                          placeholder="—"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.gridRow}>
+                    {[
+                      { key: "shriveled_wheat", label: "Shriveled Wheat" },
+                      { key: "insect_damage", label: "Insect Damage" },
+                      { key: "blackened_wheat", label: "Blackened Wheat" },
+                      { key: "other_grains", label: "Other Grains / Sprouted" },
+                      { key: "soft_wheat", label: "Soft / Other Damage" },
+                      { key: "heat_damaged", label: "Heat Damaged" },
+                      { key: "immature_wheat", label: "Immature Wheat" },
+                      { key: "broken_wheat", label: "Broken Wheat" },
+                    ].map((f) => (
+                      <View key={f.key} style={styles.gridCell}>
+                        <Text style={styles.label}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData[f.key]}
+                          onChangeText={(v) => setFormData({ ...formData, [f.key]: v })}
+                          keyboardType="decimal-pad"
+                          placeholder="0.00"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Dockage %</Text>
                   <Text style={styles.totalValue}>{formData.total_dockage}</Text>
@@ -1089,13 +1191,76 @@ const styles = StyleSheet.create({
   gridRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginHorizontal: -6,
+    marginHorizontal: -4,
   },
   gridCell: {
     width: "33.33%",
-    paddingHorizontal: 6,
-    marginBottom: 8,
-    minWidth: 160,
+    paddingHorizontal: 4,
+    marginBottom: 6,
+    minWidth: 140,
+  },
+  paramTable: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  paramHeaderRow: {
+    backgroundColor: "#1e3a5f",
+  },
+  paramHeaderText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  paramRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    minHeight: 36,
+  },
+  paramRowAlt: {
+    backgroundColor: "#f0f4ff",
+  },
+  paramSr: {
+    width: 28,
+    fontSize: 11,
+    color: "#374151",
+    textAlign: "center",
+    paddingVertical: 6,
+    fontWeight: "600",
+  },
+  paramName: {
+    flex: 2,
+    fontSize: 11,
+    color: "#374151",
+    paddingVertical: 6,
+    paddingLeft: 4,
+  },
+  paramStd: {
+    width: 55,
+    fontSize: 10,
+    color: "#6b7280",
+    textAlign: "center",
+    paddingVertical: 6,
+  },
+  paramVal: {
+    width: 60,
+    fontSize: 11,
+    color: "#374151",
+    textAlign: "center",
+  },
+  paramValInput: {
+    width: 60,
+    fontSize: 12,
+    color: "#111827",
+    textAlign: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderLeftWidth: 1,
+    borderLeftColor: "#d1d5db",
+    height: 36,
   },
   inputContainer: { marginBottom: 12 },
   input: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 6, padding: 10, fontSize: 14, backgroundColor: "#fff", marginBottom: 4 },

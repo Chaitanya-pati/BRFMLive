@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { getFullImageUrl } from '../utils/imageUtils';
 import Layout from '../components/Layout';
 import InputField from '../components/InputField';
 import SelectDropdown from '../components/SelectDropdown';
@@ -248,7 +249,7 @@ export default function VehicleEntryScreen({ navigation }) {
     ]);
   };
 
-  // Universal photo picker
+  // Universal photo picker — gallery
   const pickImageInto = async (setter, fieldName) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -261,6 +262,29 @@ export default function VehicleEntryScreen({ navigation }) {
       }
     } catch {
       showNotification('Failed to pick image', 'error');
+    }
+  };
+
+  // Universal photo capture — camera
+  const capturePhotoInto = async (setter, fieldName) => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          showNotification('Camera permission is required', 'error');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length > 0) {
+        setter((prev) => ({ ...prev, [fieldName]: { uri: result.assets[0].uri } }));
+      }
+    } catch {
+      showNotification('Failed to capture image', 'error');
     }
   };
 
@@ -551,26 +575,32 @@ export default function VehicleEntryScreen({ navigation }) {
   // Reusable PhotoField that operates on any (form, setForm) pair
   const PhotoField = ({ label, fieldName, form, setForm }) => {
     const photo = form[fieldName];
+    const displayUri = photo?.uri
+      ? (photo.existing ? getFullImageUrl(photo.uri) : photo.uri)
+      : null;
     return (
       <View style={styles.photoField}>
         <Text style={styles.photoLabel}>{label}</Text>
         <View style={styles.photoRow}>
-          {photo?.uri ? (
-            <Image source={{ uri: photo.uri }} style={styles.photoThumb} resizeMode="cover" />
+          {displayUri ? (
+            <Image source={{ uri: displayUri }} style={styles.photoThumb} resizeMode="cover" />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={styles.photoPlaceholderText}>No photo</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.photoBtn} onPress={() => pickImageInto(setForm, fieldName)}>
-            <Text style={styles.photoBtnText}>{photo?.uri ? 'Change' : 'Upload'}</Text>
+          <TouchableOpacity style={styles.photoCameraBtn} onPress={() => capturePhotoInto(setForm, fieldName)}>
+            <Text style={styles.photoBtnText}>📷 Camera</Text>
           </TouchableOpacity>
-          {photo?.uri && (
+          <TouchableOpacity style={styles.photoBtn} onPress={() => pickImageInto(setForm, fieldName)}>
+            <Text style={styles.photoBtnText}>{displayUri ? '🖼 Change' : '🖼 Gallery'}</Text>
+          </TouchableOpacity>
+          {displayUri && (
             <TouchableOpacity
               style={styles.photoRemoveBtn}
               onPress={() => setForm((prev) => ({ ...prev, [fieldName]: null }))}
             >
-              <Text style={styles.photoRemoveBtnText}>Remove</Text>
+              <Text style={styles.photoRemoveBtnText}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -988,7 +1018,7 @@ const styles = StyleSheet.create({
   vehicleRow: {
     flexDirection: 'row',
     gap: 8,
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
   },
   vPart1: { flex: 1 },
   vPart2: { flex: 1 },
@@ -1029,7 +1059,8 @@ const styles = StyleSheet.create({
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   photoThumb: {
     width: 72,
@@ -1053,15 +1084,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
   },
+  photoCameraBtn: {
+    backgroundColor: '#0F766E',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
   photoBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 6,
   },
   photoBtnText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   photoRemoveBtn: {

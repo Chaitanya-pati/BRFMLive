@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, TextInput, FlatList,
+  ActivityIndicator, TextInput, FlatList, Platform,
 } from "react-native";
 import Layout from "../components/Layout";
 import colors from "../theme/colors";
@@ -75,12 +75,64 @@ function JourneyMilestone({ icon, label, time, km, signed, done }) {
 }
 
 // ─── Sign-off form ───────────────────────────────────────────────────────────
+function isoToDateInputValue(isoStr) {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().split("T")[0];
+}
+
+function dateInputValueToISO(val) {
+  if (!val) return null;
+  const d = new Date(val + "T00:00:00");
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function DateFieldSignoff({ label, value, onChange }) {
+  if (Platform.OS === "web") {
+    return (
+      <View style={s.fRow}>
+        <Text style={s.fLabel}>{label}</Text>
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            flex: 1,
+            height: 42,
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            paddingLeft: 12,
+            paddingRight: 12,
+            fontSize: 14,
+            backgroundColor: "#f8f9fa",
+            boxSizing: "border-box",
+            outline: "none",
+            cursor: "pointer",
+          }}
+        />
+      </View>
+    );
+  }
+  return (
+    <View style={s.fRow}>
+      <Text style={s.fLabel}>{label}</Text>
+      <TextInput
+        style={s.fInput}
+        value={value}
+        onChangeText={onChange}
+        placeholder="YYYY-MM-DD"
+      />
+    </View>
+  );
+}
+
 function SignoffForm({ tripId, signoff, onSaved }) {
   const [form, setForm] = useState({
     freight_received: signoff?.freight_received ? String(signoff.freight_received) : "",
     excel_updated: signoff?.excel_updated ?? null,
-    supervisor_sign_date: signoff?.supervisor_sign_date ? fmtDate(signoff.supervisor_sign_date) : "",
-    driver_sign_date: signoff?.driver_sign_date ? fmtDate(signoff.driver_sign_date) : "",
+    supervisor_sign_date: isoToDateInputValue(signoff?.supervisor_sign_date),
+    driver_sign_date: isoToDateInputValue(signoff?.driver_sign_date),
     remarks: signoff?.remarks || "",
   });
   const [saving, setSaving] = useState(false);
@@ -92,8 +144,8 @@ function SignoffForm({ tripId, signoff, onSaved }) {
       await client.put(`/trip-sheets/${tripId}/signoff`, {
         freight_received: form.freight_received ? parseFloat(form.freight_received) : null,
         excel_updated: form.excel_updated,
-        supervisor_sign_date: parseInput(form.supervisor_sign_date),
-        driver_sign_date: parseInput(form.driver_sign_date),
+        supervisor_sign_date: dateInputValueToISO(form.supervisor_sign_date),
+        driver_sign_date: dateInputValueToISO(form.driver_sign_date),
         remarks: form.remarks || null,
       });
       showSuccess("Sign-off saved");
@@ -124,15 +176,17 @@ function SignoffForm({ tripId, signoff, onSaved }) {
         </View>
       </View>
 
-      <View style={s.fRow}>
-        <Text style={s.fLabel}>Supervisor Sign Date</Text>
-        <TextInput style={s.fInput} value={form.supervisor_sign_date} onChangeText={F("supervisor_sign_date")} placeholder="DD/MM/YYYY" />
-      </View>
+      <DateFieldSignoff
+        label="Supervisor Sign Date"
+        value={form.supervisor_sign_date}
+        onChange={F("supervisor_sign_date")}
+      />
 
-      <View style={s.fRow}>
-        <Text style={s.fLabel}>Driver Sign Date</Text>
-        <TextInput style={s.fInput} value={form.driver_sign_date} onChangeText={F("driver_sign_date")} placeholder="DD/MM/YYYY" />
-      </View>
+      <DateFieldSignoff
+        label="Driver Sign Date"
+        value={form.driver_sign_date}
+        onChange={F("driver_sign_date")}
+      />
 
       <View style={[s.fRow, { alignItems: "flex-start" }]}>
         <Text style={s.fLabel}>Remarks</Text>
