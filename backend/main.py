@@ -69,6 +69,142 @@ def sanitize_float(value):
     return value
 
 
+TRANSFER_VALIDATION_EPSILON = 0.0001
+
+
+def get_bin_available_capacity(bin_obj, reserved_quantity=0.0):
+    """Return the amount that can still be added to a bin.
+
+    reserved_quantity is used when editing an existing transfer whose old
+    quantity is already included in current_quantity.
+    """
+    capacity = float(bin_obj.capacity or 0.0)
+    current_quantity = float(bin_obj.current_quantity or 0.0)
+    reserved_quantity = float(reserved_quantity or 0.0)
+    return max(capacity - current_quantity + reserved_quantity, 0.0)
+
+
+def get_order_remaining_quantity(
+    db,
+    production_order_id,
+    transfer_model=None,
+    exclude_transfer_id=None,
+):
+    production_order = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.id == production_order_id
+    ).first()
+    if not production_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+
+    transferred_quantity = 0.0
+    if transfer_model is not None:
+        quantity_query = db.query(
+            func.coalesce(func.sum(transfer_model.quantity_transferred), 0.0)
+        ).filter(transfer_model.production_order_id == production_order_id)
+        if exclude_transfer_id is not None:
+            quantity_query = quantity_query.filter(
+                transfer_model.id != exclude_transfer_id
+            )
+        transferred_quantity = float(quantity_query.scalar() or 0.0)
+
+    return max(
+        float(production_order.quantity or 0.0) - transferred_quantity,
+        0.0,
+    )
+
+
+def validate_order_has_remaining_quantity(
+    db,
+    production_order_id,
+    transfer_model,
+):
+    remaining_quantity = get_order_remaining_quantity(
+        db, production_order_id, transfer_model=transfer_model
+    )
+    if remaining_quantity <= TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail="There is no remaining production order quantity available to transfer.",
+        )
+    return remaining_quantity
+
+
+def validate_transfer_limits(
+    db,
+    production_order_id,
+    destination_bin,
+    quantity,
+    transfer_model=None,
+    exclude_transfer_id=None,
+    existing_quantity=0.0,
+):
+    """Enforce destination capacity and production-order limits server-side."""
+    try:
+        quantity = float(quantity)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Transfer quantity must be a valid number")
+
+    if not math.isfinite(quantity) or quantity <= 0:
+        raise HTTPException(status_code=400, detail="Transfer quantity must be greater than 0")
+
+    available_capacity = get_bin_available_capacity(destination_bin, existing_quantity)
+    if quantity > available_capacity + TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Transfer quantity {quantity:.2f} T exceeds the available capacity "
+                f"of destination bin {destination_bin.bin_number}. "
+                f"Bin capacity: {float(destination_bin.capacity or 0.0):.2f} T, "
+                f"currently occupied: {float(destination_bin.current_quantity or 0.0):.2f} T, "
+                f"available: {available_capacity:.2f} T."
+            ),
+        )
+
+    remaining_order_quantity = get_order_remaining_quantity(
+        db,
+        production_order_id,
+        transfer_model=transfer_model,
+        exclude_transfer_id=exclude_transfer_id,
+    )
+    if quantity > remaining_order_quantity + TRANSFER_VALIDATION_EPSILON:
+        production_order = db.query(models.ProductionOrder).filter(
+            models.ProductionOrder.id == production_order_id
+        ).first()
+        transferred_quantity = max(
+            float(production_order.quantity or 0.0) - remaining_order_quantity,
+            0.0,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Transfer quantity {quantity:.2f} T exceeds the remaining "
+                f"production order quantity of {remaining_order_quantity:.2f} T. "
+                f"Order total: {float(production_order.quantity or 0.0):.2f} T, "
+                f"already transferred: {transferred_quantity:.2f} T."
+            ),
+        )
+
+    return {
+        "available_capacity": available_capacity,
+        "remaining_order_quantity": remaining_order_quantity,
+    }
+
+
+def validate_bin_has_capacity(destination_bin):
+    """Reject a transfer start when the selected destination bin is full."""
+    available_capacity = get_bin_available_capacity(destination_bin)
+    if available_capacity <= TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Destination bin {destination_bin.bin_number} has no available capacity. "
+                f"Capacity: {float(destination_bin.capacity or 0.0):.2f} T, "
+                f"currently occupied: {float(destination_bin.current_quantity or 0.0):.2f} T."
+            ),
+        )
+    return available_capacity
+
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gate Entry & Lab Testing API")
@@ -4063,6 +4199,7 @@ def start_transfer_session(session_data: schemas.TransferSessionCreate,
     if not destination_bin:
         raise HTTPException(status_code=404,
                             detail="Destination bin not found")
+    validate_bin_has_capacity(destination_bin)
 
     # Find route configuration based on source godown and destination bin
     # Route configuration has stages, first stage should be source godown, last stage should be destination bin
@@ -4213,6 +4350,25 @@ def divert_transfer_session(session_id: int,
         models.Bin).filter(models.Bin.id == divert_data.new_bin_id).first()
     if not new_bin:
         raise HTTPException(status_code=404, detail="New bin not found")
+    validate_bin_has_capacity(new_bin)
+
+    if divert_data.quantity_transferred <= 0:
+        raise HTTPException(status_code=400,
+                            detail="Transfer quantity must be greater than 0")
+    current_bin = db.query(
+        models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
+    if not current_bin:
+        raise HTTPException(status_code=404, detail="Current destination bin not found")
+    current_available_capacity = get_bin_available_capacity(current_bin)
+    if divert_data.quantity_transferred > current_available_capacity + TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Transfer quantity {divert_data.quantity_transferred:.2f} T exceeds "
+                f"the available capacity of destination bin {current_bin.bin_number}: "
+                f"{current_available_capacity:.2f} T."
+            ),
+        )
 
     utc_now = get_utc_now()
 
@@ -4231,8 +4387,6 @@ def divert_transfer_session(session_id: int,
         current_bin_transfer.quantity = divert_data.quantity_transferred
 
     # Update current bin quantity
-    current_bin = db.query(
-        models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
     if current_bin:
         current_bin.current_quantity = (current_bin.current_quantity or
                                         0) + divert_data.quantity_transferred
@@ -4304,6 +4458,24 @@ def stop_transfer_session(session_id: int,
         raise HTTPException(status_code=400,
                             detail="Transfer session is not active")
 
+    if transferred_quantity <= 0:
+        raise HTTPException(status_code=400,
+                            detail="Transfer quantity must be greater than 0")
+    current_bin = db.query(
+        models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
+    if not current_bin:
+        raise HTTPException(status_code=404, detail="Current destination bin not found")
+    available_capacity = get_bin_available_capacity(current_bin)
+    if transferred_quantity > available_capacity + TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Transfer quantity {transferred_quantity:.2f} T exceeds the "
+                f"available capacity of destination bin {current_bin.bin_number}: "
+                f"{available_capacity:.2f} T."
+            ),
+        )
+
     utc_now = get_utc_now()
 
     print(f"\n🛑 BACKEND: Stopping transfer session {session_id}")
@@ -4324,8 +4496,6 @@ def stop_transfer_session(session_id: int,
     db_session.status = "completed"
 
     # Update current bin quantity (add)
-    current_bin = db.query(
-        models.Bin).filter(models.Bin.id == db_session.current_bin_id).first()
     if current_bin:
         current_bin.current_quantity = (current_bin.current_quantity
                                         or 0) + transferred_quantity
@@ -5022,6 +5192,33 @@ def save_production_order_planning(
                 status_code=400,
                 detail=f"Insufficient quantity in bin {bin_obj.bin_number}. Available: {bin_obj.current_quantity}, Requested: {source.quantity}"
             )
+
+    total_destination_quantity = 0.0
+    for dest in planning.destination_bins:
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
+        if not dest_bin:
+            raise HTTPException(status_code=400, detail=f"Destination bin {dest.bin_id} not found")
+        if dest.quantity < 0:
+            raise HTTPException(status_code=400, detail=f"Destination quantity for bin {dest_bin.bin_number} cannot be negative")
+        available_capacity = get_bin_available_capacity(dest_bin)
+        if dest.quantity > available_capacity + TRANSFER_VALIDATION_EPSILON:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Destination quantity {dest.quantity:.2f} T for bin {dest_bin.bin_number} "
+                    f"exceeds its available capacity of {available_capacity:.2f} T."
+                ),
+            )
+        total_destination_quantity += dest.quantity
+
+    if total_destination_quantity > float(db_order.quantity or 0.0) + TRANSFER_VALIDATION_EPSILON:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Destination distribution {total_destination_quantity:.2f} T cannot exceed "
+                f"the production order quantity of {float(db_order.quantity or 0.0):.2f} T."
+            ),
+        )
     
     # Clear existing planning data
     db.query(models.ProductionOrderSourceBin).filter(
@@ -5087,7 +5284,28 @@ def validate_production_order_planning(
         elif bin_obj.current_quantity < source.quantity * 1.1:
             warnings.append(f"Low quantity warning for bin {bin_obj.bin_number}")
     
-    total_distribution = 0
+    total_distribution = 0.0
+    for dest in planning.destination_bins:
+        dest_bin = db.query(models.Bin).filter(models.Bin.id == dest.bin_id).first()
+        if not dest_bin:
+            errors.append(f"Destination bin {dest.bin_id} not found")
+            continue
+        if dest.quantity < 0:
+            errors.append(f"Destination quantity for bin {dest_bin.bin_number} cannot be negative")
+            continue
+        available_capacity = get_bin_available_capacity(dest_bin)
+        if dest.quantity > available_capacity + TRANSFER_VALIDATION_EPSILON:
+            errors.append(
+                f"Destination quantity {dest.quantity:.2f} T for bin {dest_bin.bin_number} "
+                f"exceeds available capacity of {available_capacity:.2f} T"
+            )
+        total_distribution += dest.quantity
+
+    if total_distribution > float(db_order.quantity or 0.0) + TRANSFER_VALIDATION_EPSILON:
+        errors.append(
+            f"Destination distribution {total_distribution:.2f} T cannot exceed "
+            f"order quantity {float(db_order.quantity or 0.0):.2f} T"
+        )
 
     grouped_summary = [
         {
@@ -5203,6 +5421,10 @@ def start_transfer(
     ).first()
     if not dest_bin:
         raise HTTPException(status_code=404, detail="Destination bin not found")
+    validate_bin_has_capacity(dest_bin)
+    validate_order_has_remaining_quantity(
+        db, data.production_order_id, models.TransferRecording
+    )
 
     active_transfer = db.query(models.TransferRecording).filter(
         models.TransferRecording.production_order_id == data.production_order_id,
@@ -5265,6 +5487,21 @@ def complete_transfer(
     
     if transfer.status != models.TransferRecordingStatus.IN_PROGRESS:
         raise HTTPException(status_code=400, detail="Transfer is not in progress")
+
+    dest_bin = db.query(models.Bin).filter(
+        models.Bin.id == transfer.destination_bin_id
+    ).first()
+    if not dest_bin:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
+    validate_transfer_limits(
+        db,
+        transfer.production_order_id,
+        dest_bin,
+        data.quantity_transferred,
+        transfer_model=models.TransferRecording,
+        exclude_transfer_id=transfer.id,
+        existing_quantity=transfer.quantity_transferred or 0.0,
+    )
     
     # Mark transfer as completed
     transfer.status = models.TransferRecordingStatus.COMPLETED
@@ -5323,6 +5560,27 @@ def divert_transfer(
     ).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
+    if transfer.status != models.TransferRecordingStatus.IN_PROGRESS:
+        raise HTTPException(status_code=400, detail="Transfer is not in progress")
+
+    current_dest_bin = db.query(models.Bin).filter(
+        models.Bin.id == transfer.destination_bin_id
+    ).first()
+    next_dest_bin = db.query(models.Bin).filter(
+        models.Bin.id == next_bin_id
+    ).first()
+    if not current_dest_bin or not next_dest_bin:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
+    validate_transfer_limits(
+        db,
+        transfer.production_order_id,
+        current_dest_bin,
+        data.quantity_transferred,
+        transfer_model=models.TransferRecording,
+        exclude_transfer_id=transfer.id,
+        existing_quantity=transfer.quantity_transferred or 0.0,
+    )
+    validate_bin_has_capacity(next_dest_bin)
     
     transfer.status = models.TransferRecordingStatus.COMPLETED
     transfer.transfer_end_time = get_utc_now()
@@ -5539,6 +5797,33 @@ def create_12hour_transfer_record(
     branch_id: Optional[int] = Depends(get_branch_id)
 ):
     """Create a new 12-hour transfer record"""
+    prod_order = db.query(models.ProductionOrder).filter(
+        models.ProductionOrder.id == record.production_order_id
+    ).first()
+    if not prod_order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    validate_order_has_remaining_quantity(
+        db, record.production_order_id, models.Transfer12HourRecord
+    )
+    source_bin = db.query(models.Bin).filter(models.Bin.id == record.source_bin_id).first()
+    dest_bin = db.query(models.Bin).filter(models.Bin.id == record.destination_bin_id).first()
+    if not source_bin:
+        raise HTTPException(status_code=404, detail="Source bin not found")
+    if not dest_bin:
+        raise HTTPException(status_code=404, detail="Destination bin not found")
+    if record.quantity_transferred < 0:
+        raise HTTPException(status_code=400, detail="Transfer quantity cannot be negative")
+    if record.quantity_transferred > 0:
+        validate_transfer_limits(
+            db,
+            record.production_order_id,
+            dest_bin,
+            record.quantity_transferred,
+            transfer_model=models.Transfer12HourRecord,
+        )
+    else:
+        validate_bin_has_capacity(dest_bin)
+
     db_record = models.Transfer12HourRecord(
         **record.dict(),
         created_by=user_id
@@ -5549,9 +5834,6 @@ def create_12hour_transfer_record(
     db.add(db_record)
     
     # Update bin quantities
-    source_bin = db.query(models.Bin).filter(models.Bin.id == record.source_bin_id).first()
-    dest_bin = db.query(models.Bin).filter(models.Bin.id == record.destination_bin_id).first()
-    
     if source_bin and record.quantity_transferred:
         source_bin.current_quantity -= record.quantity_transferred
     if dest_bin and record.quantity_transferred:
@@ -5569,7 +5851,11 @@ def get_12hour_transfer_records(
     db: Session = Depends(get_db)
 ):
     """Get all 12-hour transfer records"""
-    query = db.query(models.Transfer12HourRecord)
+    # Legacy manual-transfer rows may not have a production order and cannot
+    # be represented by the production-order transfer response schema.
+    query = db.query(models.Transfer12HourRecord).filter(
+        models.Transfer12HourRecord.production_order_id.isnot(None)
+    )
     if branch_id:
         query = query.filter(models.Transfer12HourRecord.branch_id == branch_id)
     return query.order_by(models.Transfer12HourRecord.created_at.desc()).offset(skip).limit(limit).all()
@@ -5587,6 +5873,26 @@ def update_12hour_transfer_record(
         
     update_data = record_update.dict(exclude_unset=True)
     print(f"[12HOUR-TRANSFER] Updating record {record_id} with data: {update_data}")
+
+    if "quantity_transferred" in update_data:
+        new_quantity = update_data["quantity_transferred"]
+        if new_quantity is None or new_quantity < 0:
+            raise HTTPException(status_code=400, detail="Transfer quantity cannot be negative")
+        if new_quantity > 0:
+            dest_bin = db.query(models.Bin).filter(
+                models.Bin.id == db_record.destination_bin_id
+            ).first()
+            if not dest_bin:
+                raise HTTPException(status_code=404, detail="Destination bin not found")
+            validate_transfer_limits(
+                db,
+                db_record.production_order_id,
+                dest_bin,
+                new_quantity,
+                transfer_model=models.Transfer12HourRecord,
+                exclude_transfer_id=db_record.id,
+                existing_quantity=db_record.quantity_transferred or 0.0,
+            )
     
     # If the status is terminal (COMPLETED), ensure it's recorded correctly.
     if "status" in update_data and update_data["status"] == "DIVERTED":
@@ -5632,6 +5938,25 @@ def complete_12hour_transfer(
     update_data = data.dict(exclude_unset=True)
     
     # Handle bin quantity updates if quantity is provided/changed
+    if "quantity_transferred" in update_data:
+        new_quantity = update_data["quantity_transferred"]
+        if new_quantity is None or new_quantity <= 0:
+            raise HTTPException(status_code=400, detail="Transfer quantity must be greater than 0")
+        dest_bin = db.query(models.Bin).filter(
+            models.Bin.id == db_record.destination_bin_id
+        ).first()
+        if not dest_bin:
+            raise HTTPException(status_code=404, detail="Destination bin not found")
+        validate_transfer_limits(
+            db,
+            db_record.production_order_id,
+            dest_bin,
+            new_quantity,
+            transfer_model=models.Transfer12HourRecord,
+            exclude_transfer_id=db_record.id,
+            existing_quantity=db_record.quantity_transferred or 0.0,
+        )
+
     if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
         diff = update_data["quantity_transferred"] - db_record.quantity_transferred
         source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()
@@ -5715,6 +6040,29 @@ def divert_12hour_transfer(
         raise HTTPException(status_code=404, detail="Record not found")
     
     update_data = data.dict(exclude_unset=True)
+    if "quantity_transferred" in update_data:
+        new_quantity = update_data["quantity_transferred"]
+        if new_quantity is None or new_quantity <= 0:
+            raise HTTPException(status_code=400, detail="Transfer quantity must be greater than 0")
+        current_dest_bin = db.query(models.Bin).filter(
+            models.Bin.id == db_record.destination_bin_id
+        ).first()
+        next_dest_bin = db.query(models.Bin).filter(
+            models.Bin.id == next_bin_id
+        ).first()
+        if not current_dest_bin or not next_dest_bin:
+            raise HTTPException(status_code=404, detail="Destination bin not found")
+        validate_transfer_limits(
+            db,
+            db_record.production_order_id,
+            current_dest_bin,
+            new_quantity,
+            transfer_model=models.Transfer12HourRecord,
+            exclude_transfer_id=db_record.id,
+            existing_quantity=db_record.quantity_transferred or 0.0,
+        )
+        validate_bin_has_capacity(next_dest_bin)
+
     if "quantity_transferred" in update_data and update_data["quantity_transferred"] != db_record.quantity_transferred:
         diff = update_data["quantity_transferred"] - db_record.quantity_transferred
         source_bin = db.query(models.Bin).filter(models.Bin.id == db_record.source_bin_id).first()

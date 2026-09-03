@@ -138,13 +138,63 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   // "locked" in the Pipeline view → the 24-hour transfer must lock too.
   const planLocked =
     totalPlannedQty > 0 && totalTransferredQty >= totalPlannedQty - 0.0001;
-  const remainingQty = Math.max(totalPlannedQty - totalTransferredQty, 0);
+  const orderQuantity = parseFloat(order.quantity) || totalPlannedQty;
+  const remainingQty = Math.max(orderQuantity - totalTransferredQty, 0);
 
   const canStartNew = inProgressTransfers.length === 0 && !planLocked;
 
+  const getAvailableCapacity = (bin, reservedQuantity = 0) => {
+    if (!bin) return 0;
+    return Math.max(
+      (parseFloat(bin.capacity) || 0) -
+        (parseFloat(bin.current_quantity) || 0) +
+        reservedQuantity,
+      0
+    );
+  };
+
+  const startDestinationBin = availableBins.find(
+    (bin) => String(bin.id) === String(startBinId)
+  );
+  const startAvailableCapacity = getAvailableCapacity(startDestinationBin);
+
+  const completeDestinationBin = completeModal
+    ? availableBins.find(
+        (bin) => Number(bin.id) === Number(completeModal.transfer.destination_bin_id)
+      ) || completeModal.transfer.destination_bin
+    : null;
+  const completeOtherTransferredQty = completeModal
+    ? transfers.reduce(
+        (sum, t) =>
+          t.id === completeModal.transfer.id
+            ? sum
+            : sum + (parseFloat(t.quantity_transferred) || 0),
+        0
+      )
+    : 0;
+  const completeOrderRemaining = Math.max(
+    orderQuantity - completeOtherTransferredQty,
+    0
+  );
+  const completeCapacityRemaining = getAvailableCapacity(
+    completeDestinationBin,
+    parseFloat(completeModal?.transfer?.quantity_transferred) || 0
+  );
+  const completeAllowedQuantity = Math.min(
+    completeOrderRemaining,
+    completeCapacityRemaining
+  );
+  const enteredCompleteQty = parseFloat(formQty);
+  const completeQuantityExceedsLimit =
+    Number.isFinite(enteredCompleteQty) &&
+    enteredCompleteQty > completeAllowedQuantity + 0.0001;
+
   // ---------- START MODAL ----------
   const openStartModal = () => {
-    setStartBinId(availableBins.length > 0 ? String(availableBins[0].id) : "");
+    const binWithCapacity = availableBins.find(
+      (bin) => getAvailableCapacity(bin) > 0.0001
+    );
+    setStartBinId(binWithCapacity ? String(binWithCapacity.id) : "");
     setStartWater("");
     setStartModal(true);
   };
@@ -152,6 +202,24 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
   const handleConfirmStart = async () => {
     if (!startBinId) {
       showError("Validation", "Please select a destination bin");
+      return;
+    }
+    if (startAvailableCapacity <= 0.0001) {
+      showError(
+        "Destination Bin Full",
+        `This bin has no available capacity. It can hold ${(
+          parseFloat(startDestinationBin?.capacity) || 0
+        ).toFixed(2)} T and currently contains ${(
+          parseFloat(startDestinationBin?.current_quantity) || 0
+        ).toFixed(2)} T.`
+      );
+      return;
+    }
+    if (remainingQty <= 0.0001) {
+      showError(
+        "Production Order Complete",
+        "There is no remaining production order quantity available to transfer."
+      );
       return;
     }
     setStartSaving(true);
@@ -191,27 +259,25 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
       showError("Validation", "Please enter a valid quantity");
       return;
     }
-    // Enforce planning lock: cannot transfer more than the planned quantity
-    // (matches the raw-wheat-bin lock in the Pipeline view).
-    if (totalPlannedQty > 0) {
-      const otherTransferredQty = transfers.reduce(
-        (sum, t) =>
-          t.id === completeModal.transfer.id
-            ? sum
-            : sum + (parseFloat(t.quantity_transferred) || 0),
-        0
-      );
-      const allowableQty = Math.max(
-        totalPlannedQty - otherTransferredQty,
-        0
-      );
-      if (qty > allowableQty + 0.0001) {
-        showError(
-          "Plan Limit Reached",
-          `You can transfer at most ${allowableQty.toFixed(2)} T more. The raw wheat plan for this order is ${totalPlannedQty.toFixed(2)} T.`
+    if (qty > completeAllowedQuantity + 0.0001) {
+      const reasons = [];
+      if (qty > completeCapacityRemaining + 0.0001) {
+        reasons.push(
+          `destination bin has only ${completeCapacityRemaining.toFixed(2)} T available`
         );
-        return;
       }
+      if (qty > completeOrderRemaining + 0.0001) {
+        reasons.push(
+          `production order has only ${completeOrderRemaining.toFixed(2)} T remaining`
+        );
+      }
+      showError(
+        "Transfer Quantity Too High",
+        `Enter ${completeAllowedQuantity.toFixed(2)} T or less: ${reasons.join(
+          " and "
+        )}.`
+      );
+      return;
     }
     setSaving(true);
     try {
@@ -686,7 +752,25 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
               onChangeText={setFormQty}
               keyboardType="decimal-pad"
               placeholder="Enter quantity"
+              error={
+                completeQuantityExceedsLimit
+                  ? `Maximum allowed: ${completeAllowedQuantity.toFixed(2)} T`
+                  : undefined
+              }
             />
+            <View
+              style={[
+                styles.limitNotice,
+                completeQuantityExceedsLimit && styles.limitNoticeError,
+              ]}
+            >
+              <Text style={styles.limitNoticeText}>
+                Destination capacity available: {completeCapacityRemaining.toFixed(2)} T
+              </Text>
+              <Text style={styles.limitNoticeText}>
+                Production order remaining: {completeOrderRemaining.toFixed(2)} T
+              </Text>
+            </View>
             <InputField
               label="Moisture Level (%) — optional"
               value={formMoisture}
@@ -705,6 +789,13 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                 title="Complete"
                 onPress={handleComplete}
                 loading={saving}
+                disabled={
+                  saving ||
+                  !formQty ||
+                  !Number.isFinite(enteredCompleteQty) ||
+                  enteredCompleteQty <= 0 ||
+                  completeQuantityExceedsLimit
+                }
                 style={{ flex: 1 }}
               />
             </View>
@@ -966,6 +1057,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#78350f",
+  },
+  limitNotice: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  limitNoticeError: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  limitNoticeText: {
+    color: "#1e40af",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 2,
   },
 
   srcBreakdownWrap: {

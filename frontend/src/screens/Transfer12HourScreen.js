@@ -322,6 +322,7 @@ export default function Transfer12HourScreen({ route, navigation }) {
 
       setSourceBins(filteredSource);
       setDestinationBins(filteredDest);
+      setTransfer12hRecords(transfer12hRecords);
       // Map bin ID to its 24h transfer details
       const detailsMap = {};
       order24hRecords.forEach(r => {
@@ -352,6 +353,45 @@ export default function Transfer12HourScreen({ route, navigation }) {
 
     if (!source || source === "" || source === "null" || !dest || dest === "" || dest === "null") {
       showAlert("Validation Error", "Please select both source and destination bins");
+      return;
+    }
+
+    const destinationBin = destinationBins.find(
+      (bin) => Number(bin.id) === Number(dest)
+    );
+    const destinationCapacityRemaining = destinationBin
+      ? Math.max(
+          (parseFloat(destinationBin.capacity) || 0) -
+            (parseFloat(destinationBin.current_quantity) || 0),
+          0
+        )
+      : 0;
+    if (!destinationBin || destinationCapacityRemaining <= 0.0001) {
+      showAlert(
+        "Destination Bin Full",
+        destinationBin
+          ? `This bin has only ${destinationCapacityRemaining.toFixed(2)} T available. Choose a bin with enough free capacity.`
+          : "The selected destination bin could not be found. Please select another bin."
+      );
+      return;
+    }
+
+    const orderQuantity = parseFloat(selectedOrder.quantity) || 0;
+    const orderTransferred = transfer12hRecords
+      .filter(
+        (record) =>
+          Number(record.production_order_id) === Number(selectedOrder.id)
+      )
+      .reduce(
+        (sum, record) => sum + (parseFloat(record.quantity_transferred) || 0),
+        0
+      );
+    const orderRemaining = Math.max(orderQuantity - orderTransferred, 0);
+    if (orderRemaining <= 0.0001) {
+      showAlert(
+        "Production Order Complete",
+        "There is no remaining production order quantity available to transfer."
+      );
       return;
     }
 
@@ -409,9 +449,72 @@ export default function Transfer12HourScreen({ route, navigation }) {
     setShowDataModal(true);
   };
 
+  const getTransferQuantityLimits = (record) => {
+    const destinationBin = destinationBins.find(
+      (bin) => Number(bin.id) === Number(record?.destination_bin_id)
+    );
+    const capacityRemaining = destinationBin
+      ? Math.max(
+          (parseFloat(destinationBin.capacity) || 0) -
+            (parseFloat(destinationBin.current_quantity) || 0) +
+            (parseFloat(record?.quantity_transferred) || 0),
+          0
+        )
+      : 0;
+    const orderQuantity = parseFloat(selectedOrder?.quantity) || 0;
+    const otherTransferred = transfer12hRecords
+      .filter((item) => Number(item.id) !== Number(record?.id))
+      .filter(
+        (item) =>
+          Number(item.production_order_id) === Number(selectedOrder?.id)
+      )
+      .reduce(
+        (sum, item) => sum + (parseFloat(item.quantity_transferred) || 0),
+        0
+      );
+    const orderRemaining = Math.max(orderQuantity - otherTransferred, 0);
+    return {
+      destinationBin,
+      capacityRemaining,
+      orderRemaining,
+      allowedQuantity: Math.min(capacityRemaining, orderRemaining),
+    };
+  };
+
   const handleSaveAndAction = async () => {
-    if (!transferQuantity || parseFloat(transferQuantity) <= 0) {
+    const quantity = parseFloat(transferQuantity);
+    if (!transferQuantity || !Number.isFinite(quantity) || quantity <= 0) {
       showAlert("Validation Error", "Please enter quantity transferred");
+      return;
+    }
+
+    const recordBeingCompleted =
+      activeTransferRecord ||
+      transfer12hRecords.find((record) => Number(record.id) === Number(currentRecordId));
+    const {
+      destinationBin,
+      capacityRemaining,
+      orderRemaining,
+      allowedQuantity,
+    } = getTransferQuantityLimits(recordBeingCompleted);
+    if (!destinationBin || quantity > allowedQuantity + 0.0001) {
+      const reasons = [];
+      if (!destinationBin) {
+        reasons.push("the destination bin could not be found");
+      } else if (quantity > capacityRemaining + 0.0001) {
+        reasons.push(
+          `the destination bin has only ${capacityRemaining.toFixed(2)} T available`
+        );
+      }
+      if (quantity > orderRemaining + 0.0001) {
+        reasons.push(
+          `the production order has only ${orderRemaining.toFixed(2)} T remaining`
+        );
+      }
+      showAlert(
+        "Transfer Quantity Too High",
+        `Enter ${allowedQuantity.toFixed(2)} T or less: ${reasons.join(" and ")}.`
+      );
       return;
     }
 
@@ -419,7 +522,7 @@ export default function Transfer12HourScreen({ route, navigation }) {
     try {
       const client = getApiClient();
       await client.patch(`/12hour-transfer/records/${currentRecordId}`, {
-        quantity_transferred: parseFloat(transferQuantity),
+        quantity_transferred: quantity,
         water_added: waterAdded ? parseFloat(waterAdded) : null,
         moisture_level: moistureLevel ? parseFloat(moistureLevel) : null,
         status: pendingStatus,
@@ -750,6 +853,13 @@ export default function Transfer12HourScreen({ route, navigation }) {
     // Improved lookup to avoid "Unknown"
     const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
     const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || "Bin #" + destBinId;
+    const quantityLimitDetails = getTransferQuantityLimits(
+      activeTransferRecord || { id: currentRecordId, destination_bin_id: destBinId }
+    );
+    const enteredQuantity = parseFloat(transferQuantity);
+    const quantityOverLimit =
+      Number.isFinite(enteredQuantity) &&
+      enteredQuantity > quantityLimitDetails.allowedQuantity + 0.0001;
 
     return (
       <ScrollView style={styles.container}>
@@ -809,7 +919,16 @@ export default function Transfer12HourScreen({ route, navigation }) {
                 onChangeText={setTransferQuantity}
                 keyboardType="decimal-pad"
                 placeholder="Enter quantity"
+                error={quantityOverLimit ? `Maximum allowed: ${quantityLimitDetails.allowedQuantity.toFixed(2)} T` : undefined}
               />
+              <View style={[styles.limitNotice, quantityOverLimit && styles.limitNoticeError]}>
+                <Text style={styles.limitNoticeText}>
+                  Destination capacity available: {quantityLimitDetails.capacityRemaining.toFixed(2)} T
+                </Text>
+                <Text style={styles.limitNoticeText}>
+                  Production order remaining: {quantityLimitDetails.orderRemaining.toFixed(2)} T
+                </Text>
+              </View>
               <InputField
                 label="Actual Moisture % (after transfer)"
                 value={moistureLevel}
@@ -836,6 +955,13 @@ export default function Transfer12HourScreen({ route, navigation }) {
                   title="Save & Stop"
                   onPress={handleSaveAndAction} 
                   loading={loading}
+                  disabled={
+                    loading ||
+                    !transferQuantity ||
+                    !Number.isFinite(parseFloat(transferQuantity)) ||
+                    parseFloat(transferQuantity) <= 0 ||
+                    quantityOverLimit
+                  }
                   style={{flex: 1}}
                 />
               </View>
@@ -1097,6 +1223,21 @@ const styles = StyleSheet.create({
   modalContent: { padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 8 },
   modalSubtitle: { fontSize: 14, color: colors.text.secondary, marginBottom: 16 },
+  limitNotice: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  limitNoticeText: {
+    color: '#1e40af',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
   modalActions: { flexDirection: 'row', marginTop: 20 },
   // New styles for transfer details
   orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
