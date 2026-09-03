@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Layout from '../components/Layout';
 import BinVisual from '../components/BinVisual';
+import BinNumberHighlight from '../components/BinNumberHighlight';
 import { api } from '../api/client';
 import { formatISTDateTime } from '../utils/dateUtils';
 import colors from '../theme/colors';
@@ -675,7 +676,7 @@ export default function LiveAddScreen({ navigation }) {
                     </View>
                     <View style={styles.cardRow}>
                       <Text style={styles.cardLabel}>To</Text>
-                      <Text style={styles.cardValue}>{destName}</Text>
+                      <BinNumberHighlight value={destName} compact textStyle={styles.cardValue} />
                     </View>
                     {magnetName && (
                       <View style={styles.cardRow}>

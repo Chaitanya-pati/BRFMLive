@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import DataTable from "./DataTable";
+import BinNumberHighlight from "./BinNumberHighlight";
 import Modal from "./Modal";
 import InputField from "./InputField";
 import SelectDropdown from "./SelectDropdown";
@@ -97,7 +98,12 @@ export default function SiloMasterView() {
   };
 
   const columns = [
-    { key: "bin_no", label: "Bin No", flex: 1 },
+    {
+      key: "bin_no",
+      label: "Bin No",
+      flex: 1,
+      render: (value) => <BinNumberHighlight value={value} compact />,
+    },
     { key: "silo_name", label: "Silo Name", flex: 1.5 },
     { key: "capacity_kg", label: "Capacity (Tons)", flex: 1, render: (v) => v != null ? (v / 1000).toFixed(2) + " T" : "-" },
     { key: "current_stock_kg", label: "Current Stock (Tons)", flex: 1.2, render: (v) => v != null ? (v / 1000).toFixed(2) + " T" : "-" },

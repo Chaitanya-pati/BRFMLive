@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Layout from '../components/Layout';
 import BinVisual from '../components/BinVisual';
+import BinNumberHighlight from '../components/BinNumberHighlight';
 import colors from '../theme/colors';
 import { getApiClient } from '../api/client';
 import { formatISTDate } from '../utils/dateUtils';
@@ -147,15 +148,25 @@ function TransferRecordMini({ record, type }) {
     <View style={[styles.recordMini, { borderLeftColor: cfg.color }]}>
       <View style={styles.recordMiniHeader}>
         {type === '12h' ? (
-          <Text style={styles.recordMiniBins}>
-            {record.source_bin?.bin_number || `Src#${record.source_bin?.id || '?'}`}
-            {' → '}
-            {record.destination_bin?.bin_number || `Dst#${record.destination_bin?.id || '?'}`}
-          </Text>
+          <View style={styles.recordMiniBins}>
+            <BinNumberHighlight
+              value={record.source_bin?.bin_number || `Src#${record.source_bin?.id || '?'}`}
+              compact
+            />
+            <Text style={styles.recordMiniArrow}>→</Text>
+            <BinNumberHighlight
+              value={record.destination_bin?.bin_number || `Dst#${record.destination_bin?.id || '?'}`}
+              compact
+            />
+          </View>
         ) : (
-          <Text style={styles.recordMiniBins}>
-            → {record.destination_bin?.bin_number || `Bin#${record.destination_bin?.id || '?'}`}
-          </Text>
+          <View style={styles.recordMiniBins}>
+            <Text style={styles.recordMiniArrow}>→</Text>
+            <BinNumberHighlight
+              value={record.destination_bin?.bin_number || `Bin#${record.destination_bin?.id || '?'}`}
+              compact
+            />
+          </View>
         )}
         <StatusBadge status={record.status} small />
       </View>

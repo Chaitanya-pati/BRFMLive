@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import BinNumberHighlight from './BinNumberHighlight';
 import colors from '../theme/colors';
 
 // ─── Gear Icon ──────────────────────────────────────────────────────────────
@@ -239,7 +240,7 @@ export default function GrindingMachineCard({ bin, onPress, isActive = false }) 
           <Text style={[styles.badgeText, { color: accent }]}>{statusLabel}</Text>
         </View>
 
-        <Text style={styles.binName}>Bin {bin.bin_number}</Text>
+        <BinNumberHighlight value={bin.bin_number} textStyle={styles.binName} />
 
         {bin.order_number
           ? <Text style={styles.order}>Order: {bin.order_number}</Text>

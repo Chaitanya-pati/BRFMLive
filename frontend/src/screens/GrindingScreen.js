@@ -23,6 +23,7 @@ import colors from "../theme/colors";
 import { getApiClient } from "../api/client";
 import { showToast, showAlert } from "../utils/customAlerts";
 import GrindingMachineCard from "../components/GrindingMachineCard";
+import BinNumberHighlight from "../components/BinNumberHighlight";
 
 // ─── Cross-platform Date/Time Picker Modal ────────────────────────────────────
 // On web  → renders a native HTML <input type="date|time"> inside a modal
@@ -1560,9 +1561,11 @@ export default function GrindingScreen({ route, navigation }) {
                 </View>
                 <View>
                   <Text style={styles.activeLabel}>Bin</Text>
-                  <Text style={styles.activeValue}>
-                    Bin {selectedBin?.bin_number}
-                  </Text>
+                    <BinNumberHighlight
+                      value={selectedBin?.bin_number}
+                      compact
+                      textStyle={styles.activeValue}
+                    />
                 </View>
                 <TouchableOpacity onPress={handleChangeBin} disabled={loading}>
                   <Text style={[styles.changeText, loading && {opacity: 0.6}]}>

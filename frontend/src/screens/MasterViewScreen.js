@@ -13,6 +13,7 @@ import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import SiloMasterView from "../components/SiloMasterView";
+import BinNumberHighlight from "../components/BinNumberHighlight";
 import {
   godownApi,
   supplierApi,
@@ -476,7 +477,13 @@ export default function MasterViewScreen({ navigation, route }) {
 
   const binColumns = [
     { field: "id", label: "ID", flex: 0.5, key: "id" },
-    { field: "bin_number", label: "Bin Number", flex: 1, key: "bin_number" },
+    {
+      field: "bin_number",
+      label: "Bin Number",
+      flex: 1,
+      key: "bin_number",
+      render: (value) => <BinNumberHighlight value={value} compact />,
+    },
     { field: "capacity", label: "Capacity (tons)", flex: 1, key: "capacity" },
     { field: "current_quantity", label: "Current Quantity (tons)", flex: 1.2, key: "current_quantity" },
     { field: "bin_type", label: "Bin Type", flex: 1.2, key: "bin_type" },

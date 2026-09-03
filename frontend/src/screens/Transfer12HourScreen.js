@@ -14,6 +14,7 @@ import Button from "../components/Button";
 import InputField from "../components/InputField";
 import SelectDropdown from "../components/SelectDropdown";
 import BinVisual from "../components/BinVisual";
+import BinNumberHighlight from "../components/BinNumberHighlight";
 import Card from "../components/Card";
 import MagnetCleaningPanel from "../components/MagnetCleaningPanel";
 import colors from "../theme/colors";
@@ -639,9 +640,17 @@ export default function Transfer12HourScreen({ route, navigation }) {
               <Card key={transfer.id} style={styles.transferHistoryCard}>
                 <View style={styles.transferHistoryCardHeader}>
                   <View style={styles.transferHistoryCardLeft}>
-                    <Text style={styles.transferHistoryCardBin}>
-                      Bin {transfer.source_bin_id} → Bin {transfer.destination_bin_id}
-                    </Text>
+                    <View style={styles.transferHistoryCardBin}>
+                      <BinNumberHighlight
+                        value={transfer.source_bin_number || `#${transfer.source_bin_id}`}
+                        compact
+                      />
+                      <Text style={styles.transferHistoryArrow}>→</Text>
+                      <BinNumberHighlight
+                        value={transfer.destination_bin_number || `#${transfer.destination_bin_id}`}
+                        compact
+                      />
+                    </View>
                     <Text style={styles.transferHistoryCardTime}>
                       {formatISTDateTime(transfer.transfer_start_time)}
                     </Text>
@@ -880,8 +889,20 @@ export default function Transfer12HourScreen({ route, navigation }) {
             </View>
             <Text style={styles.sessionDetail}>Type: {item.transfer_type}</Text>
             <Text style={styles.sessionDetail}>Order: {item.production_order_number || 'N/A'}</Text>
-            <Text style={styles.sessionDetail}>From Bin: {item.source_bin_number || `Bin ${item.source_bin_id}`}</Text>
-            <Text style={styles.sessionDetail}>To Bin: {item.destination_bin_number || `Bin ${item.destination_bin_id}`}</Text>
+            <View style={styles.sessionDetailRow}>
+              <Text style={styles.sessionDetail}>From Bin:</Text>
+              <BinNumberHighlight
+                value={item.source_bin_number || `#${item.source_bin_id}`}
+                compact
+              />
+            </View>
+            <View style={styles.sessionDetailRow}>
+              <Text style={styles.sessionDetail}>To Bin:</Text>
+              <BinNumberHighlight
+                value={item.destination_bin_number || `#${item.destination_bin_id}`}
+                compact
+              />
+            </View>
             <Text style={styles.sessionDetail}>Qty: {item.quantity_transferred} T</Text>
             <Text style={styles.sessionDetail}>Incoming Moisture: {item.incoming_moisture !== null && item.incoming_moisture !== undefined ? `${item.incoming_moisture}%` : "—"}</Text>
             <Text style={styles.sessionDetail}>Target Moisture: {item.target_moisture !== null && item.target_moisture !== undefined ? `${item.target_moisture}%` : "—"}</Text>

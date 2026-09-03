@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import BinNumberHighlight from './BinNumberHighlight';
 
 // Size presets: width is the body width; total height is lid + body + hopper
 const SIZES = {
@@ -154,12 +155,12 @@ export default function BinVisual({
       <View style={styles.drainSpout} />
 
       {/* Labels */}
-      <Text
-        style={[styles.binNumber, { fontSize: dim.labelSize }]}
-        numberOfLines={1}
-      >
-        {binNumber || '—'}
-      </Text>
+      <BinNumberHighlight
+        value={binNumber}
+        compact
+        style={{ marginTop: 6 }}
+        textStyle={{ fontSize: dim.labelSize }}
+      />
       {showQty && (
         <Text
           style={[styles.qtyText, { fontSize: dim.subSize }]}
@@ -329,12 +330,6 @@ const styles = StyleSheet.create({
   },
 
   // ── LABELS ──
-  binNumber: {
-    marginTop: 6,
-    fontWeight: '700',
-    color: '#1e293b',
-    textAlign: 'center',
-  },
   qtyText: {
     color: '#64748b',
     textAlign: 'center',

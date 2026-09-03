@@ -12,6 +12,7 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import BinVisual from "../components/BinVisual";
+import BinNumberHighlight from "../components/BinNumberHighlight";
 import MagnetCleaningPanel from "../components/MagnetCleaningPanel";
 import colors from "../theme/colors";
 import { getApiClient, productionLabTestApi } from "../api/client";
@@ -443,9 +444,10 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                 <Card key={t.id} style={styles.itemCard}>
                   <View style={styles.itemRow}>
                     <View style={styles.itemLeft}>
-                      <Text style={styles.itemTitle}>
-                        Destination: {transferBinName(t)}
-                      </Text>
+                      <View style={styles.itemTitleRow}>
+                        <Text style={styles.itemTitle}>Destination:</Text>
+                        <BinNumberHighlight value={transferBinName(t)} compact />
+                      </View>
                       <Text style={styles.itemSub}>
                         Started: {t.transfer_start_time ? formatISTDateTime(t.transfer_start_time) : "—"}
                       </Text>
@@ -511,9 +513,10 @@ export default function TransferRecordingDetailsScreen({ route, navigation }) {
                   <Card key={t.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
                       <View style={styles.itemLeft}>
-                        <Text style={styles.itemTitle}>
-                          Destination: {transferBinName(t)}
-                        </Text>
+                        <View style={styles.itemTitleRow}>
+                          <Text style={styles.itemTitle}>Destination:</Text>
+                          <BinNumberHighlight value={transferBinName(t)} compact />
+                        </View>
                         <Text style={styles.itemSub}>
                           {t.transfer_start_time ? formatISTDateTime(t.transfer_start_time) : "—"}
                           {t.transfer_end_time ? ` → ${formatISTDateTime(t.transfer_end_time)}` : ""}
@@ -760,7 +763,11 @@ function SourceBinsBreakdown({ sourceBins }) {
         const binName = sb.bin_number || (sb.bin && sb.bin.bin_number) || `Bin #${sb.bin_id}`;
         return (
           <View key={sb.bin_id || i} style={styles.srcBreakdownRow}>
-            <Text style={styles.srcBreakdownBin}>{binName}</Text>
+                        <BinNumberHighlight
+                          value={binName}
+                          compact
+                          textStyle={styles.srcBreakdownBin}
+                        />
             <Text style={styles.srcBreakdownPct}>{sb.blend_percentage}%</Text>
           </View>
         );

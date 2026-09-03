@@ -32,6 +32,7 @@ import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
 import { getFullImageUrl } from "../utils/imageUtils";
 import BinVisual from "../components/BinVisual";
 import DatePicker from "../components/DatePicker";
+import BinNumberHighlight from "../components/BinNumberHighlight";
 
 export default function PrecleaningBinScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -1164,9 +1165,10 @@ export default function PrecleaningBinScreen({ navigation }) {
                             {session.destination_bin?.bin_number && (
                               <>
                                 <Text style={{ fontSize: 13, color: "#6b7280" }}>→</Text>
-                                <Text style={[styles.sessionTitle, { color: colors.primary }]}>
-                                  Bin {session.destination_bin.bin_number}
-                                </Text>
+                                <BinNumberHighlight
+                                  value={session.destination_bin.bin_number}
+                                  compact
+                                />
                               </>
                             )}
                           </View>
@@ -1263,9 +1265,11 @@ export default function PrecleaningBinScreen({ navigation }) {
 
                                 {/* Middle: details */}
                                 <View style={{ flex: 1, gap: 3 }}>
-                                  <Text style={styles.btBinName}>
-                                    Bin {bt.bin?.bin_number || bt.bin_id}
-                                  </Text>
+                                  <BinNumberHighlight
+                                    value={bt.bin?.bin_number || `#${bt.bin_id}`}
+                                    compact
+                                    textStyle={styles.btBinName}
+                                  />
                                   <Text style={styles.btMeta}>
                                     Start: {formatISTDateTime(bt.start_timestamp)}
                                   </Text>
@@ -1427,15 +1431,19 @@ export default function PrecleaningBinScreen({ navigation }) {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Destination Bin:</Text>
-                  <Text style={styles.infoValue}>
-                    {activeTransferSession.destination_bin?.bin_number || "N/A"}
-                  </Text>
+                  <BinNumberHighlight
+                    value={activeTransferSession.destination_bin?.bin_number}
+                    compact
+                    textStyle={styles.infoValue}
+                  />
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Current Bin:</Text>
-                  <Text style={styles.infoValue}>
-                    {activeTransferSession.current_bin?.bin_number || "N/A"}
-                  </Text>
+                  <BinNumberHighlight
+                    value={activeTransferSession.current_bin?.bin_number}
+                    compact
+                    textStyle={styles.infoValue}
+                  />
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Magnet:</Text>
@@ -1469,11 +1477,15 @@ export default function PrecleaningBinScreen({ navigation }) {
                             key={binTransfer.id}
                             style={styles.binTransferCard}
                           >
-                            <Text style={styles.binTransferTitle}>
-                              Transfer #{binTransfer.sequence} - Bin{" "}
-                              {binTransfer.bin?.bin_number ||
-                                binTransfer.bin_id}
-                            </Text>
+                            <View style={styles.binTransferTitleRow}>
+                              <Text style={styles.binTransferTitle}>
+                                Transfer #{binTransfer.sequence}
+                              </Text>
+                              <BinNumberHighlight
+                                value={binTransfer.bin?.bin_number || `#${binTransfer.bin_id}`}
+                                compact
+                              />
+                            </View>
                             <View style={styles.infoRow}>
                               <Text style={styles.infoLabel}>Start Time:</Text>
                               <Text style={styles.infoValue}>
@@ -1527,12 +1539,17 @@ export default function PrecleaningBinScreen({ navigation }) {
           <ScrollView style={styles.modalContent}>
             {activeTransferSession && (
               <>
-                <Text style={styles.infoText}>
-                  Current Bin:{" "}
-                  {bins.find(
-                    (b) => b.id === activeTransferSession.current_bin_id,
-                  )?.bin_number || "N/A"}
-                </Text>
+                <View style={styles.infoTextRow}>
+                  <Text style={styles.infoText}>Current Bin:</Text>
+                  <BinNumberHighlight
+                    value={
+                      bins.find(
+                        (b) => b.id === activeTransferSession.current_bin_id,
+                      )?.bin_number
+                    }
+                    compact
+                  />
+                </View>
 
                 <SelectDropdown
                   label="New Destination Bin *"
@@ -1589,12 +1606,17 @@ export default function PrecleaningBinScreen({ navigation }) {
           <ScrollView style={styles.modalContent}>
             {activeTransferSession && (
               <>
-                <Text style={styles.infoText}>
-                  Current Bin:{" "}
-                  {bins.find(
-                    (b) => b.id === activeTransferSession.current_bin_id,
-                  )?.bin_number || "N/A"}
-                </Text>
+                <View style={styles.infoTextRow}>
+                  <Text style={styles.infoText}>Current Bin:</Text>
+                  <BinNumberHighlight
+                    value={
+                      bins.find(
+                        (b) => b.id === activeTransferSession.current_bin_id,
+                      )?.bin_number
+                    }
+                    compact
+                  />
+                </View>
 
                 <InputField
                   label="Quantity Transferred to Current Bin (tons) *"

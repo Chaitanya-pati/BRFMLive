@@ -88,9 +88,13 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
           return (
             <View key={colIndex} style={styles.mobileCardRow}>
               <Text style={styles.mobileCardLabel}>{col.label}</Text>
-              <Text style={styles.mobileCardValue} numberOfLines={2}>
-                {cellContent}
-              </Text>
+              {React.isValidElement(cellContent) ? (
+                cellContent
+              ) : (
+                <Text style={styles.mobileCardValue} numberOfLines={2}>
+                  {cellContent}
+                </Text>
+              )}
             </View>
           );
         })}
@@ -189,9 +193,13 @@ export default function DataTable({ columns, data, onEdit, onDelete, onAdd, onVi
 
                 return (
                   <View key={colIndex} style={[styles.cell, { flex: col.flex || 1, alignItems: col.align || 'flex-start' }]}>
-                    <Text style={styles.cellText} numberOfLines={2}>
-                      {cellContent}
-                    </Text>
+                    {React.isValidElement(cellContent) ? (
+                      cellContent
+                    ) : (
+                      <Text style={styles.cellText} numberOfLines={2}>
+                        {cellContent}
+                      </Text>
+                    )}
                   </View>
                 );
               })}

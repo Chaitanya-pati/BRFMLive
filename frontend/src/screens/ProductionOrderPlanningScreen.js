@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Layout from '../components/Layout';
 import BinVisual from '../components/BinVisual';
+import BinNumberHighlight from '../components/BinNumberHighlight';
 import { productionOrderApi, planningBinsApi } from '../api/client';
 import colors from '../theme/colors';
 import { showAlert, showConfirm, showSuccess, showError } from '../utils/customAlerts';
@@ -349,7 +350,11 @@ export default function ProductionOrderPlanningScreen({ route, navigation }) {
                       size="xs"
                       showQty={false}
                     />
-                    <Text style={styles.binName}>{source.bin?.bin_number}</Text>
+                    <BinNumberHighlight
+                      value={source.bin?.bin_number}
+                      compact
+                      textStyle={styles.binName}
+                    />
                   </View>
                   <View style={[styles.binTableCell, { flex: 1 }]}>
                     <Text style={styles.binAvailable}>{source.bin?.current_quantity} T</Text>
