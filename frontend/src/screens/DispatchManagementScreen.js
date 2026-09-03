@@ -41,8 +41,13 @@ export default function DispatchManagementScreen({ navigation }) {
   });
 
   const [formData, setFormData] = useState({
+    transport_type: "INTERNAL",
     truck_id: "",
     driver_id: "",
+    external_driver_name: "",
+    external_driver_phone: "",
+    external_vehicle_number: "",
+    external_party_name: "",
     warehouse_loader: "",
     remarks: "",
   });
@@ -66,8 +71,16 @@ export default function DispatchManagementScreen({ navigation }) {
   }, [selectedOrderIds]);
 
   // Progressive disclosure flags
-  const truckSelected = !!formData.truck_id;
-  const driverSelected = !!formData.driver_id;
+  const isExternal = formData.transport_type === "EXTERNAL";
+  const truckSelected = !isExternal && !!formData.truck_id;
+  const driverSelected = !isExternal && !!formData.driver_id;
+  const externalAssignmentSelected =
+    isExternal &&
+    !!formData.external_driver_name?.trim() &&
+    !!formData.external_vehicle_number?.trim();
+  const assignmentSelected = isExternal
+    ? externalAssignmentSelected
+    : truckSelected && driverSelected;
   const ordersSelected = selectedOrderIds.length > 0;
 
   const buildItemsForOrder = (order) => {
@@ -217,13 +230,24 @@ export default function DispatchManagementScreen({ navigation }) {
   };
 
   const handleSave = async () => {
-    if (!formData.truck_id) {
-      showError("Please select a truck");
-      return;
-    }
-    if (!formData.driver_id) {
-      showError("Please select a driver");
-      return;
+    if (isExternal) {
+      if (!formData.external_driver_name?.trim()) {
+        showError("Please enter the external driver name");
+        return;
+      }
+      if (!formData.external_vehicle_number?.trim()) {
+        showError("Please enter the external vehicle number");
+        return;
+      }
+    } else {
+      if (!formData.truck_id) {
+        showError("Please select a truck");
+        return;
+      }
+      if (!formData.driver_id) {
+        showError("Please select a driver");
+        return;
+      }
     }
     if (selectedOrderIds.length === 0) {
       showError("Please select at least one customer order");
@@ -256,8 +280,13 @@ export default function DispatchManagementScreen({ navigation }) {
     try {
       const payload = {
         order_id: null,
-        truck_id: parseInt(formData.truck_id),
-        driver_id: parseInt(formData.driver_id),
+        transport_type: formData.transport_type,
+        truck_id: isExternal ? null : parseInt(formData.truck_id),
+        driver_id: isExternal ? null : parseInt(formData.driver_id),
+        external_driver_name: isExternal ? formData.external_driver_name.trim() : null,
+        external_driver_phone: isExternal ? formData.external_driver_phone.trim() : null,
+        external_vehicle_number: isExternal ? formData.external_vehicle_number.trim() : null,
+        external_party_name: isExternal ? formData.external_party_name.trim() : null,
         warehouse_loader: formData.warehouse_loader || "",
         remarks: formData.remarks || "",
         dispatch_items: itemsToDispatch.map(item => ({
@@ -376,7 +405,17 @@ export default function DispatchManagementScreen({ navigation }) {
     setEditingDispatch(null);
     setSelectedOrderIds([]);
     setDispatchItems([]);
-    setFormData({ truck_id: "", driver_id: "", warehouse_loader: "", remarks: "" });
+    setFormData({
+      transport_type: "INTERNAL",
+      truck_id: "",
+      driver_id: "",
+      external_driver_name: "",
+      external_driver_phone: "",
+      external_vehicle_number: "",
+      external_party_name: "",
+      warehouse_loader: "",
+      remarks: "",
+    });
     setBillSettings({ cgst_percent: "", sgst_percent: "", igst_percent: "", terms_of_delivery: "", destination: "" });
     setBillPickerModal(null);
   };
@@ -398,8 +437,13 @@ export default function DispatchManagementScreen({ navigation }) {
     setSelectedOrderIds(derivedOrderIds);
 
     setFormData({
+      transport_type: row.transport_type || "INTERNAL",
       truck_id: row.truck_id ? row.truck_id.toString() : "",
-      driver_id: row.driver_id.toString(),
+      driver_id: row.driver_id ? row.driver_id.toString() : "",
+      external_driver_name: row.external_driver_name || "",
+      external_driver_phone: row.external_driver_phone || "",
+      external_vehicle_number: row.external_vehicle_number || "",
+      external_party_name: row.external_party_name || "",
       warehouse_loader: row.warehouse_loader || "",
       remarks: row.remarks || "",
     });
@@ -446,9 +490,17 @@ export default function DispatchManagementScreen({ navigation }) {
   const columns = [
     { key: "dispatch_id", label: "ID" },
     {
+      key: "transport_type",
+      label: "Transport",
+      render: (val, row) => row.transport_type === "EXTERNAL" ? "External" : "Internal",
+    },
+    {
       key: "truck",
       label: "Truck",
-      render: (val, row) => row.truck?.truck_number || "—",
+      render: (val, row) =>
+        row.transport_type === "EXTERNAL"
+          ? row.external_vehicle_number || "—"
+          : row.truck?.truck_number || "—",
     },
     {
       key: "orders",
@@ -463,7 +515,10 @@ export default function DispatchManagementScreen({ navigation }) {
     {
       key: "driver_id",
       label: "Driver",
-      render: (val, row) => row.driver?.driver_name || `Driver #${row.driver_id}`,
+      render: (val, row) =>
+        row.transport_type === "EXTERNAL"
+          ? row.external_driver_name || "—"
+          : row.driver?.driver_name || `Driver #${row.driver_id}`,
     },
     {
       key: "quantity",
@@ -585,13 +640,15 @@ export default function DispatchManagementScreen({ navigation }) {
                 <TouchableOpacity style={styles.editBtn} onPress={() => handleEditDispatch(row)}>
                   <Text style={styles.editBtnText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deliveryBtn}
-                  onPress={() => navigation.navigate("DriverDelivery", { driverId: row.driver_id?.toString() })}
-                >
-                  <FaTruck color="#fff" size={15} />
-                  <Text style={styles.deliveryBtnText}>Delivery</Text>
-                </TouchableOpacity>
+                {row.transport_type !== "EXTERNAL" && (
+                  <TouchableOpacity
+                    style={styles.deliveryBtn}
+                    onPress={() => navigation.navigate("DriverDelivery", { driverId: row.driver_id?.toString() })}
+                  >
+                    <FaTruck color="#fff" size={15} />
+                    <Text style={styles.deliveryBtnText}>Delivery</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(row.dispatch_id)}>
                   <FaTrash color={colors.error} size={16} />
                 </TouchableOpacity>
@@ -607,64 +664,129 @@ export default function DispatchManagementScreen({ navigation }) {
         >
           <ScrollView>
 
-            {/* ── STEP 1: Truck ── */}
+            {/* ── STEP 1: Transport Type ── */}
             <View style={styles.stepCard}>
               <View style={styles.stepHeader}>
-                <View style={[styles.stepBadge, truckSelected && styles.stepBadgeDone]}>
+                <View style={[styles.stepBadge, assignmentSelected && styles.stepBadgeDone]}>
                   <Text style={styles.stepBadgeText}>1</Text>
                 </View>
-                <Text style={styles.stepTitle}>Select Truck</Text>
-                {truckSelected && (
-                  <Text style={styles.stepDoneTag}>
-                    {trucks.find(t => t.truck_id.toString() === formData.truck_id)?.truck_number}
-                  </Text>
-                )}
+                <Text style={styles.stepTitle}>Transport Type</Text>
+                <Text style={styles.stepDoneTag}>{isExternal ? "External" : "Internal"}</Text>
               </View>
               <SelectDropdown
-                label="Truck *"
+                label="Transport Type *"
                 options={[
-                  { label: "Select truck…", value: "" },
-                  ...trucks.map(t => ({
-                    label: `${t.truck_number} — ${t.truck_type} / ${t.vehicle_category}`,
-                    value: t.truck_id.toString(),
-                  })),
+                  { label: "Internal Fleet", value: "INTERNAL" },
+                  { label: "External Driver", value: "EXTERNAL" },
                 ]}
-                value={formData.truck_id}
-                onValueChange={(val) => setFormData({ ...formData, truck_id: val })}
+                value={formData.transport_type}
+                onValueChange={(val) => setFormData({
+                  ...formData,
+                  transport_type: val,
+                  truck_id: "",
+                  driver_id: "",
+                })}
               />
             </View>
 
-            {/* ── STEP 2: Driver (visible after truck selected) ── */}
-            {truckSelected && (
+            {/* ── STEP 2: Internal truck/driver or external details ── */}
+            {isExternal ? (
               <View style={styles.stepCard}>
                 <View style={styles.stepHeader}>
-                  <View style={[styles.stepBadge, driverSelected && styles.stepBadgeDone]}>
+                  <View style={[styles.stepBadge, externalAssignmentSelected && styles.stepBadgeDone]}>
                     <Text style={styles.stepBadgeText}>2</Text>
                   </View>
-                  <Text style={styles.stepTitle}>Select Driver</Text>
-                  {driverSelected && (
-                    <Text style={styles.stepDoneTag}>
-                      {drivers.find(d => d.driver_id.toString() === formData.driver_id)?.driver_name}
-                    </Text>
+                  <Text style={styles.stepTitle}>External Driver Details</Text>
+                  {externalAssignmentSelected && (
+                    <Text style={styles.stepDoneTag}>{formData.external_vehicle_number}</Text>
                   )}
                 </View>
-                <SelectDropdown
-                  label="Driver *"
-                  options={[
-                    { label: "Select driver…", value: "" },
-                    ...drivers.map(d => ({
-                      label: d.driver_name,
-                      value: d.driver_id.toString(),
-                    })),
-                  ]}
-                  value={formData.driver_id}
-                  onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
+                <InputField
+                  label="Driver Name *"
+                  value={formData.external_driver_name}
+                  onChangeText={(val) => setFormData({ ...formData, external_driver_name: val })}
+                  placeholder="Enter driver name"
                 />
+                <InputField
+                  label="Driver Phone"
+                  value={formData.external_driver_phone}
+                  onChangeText={(val) => setFormData({ ...formData, external_driver_phone: val })}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                />
+                <InputField
+                  label="Vehicle Number *"
+                  value={formData.external_vehicle_number}
+                  onChangeText={(val) => setFormData({ ...formData, external_vehicle_number: val.toUpperCase() })}
+                  placeholder="e.g. MH-12-AB-1234"
+                  autoCapitalize="characters"
+                />
+                <InputField
+                  label="External Party (Optional)"
+                  value={formData.external_party_name}
+                  onChangeText={(val) => setFormData({ ...formData, external_party_name: val })}
+                  placeholder="Transport company or party name"
+                />
+              </View>
+            ) : (
+              <View>
+                <View style={styles.stepCard}>
+                  <View style={styles.stepHeader}>
+                    <View style={[styles.stepBadge, truckSelected && styles.stepBadgeDone]}>
+                      <Text style={styles.stepBadgeText}>2</Text>
+                    </View>
+                    <Text style={styles.stepTitle}>Select Truck</Text>
+                    {truckSelected && (
+                      <Text style={styles.stepDoneTag}>
+                        {trucks.find(t => t.truck_id.toString() === formData.truck_id)?.truck_number}
+                      </Text>
+                    )}
+                  </View>
+                  <SelectDropdown
+                    label="Truck *"
+                    options={[
+                      { label: "Select truck…", value: "" },
+                      ...trucks.map(t => ({
+                        label: `${t.truck_number} — ${t.truck_type} / ${t.vehicle_category}`,
+                        value: t.truck_id.toString(),
+                      })),
+                    ]}
+                    value={formData.truck_id}
+                    onValueChange={(val) => setFormData({ ...formData, truck_id: val })}
+                  />
+                </View>
+                {truckSelected && (
+                  <View style={styles.stepCard}>
+                    <View style={styles.stepHeader}>
+                      <View style={[styles.stepBadge, driverSelected && styles.stepBadgeDone]}>
+                        <Text style={styles.stepBadgeText}>3</Text>
+                      </View>
+                      <Text style={styles.stepTitle}>Select Driver</Text>
+                      {driverSelected && (
+                        <Text style={styles.stepDoneTag}>
+                          {drivers.find(d => d.driver_id.toString() === formData.driver_id)?.driver_name}
+                        </Text>
+                      )}
+                    </View>
+                    <SelectDropdown
+                      label="Driver *"
+                      options={[
+                        { label: "Select driver…", value: "" },
+                        ...drivers.map(d => ({
+                          label: d.driver_name,
+                          value: d.driver_id.toString(),
+                        })),
+                      ]}
+                      value={formData.driver_id}
+                      onValueChange={(val) => setFormData({ ...formData, driver_id: val })}
+                    />
+                  </View>
+                )}
               </View>
             )}
 
-            {/* ── STEP 3: Customer Orders with Checkboxes (visible after driver selected) ── */}
-            {driverSelected && (
+            {/* ── STEP 3: Customer Orders with Checkboxes ── */}
+            {assignmentSelected && (
               <View style={styles.stepCard}>
                 <View style={styles.stepHeader}>
                   <View style={[styles.stepBadge, ordersSelected && styles.stepBadgeDone]}>

@@ -410,6 +410,16 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
             if st.order and st.order.customer:
                 customer = st.order.customer
                 break
+    # External dispatches intentionally have no delivery stops. For their
+    # printable trip-sheet details, derive the first customer from dispatch
+    # items when the dispatch contains multiple orders.
+    if not customer and dispatch:
+        for dispatch_item in dispatch.items:
+            if dispatch_item.order_item and dispatch_item.order_item.order:
+                candidate_order = dispatch_item.order_item.order
+                if candidate_order.customer:
+                    customer = candidate_order.customer
+                    break
 
     # Build per-stop data with customer names resolved from relationship.
     # Include any stop that has either delivery data OR a linked order (so freshly
@@ -453,13 +463,30 @@ def get_trip_sheet_full(trip_id: int, db: Session = Depends(get_db)):
             "dispatched_bags": dispatch.dispatched_bags if dispatch else None,
             "status": dispatch.status if dispatch else None,
             "remarks": dispatch.remarks if dispatch else None,
+            "transport_type": (dispatch.transport_type or "INTERNAL") if dispatch else "INTERNAL",
+            "external_driver_name": dispatch.external_driver_name if dispatch else None,
+            "external_driver_phone": dispatch.external_driver_phone if dispatch else None,
+            "external_vehicle_number": dispatch.external_vehicle_number if dispatch else None,
+            "external_party_name": dispatch.external_party_name if dispatch else None,
         },
         "driver": {
-            "driver_name": dispatch.driver.driver_name if dispatch and dispatch.driver else None,
-            "phone": dispatch.driver.phone if dispatch and dispatch.driver else None,
+            "driver_name": (
+                dispatch.driver.driver_name
+                if dispatch and dispatch.driver
+                else (dispatch.external_driver_name if dispatch else None)
+            ),
+            "phone": (
+                dispatch.driver.phone
+                if dispatch and dispatch.driver
+                else (dispatch.external_driver_phone if dispatch else None)
+            ),
         },
         "truck": {
-            "truck_number": dispatch.truck.truck_number if dispatch and dispatch.truck else None,
+            "truck_number": (
+                dispatch.truck.truck_number
+                if dispatch and dispatch.truck
+                else (dispatch.external_vehicle_number if dispatch else None)
+            ),
         },
         "customer": {
             "customer_name": customer.customer_name if customer else None,
@@ -625,6 +652,13 @@ def update_dispatch_status(dispatch_id: int, db: Session):
     if not dispatch:
         return
 
+    # External dispatches are records only. They do not participate in the
+    # internal delivery-proof lifecycle.
+    if (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        dispatch.status = "DISPATCHED"
+        db.commit()
+        return
+
     dispatch.status = "DELIVERED" if dispatch.delivery_date else "DISPATCHED"
     db.commit()
 
@@ -651,6 +685,39 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
     
     if not dispatch_data.get('branch_id'):
         raise HTTPException(status_code=400, detail="branch_id is required")
+
+    transport_type = (dispatch_data.get("transport_type") or "INTERNAL").upper()
+    if transport_type not in {"INTERNAL", "EXTERNAL"}:
+        raise HTTPException(status_code=400, detail="transport_type must be INTERNAL or EXTERNAL")
+    dispatch_data["transport_type"] = transport_type
+
+    if transport_type == "INTERNAL":
+        if not dispatch_data.get("driver_id"):
+            raise HTTPException(status_code=400, detail="Internal dispatch must have a driver")
+        if not dispatch_data.get("truck_id"):
+            raise HTTPException(status_code=400, detail="Internal dispatch must have a truck")
+        # Do not retain external-only data on an internal record.
+        for key in ("external_driver_name", "external_driver_phone",
+                    "external_vehicle_number", "external_party_name"):
+            dispatch_data[key] = None
+    else:
+        external_driver_name = (dispatch_data.get("external_driver_name") or "").strip()
+        external_vehicle_number = (dispatch_data.get("external_vehicle_number") or "").strip()
+        if not external_driver_name:
+            raise HTTPException(status_code=400, detail="External driver name is required")
+        if not external_vehicle_number:
+            raise HTTPException(status_code=400, detail="External vehicle number is required")
+        dispatch_data["external_driver_name"] = external_driver_name
+        dispatch_data["external_vehicle_number"] = external_vehicle_number
+        dispatch_data["external_driver_phone"] = (
+            dispatch_data.get("external_driver_phone") or ""
+        ).strip() or None
+        dispatch_data["external_party_name"] = (
+            dispatch_data.get("external_party_name") or ""
+        ).strip() or None
+        # External assignments are not linked to internal fleet masters.
+        dispatch_data["driver_id"] = None
+        dispatch_data["truck_id"] = None
 
     # Require at least one customer order linkage: either a direct order_id on the
     # dispatch, or order_items that resolve to a customer order. Without this,
@@ -727,25 +794,27 @@ def create_dispatch(dispatch: schemas.DispatchCreate,
         if db_dispatch.order_id:
             order_ids_to_update.add(db_dispatch.order_id)
 
-        # Auto-create one DispatchDeliveryStop per linked customer order so the
-        # trip sheet immediately has customer + delivery place information.
-        for oid in order_ids_to_update:
-            existing = db.query(models.DispatchDeliveryStop).filter(
-                models.DispatchDeliveryStop.dispatch_id == db_dispatch.dispatch_id,
-                models.DispatchDeliveryStop.order_id == oid,
-            ).first()
-            if existing:
-                continue
-            order = db.query(models.CustomerOrder).filter(
-                models.CustomerOrder.order_id == oid
-            ).first()
-            cname = order.customer.customer_name if (order and order.customer) else None
-            db.add(models.DispatchDeliveryStop(
-                dispatch_id=db_dispatch.dispatch_id,
-                order_id=oid,
-                customer_name=cname,
-            ))
-        db.flush()
+        # Internal trips use delivery stops for journey/proof tracking.
+        # External dispatches are intentionally records only and must not
+        # create tracking stops.
+        if transport_type == "INTERNAL":
+            for oid in order_ids_to_update:
+                existing = db.query(models.DispatchDeliveryStop).filter(
+                    models.DispatchDeliveryStop.dispatch_id == db_dispatch.dispatch_id,
+                    models.DispatchDeliveryStop.order_id == oid,
+                ).first()
+                if existing:
+                    continue
+                order = db.query(models.CustomerOrder).filter(
+                    models.CustomerOrder.order_id == oid
+                ).first()
+                cname = order.customer.customer_name if (order and order.customer) else None
+                db.add(models.DispatchDeliveryStop(
+                    dispatch_id=db_dispatch.dispatch_id,
+                    order_id=oid,
+                    customer_name=cname,
+                ))
+            db.flush()
 
         # Set each affected order to DISPATCHED only if no prior dispatch existed for it
         for oid in order_ids_to_update:
@@ -883,6 +952,36 @@ def update_dispatch(dispatch_id: int,
     
     for key, value in update_data.items():
         setattr(db_dispatch, key, value)
+
+    transport_type = (db_dispatch.transport_type or "INTERNAL").upper()
+    if transport_type not in {"INTERNAL", "EXTERNAL"}:
+        raise HTTPException(status_code=400, detail="transport_type must be INTERNAL or EXTERNAL")
+    db_dispatch.transport_type = transport_type
+
+    if transport_type == "INTERNAL":
+        if not db_dispatch.driver_id:
+            raise HTTPException(status_code=400, detail="Internal dispatch must have a driver")
+        if not db_dispatch.truck_id:
+            raise HTTPException(status_code=400, detail="Internal dispatch must have a truck")
+        db_dispatch.external_driver_name = None
+        db_dispatch.external_driver_phone = None
+        db_dispatch.external_vehicle_number = None
+        db_dispatch.external_party_name = None
+    else:
+        db_dispatch.external_driver_name = (db_dispatch.external_driver_name or "").strip()
+        db_dispatch.external_vehicle_number = (db_dispatch.external_vehicle_number or "").strip()
+        if not db_dispatch.external_driver_name:
+            raise HTTPException(status_code=400, detail="External driver name is required")
+        if not db_dispatch.external_vehicle_number:
+            raise HTTPException(status_code=400, detail="External vehicle number is required")
+        db_dispatch.external_driver_phone = (
+            (db_dispatch.external_driver_phone or "").strip() or None
+        )
+        db_dispatch.external_party_name = (
+            (db_dispatch.external_party_name or "").strip() or None
+        )
+        db_dispatch.driver_id = None
+        db_dispatch.truck_id = None
     
     if items_data is not None:
         # Clear existing items and re-add or update (simplified for now: replace)
@@ -924,6 +1023,8 @@ async def upload_delivery_proof(
     db_dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
     if not db_dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")
+    if (db_dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     try:
         photo_path = await save_upload_file(driver_photo)
@@ -957,8 +1058,11 @@ async def upload_delivery_proof(
 
 @app.get("/api/dispatches/{dispatch_id}/delivery-stops", response_model=List[schemas.DispatchDeliveryStopRead])
 def get_delivery_stops(dispatch_id: int, db: Session = Depends(get_db)):
-    if not db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first():
+    dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")
+    if (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        return []
     stops = db.query(models.DispatchDeliveryStop)\
         .filter(models.DispatchDeliveryStop.dispatch_id == dispatch_id)\
         .options(
@@ -1001,8 +1105,11 @@ def create_or_update_delivery_stop(
     unloading_end: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    if not db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first():
+    dispatch = db.query(models.Dispatch).filter(models.Dispatch.dispatch_id == dispatch_id).first()
+    if not dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")
+    if (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     existing = None
     if order_id:
@@ -1070,6 +1177,11 @@ def update_delivery_stop_times(
     ).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
+    dispatch = db.query(models.Dispatch).filter(
+        models.Dispatch.dispatch_id == dispatch_id
+    ).first()
+    if dispatch and (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     def _parse(dt_str):
         return parse_ist(dt_str)
@@ -1101,6 +1213,11 @@ async def add_stop_photo(
     ).options(joinedload(models.DispatchDeliveryStop.photos)).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
+    dispatch = db.query(models.Dispatch).filter(
+        models.Dispatch.dispatch_id == dispatch_id
+    ).first()
+    if dispatch and (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     try:
         photo_path = await save_upload_file(photo)
@@ -1126,6 +1243,11 @@ async def upload_driver_signature(
     ).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
+    dispatch = db.query(models.Dispatch).filter(
+        models.Dispatch.dispatch_id == dispatch_id
+    ).first()
+    if dispatch and (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     try:
         sig_path = await save_upload_file(signature)
@@ -1150,6 +1272,11 @@ async def upload_customer_signature(
     ).first()
     if not stop:
         raise HTTPException(status_code=404, detail="Delivery stop not found")
+    dispatch = db.query(models.Dispatch).filter(
+        models.Dispatch.dispatch_id == dispatch_id
+    ).first()
+    if dispatch and (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL":
+        raise HTTPException(status_code=400, detail="External dispatches do not use delivery tracking")
 
     try:
         sig_path = await save_upload_file(signature)

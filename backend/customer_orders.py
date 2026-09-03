@@ -253,12 +253,20 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
         joinedload(models.CustomerOrder.items).joinedload(models.OrderItem.bag_size)
     ).first()
     
-    # Get all dispatches related to this order
-    dispatches = db.query(models.Dispatch).filter(
-        models.Dispatch.order_id == order_id
+    # Get all dispatches related to this order. Multi-order dispatches may
+    # have a null header order_id, so include dispatch items as well.
+    dispatches = db.query(models.Dispatch).outerjoin(
+        models.DispatchItem,
+        models.DispatchItem.dispatch_id == models.Dispatch.dispatch_id,
+    ).outerjoin(
+        models.OrderItem,
+        models.OrderItem.order_item_id == models.DispatchItem.order_item_id,
+    ).filter(
+        (models.Dispatch.order_id == order_id) |
+        (models.OrderItem.order_id == order_id)
     ).options(
         joinedload(models.Dispatch.driver)
-    ).order_by(models.Dispatch.actual_dispatch_date.asc()).all()
+    ).distinct().order_by(models.Dispatch.actual_dispatch_date.asc()).all()
     
     # Build timeline stages
     timeline = []
@@ -283,13 +291,29 @@ def get_order_traceability(order_id: int, db: Session = Depends(get_db)):
     
     # Stage 3-N: Dispatches
     for idx, dispatch in enumerate(dispatches, start=3):
-        driver_name = f"{dispatch.driver.driver_name}" if dispatch.driver else "Unknown"
+        is_external = (dispatch.transport_type or "INTERNAL").upper() == "EXTERNAL"
+        driver_name = (
+            dispatch.external_driver_name
+            if is_external
+            else (dispatch.driver.driver_name if dispatch.driver else "Unknown")
+        )
+        transport_label = "External transport" if is_external else "Internal transport"
+        vehicle_number = (
+            dispatch.external_vehicle_number
+            if is_external
+            else (dispatch.truck.truck_number if dispatch.truck else None)
+        )
         timeline.append({
             "stage": idx,
             "name": f"Dispatch #{dispatch.dispatch_id}",
-            "status": dispatch.status or "DISPATCHED",
+            "status": "External dispatch" if is_external else (dispatch.status or "DISPATCHED"),
             "date": dispatch.actual_dispatch_date,
-            "details": f"Dispatched by {driver_name} | {dispatch.dispatched_quantity_ton} tons | {dispatch.dispatched_bags or 0} bags | To: {dispatch.city}, {dispatch.state}"
+            "details": (
+                f"{transport_label} | Driver: {driver_name}"
+                f"{f' | Vehicle: {vehicle_number}' if vehicle_number else ''}"
+                f" | {dispatch.dispatched_quantity_ton} tons"
+                f" | {dispatch.dispatched_bags or 0} bags"
+            )
         })
     
     # Final Stage: Delivery

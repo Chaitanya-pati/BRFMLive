@@ -487,7 +487,11 @@ export default function DriverDeliveryScreen({ navigation }) {
     try {
       const res = await dispatchApi.getAll();
       const all = res.data || [];
-      const dispatched = all.filter((d) => d.status === "DISPATCHED");
+      // External dispatches are informational records only and must never
+      // enter the internal driver delivery workflow.
+      const dispatched = all.filter(
+        (d) => d.status === "DISPATCHED" && d.transport_type !== "EXTERNAL",
+      );
 
       if (admin) {
         setDispatches(dispatched);

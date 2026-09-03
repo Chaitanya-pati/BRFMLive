@@ -161,7 +161,9 @@ class Dispatch(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     order_id = Column(Integer, ForeignKey("customer_orders.order_id"), nullable=True)
     truck_id = Column(Integer, ForeignKey("trucks.truck_id"), nullable=True)
-    driver_id = Column(Integer, ForeignKey("drivers.driver_id"), nullable=False)
+    # Internal dispatches use driver_id/truck_id. External dispatches store
+    # the driver and vehicle details directly on the dispatch record.
+    driver_id = Column(Integer, ForeignKey("drivers.driver_id"), nullable=True)
     dispatched_quantity_ton = Column(Float, nullable=False, default=0.0)
     dispatched_bags = Column(Integer, nullable=True, default=0)
     bag_size_id = Column(Integer, ForeignKey("bag_sizes.id"), nullable=True)
@@ -171,6 +173,11 @@ class Dispatch(Base):
     status = Column(String(30), default='DISPATCHED')
     driver_photo = Column(Text)
     remarks = Column(Text)
+    transport_type = Column(String(20), nullable=False, default="INTERNAL")
+    external_driver_name = Column(String(150), nullable=True)
+    external_driver_phone = Column(String(20), nullable=True)
+    external_vehicle_number = Column(String(50), nullable=True)
+    external_party_name = Column(String(150), nullable=True)
     created_at = Column(DateTime, default=ist_now)
 
     branch = relationship("Branch")

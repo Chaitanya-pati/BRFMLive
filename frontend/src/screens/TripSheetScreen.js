@@ -29,6 +29,9 @@ function parseInput(s) {
 // derive status from stop data
 function getTripStatus(fullData) {
   if (!fullData) return "PENDING";
+  if ((fullData.dispatch?.transport_type || "INTERNAL").toUpperCase() === "EXTERNAL") {
+    return "EXTERNAL";
+  }
   const stop = fullData.stop || {};
   if (stop.factory_return_at) return stop.supervisor_sign_date ? "CLOSED" : "RETURNED";
   if (stop.factory_exit_at) return "IN_TRANSIT";
@@ -40,6 +43,7 @@ const STATUS_STYLE = {
   IN_TRANSIT: { bg: "#e3f2fd", color: "#1565C0", label: "In Transit" },
   RETURNED:   { bg: "#fff3e0", color: "#e65100", label: "Returned" },
   CLOSED:     { bg: "#e8f5e9", color: "#2e7d32", label: "Closed" },
+  EXTERNAL:   { bg: "#f3e8ff", color: "#7c3aed", label: "External Dispatch" },
 };
 
 function StatusPill({ status }) {
@@ -265,6 +269,7 @@ function TripDetail({ tripId, onBack, navigation }) {
   const items = fullData.items || [];
   const allStops = fullData.all_stops || [];
   const status = getTripStatus(fullData);
+  const isExternal = (dispatch.transport_type || "INTERNAL").toUpperCase() === "EXTERNAL";
 
   const milestones = [
     { icon: "🚛", label: "Left Factory", time: fmtDT(stop.factory_exit_at), km: stop.factory_exit_km, signed: stop.factory_exit_signed, done: !!stop.factory_exit_at },
@@ -299,7 +304,7 @@ function TripDetail({ tripId, onBack, navigation }) {
 
       {/* Tabs */}
       <View style={s.tabBar}>
-        {[["summary", "Summary"], ["journey", "Journey"], ["signoff", "Sign-Off"]].map(([k, l]) => (
+        {[["summary", "Summary"], ...(!isExternal ? [["journey", "Journey"], ["signoff", "Sign-Off"]] : [])].map(([k, l]) => (
           <TouchableOpacity key={k} style={[s.tabBtn, tab === k && s.tabBtnOn]} onPress={() => setTab(k)}>
             <Text style={[s.tabBtnText, tab === k && s.tabBtnTextOn]}>{l}</Text>
           </TouchableOpacity>
@@ -312,8 +317,11 @@ function TripDetail({ tripId, onBack, navigation }) {
           <View style={s.sectionCard}>
             <Text style={s.sectionCardTitle}>Dispatch Info</Text>
             <InfoRow label="Dispatch #" value={String(dispatch.dispatch_id || "")} />
+            <InfoRow label="Transport" value={isExternal ? "External" : "Internal Fleet"} />
             <InfoRow label="Truck" value={truck.truck_number} />
             <InfoRow label="Driver" value={driver.driver_name} />
+            {isExternal && <InfoRow label="Driver Phone" value={driver.phone} />}
+            {isExternal && <InfoRow label="External Party" value={dispatch.external_party_name} />}
             <InfoRow label="Customer" value={
               allStops.length > 0
                 ? [...new Set(allStops.map(s => s.customer_name).filter(Boolean))].join(", ")
@@ -351,8 +359,8 @@ function TripDetail({ tripId, onBack, navigation }) {
         </View>
       )}
 
-      {/* ── Journey Tab (read-only) ── */}
-      {tab === "journey" && (
+      {/* ── Journey Tab (internal trips only) ── */}
+      {!isExternal && tab === "journey" && (
         <View style={s.sectionCard}>
           <Text style={s.sectionCardTitle}>Journey Milestones</Text>
           <Text style={s.journeyNote}>These times are recorded by the driver. View only.</Text>
@@ -368,8 +376,8 @@ function TripDetail({ tripId, onBack, navigation }) {
         </View>
       )}
 
-      {/* ── Sign-Off Tab ── */}
-      {tab === "signoff" && (
+      {/* ── Sign-Off Tab (internal trips only) ── */}
+      {!isExternal && tab === "signoff" && (
         <SignoffForm tripId={tripId} signoff={sg} onSaved={load} />
       )}
     </ScrollView>

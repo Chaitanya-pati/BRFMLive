@@ -1094,13 +1094,18 @@ class DispatchItem(DispatchItemBase):
 class DispatchBase(ISTModel):
     order_id: Optional[int] = None
     truck_id: Optional[int] = None
-    driver_id: int
+    driver_id: Optional[int] = None
     dispatched_quantity_ton: float = 0.0
     dispatched_bags: Optional[int] = 0
     bag_size_id: Optional[int] = None
     warehouse_loader: Optional[str] = None
     status: Optional[str] = "DISPATCHED"
     remarks: Optional[str] = None
+    transport_type: str = "INTERNAL"
+    external_driver_name: Optional[str] = None
+    external_driver_phone: Optional[str] = None
+    external_vehicle_number: Optional[str] = None
+    external_party_name: Optional[str] = None
 
 class DispatchCreate(DispatchBase):
     branch_id: Optional[int] = None
@@ -1116,6 +1121,11 @@ class DispatchUpdate(ISTModel):
     warehouse_loader: Optional[str] = None
     status: Optional[str] = None
     remarks: Optional[str] = None
+    transport_type: Optional[str] = None
+    external_driver_name: Optional[str] = None
+    external_driver_phone: Optional[str] = None
+    external_vehicle_number: Optional[str] = None
+    external_party_name: Optional[str] = None
     dispatch_items: Optional[List[DispatchItemCreate]] = None
 
 class Dispatch(DispatchBase):
