@@ -43,6 +43,7 @@ export default function Transfer12HourScreen({ route, navigation }) {
   };
 
   const [productionOrders, setProductionOrders] = useState([]);
+  const [allBins, setAllBins] = useState([]);
   const [sourceBins, setSourceBins] = useState([]);
   const [destinationBins, setDestinationBins] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -146,6 +147,7 @@ export default function Transfer12HourScreen({ route, navigation }) {
       const client = getApiClient();
       const response = await client.get("/bins");
       const allBins = response.data || [];
+      setAllBins(allBins);
       // We need these for display names regardless of current stage filters
       setSourceBins(prev => prev.length > 0 ? prev : allBins);
       setDestinationBins(prev => prev.length > 0 ? prev : allBins);
@@ -286,6 +288,7 @@ export default function Transfer12HourScreen({ route, navigation }) {
       ]);
       
       const allBins = binsResponse.data || [];
+      setAllBins(allBins);
       const transfer24hRecords = transfer24hResponse.data || [];
       const transfer12hRecords = transfer12hResponse.data || [];
       
@@ -339,6 +342,16 @@ export default function Transfer12HourScreen({ route, navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getBinNumber = (binId) => {
+    const bin = allBins.find((item) => Number(item.id) === Number(binId));
+    return bin?.bin_number;
+  };
+
+  const formatBinLabel = (binId, suppliedBinNumber) => {
+    const binNumber = suppliedBinNumber || getBinNumber(binId);
+    return binNumber ? `#${binNumber}` : `#${binId}`;
   };
 
   const handleStartTransfer = () => {
@@ -745,12 +758,12 @@ export default function Transfer12HourScreen({ route, navigation }) {
                   <View style={styles.transferHistoryCardLeft}>
                     <View style={styles.transferHistoryCardBin}>
                       <BinNumberHighlight
-                        value={transfer.source_bin_number || `#${transfer.source_bin_id}`}
+                        value={formatBinLabel(transfer.source_bin_id, transfer.source_bin_number)}
                         compact
                       />
                       <Text style={styles.transferHistoryArrow}>→</Text>
                       <BinNumberHighlight
-                        value={transfer.destination_bin_number || `#${transfer.destination_bin_id}`}
+                        value={formatBinLabel(transfer.destination_bin_id, transfer.destination_bin_number)}
                         compact
                       />
                     </View>
@@ -851,8 +864,8 @@ export default function Transfer12HourScreen({ route, navigation }) {
     }
     
     // Improved lookup to avoid "Unknown"
-    const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || "Bin #" + sourceBinId;
-    const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || "Bin #" + destBinId;
+    const sourceBinName = sourceBins.find(b => Number(b.id) === Number(sourceBinId))?.bin_number || getBinNumber(sourceBinId) || "Bin #" + sourceBinId;
+    const destBinName = destinationBins.find(b => Number(b.id) === Number(destBinId))?.bin_number || getBinNumber(destBinId) || "Bin #" + destBinId;
     const quantityLimitDetails = getTransferQuantityLimits(
       activeTransferRecord || { id: currentRecordId, destination_bin_id: destBinId }
     );
@@ -1018,14 +1031,14 @@ export default function Transfer12HourScreen({ route, navigation }) {
             <View style={styles.sessionDetailRow}>
               <Text style={styles.sessionDetail}>From Bin:</Text>
               <BinNumberHighlight
-                value={item.source_bin_number || `#${item.source_bin_id}`}
+                value={formatBinLabel(item.source_bin_id, item.source_bin_number)}
                 compact
               />
             </View>
             <View style={styles.sessionDetailRow}>
               <Text style={styles.sessionDetail}>To Bin:</Text>
               <BinNumberHighlight
-                value={item.destination_bin_number || `#${item.destination_bin_id}`}
+                value={formatBinLabel(item.destination_bin_id, item.destination_bin_number)}
                 compact
               />
             </View>
