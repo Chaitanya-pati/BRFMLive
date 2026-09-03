@@ -55,9 +55,23 @@ function StageNumber({ num, color }) {
 }
 
 // ── Compact mini-card shown in the 4-in-a-row layout ──────────────────────────
-function StageMiniCard({ num, themeKey, status, summary, bins, expanded, onToggle }) {
+function StageMiniCard({
+  num,
+  themeKey,
+  status,
+  summary,
+  bins,
+  quantity,
+  quantityLabel = 'Quantity',
+  expanded,
+  onToggle,
+}) {
   const theme = STAGE_THEME[themeKey];
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+  const binSummary = bins && bins.length > 0
+    ? bins.slice(0, 2).map((bin) => `#${bin.bin_number}`).join(', ') +
+      (bins.length > 2 ? ` +${bins.length - 2}` : '')
+    : 'No bin assigned';
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -74,9 +88,18 @@ function StageMiniCard({ num, themeKey, status, summary, bins, expanded, onToggl
           <Text style={styles.miniIcon}>{theme.icon}</Text>
           <Text style={styles.miniTitle} numberOfLines={1}>{theme.title}</Text>
         </View>
-      </View>
-      <View style={styles.miniStatusRow}>
         <StatusPill status={status} />
+      </View>
+
+      <View style={styles.miniMetricStrip}>
+        <View style={styles.miniMetricBlock}>
+          <Text style={styles.miniMetricLabel}>BIN{bins?.length === 1 ? '' : 'S'}</Text>
+          <Text style={styles.miniMetricValue} numberOfLines={1}>{binSummary}</Text>
+        </View>
+        <View style={[styles.miniMetricBlock, styles.miniMetricQuantity]}>
+          <Text style={styles.miniMetricLabel}>{quantityLabel}</Text>
+          <Text style={styles.miniMetricValue} numberOfLines={1}>{quantity || '—'}</Text>
+        </View>
       </View>
 
       {/* Compact bin row */}
@@ -168,17 +191,25 @@ function ExpandedTransferRecords({ records, type, magnetRecords }) {
             return (
               <View key={r.id || i} style={[styles.transferRow, { borderLeftColor: cfg.color }]}>
                 <View style={styles.transferRowHeader}>
-                  <Text style={styles.transferBinFlow}>
-                    {type === '12h'
-                      ? `${r.source_bin?.bin_number || '—'} → ${r.destination_bin?.bin_number || '—'}`
-                      : `→ ${r.destination_bin?.bin_number || '—'}`}
-                  </Text>
+                  <View style={styles.transferFlowBlock}>
+                    <Text style={styles.transferFlowLabel}>BIN FLOW</Text>
+                    <Text style={styles.transferBinFlow}>
+                      {type === '12h'
+                        ? `#${r.source_bin?.bin_number || '—'} → #${r.destination_bin?.bin_number || '—'}`
+                        : `→ #${r.destination_bin?.bin_number || '—'}`}
+                    </Text>
+                  </View>
                   <StatusPill status={r.status} />
+                </View>
+                <View style={styles.transferPrimaryMetric}>
+                  <Text style={styles.transferQuantityLabel}>QUANTITY TRANSFERRED</Text>
+                  <Text style={styles.transferQuantityValue}>
+                    {r.quantity_transferred != null ? `${Number(r.quantity_transferred).toFixed(2)} T` : '—'}
+                  </Text>
                 </View>
                 <View style={styles.transferGrid}>
                   <KV label="Start" value={r.transfer_start_time ? formatISTDateTime(r.transfer_start_time) : '—'} />
                   <KV label="End" value={r.transfer_end_time ? formatISTDateTime(r.transfer_end_time) : '—'} />
-                  <KV label="Quantity" value={r.quantity_transferred != null ? `${r.quantity_transferred} T` : '—'} />
                   {type === '12h' ? (
                     <>
                       <KV label="In M%" value={r.incoming_moisture != null ? `${r.incoming_moisture}%` : '—'} />
@@ -401,6 +432,7 @@ export default function LiveAddScreen({ navigation }) {
     // Stage summaries (1-line)
     let rawSummary = '—', t24Summary = '—', t12Summary = '—', grindSummary = '—';
     let totalPlanned = 0, totalTransferred = 0;
+    let t12TotalQty = 0, grindTotalQty = 0;
     let rawBins = [], t24Bins = [], t12Bins = [], grindBins = [];
     if (stages) {
       rawBins = stages.raw_wheat.source_bins || [];
@@ -423,8 +455,11 @@ export default function LiveAddScreen({ navigation }) {
       t24Summary = stages.transfer_24h.records.length > 0
         ? `${stages.transfer_24h.records.length} transfer${stages.transfer_24h.records.length !== 1 ? 's' : ''} · ${totalTransferred.toFixed(1)} T`
         : 'No transfers';
-      const t12TotalQty = (stages.transfer_12h.records || []).reduce(
+      t12TotalQty = (stages.transfer_12h.records || []).reduce(
         (s, r) => s + (Number(r.quantity_transferred) || 0), 0
+      );
+      grindTotalQty = grindBins.reduce(
+        (s, b) => s + (Number(b.current_quantity) || 0), 0
       );
       t12Summary = stages.transfer_12h.records.length > 0
         ? `${stages.transfer_12h.records.length} transfer${stages.transfer_12h.records.length !== 1 ? 's' : ''} · ${t12TotalQty.toFixed(1)} T`
@@ -447,22 +482,40 @@ export default function LiveAddScreen({ navigation }) {
             <Text style={styles.backBtnText}>← Back to Live Orders</Text>
           </TouchableOpacity>
 
-          {/* Compact header */}
+          {/* Order identity and live summary */}
           <View style={styles.detailHeader}>
-            <View style={styles.detailHeaderLeft}>
-              <PulseIcon />
-              <View style={styles.detailHeaderText}>
-                <Text style={styles.detailTitle}>{selectedOrder.order_number}</Text>
-                <Text style={styles.detailSub}>
-                  {selectedOrder.branch_name}
-                  {order?.raw_product?.product_name ? ` · ${order.raw_product.product_name}` : ''}
-                  {order?.quantity ? ` · ${order.quantity} T` : ''}
-                </Text>
+            <View style={styles.detailHeaderTop}>
+              <View style={styles.detailHeaderLeft}>
+                <PulseIcon />
+                <View style={styles.detailHeaderText}>
+                  <Text style={styles.detailEyebrow}>LIVE PRODUCTION</Text>
+                  <Text style={styles.detailTitle}>Order {selectedOrder.order_number}</Text>
+                </View>
+              </View>
+              <View style={styles.liveBadgeWrap}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveBadgeText}>LIVE</Text>
               </View>
             </View>
-            <View style={styles.liveBadgeWrap}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>LIVE</Text>
+            <View style={styles.detailSummaryRow}>
+              <View style={styles.detailSummaryItem}>
+                <Text style={styles.detailSummaryLabel}>PRODUCT</Text>
+                <Text style={styles.detailSummaryValue} numberOfLines={1}>
+                  {order?.raw_product?.product_name || '—'}
+                </Text>
+              </View>
+              <View style={styles.detailSummaryItem}>
+                <Text style={styles.detailSummaryLabel}>ORDER QUANTITY</Text>
+                <Text style={styles.detailSummaryValue}>
+                  {order?.quantity != null ? `${Number(order.quantity).toFixed(2)} T` : '—'}
+                </Text>
+              </View>
+              <View style={styles.detailSummaryItem}>
+                <Text style={styles.detailSummaryLabel}>BRANCH</Text>
+                <Text style={styles.detailSummaryValue} numberOfLines={1}>
+                  {selectedOrder.branch_name || '—'}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -536,6 +589,8 @@ export default function LiveAddScreen({ navigation }) {
                     status={stages.raw_wheat.status}
                     summary={rawSummary}
                     bins={rawBins}
+                    quantity={totalPlanned > 0 ? `${totalTransferred.toFixed(1)} / ${totalPlanned.toFixed(1)} T` : '—'}
+                    quantityLabel="EXTRACTED / PLANNED"
                     expanded={expandedStage === 'raw'}
                     onToggle={() => toggleStage('raw')}
                   />
@@ -545,6 +600,8 @@ export default function LiveAddScreen({ navigation }) {
                     status={stages.transfer_24h.status}
                     summary={t24Summary}
                     bins={t24Bins}
+                    quantity={`${totalTransferred.toFixed(1)} T`}
+                    quantityLabel="TRANSFERRED"
                     expanded={expandedStage === 't24'}
                     onToggle={() => toggleStage('t24')}
                   />
@@ -554,6 +611,8 @@ export default function LiveAddScreen({ navigation }) {
                     status={stages.transfer_12h.status}
                     summary={t12Summary}
                     bins={t12Bins}
+                    quantity={`${t12TotalQty.toFixed(1)} T`}
+                    quantityLabel="TRANSFERRED"
                     expanded={expandedStage === 't12'}
                     onToggle={() => toggleStage('t12')}
                   />
@@ -563,6 +622,8 @@ export default function LiveAddScreen({ navigation }) {
                     status={stages.grinding.status}
                     summary={grindSummary}
                     bins={grindBins}
+                    quantity={grindBins.length > 0 ? `${grindTotalQty.toFixed(1)} T` : '—'}
+                    quantityLabel="IN BINS"
                     expanded={expandedStage === 'grind'}
                     onToggle={() => toggleStage('grind')}
                   />
@@ -820,15 +881,37 @@ const styles = StyleSheet.create({
 
   // Detail header
   detailHeader: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: '#e5e7eb', flexWrap: 'wrap', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: '#e5e7eb',
     ...Platform.select({ web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }, default: { elevation: 2 } }),
+  },
+  detailHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   detailHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 },
   detailHeaderText: { flex: 1, minWidth: 0 },
-  detailTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  detailSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  detailEyebrow: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1 },
+  detailTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginTop: 2 },
+  detailSummaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    flexWrap: 'wrap',
+  },
+  detailSummaryItem: { flex: 1, minWidth: 120 },
+  detailSummaryLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.7,
+  },
+  detailSummaryValue: { fontSize: 13, fontWeight: '600', color: '#334155', marginTop: 4 },
   liveBadgeWrap: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#fef2f2', borderRadius: 12 },
 
   // Shortcuts
@@ -866,6 +949,35 @@ const styles = StyleSheet.create({
   miniIcon: { fontSize: 14 },
   miniTitle: { fontSize: 12, fontWeight: '700', color: '#111827', flex: 1, minWidth: 0 },
   miniStatusRow: { marginBottom: 8 },
+  miniMetricStrip: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 8,
+    marginBottom: 6,
+    padding: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  miniMetricBlock: { flex: 1, minWidth: 0 },
+  miniMetricQuantity: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#e2e8f0',
+    paddingLeft: 8,
+  },
+  miniMetricLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.5,
+  },
+  miniMetricValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 3,
+  },
   miniBinScroll: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
   miniEmpty: { fontSize: 11, color: '#cbd5e1', fontStyle: 'italic', paddingVertical: 12, textAlign: 'center' },
   miniSummary: { fontSize: 11, color: '#475569', marginTop: 6, lineHeight: 14 },
@@ -917,7 +1029,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: 8, flexWrap: 'wrap', gap: 6,
   },
-  transferBinFlow: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  transferFlowBlock: { flex: 1, minWidth: 140 },
+  transferFlowLabel: { fontSize: 9, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.7, marginBottom: 2 },
+  transferBinFlow: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  transferPrimaryMetric: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  transferQuantityLabel: { fontSize: 9, fontWeight: '700', color: '#64748b', letterSpacing: 0.7 },
+  transferQuantityValue: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
   transferGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   kvCell: { minWidth: 90 },
   kvLabel: { fontSize: 10, color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
