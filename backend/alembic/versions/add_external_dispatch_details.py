@@ -1,7 +1,7 @@
 """add external dispatch details
 
 Revision ID: add_external_dispatch_details
-Revises: b345b4c06510
+Revises: c4e1a2b3d5f6
 Create Date: 2026-08-27 00:00:00.000000
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "add_external_dispatch_details"
-down_revision: Union[str, Sequence[str], None] = "b345b4c06510"
+down_revision: Union[str, Sequence[str], None] = "c4e1a2b3d5f6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -80,6 +80,17 @@ def run_column_migrations():
     from sqlalchemy import text
     with engine.connect() as conn:
         migrations = [
+            # External dispatch fields are also applied here for deployments
+            # that start the API without running Alembic separately.
+            "ALTER TABLE dispatch ALTER COLUMN driver_id DROP NOT NULL",
+            "ALTER TABLE dispatch ADD COLUMN IF NOT EXISTS transport_type VARCHAR(20)",
+            "ALTER TABLE dispatch ADD COLUMN IF NOT EXISTS external_driver_name VARCHAR(150)",
+            "ALTER TABLE dispatch ADD COLUMN IF NOT EXISTS external_driver_phone VARCHAR(20)",
+            "ALTER TABLE dispatch ADD COLUMN IF NOT EXISTS external_vehicle_number VARCHAR(50)",
+            "ALTER TABLE dispatch ADD COLUMN IF NOT EXISTS external_party_name VARCHAR(150)",
+            "UPDATE dispatch SET transport_type = 'INTERNAL' WHERE transport_type IS NULL",
+            "ALTER TABLE dispatch ALTER COLUMN transport_type SET DEFAULT 'INTERNAL'",
+            "ALTER TABLE dispatch ALTER COLUMN transport_type SET NOT NULL",
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_at TIMESTAMP",
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_km FLOAT",
             "ALTER TABLE dispatch_delivery_stops ADD COLUMN IF NOT EXISTS factory_exit_signed VARCHAR(150)",

@@ -54,6 +54,12 @@ PostgreSQL serves as the primary data store, utilizing relational structures wit
 - `DATABASE_URL`: PostgreSQL connection string.
 - `EXPO_PUBLIC_API_URL`: Frontend API endpoint.
 
+### Running on Replit
+- Install Python dependencies with `uv sync` from the project root.
+- Install frontend dependencies with `cd frontend && npm ci`.
+- Use the `Start Application` workflow to run FastAPI on port 8000 and Expo Web on port 5000 together.
+- The frontend uses `EXPO_PUBLIC_API_URL` when provided; otherwise, Replit web preview resolves the local backend URL automatically.
+
 ### Hourly Grinding — Bran vs Main Percentage
 - Each `HourlyProduction` row stores `bran_percentage` and `main_percentage`
   (added via `run_column_migrations` on startup; backfilled for existing rows).

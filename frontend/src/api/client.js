@@ -21,10 +21,10 @@ const getCurrentAPIUrl = () => {
   return "http://localhost:8000/api";
 };
 
-// Use getCurrentAPIUrl() for dynamic URL, or fallback to environment variable
-//const API_URL = "https://brfmlive.onrender.com/api";
-const API_URL = "https://brfmlive-1.onrender.com/api";
-//process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
+// Prefer an explicitly configured API URL for native builds and deployments.
+// In Replit/local web preview, use the backend running alongside the frontend
+// instead of sending requests to a separate remote deployment.
+const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
 
 export const API_BASE_URL = API_URL.replace("/api", "");
 

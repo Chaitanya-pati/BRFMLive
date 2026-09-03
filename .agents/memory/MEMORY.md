@@ -1,0 +1,1 @@
+- [Frontend dependency installation](frontend-install.md) — update blocked transitive npm resolutions to safe available releases before retrying Expo setup.
