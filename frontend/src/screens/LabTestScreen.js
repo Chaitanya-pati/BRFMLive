@@ -15,18 +15,13 @@ import { Picker } from "@react-native-picker/picker";
 import Layout from "../components/Layout";
 import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
-import { vehicleApi, labTestApi, claimApi } from "../api/client";
+import { vehicleApi, labTestApi, claimApi, API_BASE_URL } from "../api/client";
 import colors from "../theme/colors";
 import { formatISTDate, formatISTDateTime } from "../utils/dateUtils";
 
 async function getLogoBase64() {
   try {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const backendBase = (hostname === 'localhost' || hostname === '127.0.0.1')
-      ? `http://${hostname}:8000`
-      : `${protocol}//${hostname}:8000`;
-    const logoUrl = `${backendBase}/uploads/new-logo.png`;
+    const logoUrl = `${API_BASE_URL}/uploads/new-logo.png`;
     const resp = await fetch(logoUrl);
     const blob = await resp.blob();
     return await new Promise((resolve) => {

@@ -9,9 +9,9 @@ module.exports = async function(env, argv) {
       allowedHosts: 'all',
       proxy: {
         '/api': {
-          target: 'http://0.0.0.0:8000',
+          target: 'https://brfmlive-1.onrender.com',
           changeOrigin: true,
-          secure: false,
+          secure: true,
         },
       },
     };

@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }) {
 
       // Check if it's a network/connection error
       if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        errorMessage = `Cannot connect to backend server.\n\nBackend URL: ${API_BASE_URL}\n\nPlease ensure:\n1. Backend server is running (port 8000)\n2. Click the Run button to start both servers\n3. Wait for "Uvicorn running on http://0.0.0.0:8000" message\n\nIf issue persists, check the console logs for API URL details.`;
+        errorMessage = `Cannot connect to backend server.\n\nBackend URL: ${API_BASE_URL}\n\nPlease verify the Render backend is available and try again.\n\nIf the issue persists, check the console logs for API URL details.`;
       }
 
       Alert.alert('Login Failed', errorMessage);

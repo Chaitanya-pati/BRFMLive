@@ -2,9 +2,8 @@
 # Supplier Management E2E Testing Guide
 
 ## Prerequisites
-1. Backend API running on port 8000
+1. Render backend available at `https://brfmlive-1.onrender.com`
 2. Frontend running on port 5000
-3. PostgreSQL database accessible
 
 ## Test Scenarios
 
@@ -119,13 +118,13 @@
 
 ### Check Backend Connectivity
 ```bash
-curl http://127.0.0.1:8000/
-curl http://127.0.0.1:8000/api/suppliers
+curl https://brfmlive-1.onrender.com/
+curl https://brfmlive-1.onrender.com/api/suppliers
 ```
 
 ### Check Frontend API Configuration
 - Verify `frontend/src/api/client.js` has correct API_URL
-- Should point to: `https://[repl-domain]:8000/api`
+- Should point to: `https://brfmlive-1.onrender.com/api`
 
 ### Browser Console Checks
 1. Open Developer Tools (F12)
@@ -143,7 +142,7 @@ curl http://127.0.0.1:8000/api/suppliers
 
 ### Issue: "Network Error" when saving
 **Solution:**
-- Verify backend is running on port 8000
+- Verify `https://brfmlive-1.onrender.com/` is available
 - Check API_URL in `frontend/src/api/client.js`
 - Ensure CORS is enabled in backend
 

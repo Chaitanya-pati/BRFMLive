@@ -1,32 +1,11 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// API URL configuration for Replit environment
-const getCurrentAPIUrl = () => {
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
+// The production Render service is the only backend for this frontend.
+const API_BASE_URL = "https://brfmlive-1.onrender.com";
+const API_URL = `${API_BASE_URL}/api`;
 
-    // For local development, use localhost with port 8000
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return `http://${hostname}:8000/api`;
-    }
-
-    // For Replit deployment: backend runs on port 8000, which is externally accessible
-    // Must explicitly specify port 8000 to reach the FastAPI backend
-    return `${protocol}//${hostname}:8000/api`;
-  }
-
-  // Final fallback
-  return "http://localhost:8000/api";
-};
-
-// Prefer an explicitly configured API URL for native builds and deployments.
-// In Replit/local web preview, use the backend running alongside the frontend
-// instead of sending requests to a separate remote deployment.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || getCurrentAPIUrl();
-
-export const API_BASE_URL = API_URL.replace("/api", "");
+export { API_BASE_URL };
 
 export const api = axios.create({
   baseURL: API_URL,

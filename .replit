@@ -17,7 +17,7 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && npm run web"
+args = "cd frontend && npm run web"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -53,6 +53,6 @@ deploymentTarget = "autoscale"
 run = [
   "bash",
   "-c",
-  "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
+  "cd frontend && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --web --port 5000",
 ]
-build = ["bash", "-c", "cd frontend && npm install && cd ../backend && uv sync"]
+build = ["bash", "-c", "cd frontend && npm install"]
